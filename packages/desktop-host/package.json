@@ -1,0 +1,8 @@
+{
+  "name": "@legend-apps/desktop-host",
+  "version": "0.1.0-prototype.0",
+  "license": "MIT",
+  "files": [
+    "AppDelegate.mm"
+  ]
+}

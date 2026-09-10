@@ -1,0 +1,26 @@
+{
+  "name": "@legend-apps/native-greeting",
+  "version": "0.1.0-prototype.0",
+  "license": "MIT",
+  "main": "src/index.ts",
+  "react-native": "src/index.ts",
+  "files": [
+    "src",
+    "ios",
+    "*.podspec"
+  ],
+  "peerDependencies": {
+    "react": "19.1.4",
+    "react-native": "0.81.6"
+  },
+  "codegenConfig": {
+    "name": "RNGreetingSpec",
+    "type": "modules",
+    "jsSrcsDir": "src",
+    "ios": {
+      "modulesProvider": {
+        "NativeGreeting": "RNGreeting"
+      }
+    }
+  }
+}

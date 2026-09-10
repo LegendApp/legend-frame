@@ -1,0 +1,13 @@
+{
+  "name": "@legend-apps/desktop-config",
+  "version": "0.1.0-prototype.0",
+  "license": "MIT",
+  "main": "app.plugin.cjs",
+  "files": [
+    "*.cjs"
+  ],
+  "dependencies": {
+    "expo-desktop-config-plugins": "1.2.0-beta.0",
+    "@legend-apps/desktop-host": "0.1.0-prototype.0"
+  }
+}

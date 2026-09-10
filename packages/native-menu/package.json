@@ -1,0 +1,40 @@
+{
+  "name": "@legend-apps/native-menu",
+  "version": "0.1.0-prototype.0",
+  "main": "src/index.ts",
+  "react-native": "src/index.ts",
+  "codegenConfig": {
+    "name": "RNNativeMenuSpec",
+    "type": "modules",
+    "jsSrcsDir": "src",
+    "android": {
+      "javaPackageName": "so.legend.apps.nativemenu"
+    },
+    "ios": {
+      "modulesProvider": {
+        "NativeMenu": "RNNativeMenu"
+      }
+    }
+  },
+  "peerDependencies": {
+    "react": "19.1.4",
+    "react-native": "0.81.6"
+  },
+  "license": "MIT",
+  "files": [
+    "src",
+    "ios",
+    "*.podspec"
+  ],
+  "legend": {
+    "sdk": true,
+    "nativeModules": [
+      "NativeMenu"
+    ],
+    "pod": "RNNativeMenu",
+    "platforms": [
+      "macos"
+    ],
+    "requires": []
+  }
+}
