@@ -4,6 +4,8 @@ import { parseArgs } from "node:util";
 import { existsSync } from "node:fs";
 import { create, refreshLocalPackages } from "./create.ts";
 import { buildMode } from "./build-mode.ts";
+import { packageApp } from "./package.ts";
+import { credentials } from "./credentials.ts";
 import { build, analyze } from "./build.ts";
 import { dev, launch } from "./dev.ts";
 import { doctor, run } from "./commands.ts";
@@ -25,6 +27,7 @@ try {
       preview: { type: "boolean" },
       force: { type: "boolean" },
       "no-open": { type: "boolean" },
+      "submission-id": { type: "string" },
       help: { type: "boolean", short: "h" },
     },
   });
@@ -40,10 +43,11 @@ try {
   legend create MyApp  Create an app
   legend dev           Develop with Fast Refresh
   legend build         Build a standalone app
+  legend package       Sign and notarize a distribution archive
 
-Inside an app: bun dev, bun run build
+Inside an app: bun dev, bun run build, bun run package
 
-Advanced: doctor, analyze, open [app], build --dev, build --preview
+Advanced: credentials, doctor, analyze, open [app], build --dev, build --preview
 SDK maintainers: sdk pack, sdk build-go, sdk register <Go.app>
 Overrides: --project <directory>, --port <number>, dev --go <Go.app>, create --packages <manifest>`);
   } else switch (command) {
@@ -86,6 +90,16 @@ Overrides: --project <directory>, --port <number>, dev --go <Go.app>, create --p
       await doctor(start);
       console.log("Native toolchain available.");
       break;
+    case "credentials":
+      await credentials(project(), true);
+      console.log("Signing credentials configured. Run legend package to prepare a distribution archive.");
+      break;
+    case "package": {
+      if (process.platform !== "darwin" || process.arch !== "arm64") throw new Error("Packaging currently supports Apple Silicon macOS only.");
+      const result = await packageApp(project(), { force: !!values.force, submissionId: values["submission-id"] as string | undefined });
+      if (result.pending) process.exitCode = 2;
+      break;
+    }
     case "build": {
       const mode = buildMode(values);
       const root = project();

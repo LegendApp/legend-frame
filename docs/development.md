@@ -34,6 +34,8 @@ bun run build
 
 It produces a standalone `.app` and prints its location. `legend open` opens the last standalone product without requiring its path.
 
+To prepare a signed, notarized distribution archive, run `bun run package` in a new starter, or `bunx --no-install legend package` in an existing app. First use discovers signing identities and configures a notarization Keychain profile. See [packaging](packaging.md) for setup, CI, and retry behavior.
+
 ## Prepare the local SDK (framework maintainers)
 
 This setup is done once per local SDK, rather than for every app:

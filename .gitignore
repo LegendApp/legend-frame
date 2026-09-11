@@ -2,6 +2,7 @@ node_modules/
 .DS_Store
 .legend/
 artifacts/
+dist/
 docs/evidence/
 macos/
 *.tgz

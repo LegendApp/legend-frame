@@ -292,7 +292,8 @@ async function buildUnlocked(
     path.join(destination, "Contents/Resources/legend-runtime.json"),
     result.runtime,
   );
-  // Seal the locally modified bundle. Public distribution signing is a later milestone.
+  // Local standalone outputs remain ad-hoc. `legend package` signs a separate
+  // staging copy with Developer ID for distribution.
   await run(
     root,
     ["codesign", "--force", "--deep", "--sign", "-", destination],

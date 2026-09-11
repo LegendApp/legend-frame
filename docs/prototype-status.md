@@ -23,7 +23,7 @@ The local Apple Silicon prototype is implemented and its Go → custom developme
 | Missing-tooling diagnostic | Isolated PATH test reported missing Xcode with retry guidance |
 | CLI defaults | Fresh app created without package flags and opened with `bun dev`; automatic port fallback and separate missing-Go guidance verified |
 | Custom build action | `b` reused a compatible custom binary and opened it; bare `build` reused the standalone release product |
-| Focused tests / TypeScript | 14 tests passed; typecheck passed |
+| Focused tests / TypeScript | 24 tests passed; typecheck passed |
 
 Local validation reports, production selection, clean generation hashes, and native build logs are saved in `docs/evidence/`. These generated diagnostics are not committed.
 
@@ -51,7 +51,9 @@ Artifacts are ignored by Git and can be regenerated using the development instru
 
 ## Remaining scope
 
-This is a local prototype, not the MVP or public beta. Runtime downloads/caching, public package releases, signing identities/notarization, update delivery, broader SDK APIs, and a real product-app migration remain the next milestones. Local ad-hoc signing is used for the test binaries.
+This is a local prototype, not the MVP or public beta. Runtime downloads/caching, public package releases, real Developer ID/notarization acceptance, update delivery, broader SDK APIs, and a real product-app migration remain the next milestones. Local ad-hoc signing is used for the test binaries.
+
+The `legend package` command now implements credential setup, signing, resumable notarization, stapling, and ZIP validation. Simulated end-to-end tests and real ad-hoc signature verification pass; no real Developer ID identity or notarization submission has been used. See [packaging validation limits](packaging.md#validation-status).
 
 The prototype supports static `app.json`, one JS application entry, and framework-owned module pruning. It conservatively retains third-party native packages. Dynamic app configuration, multiple window entrypoints, arbitrary runtime module lookup, and wider platform support are not claimed as implemented.
 

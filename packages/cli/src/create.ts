@@ -65,6 +65,7 @@ export async function create(root: string, archiveManifest: string) {
     scripts: {
       dev: "legend dev",
       build: "legend build",
+      package: "legend package",
       doctor: "legend doctor",
     },
     dependencies: deps,
@@ -109,7 +110,7 @@ export async function create(root: string, archiveManifest: string) {
   writeFileSync(path.join(root, "App.tsx"), starter);
   writeFileSync(
     path.join(root, ".gitignore"),
-    "node_modules/\n.legend/\nmacos/\n",
+    "node_modules/\n.legend/\nmacos/\ndist/\n",
   );
   await run(root, ["bun", "install"]);
   console.log(`Created ${root}.\n\n  cd ${JSON.stringify(root)}\n  bun dev`);

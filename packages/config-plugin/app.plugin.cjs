@@ -4,9 +4,24 @@ const {
   withAppDelegate,
   withPodfile,
   withInfoPlist,
+  withEntitlementsPlist,
 } = require("expo-desktop-config-plugins");
+const { resolveEntitlements } = require("./entitlements.cjs");
 
 module.exports = function withLegendDesktop(config) {
+  // The upstream base mod merges template entitlements into config before
+  // callbacks run. Capture the declared values before that mutation.
+  const declaredEntitlements = structuredClone(config.macos?.entitlements ?? {});
+  config = withEntitlementsPlist(config, (mod) => {
+    const selection = path.join(mod.modRequest.projectRoot, ".legend/native-selection.json");
+    const packages = fs.existsSync(selection)
+      ? JSON.parse(fs.readFileSync(selection, "utf8")).included.map((pkg) => JSON.parse(fs.readFileSync(path.join(pkg.root, "package.json"), "utf8")))
+      : [];
+    // Own the generated entitlements; the desktop template's sandbox defaults
+    // are not the framework's direct-distribution policy.
+    mod.modResults = resolveEntitlements({ macos: { entitlements: declaredEntitlements } }, packages);
+    return mod;
+  });
   config = withAppDelegate(config, (mod) => {
     // Own this adapter; application customizations belong in configuration/plugins.
     mod.modResults.contents = fs.readFileSync(

@@ -3,6 +3,16 @@ import path from "node:path";
 import { stateFile } from "./project.ts";
 
 const running = new Map<string, Set<ReturnType<typeof Bun.spawn>>>();
+const secretFlags = new Set(["--password", "--apple-id-password", "--token", "--secret", "--api-key", "-P"]);
+export function commandRedactor(argv: string[], secrets: string[] = []) {
+  const values = [...secrets];
+  for (let i = 0; i < argv.length; i++) {
+    const [flag, ...inline] = argv[i]!.split("=");
+    if (secretFlags.has(flag!)) values.push(inline.length ? inline.join("=") : argv[i + 1] ?? "");
+  }
+  const unique = [...new Set(values.filter(Boolean))].sort((a, b) => b.length - a.length);
+  return { sensitive: unique.length > 0, redact: (value: string) => unique.reduce((text, secret) => text.replaceAll(secret, "[REDACTED]"), value) };
+}
 export function cancelCommands(root: string) {
   for (const child of running.get(root) ?? []) child.kill();
 }
@@ -14,14 +24,16 @@ export async function run(
     cwd?: string;
     env?: Record<string, string>;
     capture?: boolean;
+    sensitiveValues?: string[];
   } = {},
 ) {
+  const { sensitive, redact } = commandRedactor(argv, options.sensitiveValues);
   mkdirSync(stateFile(root, "logs"), { recursive: true });
   appendFileSync(
     stateFile(root, "commands.jsonl"),
     JSON.stringify({
       time: new Date().toISOString(),
-      argv,
+      argv: argv.map(redact),
       cwd: options.cwd ?? root,
     }) + "\n",
   );
@@ -36,7 +48,7 @@ export async function run(
   let output = "";
   const log = stateFile(
     root,
-    `logs/${Date.now()}-${path.basename(argv[0]!)}.log`,
+    `logs/${Date.now()}-${crypto.randomUUID()}-${path.basename(argv[0]!)}.log`,
   );
   async function consume(
     stream: ReadableStream<Uint8Array>,
@@ -45,8 +57,10 @@ export async function run(
     for await (const chunk of stream) {
       const value = new TextDecoder().decode(chunk);
       output += value;
-      appendFileSync(log, value);
-      if (!options.capture) target.write(value);
+      if (!sensitive) {
+        appendFileSync(log, value);
+        if (!options.capture) target.write(value);
+      }
     }
   }
   await Promise.all([
@@ -54,10 +68,15 @@ export async function run(
     consume(child.stderr, process.stderr),
   ]);
   const code = await child.exited;
+  // Buffer sensitive commands so secrets split across output chunks cannot leak.
+  if (sensitive) {
+    appendFileSync(log, redact(output));
+    if (!options.capture) process.stdout.write(redact(output));
+  }
   running.get(root)!.delete(child);
   if (code)
     throw new Error(
-      `${argv.join(" ")} exited ${code}. See ${log}\n${output.slice(-1800)}`,
+      `${argv.map(redact).join(" ")} exited ${code}. See ${log}\n${redact(output).slice(-1800)}`,
     );
   return output;
 }
