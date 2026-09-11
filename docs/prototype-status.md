@@ -21,7 +21,9 @@ The local Apple Silicon prototype is implemented and its Go → custom developme
 | Actual native pruning | Menu pod and generated bindings absent; final executable contains dialog/greeting classes and no menu class |
 | Clean CNG | Two clean prebuild runs produced identical AppDelegate, Info.plist, Podfile, and Xcode-project hashes |
 | Missing-tooling diagnostic | Isolated PATH test reported missing Xcode with retry guidance |
-| Focused tests / TypeScript | 8 tests passed; typecheck passed |
+| CLI defaults | Fresh app created without package flags and opened with `bun dev`; automatic port fallback and separate missing-Go guidance verified |
+| Custom build action | `b` reused a compatible custom binary and opened it; bare `build` reused the standalone release product |
+| Focused tests / TypeScript | 14 tests passed; typecheck passed |
 
 Local validation reports, production selection, clean generation hashes, and native build logs are saved in `docs/evidence/`. These generated diagnostics are not committed.
 

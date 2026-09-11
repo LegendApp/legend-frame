@@ -3,6 +3,8 @@ import path from "node:path";
 import { binary, run, cancelCommands } from "./commands.ts";
 import { build } from "./build.ts";
 import { reload } from "./metro.ts";
+import { availablePort, findGo, readRuntime, registerRuntime } from "./local.ts";
+import { sessionStatus } from "./session-status.ts";
 import {
   dependencyStamp,
   goConfigurationIssues,
@@ -53,29 +55,28 @@ export async function launch(root: string, app: string, port?: number) {
 export async function dev(
   root: string,
   goApp: string | undefined,
-  port = 19120,
+  requestedPort?: number,
   noOpen = false,
 ) {
-  if (
-    await fetch(`http://127.0.0.1:${port}/status`).then(
-      () => true,
-      () => false,
-    )
-  )
-    throw new Error(`Port ${port} is already in use. Choose --port.`);
+  const port = await availablePort(requestedPort);
   let target: "go" | "dev" = "go";
   const settingsFile = stateFile(root, "settings.json");
   const settings = existsSync(settingsFile) ? readJson(settingsFile) : {};
   const explicitGo = !!goApp;
   goApp ??= settings.goApp;
   if (goApp) goApp = path.resolve(goApp);
+  if (explicitGo) registerRuntime(goApp!);
   if (!explicitGo && settings.target === "dev") target = "dev";
   let current: { app: string; runtime: Runtime } | undefined;
   let appProcess: ReturnType<typeof Bun.spawn> | undefined;
+  let launchedRuntime: { app: string; fingerprint: string } | undefined;
   let busy = false;
   let status = "";
+  let canBuild = false;
+  const appName = readJson(path.join(root, "app.json")).expo?.name ?? path.basename(root);
   let stamp = dependencyStamp(root);
   let restartPending = false;
+  let reopenPending = false;
   let closing = false;
   let metro: ReturnType<typeof Bun.spawn> | undefined;
   let finish!: () => void;
@@ -121,7 +122,7 @@ export async function dev(
       if (child.exitCode !== null)
         throw new Error(`Metro failed to start. See ${log}`);
       if (
-        await fetch(`http://127.0.0.1:${port}/status`).then(
+        await fetch(`http://127.0.0.1:${port}/status`, { signal: AbortSignal.timeout(1000) }).then(
           (r) => r.ok,
           () => false,
         )
@@ -138,55 +139,68 @@ export async function dev(
   async function check() {
     const native = nativePackages(root);
     current = undefined;
+    if (target === "go") {
+      if (explicitGo) {
+        const runtime = readRuntime(goApp!);
+        if (runtime?.mode === "go") current = { app: goApp!, runtime };
+      } else {
+        current = findGo(native, goApp);
+        if (current) goApp = current.app;
+      }
+    }
+    if (target === "dev" && existsSync(stateFile(root, "dev-build.json"))) {
+      const record = readJson(stateFile(root, "dev-build.json"));
+      const runtime = readRuntime(record.app);
+      if (runtime?.mode === "dev") current = { app: record.app, runtime };
+    }
+    const issues = current ? incompatible(current.runtime, native) : [];
     if (
-      target === "go" &&
-      goApp &&
-      existsSync(path.join(goApp, "Contents/Resources/legend-runtime.json"))
-    )
-      current = {
-        app: goApp,
-        runtime: readJson(
-          path.join(goApp, "Contents/Resources/legend-runtime.json"),
-        ),
-      };
-    if (target === "dev" && existsSync(stateFile(root, "dev-build.json")))
-      current = readJson(stateFile(root, "dev-build.json"));
-    const issues = current
-      ? incompatible(current.runtime, native)
-      : [`No ${target} runtime available`];
-    if (
-      current &&
-      target === "dev" &&
-      current.runtime.fingerprint !==
-        runtimeFor(root, native, "dev").fingerprint
-    )
-      issues.push("native configuration or host changed");
-    if (target === "go")
-      issues.push(
-        ...goConfigurationIssues(readJson(path.join(root, "app.json"))),
-      );
-    const next = issues.length
-      ? `Custom development build required: ${issues.join(", ")}`
-      : `${target === "go" ? "Legend Go" : "Development build"} ready`;
+      current && target === "dev" &&
+      current.runtime.fingerprint !== runtimeFor(root, native, "dev").fingerprint
+    ) issues.push("Native configuration or host changed.");
+    if (target === "go") {
+      for (let i = 0; i < issues.length; i++) {
+        const name = issues[i]!;
+        if (native.some((pkg) => pkg.name === name)) {
+          issues[i] = current?.runtime.modules[name]
+            ? `${name} has changed since this Go runtime was built.`
+            : `${name} isn’t included in Legend Go.`;
+        }
+      }
+      issues.push(...goConfigurationIssues(readJson(path.join(root, "app.json"))));
+    }
+    const view = sessionStatus(target, !!current, issues, appProcess?.exitCode === null);
+    if (view.compatible && current && appProcess?.exitCode === null &&
+      (launchedRuntime?.app !== current.app || launchedRuntime.fingerprint !== current.runtime.fingerprint)) {
+      // Discovery can find a different compatible binary after a native edit.
+      // Relaunch before allowing that new runtime selection to serve the app.
+      restartPending = true;
+      appProcess.kill();
+      await appProcess.exited;
+      appProcess = undefined;
+      reopenPending = true;
+    }
+    canBuild = view.canBuild;
+    const next = view.message;
     writeJson(stateFile(root, "session.json"), {
-      compatible: !issues.length,
+      compatible: view.compatible,
       reason: next,
       target,
       port,
     });
     // An existing HMR websocket can push code without another bundle request.
     // Stop only the process owned by this session when its native ABI is stale.
-    if (issues.length && appProcess && appProcess.exitCode === null) {
+    if (!view.compatible && appProcess && appProcess.exitCode === null) {
       appProcess.kill();
       await appProcess.exited;
     }
     if (next !== status) {
       status = next;
       console.log(
-        `\n${status}\ns  Switch/build · o  Open · r  Reload · j  Debugger · q  Quit`,
+        `\nLegend · ${appName}\n\n${status}\n\n${view.actions}`,
       );
     }
-    return !issues.length;
+    return view.compatible;
   }
   async function open() {
     if ((await check()) && current) {
@@ -196,6 +210,9 @@ export async function dev(
         await appProcess.exited;
       }
       appProcess = await launch(root, current.app, port);
+      launchedRuntime = { app: current.app, fingerprint: current.runtime.fingerprint };
+      reopenPending = false;
+      await check();
     }
   }
   function close() {
@@ -250,7 +267,7 @@ export async function dev(
       }
       const compatible = await check();
       if (restartPending && compatible) {
-        const wasOpen = appProcess?.exitCode === null;
+        const wasOpen = appProcess?.exitCode === null || reopenPending;
         await startMetro();
         // A new Metro dependency map needs a fresh app connection, not the old HMR graph.
         if (wasOpen) await open();
@@ -291,24 +308,28 @@ export async function dev(
     busy = true;
     try {
       if (key === "s") {
-        if (target === "dev" && (await check())) {
-          target = "go";
-          await open();
-        } else {
-          writeJson(stateFile(root, "session.json"), {
-            compatible: false,
-            reason: "Preparing custom development build",
-          });
-          if (appProcess && appProcess.exitCode === null) {
-            appProcess.kill();
-            await appProcess.exited;
-          }
-          await build(root, "dev");
-          if (closing) return;
-          target = "dev";
-          restartPending = true;
-          await open();
+        // Selecting a target never starts a compiler. The next prompt offers `b` if needed.
+        target = target === "dev" ? "go" : "dev";
+        if (appProcess && appProcess.exitCode === null) {
+          appProcess.kill();
+          await appProcess.exited;
         }
+        await open();
+        writeJson(settingsFile, { target, goApp });
+      } else if (key === "b" && !(await check()) && canBuild) {
+        writeJson(stateFile(root, "session.json"), {
+          compatible: false,
+          reason: "Preparing custom development build",
+        });
+        if (appProcess && appProcess.exitCode === null) {
+          appProcess.kill();
+          await appProcess.exited;
+        }
+        await build(root, "dev");
+        if (closing) return;
+        target = "dev";
+        restartPending = true;
+        await open();
         writeJson(settingsFile, { target, goApp });
       } else if (key === "o") await open();
       else if (key === "r") await reload(port);

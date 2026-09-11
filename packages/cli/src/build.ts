@@ -10,6 +10,7 @@ import {
   closeSync,
 } from "node:fs";
 import path from "node:path";
+import { registerRuntime } from "./local.ts";
 import { binary, doctor, run } from "./commands.ts";
 import {
   digest,
@@ -108,7 +109,12 @@ export async function build(
     );
   }
   try {
-    return await buildUnlocked(root, mode, force);
+    const result = await buildUnlocked(root, mode, force);
+    if (mode === "go") {
+      registerRuntime(result.app);
+      console.log("Legend Go registered. Apps will discover it automatically.");
+    }
+    return result;
   } finally {
     rmSync(lock, { force: true });
   }

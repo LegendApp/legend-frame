@@ -3,6 +3,18 @@ import path from "node:path";
 import { readJson, writeJson } from "./project.ts";
 import { run } from "./commands.ts";
 
+export async function refreshLocalPackages(root: string, manifest: string) {
+  const pkg = readJson(path.join(root, "package.json"));
+  pkg.overrides ??= {};
+  for (const [name, file] of Object.entries(readJson(manifest))) {
+    const archive = path.resolve(path.dirname(manifest), file as string);
+    pkg.overrides[name] = archive;
+    if (pkg.dependencies?.[name]) pkg.dependencies[name] = archive;
+  }
+  writeJson(path.join(root, "package.json"), pkg);
+  await run(root, ["bun", "install"]);
+}
+
 // Native versions tested with the local Go runtime. This is a compatibility
 // matrix, not the module-inclusion registry; discovery remains package-owned.
 const nativeVersions = {
@@ -52,7 +64,7 @@ export async function create(root: string, archiveManifest: string) {
     main: "index.ts",
     scripts: {
       dev: "legend dev",
-      build: "legend build --release",
+      build: "legend build",
       doctor: "legend doctor",
     },
     dependencies: deps,
@@ -100,7 +112,7 @@ export async function create(root: string, archiveManifest: string) {
     "node_modules/\n.legend/\nmacos/\n",
   );
   await run(root, ["bun", "install"]);
-  console.log(`Created ${root}. Start with bun dev --go /path/to/LegendGo.app`);
+  console.log(`Created ${root}.\n\n  cd ${JSON.stringify(root)}\n  bun dev`);
 }
 const starter = `import React, { useEffect, useState } from "react";
 import { Button, StyleSheet, Text, View } from "react-native";

@@ -1,80 +1,121 @@
 #!/usr/bin/env bun
 import path from "node:path";
-import { create } from "./create.ts";
+import { parseArgs } from "node:util";
+import { existsSync } from "node:fs";
+import { create, refreshLocalPackages } from "./create.ts";
+import { buildMode } from "./build-mode.ts";
 import { build, analyze } from "./build.ts";
 import { dev, launch } from "./dev.ts";
-import { doctor } from "./commands.ts";
+import { doctor, run } from "./commands.ts";
+import { findFramework, findProject, legendHome, packageManifest, registerRuntime } from "./local.ts";
+import { readJson, stateFile, VERSION, writeJson } from "./project.ts";
 
-const args = process.argv.slice(2);
-function option(name: string) {
-  const index = args.indexOf(name);
-  return index >= 0 ? args[index + 1] : undefined;
-}
-const root = path.resolve(option("--project") ?? process.cwd());
 try {
-  switch (args[0]) {
+  const argv = process.argv.slice(2);
+  const { positionals, values } = parseArgs({
+    args: argv,
+    allowPositionals: true,
+    options: {
+      project: { type: "string" },
+      packages: { type: "string" },
+      port: { type: "string" },
+      go: { type: argv[0] === "dev" ? "string" : "boolean" },
+      dev: { type: "boolean" },
+      release: { type: "boolean" },
+      preview: { type: "boolean" },
+      force: { type: "boolean" },
+      "no-open": { type: "boolean" },
+      help: { type: "boolean", short: "h" },
+    },
+  });
+  const projectOption = values.project as string | undefined;
+  const start = path.resolve(projectOption ?? process.cwd());
+  const project = () => findProject(start);
+  const port = values.port === undefined ? undefined : Number(values.port);
+  if (port !== undefined && (!Number.isInteger(port) || port < 1 || port > 65535)) throw new Error("Port must be an integer between 1 and 65535.");
+  const command = positionals[0];
+  if (values.help || !command) {
+    console.log(`Legend
+
+  legend create MyApp  Create an app
+  legend dev           Develop with Fast Refresh
+  legend build         Build a standalone app
+
+Inside an app: bun dev, bun run build
+
+Advanced: doctor, analyze, open [app], build --dev, build --preview
+SDK maintainers: sdk pack, sdk build-go, sdk register <Go.app>
+Overrides: --project <directory>, --port <number>, dev --go <Go.app>, create --packages <manifest>`);
+  } else switch (command) {
     case "create": {
-      if (!args[1] || !option("--packages"))
-        throw new Error(
-          "Usage: legend create <directory> --packages <local archive manifest>",
-        );
-      await create(path.resolve(args[1]), path.resolve(option("--packages")!));
+      if (!positionals[1]) throw new Error("Usage: legend create MyApp");
+      await create(path.resolve(positionals[1]), packageManifest(values.packages as string | undefined));
+      break;
+    }
+    case "sdk": {
+      switch (positionals[1]) {
+        case "pack": {
+          const framework = findFramework(start) ?? findFramework();
+          if (!framework) throw new Error("Run legend sdk pack inside the framework checkout.");
+          await run(framework, ["bun", path.join(framework, "scripts/pack.ts")]);
+          break;
+        }
+        case "register": {
+          if (!positionals[2]) throw new Error("Usage: legend sdk register <Go.app>");
+          const result = registerRuntime(positionals[2]);
+          console.log(`Registered Legend Go for SDK ${result.runtime.framework}. Apps will discover it automatically.`);
+          break;
+        }
+        case "build-go": {
+          let root: string;
+          if (projectOption) root = project();
+          else {
+            root = path.join(legendHome(), "sdk-builds", VERSION, "LegendGo");
+            const manifest = packageManifest(values.packages as string | undefined);
+            if (!existsSync(path.join(root, "package.json"))) await create(root, manifest);
+            else await refreshLocalPackages(root, manifest);
+          }
+          await build(root, "go", !!values.force);
+          break;
+        }
+        default: throw new Error("SDK commands: legend sdk pack, legend sdk build-go, legend sdk register <Go.app>");
+      }
       break;
     }
     case "doctor":
-      await doctor(root);
+      await doctor(start);
       console.log("Native toolchain available.");
       break;
-    case "build":
-      await build(
-        root,
-        args.includes("--go")
-          ? "go"
-          : args.includes("--release")
-            ? "release"
-            : args.includes("--preview")
-              ? "preview"
-              : "dev",
-        args.includes("--force"),
-      );
+    case "build": {
+      const mode = buildMode(values);
+      const root = project();
+      await build(root, mode, !!values.force);
+      if (mode === "dev") {
+        const settings = stateFile(root, "settings.json");
+        writeJson(settings, { ...(existsSync(settings) ? readJson(settings) : {}), target: "dev" });
+      }
       break;
+    }
     case "analyze": {
-      const result = await analyze(root);
-      console.log(
-        JSON.stringify(
-          {
-            included: result.included.map((p) => p.name),
-            excluded: result.excluded.map((p) => p.name),
-          },
-          null,
-          2,
-        ),
-      );
+      const result = await analyze(project());
+      console.log(JSON.stringify({ included: result.included.map((p) => p.name), excluded: result.excluded.map((p) => p.name) }, null, 2));
       break;
     }
     case "dev":
-      await dev(
-        root,
-        option("--go"),
-        Number(option("--port") ?? 19120),
-        args.includes("--no-open"),
-      );
+      await dev(project(), values.go as string | undefined, port, !!values["no-open"]);
       break;
     case "open": {
-      if (!args[1])
-        throw new Error("Usage: legend open <app> [--port <metro-port>]");
-      const app = await launch(
-        root,
-        path.resolve(args[1]),
-        option("--port") ? Number(option("--port")) : undefined,
-      );
+      // No path opens the project's last standalone build. In-session `o` opens the development runtime.
+      const root = positionals[1] ? start : project();
+      const record = stateFile(root, "release-build.json");
+      if (!positionals[1] && !existsSync(record)) throw new Error("No standalone app has been built. Run bun run build first.");
+      const product = positionals[1] ? path.resolve(positionals[1]) : readJson(record).app;
+      if (!existsSync(product)) throw new Error("The app binary is missing. Rebuild it with bun run build.");
+      const app = await launch(root, product, port);
       await app.exited;
       break;
     }
-    default:
-      console.log(
-        "Legend prototype: create, dev, build [--go|--release], analyze, doctor, open. See docs/development.md.",
-      );
+    default: throw new Error(`Unknown command: ${command}. Run legend --help.`);
   }
 } catch (error) {
   console.error(error instanceof Error ? error.message : String(error));

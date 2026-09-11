@@ -1,6 +1,7 @@
 import { mkdirSync, readFileSync, copyFileSync } from "node:fs";
 import { createHash } from "node:crypto";
 import path from "node:path";
+import { registerPackages } from "../packages/cli/src/local.ts";
 import { writeJson, readJson } from "../packages/cli/src/project.ts";
 
 const root = path.resolve(import.meta.dir, "..");
@@ -33,4 +34,5 @@ for (const dir of packages) {
   manifest[pkg.name] = immutable;
 }
 writeJson(path.join(output, "manifest.json"), manifest);
-console.log(path.join(output, "manifest.json"));
+registerPackages(path.join(output, "manifest.json"));
+console.log("Local SDK packages registered. Create an app with legend create MyApp.");
