@@ -1,4 +1,5 @@
 #!/usr/bin/env bun
+import { hostPlatform, type DesktopPlatform } from "./platform.ts";
 import path from "node:path";
 import { parseArgs } from "node:util";
 import { existsSync } from "node:fs";
@@ -20,6 +21,7 @@ try {
     allowPositionals: true,
     options: {
       project: { type: "string" },
+      platform: { type: "string" },
       packages: { type: "string" },
       port: { type: "string" },
       go: { type: argv[0] === "dev" ? "string" : "boolean" },
@@ -32,6 +34,9 @@ try {
       help: { type: "boolean", short: "h" },
     },
   });
+  if (values.platform && !["macos", "windows"].includes(values.platform)) throw new Error("Platform must be macos or windows.");
+  if (values.platform && positionals[0] !== "create" && !(positionals[0] === "sdk" && ["build-go", "pack"].includes(positionals[1] ?? ""))) throw new Error("--platform selects the create or SDK build-go target; other commands use desktop.config.json.");
+  const platform = (values.platform ?? hostPlatform()) as DesktopPlatform;
   const projectOption = values.project as string | undefined;
   const start = path.resolve(projectOption ?? process.cwd());
   const project = () => findProject(start);
@@ -41,7 +46,7 @@ try {
   if (values.help || !command) {
     console.log(`Legend
 
-  legend create MyApp  Create an app
+  legend create MyApp  Create an app (--platform macos|windows; defaults to this machine)
   legend dev           Develop with Fast Refresh
   legend build         Build a standalone app
   legend package       Sign and notarize a distribution archive
@@ -49,12 +54,13 @@ try {
 Inside an app: bun dev, bun run build, bun run package
 
 Advanced: updates init <feedURL>, credentials, doctor, analyze, open [app], build --dev, build --preview
-SDK maintainers: sdk pack, sdk build-go, sdk register <Go.app>
+Windows: dev and build --dev; production builds are not yet supported.
+SDK maintainers: sdk pack, sdk build-go [--platform windows], sdk register <runtime directory>
 Overrides: --project <directory>, --port <number>, dev --go <Go.app>, create --packages <manifest>`);
   } else switch (command) {
     case "create": {
       if (!positionals[1]) throw new Error("Usage: legend create MyApp");
-      await create(path.resolve(positionals[1]), packageManifest(values.packages as string | undefined));
+      await create(path.resolve(positionals[1]), packageManifest(values.packages as string | undefined), platform);
       break;
     }
     case "sdk": {
@@ -62,11 +68,11 @@ Overrides: --project <directory>, --port <number>, dev --go <Go.app>, create --p
         case "pack": {
           const framework = findFramework(start) ?? findFramework();
           if (!framework) throw new Error("Run legend sdk pack inside the framework checkout.");
-          await run(framework, ["bun", path.join(framework, "scripts/pack.ts")]);
+          await run(framework, ["bun", path.join(framework, "scripts/pack.ts"), ...(platform === "windows" ? ["--platform=windows"] : [])]);
           break;
         }
         case "register": {
-          if (!positionals[2]) throw new Error("Usage: legend sdk register <Go.app>");
+          if (!positionals[2]) throw new Error("Usage: legend sdk register <runtime directory>");
           const result = registerRuntime(positionals[2]);
           console.log(`Registered Legend Go for SDK ${result.runtime.framework}. Apps will discover it automatically.`);
           break;
@@ -75,15 +81,15 @@ Overrides: --project <directory>, --port <number>, dev --go <Go.app>, create --p
           let root: string;
           if (projectOption) root = project();
           else {
-            root = path.join(legendHome(), "sdk-builds", VERSION, "LegendGo");
+            root = path.join(legendHome(), "sdk-builds", VERSION, ...(platform === "windows" ? ["windows"] : []), "LegendGo");
             const manifest = packageManifest(values.packages as string | undefined);
-            if (!existsSync(path.join(root, "package.json"))) await create(root, manifest);
+            if (!existsSync(path.join(root, "package.json"))) await create(root, manifest, platform);
             else await refreshLocalPackages(root, manifest);
           }
           await build(root, "go", !!values.force);
           break;
         }
-        default: throw new Error("SDK commands: legend sdk pack, legend sdk build-go, legend sdk register <Go.app>");
+        default: throw new Error("SDK commands: legend sdk pack, legend sdk build-go, legend sdk register <runtime directory>");
       }
       break;
     }

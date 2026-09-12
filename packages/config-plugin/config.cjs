@@ -11,10 +11,12 @@ function readConfig(root) {
 }
 function toExpo(value) {
   if (!value || typeof value !== "object" || Array.isArray(value)) throw new Error("Desktop config must be an object");
-  const allowed = ["$schema", "name", "projectId", "version", "window", "macos", "scheme", "documentTypes", "menuBarOnly", "updates", "include", "signing", "helpers", "expo"];
+  const allowed = ["$schema", "name", "projectId", "version", "window", "macos", "platforms", "scheme", "documentTypes", "menuBarOnly", "updates", "include", "signing", "helpers", "expo"];
   for (const key of Object.keys(value)) if (!allowed.includes(key)) throw new Error(`Unknown desktop configuration field: ${key}`);
   for (const key of ["name", "projectId", "version"]) if (typeof value[key] !== "string" || !value[key].trim()) throw new Error(`Desktop config needs ${key}`);
-  if (!value.macos || typeof value.macos.bundleIdentifier !== "string" || !/^[A-Za-z0-9-]+(?:\.[A-Za-z0-9-]+)+$/.test(value.macos.bundleIdentifier)) throw new Error("macos.bundleIdentifier must be a reverse-DNS identifier");
+  const platforms = value.platforms ?? ["macos"];
+  if (!Array.isArray(platforms) || platforms.length !== 1 || !["macos", "windows"].includes(platforms[0])) throw new Error("platforms must select macos or windows");
+  if (platforms[0] === "macos" && (!value.macos || typeof value.macos.bundleIdentifier !== "string" || !/^[A-Za-z0-9-]+(?:\.[A-Za-z0-9-]+)+$/.test(value.macos.bundleIdentifier))) throw new Error("macos.bundleIdentifier must be a reverse-DNS identifier");
   validateWindow(value.window ?? {});
   if (value.include !== undefined && (!Array.isArray(value.include) || value.include.some(x => typeof x !== "string"))) throw new Error("include must be a list of package names");
   if (value.helpers !== undefined && (!value.helpers || typeof value.helpers !== "object" || Array.isArray(value.helpers) || Object.entries(value.helpers).some(([key, file]) => !/^[A-Za-z0-9_-]+$/.test(key) || typeof file !== "string" || file.startsWith("/")))) throw new Error("helpers must map simple names to project-relative files");
@@ -27,8 +29,8 @@ function toExpo(value) {
   const config = {
     ...backend,
     name: value.name, slug: value.name.toLowerCase().replace(/[^a-z0-9-]/g, "-"), version: value.version,
-    platforms: ["macos"], newArchEnabled: true,
-    macos: { ...value.macos, infoPlist: { CFBundleName: value.name, ...value.macos.infoPlist } },
+    platforms, newArchEnabled: true,
+    ...(value.macos ? { macos: { ...value.macos, infoPlist: { CFBundleName: value.name, ...value.macos.infoPlist } } } : {}),
     ...(value.scheme !== undefined ? { scheme: value.scheme } : {}),
     extra: { ...backend.extra, legend: extra },
     experiments: { ...backend.experiments, outOfTreePlatforms: true },

@@ -1,5 +1,5 @@
 import { packRuntimes } from "./prepare-runtimes";
-import { mkdirSync, readFileSync, copyFileSync, readdirSync } from "node:fs";
+import { mkdirSync, readFileSync, copyFileSync, readdirSync, existsSync } from "node:fs";
 import { createHash } from "node:crypto";
 import path from "node:path";
 import { registerPackages } from "../packages/cli/src/local.ts";
@@ -13,7 +13,11 @@ const packages = [
   "fixtures/native-greeting",
   "fixtures/sdk-test-driver",
 ];
-const manifest: Record<string, string> = await packRuntimes(root, output);
+const windows = process.platform === "win32" || process.argv.includes("--platform=windows");
+const savedManifest = path.join(output, "manifest.json");
+const manifest: Record<string, string> = windows
+  ? (existsSync(savedManifest) ? readJson(savedManifest) : {})
+  : await packRuntimes(root, output);
 for (const dir of packages) {
   const pkg = readJson(path.join(root, dir, "package.json"));
   const file = `${pkg.name.replace(/^@/, "").replaceAll("/", "-")}-${pkg.version}.tgz`;

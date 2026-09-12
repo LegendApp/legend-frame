@@ -5,8 +5,7 @@
   "required": [
     "name",
     "projectId",
-    "version",
-    "macos"
+    "version"
   ],
   "additionalProperties": false,
   "properties": {
@@ -183,6 +182,39 @@
     },
     "expo": {
       "type": "object"
+    },
+    "platforms": {
+      "type": "array",
+      "minItems": 1,
+      "maxItems": 1,
+      "items": {
+        "enum": [
+          "macos",
+          "windows"
+        ]
+      }
     }
-  }
+  },
+  "allOf": [
+    {
+      "if": {
+        "properties": {
+          "platforms": {
+            "const": [
+              "windows"
+            ]
+          }
+        },
+        "required": [
+          "platforms"
+        ]
+      },
+      "then": {},
+      "else": {
+        "required": [
+          "macos"
+        ]
+      }
+    }
+  ]
 }

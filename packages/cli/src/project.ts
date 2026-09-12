@@ -1,3 +1,4 @@
+import { projectPlatform, architecture, type DesktopPlatform } from "./platform.ts";
 import { resolveHelpers } from "./helpers.ts";
 import { readConfig as readAppConfig, prepareConfig, writeUpdates } from "@legend-apps/desktop-config/config.cjs";
 export { readAppConfig, prepareConfig, writeUpdates };
@@ -24,8 +25,8 @@ export type NativePackage = Package & {
 export type Runtime = {
   schema: 1;
   framework: string;
-  platform: "macos";
-  arch: "arm64";
+  platform: DesktopPlatform;
+  arch: "arm64" | "x64";
   mode: string;
   fingerprint: string;
   modules: Record<string, string>;
@@ -107,7 +108,7 @@ export function installedPackages(root: string): Package[] {
   }
   return [...found.values()].sort((a, b) => a.name.localeCompare(b.name));
 }
-export function hashFiles(root: string, entries: string[]): string {
+export function hashFiles(root: string, entries: string[], windows = false): string {
   const hash = createHash("sha256");
   function visit(relative: string) {
     const file = path.join(root, relative);
@@ -118,15 +119,15 @@ export function hashFiles(root: string, entries: string[]): string {
         a.name.localeCompare(b.name),
       )) {
         if (
-          ["node_modules", "build", ".git", "Pods"].includes(child.name) ||
-          child.isSymbolicLink()
+          ["node_modules", "build", ".git", "Pods"].includes(child.name) || child.isSymbolicLink() ||
+          (windows && (["Generated Files", "codegen", "x64", "ARM64", "Debug", "Release", ".vs", "packages", "packages.lock.json"].includes(child.name) || child.name.endsWith(".vcxproj.user") || child.name.startsWith("AutolinkedNativeModules.g.")))
         )
           continue;
         visit(path.join(relative, child.name));
       }
     } catch (error: any) {
       if (error.code !== "ENOTDIR") throw error;
-      hash.update(relative).update(readFileSync(file));
+      hash.update(relative.split(path.sep).join("/")).update(readFileSync(file));
     }
   }
   for (const entry of entries.sort()) visit(entry);
@@ -134,6 +135,7 @@ export function hashFiles(root: string, entries: string[]): string {
 }
 export function nativePackages(root: string): NativePackage[] {
   const installed = installedPackages(root);
+  if (projectPlatform(root) === "windows") return windowsNativePackages(root, installed);
   // Host/CNG code can change the native ABI without adding a TurboModule.
   // Fold it into the mandatory app module's compatibility signature for Go.
   const adapters = installed.filter(pkg => ["@legend-apps/desktop-host", "@legend-apps/desktop-config"].includes(pkg.name))
@@ -237,6 +239,7 @@ export function runtimeFor(
   packages: NativePackage[],
   mode: string,
 ): Runtime {
+  const platform = projectPlatform(root);
   const modules = Object.fromEntries(
     packages.map((p) => [p.name, p.signature]),
   );
@@ -246,6 +249,7 @@ export function runtimeFor(
         "react",
         "react-native",
         "react-native-macos",
+        "react-native-windows",
         "expo",
         "@legend-apps/desktop-host",
         "@legend-apps/desktop-config",
@@ -255,8 +259,8 @@ export function runtimeFor(
   return {
     schema: 1,
     framework: VERSION,
-    platform: "macos",
-    arch: "arm64",
+    platform,
+    arch: architecture(platform),
     mode,
     modules,
     fingerprint: digest(
@@ -276,12 +280,13 @@ export function runtimeFor(
 export function incompatible(
   runtime: Runtime,
   required: NativePackage[],
+  platform: DesktopPlatform = "macos",
 ): string[] {
   if (
     runtime.schema !== 1 ||
     runtime.framework !== VERSION ||
-    runtime.arch !== "arm64" ||
-    runtime.platform !== "macos"
+    runtime.arch !== architecture(platform) ||
+    runtime.platform !== platform
   )
     return ["framework runtime version/platform mismatch"];
   return required
@@ -345,4 +350,22 @@ export function projectEnvironment(root: string): Record<string, string> {
     LEGEND_PROJECT_NAME: typeof config.name === "string" ? config.name : path.basename(root),
     LEGEND_PROJECT_VERSION: typeof config.version === "string" ? config.version : "0.0.0",
   };
+}
+
+function windowsNativePackages(root: string, installed: Package[]): NativePackage[] {
+  const direct = readJson(path.join(root, "package.json")).dependencies ?? {};
+  const supported = (pkg: Package) => pkg.name !== "expo-desktop-template-bare-minimum" && (existsSync(path.join(pkg.root, "windows")) ||
+    ["react-native", "react-native-windows", "@legend-apps/desktop-host"].includes(pkg.name));
+  for (const pkg of installed) {
+    if (direct[pkg.name] && pkg.name !== "expo" && !supported(pkg) && (pkg.json.codegenConfig || pkg.json.legend?.nativeModules || readdirSync(pkg.root).some(name => name.endsWith(".podspec") || name === "expo-module.config.json"))) {
+      throw new Error(`${pkg.name} has no Windows implementation. Remove it from this Windows development app until it is ported.`);
+    }
+  }
+  const adapter = installed.filter(pkg => ["@legend-apps/desktop-host", "@legend-apps/desktop-config"].includes(pkg.name))
+    .map(pkg => hashFiles(pkg.root, ["package.json", "windows", ...readdirSync(pkg.root).filter(name => name.endsWith(".cjs"))], true)).join(":");
+  const versions = installed.filter(pkg => ["react", "expo", "react-native", "react-native-windows"].includes(pkg.name)).map(pkg => [pkg.name, pkg.json.version]);
+  return installed.filter(supported).map(pkg => ({ ...pkg,
+    sdk: pkg.json.legend?.sdk === true, requires: pkg.json.legend?.requires ?? [],
+    signature: digest(hashFiles(pkg.root, ["package.json", "windows", "src", "cpp", "common", "react-native.config.js"], true) + (pkg.name === "@legend-apps/desktop-host" ? adapter + JSON.stringify(versions) : "")),
+  }));
 }

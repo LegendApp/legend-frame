@@ -10,6 +10,7 @@ const { identity } = require("./identity.cjs");
 const { resolveEntitlements } = require("./entitlements.cjs");
 
 module.exports = function withLegendDesktop(config) {
+  if (config.platforms?.length === 1 && config.platforms[0] === "windows") return require("./windows.plugin.cjs")(config);
   // The upstream base mod merges template entitlements into config before
   // callbacks run. Capture the declared values before that mutation.
   const declaredEntitlements = structuredClone(config.macos?.entitlements ?? {});

@@ -1,3 +1,5 @@
+import { projectPlatform } from "./platform.ts";
+import { buildWindows } from "./windows.ts";
 import { copyHelpers } from "./helpers.ts";
 import { readAppConfig } from "./project.ts";
 import {
@@ -32,6 +34,7 @@ import {
 } from "./project.ts";
 
 export async function analyze(root: string, packages = nativePackages(root)) {
+  if (projectPlatform(root) === "windows") throw new Error("Windows production analysis is not implemented; use legend build --dev.");
   prepareConfig(root);
   const dir = stateFile(root, "analysis");
   mkdirSync(dir, { recursive: true });
@@ -151,6 +154,7 @@ async function buildUnlocked(
   mode: "go" | "dev" | "preview" | "release",
   force: boolean,
 ): Promise<{ app: string; runtime: Runtime }> {
+  if (projectPlatform(root) === "windows") return buildWindows(root, mode, force);
   prepareConfig(root);
   if (mode === "go") {
     const issues = goConfigurationIssues(readAppConfig(root));

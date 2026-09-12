@@ -2,7 +2,7 @@ export function sessionStatus(target: "go" | "dev", available: boolean, issues: 
   if (!available && target === "go" && !issues.length) return {
     compatible: false,
     canBuild: false,
-    message: "Legend Go isn’t installed for this SDK.\nAsk the SDK maintainer to run legend sdk build-go or legend sdk register <Go.app>.\nPublic runtime downloads are not available yet.",
+    message: "Legend Go isn’t installed for this SDK.\nAsk the SDK maintainer to run legend sdk build-go or legend sdk register <runtime directory>.\nPublic runtime downloads are not available yet.",
     actions: "s  Use development build · q  Quit",
   };
   if (issues.length || !available) return {

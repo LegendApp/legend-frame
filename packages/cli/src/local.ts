@@ -1,3 +1,4 @@
+import { architecture, type DesktopPlatform } from "./platform.ts";
 import { existsSync, readdirSync } from "node:fs";
 import os from "node:os";
 import path from "node:path";
@@ -31,9 +32,10 @@ export function findProject(start: string): string {
 
 export function readRuntime(app: string): Runtime | undefined {
   try {
-    const runtime = readJson(path.join(app, "Contents/Resources/legend-runtime.json"));
-    if (runtime.schema !== 1 || runtime.framework !== VERSION || runtime.platform !== "macos" || runtime.arch !== "arm64" || !runtime.modules || typeof runtime.modules !== "object" || typeof runtime.fingerprint !== "string") return undefined;
-    if (!existsSync(path.join(app, "Contents/MacOS"))) return undefined;
+    const windows = existsSync(path.join(app, "legend-runtime.json"));
+    const runtime = readJson(path.join(app, windows ? "legend-runtime.json" : "Contents/Resources/legend-runtime.json"));
+    if (runtime.schema !== 1 || runtime.framework !== VERSION || !["macos", "windows"].includes(runtime.platform) || runtime.arch !== architecture(runtime.platform) || !runtime.modules || typeof runtime.modules !== "object" || typeof runtime.fingerprint !== "string") return undefined;
+    if (!existsSync(path.join(app, windows ? "MyApp.exe" : "Contents/MacOS")) || windows !== (runtime.platform === "windows")) return undefined;
     return runtime;
   } catch { return undefined; }
 }
@@ -74,7 +76,7 @@ export function packageManifest(explicit?: string) {
   throw new Error(`No local SDK ${VERSION} is registered. Run legend sdk pack in the framework checkout. Public SDK downloads are not available yet.`);
 }
 
-export function findGo(required: NativePackage[], preferred?: string) {
+export function findGo(required: NativePackage[], preferred?: string, platform: DesktopPlatform = "macos") {
   const apps: string[] = preferred ? [path.resolve(preferred)] : [];
   const dir = path.join(legendHome(), "runtimes");
   if (existsSync(dir)) for (const file of readdirSync(dir).filter((f) => f.endsWith(".json")).sort()) {
@@ -85,9 +87,9 @@ export function findGo(required: NativePackage[], preferred?: string) {
   }
   const candidates = [...new Set(apps)].flatMap((app) => {
     const runtime = readRuntime(app);
-    return runtime?.mode === "go" ? [{ app, runtime }] : [];
+    return runtime?.mode === "go" && runtime.platform === platform ? [{ app, runtime }] : [];
   });
-  return candidates.find(({ runtime }) => incompatible(runtime, required).length === 0) ?? candidates[0];
+  return candidates.find(({ runtime }) => incompatible(runtime, required, platform).length === 0) ?? candidates[0];
 }
 
 export async function availablePort(explicit?: number): Promise<number> {

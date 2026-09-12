@@ -4,11 +4,12 @@ Legend Framework is an experimental framework for building native desktop applic
 
 Application JavaScript runs in **Hermes**. Node and Bun are development tools; neither is embedded as the application's JavaScript runtime. The UI uses React Native's native renderer.
 
-**Current scope:** macOS 14+ on Apple Silicon. The packages, CLI, and native runtime are local prototypes; public npm packages and downloadable Go releases are not available. Windows support is a separate platform effort. Intel macOS, Linux, mobile, and Mac App Store distribution are not supported by this framework's current workflow.
+**Current scope:** macOS 14+ on Apple Silicon. The packages, CLI, and native runtime are local prototypes; public npm packages and downloadable Go releases are not available. Windows x64 Go and custom development builds are integrated, with native verification still pending; see the [Windows development guide](docs/windows-slice.md). Intel macOS, Linux, mobile, and Mac App Store distribution are not supported by this framework's current workflow.
 
 ## Start here
 
 - **Build an app:** follow the [quick start](#quick-start) and [development guide](docs/development.md).
+- **Test Windows development:** use the [integrated Windows workflow](docs/windows-slice.md) and `bun run test:windows`.
 - **Use desktop APIs:** see the [SDK guide](docs/sdk.md) and [expanded API reference](docs/desktop-api-expansion.md).
 - **Understand or change the framework:** read [ARCHITECTURE.md](ARCHITECTURE.md), including its source map and implementation invariants.
 - **Work on Expo Desktop integration:** start with the [integration handoff](docs/expo-desktop-integration.md).
@@ -27,6 +28,8 @@ The CLI checks the project's native requirements against the selected runtime. O
 The development terminal explains incompatibilities and offers a build/switch action. It does not silently compile on every file change. Switching binaries or restarting Metro can reset application state.
 
 ## Quick start
+
+The steps below are for macOS; use the [Windows guide](docs/windows-slice.md) for its native prerequisites and development-only workflow.
 
 This is a **local SDK workflow**. Run the following from a clone of this repository, not from a newly created consumer app.
 
@@ -88,7 +91,36 @@ bun run package
 
 Packaging requires signing credentials and a notarization profile. It signs a staging copy, supports resuming a pending submission, and validates the final archive. It does not publish the app. Read the [packaging guide](docs/packaging.md), especially its validation status, before relying on this as a production release pipeline.
 
+## Windows development
+
+Windows uses the same CLI, starter, Go registry, native compatibility checks, and managed Metro session. The current Windows starter includes the native host; the desktop SDK feature set is being ported separately. There is no separate source kit to install.
+
+On Windows 11 x64, install the prerequisites in the [Windows guide](docs/windows-slice.md), including Visual Studio 2026 / MSVC v145 for the pinned RNW 0.81.35 template. Then run from the framework checkout:
+
+```powershell
+bun install
+bun run legend sdk pack --platform windows
+bun run legend sdk build-go --platform windows
+bun run legend create C:\dev\MyLegendApp --platform windows
+cd C:\dev\MyLegendApp
+bun run windows
+```
+
+Creation defaults to Windows on a Windows machine. `bun run windows`, `bun dev`, and `bun start` enter the normal `legend dev` session. Additional Windows native dependencies use the normal custom-build path: the session detects incompatible Go code and offers `b`, or you can run `bunx --no-install legend build --dev` explicitly. Runtime registration distinguishes Windows/x64 from macOS/arm64.
+
+For the automated Go → Fast Refresh → added native module → custom-build check, run from the framework checkout with a fresh destination:
+
+```powershell
+bun run test:windows --project C:\dev\LegendWindowsVerification
+```
+
+The verifier uses the real CLI and existing native-greeting fixture, and saves `.legend/windows-verification.json` plus `.legend/logs`. On macOS, `bun run test:windows:prepare --project /tmp/LegendWindowsCheck` checks generation and both development bundles without executing a native binary.
+
+**Native Windows verification is still pending.** Local generation/bundle checks do not prove compilation, autolinking, Hermes startup, or Fast Refresh on Windows. Windows production builds, preview builds, signing/MSIX, clean-machine runtime distribution, the full desktop SDK, and secondary JavaScript runtimes are outside this development slice. See the [Windows guide](docs/windows-slice.md) for the full setup, test, and diagnostic workflow.
+
 ## What the SDK provides
+
+The feature set below describes the macOS SDK; it is not a Windows API support matrix.
 
 Framework-owned capabilities are imported from `@legend-apps/desktop/<feature>`. Use individual entry points so production analysis can associate JavaScript imports with native modules.
 
@@ -160,11 +192,13 @@ Run framework commands from this repository; run app commands from a generated a
 | Framework | `bun run legend sdk pack` | Pack and register local SDK archives |
 | Framework | `bun run legend sdk build-go` | Build/register the generic runtime |
 | Framework | `bun run legend create <directory>` | Create a consumer from the packaged starter |
-| App | `bun run macos` / `bun dev` / `bun start` | Managed development session |
+| App | `bun run macos` / `bun run windows` / `bun dev` / `bun start` | Managed development session for the project target |
 | App | `bunx --no-install legend build --dev` | Build an app-specific development runtime |
-| App | `bunx --no-install legend analyze` | Explain production native module selection |
-| App | `bun run build` | Build a standalone Release app |
-| App | `bun run package` | Prepare a signed, notarized distribution archive |
+| Framework | `bun run test:windows` | Verify the integrated Windows native development path |
+| Framework | `bun run test:windows:prepare` | Check Windows generation and development bundles without native execution |
+| App | `bunx --no-install legend analyze` | Explain macOS production native module selection |
+| App | `bun run build` | Build a standalone macOS Release app |
+| App | `bun run package` | Prepare a signed, notarized macOS distribution archive |
 | App | `bun run doctor` | Diagnose native build prerequisites |
 
 For framework changes, begin with the checks relevant to the change:
@@ -197,6 +231,7 @@ The macOS Go → custom runtime → reduced standalone workflow has recorded nat
 | [Desktop expansion validation](docs/desktop-expansion-validation.md) | Expanded APIs, native pruning, and interactive acceptance limits |
 | [Integration validation](docs/integrations-validation.md) | Notifications, tray, updater startup and signing tooling |
 | [Runtimes validation](docs/runtimes-validation.md) | Direct upstream imports, worker behavior, reload, and pruned Release builds |
+| [Windows development](docs/windows-slice.md) | Integrated CLI, generation and bundle checks; native acceptance pending |
 | [Packaging status](docs/packaging.md#validation-status) | Simulated notarization pipeline versus real distribution acceptance |
 
 Public SDK/Go distribution, real Developer ID/notarization acceptance, production update installation/relaunch, and broader platform support remain separate release gates. Some OS interaction cases also remain outstanding in their feature reports. No current test result establishes full Windows support.
@@ -205,6 +240,6 @@ Public SDK/Go distribution, real Developer ID/notarization acceptance, productio
 
 The main boundaries are `packages/cli` for orchestration, `packages/config-plugin` for configuration/native generation, `packages/desktop-host` for application startup, and feature packages for desktop APIs. `packages/desktop` provides the public framework entry points. `scripts`, `fixtures`, and `examples` provide packaging and validation workflows.
 
-[ARCHITECTURE.md](ARCHITECTURE.md) explains these boundaries, runtime compatibility, production pruning, generated artifacts, and where to change code. It also describes the work required for Windows beyond module ports. The [Expo Desktop handoff](docs/expo-desktop-integration.md) separates integration available today from the proposed upstream `--binary` launch contract.
+[ARCHITECTURE.md](ARCHITECTURE.md) explains these boundaries, runtime compatibility, production pruning, generated artifacts, and where to change code. It also documents the integrated Windows adapter and the work remaining beyond the development slice. The [Expo Desktop handoff](docs/expo-desktop-integration.md) separates integration available today from the proposed upstream `--binary` launch contract.
 
 Use the [implementation plan](docs/implementation-plan.md) for original decisions and milestones; newer feature guides and dated validation reports describe subsequent work. These documents describe an evolving source checkout, not a claim that every feature is published or production-qualified.

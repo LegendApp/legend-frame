@@ -1,3 +1,5 @@
+import { projectPlatform } from "./platform.ts";
+import { nodeCommand } from "./windows.ts";
 import { readAppConfig } from "./project.ts";
 import { existsSync, rmSync, watch, appendFileSync, mkdirSync } from "node:fs";
 import path from "node:path";
@@ -21,6 +23,10 @@ import {
 } from "./project.ts";
 
 export async function launch(root: string, app: string, port?: number) {
+  if (readRuntime(app)?.platform === "windows") {
+    if (process.platform !== "win32") throw new Error("Launch the Windows runtime on Windows.");
+    return Bun.spawn([path.join(app, "MyApp.exe")], { cwd: app, env: { ...process.env, ...projectEnvironment(root), LEGEND_METRO_PORT: String(port ?? 8081) }, stdout: "inherit", stderr: "inherit" });
+  }
   const info = await run(
     root,
     [
@@ -62,6 +68,7 @@ export async function dev(
   requestedPort?: number,
   noOpen = false,
 ) {
+  const platform = projectPlatform(root);
   const port = await availablePort(requestedPort);
   let target: "go" | "dev" = "go";
   const settingsFile = stateFile(root, "settings.json");
@@ -99,8 +106,9 @@ export async function dev(
     delete env.CI;
     mkdirSync(stateFile(root, "logs"), { recursive: true });
     const log = stateFile(root, "logs/metro.log");
+    const metroArgs = ["start", "--localhost", "--port", String(port), "--max-workers", "2"];
     const child = Bun.spawn(
-      [
+      platform === "windows" ? nodeCommand(root, "expo", "expo", metroArgs) : [
         binary(root, "expo"),
         "start",
         "--localhost",
@@ -149,7 +157,7 @@ export async function dev(
         const runtime = readRuntime(goApp!);
         if (runtime?.mode === "go") current = { app: goApp!, runtime };
       } else {
-        current = findGo(native, goApp);
+        current = findGo(native, goApp, platform);
         if (current) goApp = current.app;
       }
     }
@@ -158,7 +166,7 @@ export async function dev(
       const runtime = readRuntime(record.app);
       if (runtime?.mode === "dev") current = { app: record.app, runtime };
     }
-    const issues = current ? incompatible(current.runtime, native) : [];
+    const issues = current ? incompatible(current.runtime, native, platform) : [];
     if (
       current && target === "dev" &&
       current.runtime.fingerprint !== runtimeFor(root, native, "dev").fingerprint

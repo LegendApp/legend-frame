@@ -84,6 +84,11 @@ export function binary(root: string, name: string) {
   return path.join(root, "node_modules", ".bin", name);
 }
 export async function doctor(root: string) {
+  if (process.platform === "win32") {
+    for (const tool of ["node", "bun", "pwsh.exe", "dotnet.exe"]) if (!Bun.which(tool)) throw new Error(`Missing ${tool}; see docs/windows-slice.md.`);
+    await run(root, ["pwsh.exe", "-File", path.join(root, "node_modules/react-native-windows/Scripts/rnw-dependencies.ps1")]);
+    return;
+  }
   if (process.platform !== "darwin" || process.arch !== "arm64")
     throw new Error("The prototype supports Apple Silicon macOS only.");
   for (const tool of ["node", "bun", "pod", "xcodebuild"])

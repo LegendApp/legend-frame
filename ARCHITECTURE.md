@@ -2,7 +2,7 @@
 
 This document explains the current Legend Framework source, its ownership boundaries, and the constraints that changes must preserve. Start with [README.md](README.md) for setup and application usage. Feature guides under [docs](docs) contain API details and dated validation evidence.
 
-The implementation is a local macOS 14+ / Apple Silicon prototype. The Windows section is a development roadmap, not a description of an already integrated Windows backend. Treat original plans and older prototype reports as historical context when a newer implementation or validation report supersedes them.
+The implementation is a local macOS 14+ / Apple Silicon prototype with an integrated Windows x64 development adapter. Windows Go and custom builds use the shared framework flow, but native Windows acceptance remains pending. Production Windows builds and SDK parity are not implemented. Treat original plans and older prototype reports as historical context when a newer implementation or validation report supersedes them.
 
 ## Purpose and system boundaries
 
@@ -23,9 +23,12 @@ flowchart TD
   CLI --> Metro[Expo and Metro]
   CLI --> Check[Runtime compatibility and native selection]
   Check --> Go[Registered Legend Go]
-  Check --> Build[Expo Desktop prebuild, CocoaPods, Xcode]
-  Build --> Dev[Custom development app]
-  Build --> Release[Standalone app with embedded JavaScript]
+  Check --> Build[Expo Desktop prebuild]
+  Build --> Mac[CocoaPods and Xcode: macOS arm64]
+  Build --> Win[RNW autolinking and MSBuild: Windows x64]
+  Mac --> Dev[Custom development app]
+  Win --> Dev
+  Mac --> Release[Standalone app with embedded JavaScript]
   Metro --> Go
   Metro --> Dev
   Release --> Package[Signing, notarization, distribution ZIP]
@@ -41,9 +44,10 @@ flowchart TD
 | Development session | [packages/cli/src/dev.ts](packages/cli/src/dev.ts), [session-status.ts](packages/cli/src/session-status.ts) | Metro and app process ownership, compatibility checks, target switching, terminal actions |
 | Metro integration | [metro.cjs](packages/cli/src/metro.cjs), [metro-gate.cjs](packages/cli/src/metro-gate.cjs), [metro.ts](packages/cli/src/metro.ts) | Worker registration integration, bundle gate, reload protocol |
 | Native graph | [packages/cli/src/project.ts](packages/cli/src/project.ts) | Installed-package discovery, native signatures, compatibility, selection, runtime metadata |
+| Platform boundary | [platform.ts](packages/cli/src/platform.ts), [windows.ts](packages/cli/src/windows.ts) | Project target, Windows pins, JS tool entrypoints, native preparation and development build |
 | Build orchestration | [packages/cli/src/build.ts](packages/cli/src/build.ts) | Production analysis, generation, dependency installation, compilation, artifact metadata |
 | Configuration | [packages/config-plugin](packages/config-plugin) | Desktop config validation, generated Expo config, identity, entitlements, CNG hooks |
-| Application host | [packages/desktop-host](packages/desktop-host), [packages/desktop-app](packages/desktop-app) | AppDelegate, React startup, core app context and native lifecycle |
+| Application host | [packages/desktop-host](packages/desktop-host), [packages/desktop-app](packages/desktop-app) | macOS AppDelegate and core lifecycle; Windows host hooks in `desktop-host/windows` |
 | SDK facade | [packages/desktop/package.json](packages/desktop/package.json) | Public subpath exports for framework-owned APIs |
 | Feature implementations | Other directories under [packages](packages) | TypeScript API, native source, codegen, native dependency metadata |
 | Packaging | [package.ts](packages/cli/src/package.ts), [signing.ts](packages/cli/src/signing.ts), [credentials.ts](packages/cli/src/credentials.ts), [updates.ts](packages/cli/src/updates.ts) | Release staging, credential selection, signing, resumable notarization, updater feed integration |
@@ -62,7 +66,9 @@ The current distribution mechanism is local tarballs. `scripts/pack.ts` writes a
 
 `~/.legend` is the default global registry; `LEGEND_HOME` overrides it. SDK records are versioned. Runtime registration records a path rather than copying an application. The managed Go build project is created under the Legend home unless a project is supplied explicitly. App-local `.legend` data and the global Legend home are different scopes.
 
-The starter dependency matrix and `scripts/prepare-runtimes.ts` are the authoritative pins for this workflow. Notable current versions include Expo Desktop beta.5, Expo 54.0.37, React Native 0.81.6, and React Native macOS 0.81.7. Updating a package is a compatibility change, not just a package-manager operation; validate the resulting native binary and external consumer together.
+The starter dependency matrix, Windows additions in `packages/cli/src/windows.ts`, and `scripts/prepare-runtimes.ts` are the authoritative pins for their respective targets. Notable current versions include Expo Desktop beta.5, Expo 54.0.37, React Native 0.81.6, React Native macOS 0.81.7, and React Native Windows 0.81.35. Updating a package is a compatibility change, not just a package-manager operation; validate the resulting native binary and external consumer together.
+
+`legend create --platform windows` uses the same packaged starter machinery, selecting a minimal Windows app and dependency set. It records the target in app configuration, adds the Windows script, and omits unported SDK features and secondary runtimes. Native fixture sources are packed with the existing `@legend-apps/native-greeting` package. Windows SDK packing does not prepare the macOS Runtimes patch, and preserves any existing archive entry for it.
 
 Direct `expo-desktop create-app --template` consumption and public runtime acquisition are not established by the local template extraction. See the [integration handoff](docs/expo-desktop-integration.md).
 
@@ -99,7 +105,7 @@ App/window close guards, incoming launch events, and single-instance forwarding 
 
 `legend dev` owns an Expo/Metro child process and the application process it launches. It selects an available port, binds development to localhost, and records the active target/status. It can discover registered Go binaries or reuse a recorded custom build; the selected target is remembered per project.
 
-Each binary embeds `legend-runtime.json`. The current schema contains the framework version, platform, architecture, mode, native package signatures, and a build fingerprint. Runtime discovery also validates the expected application layout. Today those checks explicitly target macOS/arm64.
+Each binary embeds `legend-runtime.json`. The current schema contains the framework version, platform, architecture, mode, native package signatures, and a build fingerprint. Runtime discovery also validates the expected application layout. The supported layouts are macOS/arm64 (`Contents/Resources/legend-runtime.json` inside a `.app`) and Windows/x64 (`legend-runtime.json` alongside `MyApp.exe` and its DLLs). Go discovery filters by platform before checking module signatures; it must never select a macOS binary for a Windows project.
 
 Native signatures include package metadata, native sources/specs, relevant configuration, and host integration. The build fingerprint additionally includes pinned framework/runtime versions, app configuration, and helper inputs. Matching a semver range is not sufficient proof of native compatibility.
 
@@ -117,15 +123,21 @@ A user-selected build action performs native work. Dependency watcher events do 
 
 The macOS launcher supplies both `LEGEND_BUNDLE_URL` and React Native's packager location. These serve different native connections. It launches the exact executable inside the chosen `.app` to retain process ownership. Replacing this with an upstream launch command requires equivalent connection, failure, and cleanup behavior.
 
+The Windows launcher starts the exact saved `MyApp.exe` with the product directory as its working directory. `LEGEND_METRO_PORT` configures the host’s bundle connection; project identity is supplied by the same launching CLI. The Windows template keeps the native project/executable name `MyApp` while configuring display identity separately.
+
 ## Native generation and build ownership
 
-Expo Desktop prebuild expands the pinned bare-minimum template for macOS. Legend's config plugin supplies the host AppDelegate and generated identity/entitlements. CocoaPods and React Native codegen resolve the selected native dependencies; Xcode builds the resulting workspace for arm64.
+For macOS, Expo Desktop prebuild expands the pinned bare-minimum template. Legend's config plugin supplies the host AppDelegate and generated identity/entitlements. CocoaPods and React Native codegen resolve the selected native dependencies; Xcode builds the resulting workspace for arm64.
 
 The generated `macos` project is disposable. Implement durable changes in feature packages, host source, config, and config plugins. Manual edits to generated Xcode files will not survive a clean prebuild.
 
 The CLI owns its generated `react-native.config.js` selection bridge and refuses to overwrite an unrelated one. A custom configuration needs explicit composition rather than losing the selection constraints. The build also applies exclusions to Expo autolinking and removes stale generated bindings when the graph changes.
 
 Build outputs are copied to an app-local product directory, checked for required bundle contents, given runtime metadata, and ad-hoc signed for local use. Successful build records enable reuse. A per-project build lock prevents concurrent compilation from mutating the same generated graph.
+
+For Windows, `build.ts` retains the shared build lock, result records, and Go registration, then dispatches to `windows.ts`. The config plugin’s Windows branch injects `desktop-host/windows/runtime.inc` into the upstream Win32 host, embedding the same runtime metadata as the build record. RNW owns autolinking, codegen, restore, and MSBuild invocation. Windows tool commands execute the package’s JS entrypoint through Node rather than treating `.cmd` shims as executable JavaScript.
+
+Windows builds support only `go` and `dev`. The adapter removes the packaging project from the development solution and configures the executable for unpackaged Windows App SDK use. It copies the entire output directory into independent Go/dev product directories and writes the shared metadata and build record only after a successful build. Preserving DLLs is required; an executable alone is not a complete runtime. This does not establish clean-machine distribution.
 
 ## Production module selection
 
@@ -179,6 +191,8 @@ See [packaging](docs/packaging.md) and [desktop integrations](docs/desktop-integ
 | App `.legend/native-selection.json` | Selected/excluded native modules consumed by build integration |
 | App `.legend/selection-report.json` | Selection reasons and resolved production sources |
 | App `.legend/analysis/` | Bundle/source map and worker reachability analysis outputs |
+| App `.legend/windows-build-input.json` | Runtime metadata compiled into the Windows host during prebuild |
+| App `.legend/windows-verification.json` | Windows verification stages and native reports; distinguishes prepare-only runs |
 | App `.legend/native-preparation.json` | Native generation/dependency preparation fingerprint |
 | App `.legend/*-build.json` | Successful artifacts and runtime fingerprints |
 | App `.legend/commands.jsonl`, `.legend/logs/` | Invoked commands and full process diagnostics |
@@ -189,31 +203,38 @@ See [packaging](docs/packaging.md) and [desktop integrations](docs/desktop-integ
 
 For a missing runtime, inspect SDK registration and binary metadata. For an incompatibility, compare the selected runtime with the reported native signatures/configuration. For a build failure, inspect command logs and selection before changing native source. For unexpected app size, inspect selection reasons and linked native output. For a pending package, follow the recorded submission state rather than deleting it to force a retry.
 
-## Windows: work beyond module ports
+## Windows development boundary and remaining work
 
-The current primary CLI/config/host/build/package path is macOS-specific. Experimental Windows code in the checkout does not imply that `legend dev`, `legend build`, or `legend package` supports Windows. A Windows integration needs an explicit acceptance report against its exact source and dependency matrix.
+Windows support is part of the existing framework. `legend create --platform windows`, `legend sdk build-go --platform windows`, `legend dev`, and `legend build --dev` share project discovery, runtime metadata, registry, compatibility policy, Metro gating, terminal actions, and build records with macOS. There is no second session implementation or external source kit. See the [Windows guide](docs/windows-slice.md) for commands and prerequisites.
 
-The intended workflow can remain the same. The following boundaries need Windows implementations or generalization:
+The initial target is Windows 11 x64, RNW 0.81.35, New Architecture/Hermes, and the pinned Expo Desktop template. That RNW template uses MSVC v145 / Visual Studio 2026. The starter provides the native host rather than implying that the complete macOS SDK is available on Windows. One desktop target is selected per generated project.
 
-| Workstream | Required outcome |
+Windows signatures include Windows native sources/project files and host/config integration; generated build outputs and NuGet lockfiles do not invalidate the source signature. Framework/runtime version changes participate in the mandatory host signature. Directly installed native packages without a Windows implementation fail clearly. This remains a constrained development graph, not acceptance of every third-party dependency arrangement or custom native project modification.
+
+The acceptance gate for this slice is deliberately development-only:
+
+1. Create and build/register the baseline through the framework CLI.
+2. Launch it through the real `legend dev` session and verify the compiled native host identity and Hermes.
+3. Deliver a JavaScript edit through Fast Refresh.
+4. Install the existing native-greeting fixture and observe the shared session reject Go.
+5. Use the session’s normal build action, execute the added native API in the custom binary, and verify the saved Go executable was unchanged.
+
+`scripts/test-windows.ts` drives that path and writes a stage report and logs. Its `--prepare-only` mode validates project generation, development bundles, and compatibility changes without claiming native execution. Typechecking, unit tests, packed-consumer generation/bundling, and a live Windows-target Metro gate check have passed on macOS. Compilation, Windows autolinking, native launch, Hermes, and Fast Refresh still require the Windows machine; the native verifier has not yet passed there.
+
+Remaining work includes:
+
+| Area | Outstanding acceptance or implementation |
 | --- | --- |
-| Foundation | Validate an Expo Desktop/RNW/New Architecture dependency matrix, Windows toolchain, minimum OS, and initial architecture target |
-| Native host | Initialize React/Hermes, own window/React-surface lifetime, load Metro or embedded bundles, handle activation and single-instance forwarding |
-| CLI platform boundary | Select platform/architecture, discover toolchains and artifacts, launch exact binaries, manage process lifetime, handle Windows executable shims and paths |
-| Config | Define Windows app/package identity, supported window semantics, capabilities, URL/file associations, helpers, and startup behavior |
-| Native dependency graph | Discover/fingerprint Windows sources and project inputs; coordinate Windows autolinking, codegen, dependency restore, project references, and production selection |
-| Runtime distribution | Supply the appropriate executable/dependency set and metadata; run Go without a compiler/IDE on the consumer machine |
-| External dependencies | Validate the chosen Windows/New Architecture versions of Expo support, WebView, SQLite, Nitro, and Runtimes individually |
-| Application distribution | Choose an installer/package model, deploy runtime dependencies, sign artifacts, preserve app data, implement updates and uninstall behavior |
-| Validation | Windows CI plus interactive desktop tests, clean-machine Go/release tests, input/accessibility, DPI/multiple-monitor behavior, and architecture-specific artifacts |
+| Native host | Windows execution, activation/single-instance behavior, lifecycle and window-option semantics beyond the starter |
+| SDK and external libraries | Windows implementations and validation of individual APIs; separate checks for WebView, SQLite, Nitro, and Runtimes |
+| Runtime distribution | Dependency-complete downloadable clients and clean-machine launch without a compiler/IDE |
+| Production | Windows Metro reachability, reduced native graphs, embedded bundles, and standalone launch without Metro |
+| Packaging | Installer/MSIX choice, signing, runtime deployment, updates, uninstall, and data preservation |
+| Coverage | Windows CI and interactive tests, DPI/multiple monitors, accessibility/input, and a separate ARM64 matrix |
 
-A future platform adapter should handle toolchain detection, native preparation/build, artifact metadata/layout, launch, and packaging. Shared code should continue to own session policy and dependency selection. This adapter boundary is proposed; the current CLI directly calls macOS tools and uses `.app` layouts.
+Production analysis must use `platform=windows`; macOS reachability cannot justify Windows pruning. Application APIs also need explicit Windows semantics for menus, shortcuts, window coordinates, last-window closure, and unsupported macOS-only options.
 
-Windows fingerprints must include Windows native sources/project files rather than merely reuse Apple signatures. Production analysis must resolve `platform=windows`; macOS reachability is not evidence for a Windows binary. API parity also needs semantics, such as last-window closure, application menus, shortcut modifiers, coordinate systems, and unsupported platform-only window options.
-
-The first useful acceptance gate is a complete small path: Windows Hello World in Go, one native capability, install an additional native dependency, detect the incompatibility, build/switch to a custom binary, then run a reduced standalone app without Metro on a clean Windows machine. Expand the SDK after that path is proven. Windows 11 x64 is a proposed first validation target, with ARM64 requiring its own results.
-
-Coordinate Expo Desktop template generation and generic prebuilt-binary launch behavior through the [integration handoff](docs/expo-desktop-integration.md). The proposed `expo-desktop run ... --binary` contract is not assumed to exist in the pinned CLI. Windows App SDK host and deployment decisions should be checked against [Microsoft's RNW architecture guidance](https://github.com/microsoft/react-native-windows-samples/blob/main/docs/new-architecture.md) and [deployment documentation](https://learn.microsoft.com/en-us/windows/apps/windows-app-sdk/deployment-architecture) for the selected versions.
+The current adapter uses Expo Desktop prebuild and RNW tools without an upstream change. Coordinate the future generic prebuilt-binary launch contract through the [integration handoff](docs/expo-desktop-integration.md); `expo-desktop run ... --binary` is not assumed to exist in the pinned CLI. Windows App SDK deployment decisions should follow [Microsoft’s RNW architecture guidance](https://github.com/microsoft/react-native-windows-samples/blob/main/docs/new-architecture.md) and [deployment documentation](https://learn.microsoft.com/en-us/windows/apps/windows-app-sdk/deployment-architecture) for the selected versions.
 
 ## Working on this repository
 
@@ -229,7 +250,8 @@ Useful starting points:
 | Production size or native dependencies | `analyze`, `selection`, build exclusions | Selection report, generated projects/bindings, linked binary, retained API execution |
 | Runtimes integration | Metro wrapper, worker entry, source recipe/patches | Go/dev/release execution, reload cleanup, worker-only dependencies, unused-runtime pruning |
 | Packaging/updater | Packaging state machine, signing/config modules | Mocked failure/retry tests and the explicitly scoped real release acceptance |
-| New platform | Windows workstreams above and upstream template | Platform-native build, clean-machine launch, custom-build transition, standalone artifact |
+| Windows development | `platform.ts`, `windows.ts`, Windows config/host hooks, native-greeting fixture | `test:windows:prepare` locally; `test:windows` on Windows x64 |
+| Production on a new platform | Remaining platform work above and upstream template | Native production build, clean-machine launch, reduced standalone artifact |
 
 Begin with `bun run typecheck` and `bun test tests` where appropriate. Native tests need the platform toolchain and sometimes an interactive desktop. `bun run test:all` includes costly native builds; inspect its current definition before running it. A locked GUI or unavailable UI driver is a validation limitation, not a passing interactive test.
 
