@@ -1,3 +1,5 @@
+import { readConfig as readAppConfig, prepareConfig, writeUpdates } from "@legend-apps/desktop-config/config.cjs";
+export { readAppConfig, prepareConfig, writeUpdates };
 import { createHash } from "node:crypto";
 import { createRequire } from "node:module";
 import {
@@ -130,7 +132,12 @@ export function hashFiles(root: string, entries: string[]): string {
   return hash.digest("hex");
 }
 export function nativePackages(root: string): NativePackage[] {
-  return installedPackages(root)
+  const installed = installedPackages(root);
+  // Host/CNG code can change the native ABI without adding a TurboModule.
+  // Fold it into the mandatory app module's compatibility signature for Go.
+  const adapters = installed.filter(pkg => ["@legend-apps/desktop-host", "@legend-apps/desktop-config"].includes(pkg.name))
+    .map(pkg => hashFiles(pkg.root, ["package.json", "AppDelegate.mm", ...readdirSync(pkg.root).filter(name => name.endsWith(".cjs"))])).join(":");
+  return installed
     .filter(
       (pkg) =>
         pkg.json.codegenConfig ||
@@ -144,17 +151,18 @@ export function nativePackages(root: string): NativePackage[] {
       ...pkg,
       sdk: pkg.json.legend?.sdk === true,
       requires: pkg.json.legend?.requires ?? [],
-      signature: hashFiles(pkg.root, [
+      signature: (signature => pkg.name === "@legend-apps/desktop-app" ? digest(signature + adapters) : signature)(hashFiles(pkg.root, [
         "package.json",
         "ios",
         "macos",
+        "apple",
         "cpp",
         "src",
         "common",
         "expo-module.config.json",
         "react-native.config.js",
         ...readdirSync(pkg.root).filter((name) => name.endsWith(".podspec")),
-      ]),
+      ])),
     }));
 }
 export function dependencyStamp(root: string) {
@@ -165,6 +173,7 @@ export function dependencyStamp(root: string) {
     "yarn.lock",
     "pnpm-lock.yaml",
     "app.json",
+    "desktop.config.json",
     "app.config.js",
     "app.config.ts",
     "metro.config.js",
@@ -253,7 +262,7 @@ export function runtimeFor(
       JSON.stringify({
         modules,
         pins,
-        config: readJson(path.join(root, "app.json")),
+        config: readAppConfig(root),
         adapter: hashFiles(root, [
           "node_modules/@legend-apps/desktop-host",
           "node_modules/@legend-apps/desktop-config",
@@ -281,6 +290,8 @@ export function incompatible(
 export function goConfigurationIssues(config: any): string[] {
   const expo = config.expo ?? config;
   const issues: string[] = [];
+  if (expo.scheme || expo.extra?.legend?.documentTypes?.length)
+    issues.push("URL schemes and document associations require a custom runtime");
   if (expo.extra?.legend?.customRuntime)
     issues.push("app configuration requires a custom runtime");
   if (
@@ -306,4 +317,27 @@ export function goConfigurationIssues(config: any): string[] {
       "app-specific Info.plist configuration requires a custom runtime",
     );
   return issues;
+}
+
+export function validateBuildModules(mode: string, packages: NativePackage[]) {
+  if (mode === "go" && packages.some(pkg => pkg.name === "@legend-apps/native-greeting" || pkg.json.legend?.testOnly))
+    throw new Error("Build Go from the clean SDK starter, not a custom-module test fixture.");
+  if (mode === "release" && packages.some(pkg => pkg.json.legend?.testOnly))
+    throw new Error("Test-only native modules cannot be included in distribution builds.");
+}
+
+export function projectEnvironment(root: string): Record<string, string> {
+  const file = path.join(root, "app.json");
+  // Explicit `legend open /path/App.app` also works outside a project.
+  if (!existsSync(file) && !existsSync(path.join(root, "desktop.config.json"))) return {};
+  const config = readAppConfig(root).expo ?? {};
+  const projectId = config.extra?.legend?.projectId ?? config.macos?.bundleIdentifier;
+  if (typeof projectId !== "string" || !projectId.length || projectId.length > 200)
+    throw new Error("Set extra.legend.projectId to a stable project identifier before launching Go.");
+  return {
+    LEGEND_WINDOW_CONFIG: JSON.stringify(config.extra?.legend?.window ?? {}),
+    LEGEND_PROJECT_ID: projectId,
+    LEGEND_PROJECT_NAME: typeof config.name === "string" ? config.name : path.basename(root),
+    LEGEND_PROJECT_VERSION: typeof config.version === "string" ? config.version : "0.0.0",
+  };
 }

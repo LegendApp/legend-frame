@@ -1,3 +1,4 @@
+import { readAppConfig } from "./project.ts";
 import {
   cpSync,
   existsSync,
@@ -13,6 +14,7 @@ import path from "node:path";
 import { registerRuntime } from "./local.ts";
 import { binary, doctor, run } from "./commands.ts";
 import {
+  prepareConfig,
   digest,
   hashFiles,
   nativePackages,
@@ -21,11 +23,14 @@ import {
   selection,
   stateFile,
   writeJson,
+  validateBuildModules,
+  goConfigurationIssues,
   type NativePackage,
   type Runtime,
 } from "./project.ts";
 
 export async function analyze(root: string, packages = nativePackages(root)) {
+  prepareConfig(root);
   const dir = stateFile(root, "analysis");
   mkdirSync(dir, { recursive: true });
   await run(
@@ -63,7 +68,7 @@ export async function analyze(root: string, packages = nativePackages(root)) {
         used.add(pkg.name);
     }
   }
-  const config = readJson(path.join(root, "app.json"));
+  const config = readAppConfig(root);
   const result = selection(
     packages,
     used,
@@ -125,19 +130,18 @@ async function buildUnlocked(
   mode: "go" | "dev" | "preview" | "release",
   force: boolean,
 ): Promise<{ app: string; runtime: Runtime }> {
+  prepareConfig(root);
+  if (mode === "go") {
+    const issues = goConfigurationIssues(readAppConfig(root));
+    if (issues.length) throw new Error(`Build Go from a generic SDK starter: ${issues.join("; ")}`);
+  }
   await doctor(root);
   const all = nativePackages(root);
   const productionGraph = mode === "release" || mode === "preview";
   const chosen = productionGraph
     ? await analyze(root, all)
     : { included: all, excluded: [] as NativePackage[] };
-  if (
-    mode === "go" &&
-    all.some((p) => p.name === "@legend-apps/native-greeting")
-  )
-    throw new Error(
-      "Build Go from the clean SDK starter, not the custom-module fixture app.",
-    );
+  validateBuildModules(mode, chosen.included);
   const runtime = runtimeFor(root, chosen.included, mode);
   const productionHash = productionGraph
     ? hashFiles(root, [".legend/analysis/app.js"])
@@ -179,7 +183,7 @@ async function buildUnlocked(
   writeJson(path.join(root, "package.json"), pkg);
   const preparation = digest(
     JSON.stringify({
-      config: readJson(path.join(root, "app.json")),
+      config: readAppConfig(root),
       packages: chosen.included.map((p) => [
         p.name,
         hashFiles(p.root, [

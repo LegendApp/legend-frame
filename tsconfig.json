@@ -16,7 +16,10 @@
     "packages/**/*.ts",
     "fixtures/**/*.ts",
     "scripts/**/*.ts",
-    "tests/**/*.ts"
+    "tests/**/*.ts",
+    "packages/**/*.tsx",
+    "examples/**/*.ts",
+    "examples/**/*.tsx"
   ],
   "exclude": [
     "examples/camera",

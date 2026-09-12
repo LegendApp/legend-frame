@@ -1,0 +1,129 @@
+#import "RNSDKTestDriver.h"
+#import <RNDesktopApp/LegendDesktop.h>
+@interface RNSDKTestDriver ()
+@property NSArray<NSPasteboardItem *> *savedClipboard;
+@end
+static NSMenuItem *FindItem(NSMenu *menu, NSString *title) {
+  for (NSMenuItem *item in menu.itemArray) {
+    if ([item.title isEqual:title]) return item;
+    NSMenuItem *child = item.submenu ? FindItem(item.submenu, title) : nil;
+    if (child) return child;
+  }
+  return nil;
+}
+static void PostKey(NSString *key, NSUInteger flags) {
+  NSWindow *window = NSApp.keyWindow ?: NSApp.mainWindow;
+  NSEvent *event = [NSEvent keyEventWithType:NSEventTypeKeyDown location:NSZeroPoint modifierFlags:flags
+    timestamp:NSProcessInfo.processInfo.systemUptime windowNumber:window.windowNumber context:nil
+    characters:key charactersIgnoringModifiers:key isARepeat:NO keyCode:[key isEqual:@"\x1b"] ? 53 : [key isEqual:@"\r"] ? 36 : 40];
+  [NSApp postEvent:event atStart:NO];
+}
+// Calls the AppKit destination protocol on real mounted Fabric views. This fixture
+// stays outside Go and does not synthesize system input or change the clipboard.
+@interface LegendTestDragInfo : NSObject
+@property NSPasteboard *draggingPasteboard;
+@property NSPoint draggingLocation;
+@end
+@implementation LegendTestDragInfo
+@end
+static NSButton *FindButton(NSView *view, NSString *title) {
+  if ([view isKindOfClass:NSButton.class] && [((NSButton *)view).title isEqual:title]) return (NSButton *)view;
+  for (NSView *child in view.subviews) { NSButton *found = FindButton(child, title); if (found) return found; }
+  return nil;
+}
+static NSView *FindView(NSView *view, NSString *identifier) {
+  if ([view.accessibilityIdentifier isEqual:identifier]) return view;
+  for (NSView *child in view.subviews) { NSView *found = FindView(child, identifier); if (found) return found; }
+  return nil;
+}
+@interface NSView (LegendDragTest)
+- (NSView *)hitTest:(CGPoint)point withEvent:(id)event;
+- (void)draggingSession:(NSDraggingSession *)session endedAtPoint:(NSPoint)point operation:(NSDragOperation)operation;
+@end
+@implementation RNSDKTestDriver
+RCT_EXPORT_MODULE(NativeSDKTestDriver)
+- (void)findPanel:(RCTPromiseResolveBlock)resolve reject:(RCTPromiseRejectBlock)reject attempts:(int)attempts {
+  for (NSWindow *window in NSApp.windows) {
+    if ([window isKindOfClass:NSSavePanel.class] && window.visible) { [(NSSavePanel *)window cancel:nil]; resolve(@"null"); return; }
+  }
+  if (!attempts) { reject(@"E_TEST", @"No file panel appeared", nil); return; }
+  dispatch_after(dispatch_time(DISPATCH_TIME_NOW, 50 * NSEC_PER_MSEC), dispatch_get_main_queue(), ^{ [self findPanel:resolve reject:reject attempts:attempts - 1]; });
+}
+- (void)call:(NSString *)method args:(NSString *)json resolve:(RCTPromiseResolveBlock)resolve reject:(RCTPromiseRejectBlock)reject {
+  dispatch_async(dispatch_get_main_queue(), ^{
+    NSDictionary *args = LegendArgs(json);
+    if ([method isEqual:@"key"]) PostKey(args[@"key"], [args[@"modifiers"] unsignedIntegerValue]);
+    else if ([method isEqual:@"escape"]) {
+      dispatch_after(dispatch_time(DISPATCH_TIME_NOW, 300 * NSEC_PER_MSEC), dispatch_get_main_queue(), ^{ PostKey(@"\x1b", 0); resolve(@"null"); }); return;
+    }
+    else if ([method isEqual:@"menu"] || [method isEqual:@"menuState"]) {
+      NSMenuItem *item = FindItem(NSApp.mainMenu, args[@"title"]);
+      if (!item) { reject(@"E_TEST", @"Menu item not found", nil); return; }
+      if ([method isEqual:@"menuState"]) { resolve(LegendJSON(!item.enabled ? @"disabled" : item.state == NSControlStateValueOn ? @"checked" : @"normal")); return; }
+      if (!item.enabled || ![NSApp sendAction:item.action to:item.target from:item]) { reject(@"E_TEST", @"Menu action refused", nil); return; }
+    }
+    else if ([method isEqual:@"cancelPanel"]) { [self findPanel:resolve reject:reject attempts:100]; return; }
+    else if ([method isEqual:@"secondInstance"]) {
+      NSTask *task = [NSTask new]; task.executableURL = NSBundle.mainBundle.executableURL;
+      task.arguments = @[@"--legend-second-instance-probe"];
+      task.terminationHandler = ^(NSTask *completed) { resolve(LegendJSON(@(completed.terminationStatus))); };
+      NSError *error; if (![task launchAndReturnError:&error]) LegendReject(reject, error);
+      return;
+    }
+    else if ([method isEqual:@"openURLs"]) {
+      NSMutableArray *urls = [NSMutableArray new];
+      for (NSString *url in args[@"urls"]) [urls addObject:[NSURL URLWithString:url]];
+      [NSApp.delegate application:NSApp openURLs:urls];
+    }
+    else if ([method isEqual:@"dragDrop"]) {
+      NSView *source = nil, *destination = nil;
+      for (NSWindow *window in NSApp.windows) {
+        source = source ?: FindView(window.contentView, @"expansion-drag-source");
+        destination = destination ?: FindView(window.contentView, @"expansion-drop-target");
+      }
+      if (!source || !destination) { reject(@"E_TEST", @"Drag views have not mounted", nil); return; }
+      NSPoint point = NSMakePoint(NSMidX(source.bounds), NSMidY(source.bounds));
+      // Both AppKit's route and Fabric's nested-view route must select the drag handle.
+      if ([source hitTest:point withEvent:nil] != source || [source hitTest:[source convertPoint:point toView:source.superview]] != source || source.mouseDownCanMoveWindow) {
+        reject(@"E_TEST", @"Drag source does not own hit testing over its child", nil); return;
+      }
+      LegendTestDragInfo *info = [LegendTestDragInfo new];
+      info.draggingPasteboard = [NSPasteboard pasteboardWithUniqueName];
+      [info.draggingPasteboard writeObjects:@[@"Native drag regression"]];
+      info.draggingLocation = [destination convertPoint:NSMakePoint(12, 14) toView:nil];
+      NSDragOperation operation = [destination draggingEntered:(id<NSDraggingInfo>)info];
+      BOOL accepted = operation == NSDragOperationCopy && [destination performDragOperation:(id<NSDraggingInfo>)info];
+      [source draggingSession:nil endedAtPoint:NSZeroPoint operation:accepted ? NSDragOperationCopy : NSDragOperationNone];
+      [info.draggingPasteboard releaseGlobally];
+      if (!accepted) { reject(@"E_TEST", @"Drop destination refused text", nil); return; }
+    }
+    else if ([method isEqual:@"acceptMessage"]) {
+      NSWindow *sheet = nil;
+      for (NSWindow *window in NSApp.windows) if (window.sheetParent) { sheet = window; break; }
+      NSButton *button = FindButton(sheet.contentView, @"Keep");
+      if (!button) { reject(@"E_TEST", @"Message sheet button not found", nil); return; }
+      [button performClick:nil];
+    }
+    else if ([method isEqual:@"saveClipboard"]) {
+      NSMutableArray *items = [NSMutableArray new];
+      for (NSPasteboardItem *source in NSPasteboard.generalPasteboard.pasteboardItems) {
+        NSPasteboardItem *copy = [NSPasteboardItem new];
+        for (NSString *type in source.types) { NSData *data = [source dataForType:type]; if (data) [copy setData:data forType:type]; }
+        [items addObject:copy];
+      }
+      self.savedClipboard = items;
+    }
+    else if ([method isEqual:@"restoreClipboard"]) {
+      if (!self.savedClipboard) { reject(@"E_TEST", @"No clipboard snapshot", nil); return; }
+      [NSPasteboard.generalPasteboard clearContents];
+      if (self.savedClipboard.count) [NSPasteboard.generalPasteboard writeObjects:self.savedClipboard];
+      self.savedClipboard = nil;
+    }
+    else { LegendInvalid(reject, @"Unknown test driver operation"); return; }
+    resolve(@"null");
+  });
+}
+- (std::shared_ptr<facebook::react::TurboModule>)getTurboModule:(const facebook::react::ObjCTurboModule::InitParams &)params {
+  return std::make_shared<facebook::react::NativeSDKTestDriverSpecJSI>(params);
+}
+@end

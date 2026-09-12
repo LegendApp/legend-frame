@@ -1,3 +1,4 @@
+import { readAppConfig } from "./project.ts";
 import { existsSync } from "node:fs";
 import path from "node:path";
 import { createInterface } from "node:readline/promises";
@@ -32,7 +33,7 @@ async function ask(question: string) {
 export async function credentials(root: string, reset = false, execute: Runner = run): Promise<SigningCredentials> {
   const file = stateFile(root, "signing.json");
   const saved = !reset && existsSync(file) ? readJson(file) : {};
-  const config = readJson(path.join(root, "app.json")).expo?.extra?.legend?.signing?.macos ?? {};
+  const config = readAppConfig(root).expo?.extra?.legend?.signing?.macos ?? {};
   const keychain = process.env.LEGEND_SIGNING_KEYCHAIN ?? saved.keychain;
   const identity = process.env.LEGEND_DEVELOPER_ID_APPLICATION ?? config.identity ?? saved.hash;
   const teamId = process.env.LEGEND_TEAM_ID ?? config.teamId ?? saved.teamId;

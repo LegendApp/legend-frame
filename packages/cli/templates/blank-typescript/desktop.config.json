@@ -1,0 +1,13 @@
+{
+  "$schema": "./node_modules/@legend-apps/desktop-config/schema.json",
+  "name": "HelloWorld",
+  "version": "0.0.1",
+  "window": {
+    "width": 1000,
+    "height": 700,
+    "restoreFrame": true
+  },
+  "macos": {
+    "bundleIdentifier": "so.legend.prototype.helloworld"
+  }
+}

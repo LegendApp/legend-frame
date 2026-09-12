@@ -22,7 +22,7 @@ export function findFramework(start = import.meta.dir): string | undefined {
 export function findProject(start: string): string {
   let dir = path.resolve(start);
   while (true) {
-    if (existsSync(path.join(dir, "app.json")) && existsSync(path.join(dir, "package.json"))) return dir;
+    if ((existsSync(path.join(dir, "app.json")) || existsSync(path.join(dir, "desktop.config.json"))) && existsSync(path.join(dir, "package.json"))) return dir;
     const parent = path.dirname(dir);
     if (parent === dir) throw new Error("No Legend app found. Run this command inside your app, or create one with legend create MyApp.");
     dir = parent;

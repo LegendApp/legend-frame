@@ -1,3 +1,4 @@
+import { readAppConfig } from "./project.ts";
 import { existsSync, rmSync, watch, appendFileSync, mkdirSync } from "node:fs";
 import path from "node:path";
 import { binary, run, cancelCommands } from "./commands.ts";
@@ -6,11 +7,13 @@ import { reload } from "./metro.ts";
 import { availablePort, findGo, readRuntime, registerRuntime } from "./local.ts";
 import { sessionStatus } from "./session-status.ts";
 import {
+  prepareConfig,
   dependencyStamp,
   goConfigurationIssues,
   incompatible,
   nativePackages,
   readJson,
+  projectEnvironment,
   runtimeFor,
   stateFile,
   writeJson,
@@ -41,6 +44,7 @@ export async function launch(root: string, app: string, port?: number) {
       cwd: root,
       env: {
         ...process.env,
+        ...projectEnvironment(root),
         ...(port
           ? {
               LEGEND_BUNDLE_URL: `http://127.0.0.1:${port}/index.bundle?platform=macos&dev=${developmentJS}&minify=false`,
@@ -73,7 +77,7 @@ export async function dev(
   let busy = false;
   let status = "";
   let canBuild = false;
-  const appName = readJson(path.join(root, "app.json")).expo?.name ?? path.basename(root);
+  const appName = readAppConfig(root).expo?.name ?? path.basename(root);
   let stamp = dependencyStamp(root);
   let restartPending = false;
   let reopenPending = false;
@@ -84,6 +88,7 @@ export async function dev(
     finish = resolve;
   });
   async function startMetro() {
+    prepareConfig(root);
     const previous = metro;
     metro = undefined;
     if (previous && previous.exitCode === null) {
@@ -167,7 +172,7 @@ export async function dev(
             : `${name} isn’t included in Legend Go.`;
         }
       }
-      issues.push(...goConfigurationIssues(readJson(path.join(root, "app.json"))));
+      issues.push(...goConfigurationIssues(readAppConfig(root)));
     }
     const view = sessionStatus(target, !!current, issues, appProcess?.exitCode === null);
     if (view.compatible && current && appProcess?.exitCode === null &&
@@ -241,6 +246,7 @@ export async function dev(
         "pnpm-lock.yaml",
         "yarn.lock",
         "app.json",
+        "desktop.config.json",
         "metro.config.js",
       ].includes(String(filename)) ||
       closing

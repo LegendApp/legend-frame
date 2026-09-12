@@ -5,13 +5,31 @@
   "exports": {
     "./dialogs": "./dialogs.ts",
     "./menus": "./menus.ts",
-    "./package.json": "./package.json"
+    "./package.json": "./package.json",
+    "./app": "./app.ts",
+    "./windows": "./windows.ts",
+    "./files": "./files.ts",
+    "./settings": "./settings.ts",
+    "./clipboard": "./clipboard.ts",
+    "./context-menu": "./context-menu.ts",
+    "./shortcuts": "./shortcuts.ts",
+    "./links": "./links.ts",
+    "./secure-storage": "./secure-storage.ts"
   },
   "files": [
     "*.ts"
   ],
   "dependencies": {
     "@legend-apps/file-dialog": "0.1.0-prototype.0",
-    "@legend-apps/native-menu": "0.1.0-prototype.0"
+    "@legend-apps/native-menu": "0.1.0-prototype.0",
+    "@legend-apps/desktop-app": "0.1.0-prototype.0",
+    "@legend-apps/desktop-windows": "0.1.0-prototype.0",
+    "@legend-apps/file-system": "0.1.0-prototype.0",
+    "@legend-apps/settings": "0.1.0-prototype.0",
+    "@legend-apps/clipboard": "0.1.0-prototype.0",
+    "@legend-apps/context-menu": "0.1.0-prototype.0",
+    "@legend-apps/desktop-shortcuts": "0.1.0-prototype.0",
+    "@legend-apps/desktop-links": "0.1.0-prototype.0",
+    "@legend-apps/secure-storage": "0.1.0-prototype.0"
   }
 }

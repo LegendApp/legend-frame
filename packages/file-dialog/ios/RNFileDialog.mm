@@ -8,6 +8,11 @@
 #import <AppKit/AppKit.h>
 #endif
 
+@interface RNFileDialog ()
+#if TARGET_OS_OSX
+@property NSSavePanel *activePanel;
+#endif
+@end
 @implementation RNFileDialog
 
 RCT_EXPORT_MODULE(NativeFileDialog)
@@ -32,7 +37,7 @@ RCT_EXPORT_MODULE(NativeFileDialog)
 - (NSString *)jsonStringFromObject:(id)object
 {
   id value = object ?: [NSNull null];
-  NSData *data = [NSJSONSerialization dataWithJSONObject:value options:0 error:nil];
+  NSData *data = [NSJSONSerialization dataWithJSONObject:value options:NSJSONWritingFragmentsAllowed error:nil];
   return data ? [[NSString alloc] initWithData:data encoding:NSUTF8StringEncoding] : @"null";
 }
 
@@ -40,8 +45,10 @@ RCT_EXPORT_MODULE(NativeFileDialog)
 {
 #if TARGET_OS_OSX
   RCTExecuteOnMainQueue(^{
+    if (self.activePanel) { reject(@"E_BUSY", @"A file dialog is already open", nil); return; }
     NSDictionary *options = [self parseObjectJSON:optionsJson];
     NSOpenPanel *panel = [NSOpenPanel openPanel];
+    self.activePanel = panel;
     panel.canChooseFiles = options[@"canChooseFiles"] ? [options[@"canChooseFiles"] boolValue] : YES;
     panel.canChooseDirectories = options[@"canChooseDirectories"] ? [options[@"canChooseDirectories"] boolValue] : NO;
     panel.allowsMultipleSelection = options[@"allowsMultipleSelection"] ? [options[@"allowsMultipleSelection"] boolValue] : NO;
@@ -77,19 +84,13 @@ RCT_EXPORT_MODULE(NativeFileDialog)
       }
     }
 
-    NSInteger result = [panel runModal];
-    if (result != NSModalResponseOK) {
-      resolve(@"null");
-      return;
-    }
-
-    NSMutableArray<NSString *> *paths = [NSMutableArray arrayWithCapacity:panel.URLs.count];
-    for (NSURL *url in panel.URLs) {
-      if (url.path.length > 0) {
-        [paths addObject:url.path];
-      }
-    }
-    resolve([self jsonStringFromObject:paths]);
+    [panel beginWithCompletionHandler:^(NSModalResponse result) {
+      self.activePanel = nil;
+      if (result != NSModalResponseOK) { resolve(@"null"); return; }
+      NSMutableArray<NSString *> *paths = [NSMutableArray arrayWithCapacity:panel.URLs.count];
+      for (NSURL *url in panel.URLs) if (url.path.length > 0) [paths addObject:url.path];
+      resolve([self jsonStringFromObject:paths]);
+    }];
   });
 #else
   resolve(@"null");
@@ -100,8 +101,10 @@ RCT_EXPORT_MODULE(NativeFileDialog)
 {
 #if TARGET_OS_OSX
   RCTExecuteOnMainQueue(^{
+    if (self.activePanel) { reject(@"E_BUSY", @"A file dialog is already open", nil); return; }
     NSDictionary *options = [self parseObjectJSON:optionsJson];
     NSSavePanel *panel = [NSSavePanel savePanel];
+    self.activePanel = panel;
     panel.canCreateDirectories = YES;
     panel.showsTagField = NO;
 
@@ -121,6 +124,7 @@ RCT_EXPORT_MODULE(NativeFileDialog)
     }
 
     [panel beginWithCompletionHandler:^(NSModalResponse result) {
+      self.activePanel = nil;
       if (result == NSModalResponseOK && panel.URL.path.length > 0) {
         resolve([self jsonStringFromObject:panel.URL.path]);
       } else {
@@ -130,6 +134,13 @@ RCT_EXPORT_MODULE(NativeFileDialog)
   });
 #else
   resolve(@"null");
+#endif
+}
+
+- (void)invalidate
+{
+#if TARGET_OS_OSX
+  RCTExecuteOnMainQueue(^{ [self.activePanel cancel:nil]; self.activePanel = nil; });
 #endif
 }
 

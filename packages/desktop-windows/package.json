@@ -1,0 +1,43 @@
+{
+  "name": "@legend-apps/desktop-windows",
+  "version": "0.1.0-prototype.0",
+  "license": "MIT",
+  "main": "src/index.ts",
+  "react-native": "src/index.ts",
+  "files": [
+    "src",
+    "macos",
+    "*.podspec"
+  ],
+  "peerDependencies": {
+    "react": "19.1.4",
+    "react-native": "0.81.6"
+  },
+  "codegenConfig": {
+    "name": "RNDesktopWindowsSpec",
+    "type": "modules",
+    "jsSrcsDir": "src",
+    "ios": {
+      "modulesProvider": {
+        "NativeDesktopWindowManager": "RNDesktopWindows"
+      }
+    }
+  },
+  "legend": {
+    "sdk": true,
+    "nativeModules": [
+      "NativeDesktopWindowManager"
+    ],
+    "pod": "RNDesktopWindows",
+    "platforms": [
+      "macos"
+    ],
+    "requires": [
+      "@legend-apps/desktop-app"
+    ]
+  },
+  "dependencies": {
+    "@legend-apps/desktop-app": "0.1.0-prototype.0",
+    "@legend-apps/window-options": "0.1.0-prototype.0"
+  }
+}

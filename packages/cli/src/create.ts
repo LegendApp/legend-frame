@@ -1,6 +1,6 @@
 import { cpSync, existsSync, mkdirSync, renameSync } from "node:fs";
 import path from "node:path";
-import { readJson, writeJson } from "./project.ts";
+import { readJson, writeJson, prepareConfig } from "./project.ts";
 import { run } from "./commands.ts";
 
 // Resolve relative to the installed CLI so packed consumers use the same starter.
@@ -47,28 +47,12 @@ export async function create(root: string, archiveManifest: string) {
     "react-native": pkg.dependencies["react-native"],
   };
   writeJson(path.join(root, "package.json"), pkg);
-  writeJson(path.join(root, "app.json"), {
-    expo: {
-      name,
-      slug: name.toLowerCase(),
-      version: "0.0.1",
-      platforms: ["macos"],
-      newArchEnabled: true,
-      macos: {
-        bundleIdentifier: `so.legend.prototype.${name.toLowerCase()}`,
-        infoPlist: { CFBundleName: name },
-      },
-      // beta.5's template expansion asserts these even with --platform macos.
-      windows: {
-        namespace: "LegendPrototype",
-        displayName: name,
-        packageGuid: crypto.randomUUID(),
-        projectGuid: crypto.randomUUID(),
-      },
-      experiments: { outOfTreePlatforms: true },
-      plugins: ["@legend-apps/desktop-config"],
-    },
-  });
+  const config = readJson(path.join(root, "desktop.config.json"));
+  config.name = name;
+  config.projectId = crypto.randomUUID();
+  config.macos.bundleIdentifier = `so.legend.prototype.${name.toLowerCase()}`;
+  writeJson(path.join(root, "desktop.config.json"), config);
+  prepareConfig(root);
   await run(root, ["bun", "install"]);
   console.log(`Created ${root}.\n\n  cd ${JSON.stringify(root)}\n  bun run macos`);
 }

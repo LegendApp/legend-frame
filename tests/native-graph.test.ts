@@ -5,6 +5,8 @@ import path from "node:path";
 import {
   goConfigurationIssues,
   hashFiles,
+  nativePackages,
+  projectEnvironment,
   incompatible,
   selection,
   type NativePackage,
@@ -106,4 +108,31 @@ test("Go permits ordinary identity but rejects app-specific native configuration
   expect(
     goConfigurationIssues({ expo: { plugins: ["third-party-native-plugin"] } }),
   ).toHaveLength(1);
+});
+
+test("host-only and CNG-only edits invalidate the Go compatibility signature", () => {
+  const root = mkdtempSync(path.join(os.tmpdir(), "legend-host-hash-"));
+  try {
+    writeFileSync(path.join(root, "package.json"), JSON.stringify({ dependencies: { "@legend-apps/desktop-app": "1", "@legend-apps/desktop-host": "1", "@legend-apps/desktop-config": "1" } }));
+    for (const name of ["desktop-app", "desktop-host", "desktop-config"]) {
+      const dir = path.join(root, "node_modules/@legend-apps", name); mkdirSync(dir, { recursive: true });
+      writeFileSync(path.join(dir, "package.json"), JSON.stringify({ name: `@legend-apps/${name}`, version: "1", ...(name === "desktop-app" ? { legend: { nativeModules: ["NativeDesktopApp"] } } : {}) }));
+    }
+    const initial = nativePackages(root)[0]!.signature;
+    writeFileSync(path.join(root, "node_modules/@legend-apps/desktop-host/AppDelegate.mm"), "changed native host");
+    const hostChanged = nativePackages(root)[0]!.signature; expect(hostChanged).not.toBe(initial);
+    writeFileSync(path.join(root, "node_modules/@legend-apps/desktop-config/app.plugin.cjs"), "changed native config");
+    expect(nativePackages(root)[0]!.signature).not.toBe(hostChanged);
+  } finally { rmSync(root, { recursive: true, force: true }); }
+});
+
+test("Go launch identity is explicit, validated, and optional for opening a standalone binary", () => {
+  const root = mkdtempSync(path.join(os.tmpdir(), "legend-project-env-"));
+  try {
+    expect(projectEnvironment(root)).toEqual({});
+    writeFileSync(path.join(root, "app.json"), JSON.stringify({ expo: { name: "Demo", version: "2.3.4", extra: { legend: { projectId: "stable-id" } } } }));
+    expect(projectEnvironment(root)).toEqual({ LEGEND_WINDOW_CONFIG: "{}", LEGEND_PROJECT_ID: "stable-id", LEGEND_PROJECT_NAME: "Demo", LEGEND_PROJECT_VERSION: "2.3.4" });
+    writeFileSync(path.join(root, "app.json"), JSON.stringify({ expo: { extra: { legend: { projectId: {} } } } }));
+    expect(() => projectEnvironment(root)).toThrow("stable project identifier");
+  } finally { rmSync(root, { recursive: true, force: true }); }
 });

@@ -1,0 +1,42 @@
+{
+  "name": "@legend-apps/desktop-shortcuts",
+  "version": "0.1.0-prototype.0",
+  "license": "MIT",
+  "main": "src/index.ts",
+  "react-native": "src/index.ts",
+  "files": [
+    "src",
+    "macos",
+    "*.podspec"
+  ],
+  "peerDependencies": {
+    "react": "19.1.4",
+    "react-native": "0.81.6"
+  },
+  "codegenConfig": {
+    "name": "RNDesktopShortcutsSpec",
+    "type": "modules",
+    "jsSrcsDir": "src",
+    "ios": {
+      "modulesProvider": {
+        "NativeDesktopShortcuts": "RNDesktopShortcuts"
+      }
+    }
+  },
+  "legend": {
+    "sdk": true,
+    "nativeModules": [
+      "NativeDesktopShortcuts"
+    ],
+    "pod": "RNDesktopShortcuts",
+    "platforms": [
+      "macos"
+    ],
+    "requires": [
+      "@legend-apps/desktop-app"
+    ]
+  },
+  "dependencies": {
+    "@legend-apps/desktop-app": "0.1.0-prototype.0"
+  }
+}

@@ -6,6 +6,7 @@ const {
   withInfoPlist,
   withEntitlementsPlist,
 } = require("expo-desktop-config-plugins");
+const { identity } = require("./identity.cjs");
 const { resolveEntitlements } = require("./entitlements.cjs");
 
 module.exports = function withLegendDesktop(config) {
@@ -31,6 +32,7 @@ module.exports = function withLegendDesktop(config) {
     return mod;
   });
   config = withInfoPlist(config, (mod) => {
+    Object.assign(mod.modResults, identity(config));
     mod.modResults.LegendFrameworkVersion = "0.1.0-prototype.0";
     mod.modResults.NSAppTransportSecurity = { NSAllowsLocalNetworking: true };
     return mod;

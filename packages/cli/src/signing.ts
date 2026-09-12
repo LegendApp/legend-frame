@@ -1,3 +1,4 @@
+import { readAppConfig } from "./project.ts";
 import { existsSync, openSync, closeSync, readSync, readdirSync, realpathSync, lstatSync } from "node:fs";
 import path from "node:path";
 import { createRequire } from "node:module";
@@ -27,7 +28,7 @@ export function appEntitlements(root: string, modules: Record<string, string>): 
   if (selected.length !== names.length || selected.some((pkg) => pkg.signature !== modules[pkg.name])) throw new Error("Native packages changed after the release build. Rebuild before packaging.");
   // A cached release can coexist with a last-generated dev graph. Use the
   // release binary's module set, not whichever selection file was written last.
-  return resolveEntitlements(readJson(path.join(root, "app.json")), selected.map((pkg) => pkg.json));
+  return resolveEntitlements(readAppConfig(root), selected.map((pkg) => pkg.json));
 }
 
 function machOType(file: string): number | undefined {

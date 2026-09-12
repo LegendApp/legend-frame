@@ -1,18 +1,48 @@
 #import "AppDelegate.h"
+#import <RNDesktopApp/LegendDesktop.h>
 #import <React/RCTBundleURLProvider.h>
+#import <React-RCTAppDelegate/RCTRootViewFactory.h>
 #import <ReactAppDependencyProvider/RCTAppDependencyProvider.h>
+
 
 @implementation AppDelegate
 - (void)applicationDidFinishLaunching:(NSNotification *)notification
 {
+  if (!LegendAcquireInstance()) { [NSApp terminate:nil]; return; }
   self.moduleName = @"main";
   self.dependencyProvider = [RCTAppDependencyProvider new];
-  NSString *path = [[NSBundle mainBundle] pathForResource:@"legend-runtime" ofType:@"json"];
-  NSData *data = path ? [NSData dataWithContentsOfFile:path] : nil;
-  NSDictionary *runtime = data ? [NSJSONSerialization JSONObjectWithData:data options:0 error:nil] : @{};
-  self.initialProps = @{ @"runtime": runtime ?: @{},
-                        @"launchArguments": NSProcessInfo.processInfo.arguments ?: @[] };
+  self.initialProps = LegendInitialProps(@"main", @{});
   [super applicationDidFinishLaunching:notification];
+}
+- (void)loadReactNativeWindow:(NSDictionary *)launchOptions {
+  NSView *root = [self.rootViewFactory viewWithModuleName:self.moduleName initialProperties:self.initialProps launchOptions:launchOptions];
+  self.window = [[NSWindow alloc] initWithContentRect:NSMakeRect(0, 0, 1000, 700)
+    styleMask:NSWindowStyleMaskTitled | NSWindowStyleMaskClosable | NSWindowStyleMaskResizable | NSWindowStyleMaskMiniaturizable
+    backing:NSBackingStoreBuffered defer:NO];
+  self.window.releasedWhenClosed = NO;
+  self.window.identifier = @"legend.main";
+  self.window.title = LegendContext()[@"name"];
+  root.frame = NSMakeRect(0, 0, 1000, 700);
+  self.window.contentView = LegendWindowContent(root);
+  NSDictionary *options = LegendWindowConfiguration();
+  LegendApplyWindowOptions(self.window, options);
+  LegendRestoreWindow(self.window, @"main", options);
+  if (![[NSBundle.mainBundle objectForInfoDictionaryKey:@"LegendMenuBarOnly"] boolValue]) [self.window makeKeyAndOrderFront:nil];
+}
+- (NSApplicationTerminateReply)applicationShouldTerminate:(NSApplication *)sender { return LegendShouldQuit(); }
+- (BOOL)applicationShouldTerminateAfterLastWindowClosed:(NSApplication *)sender { return NO; }
+- (void)applicationDidBecomeActive:(NSNotification *)note { LegendEmit(@{ @"type": @"activate" }); }
+- (void)applicationDidResignActive:(NSNotification *)note { LegendEmit(@{ @"type": @"deactivate" }); }
+- (BOOL)applicationShouldHandleReopen:(NSApplication *)sender hasVisibleWindows:(BOOL)visible {
+  if (!visible) for (NSWindow *window in NSApp.windows) if ([window.identifier isEqual:@"legend.main"]) [window makeKeyAndOrderFront:nil];
+  LegendEmit(@{ @"type": @"reopen" }); return YES;
+}
+- (void)application:(NSApplication *)sender openURLs:(NSArray<NSURL *> *)urls { LegendOpenURLs(urls); }
+- (void)application:(NSApplication *)sender openFiles:(NSArray<NSString *> *)files {
+  NSMutableArray *urls = [NSMutableArray new];
+  for (NSString *file in files) [urls addObject:[NSURL fileURLWithPath:file]];
+  LegendOpenURLs(urls);
+  [sender replyToOpenOrPrint:NSApplicationDelegateReplySuccess];
 }
 - (NSURL *)sourceURLForBridge:(RCTBridge *)bridge { return [self bundleURL]; }
 - (NSURL *)bundleURL
@@ -28,5 +58,6 @@
   return [[NSBundle mainBundle] URLForResource:@"main" withExtension:@"jsbundle"];
 #endif
 }
+- (NSMenu *)applicationDockMenu:(NSApplication *)sender { return LegendDockMenu; }
 - (BOOL)concurrentRootEnabled { return YES; }
 @end

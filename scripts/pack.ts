@@ -1,4 +1,4 @@
-import { mkdirSync, readFileSync, copyFileSync } from "node:fs";
+import { mkdirSync, readFileSync, copyFileSync, readdirSync } from "node:fs";
 import { createHash } from "node:crypto";
 import path from "node:path";
 import { registerPackages } from "../packages/cli/src/local.ts";
@@ -8,13 +8,9 @@ const root = path.resolve(import.meta.dir, "..");
 const output = path.join(root, "artifacts/packages");
 mkdirSync(output, { recursive: true });
 const packages = [
-  "packages/file-dialog",
-  "packages/native-menu",
-  "packages/desktop-host",
-  "packages/config-plugin",
-  "packages/desktop",
-  "packages/cli",
+  ...readdirSync(path.join(root, "packages")).sort().map(name => `packages/${name}`),
   "fixtures/native-greeting",
+  "fixtures/sdk-test-driver",
 ];
 const manifest: Record<string, string> = {};
 for (const dir of packages) {

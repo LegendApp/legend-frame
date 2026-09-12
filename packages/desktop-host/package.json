@@ -4,5 +4,8 @@
   "license": "MIT",
   "files": [
     "AppDelegate.mm"
-  ]
+  ],
+  "dependencies": {
+    "@legend-apps/desktop-app": "0.1.0-prototype.0"
+  }
 }
