@@ -1,3 +1,4 @@
+import { runIntegrationChecks } from "./integration-checks";
 import * as app from "@legend-apps/desktop/app";
 import * as windows from "@legend-apps/desktop/windows";
 import * as files from "@legend-apps/desktop/files";
@@ -35,6 +36,7 @@ export async function runChecks(onResult: (result: Check) => void | Promise<void
   const driverCall = async (method: string, args: object = {}) => JSON.parse(await driver!.call(method, JSON.stringify(args)));
   await files.mkdir(root);
   try {
+    await runIntegrationChecks(check);
     await check("app: identity and runtime metadata", async () => {
       const context = await app.getAppContext();
       assert(context.projectId.length && context.name.length && context.runtime.mode, "Missing host identity");

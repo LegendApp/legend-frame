@@ -163,8 +163,12 @@ test("pending notarization resumes without resubmission and verifies the extract
     expect(artifactHash(h.source)).toBe(original);
     expect(h.state.calls.some((args) => args[0] === "spctl" && args.at(-1)!.includes("verify-archive"))).toBe(true);
     expect(existsSync(path.join(h.root, "dist/probe-1.0.0-arm64.zip"))).toBe(true);
+    const before = h.state.calls.filter(args => args[0] === "ditto").length;
     await packageApp(h.root, { waitMs: 0 }, h.dependencies);
+    expect(h.state.calls.filter(args => args[0] === "ditto")).toHaveLength(before);
     expect(h.state.submits).toBe(1);
+    writeFileSync(path.join(h.root, "dist/probe-1.0.0-arm64.zip"), "tampered");
+    await expect(packageApp(h.root, { waitMs: 0 }, h.dependencies)).rejects.toThrow("archive changed");
   } finally { h.cleanup(); }
 });
 
@@ -225,4 +229,32 @@ test("command arguments, output chunks, and error messages redact credentials", 
     expect(output).toContain("[REDACTED]");
     expect(output).not.toContain(secret);
   } finally { rmSync(root, { recursive: true, force: true }); }
+});
+
+test("feed-signing retries receive the same verified ZIP without repackaging or resubmitting", async () => {
+  const h = harness(); let attempts = 0; let hash = "";
+  try {
+    h.state.status = "Accepted";
+    const deps = { ...h.dependencies, prepareUpdate: async (_root: string, archive: string, buildVersion: string) => {
+      expect(buildVersion).toBe("1");
+      expect(h.state.calls.some(args => args[0] === "spctl" && args.at(-1)!.includes("verify-archive"))).toBe(true);
+      const next = createHash("sha256").update(readFileSync(archive)).digest("hex");
+      if (hash) expect(next).toBe(hash); hash = next;
+      if (++attempts === 1) throw new Error("Keychain not available");
+      return { feed: "appcast.xml", archive };
+    } };
+    await expect(packageApp(h.root, {}, deps)).rejects.toThrow("Keychain not available");
+    const copies = h.state.calls.filter(args => args[0] === "ditto").length;
+    const result = await packageApp(h.root, {}, deps);
+    expect(result.pending).toBe(false); expect(attempts).toBe(2);
+    expect(h.state.submits).toBe(1); expect(h.state.calls.filter(args => args[0] === "ditto")).toHaveLength(copies);
+  } finally { h.cleanup(); }
+});
+test("configured updates must survive production pruning before packaging", async () => {
+  const h = harness();
+  try {
+    const config = readJson(path.join(h.root, "app.json")); config.expo.extra = { legend: { updates: { feedURL: "https://example.com/appcast.xml" } } }; writeJson(path.join(h.root, "app.json"), config);
+    await expect(packageApp(h.root, {}, h.dependencies)).rejects.toThrow("module was pruned");
+    expect(h.state.submits).toBe(0);
+  } finally { h.cleanup(); }
 });

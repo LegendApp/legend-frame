@@ -290,6 +290,8 @@ export function incompatible(
 export function goConfigurationIssues(config: any): string[] {
   const expo = config.expo ?? config;
   const issues: string[] = [];
+  if (expo.extra?.legend?.menuBarOnly) issues.push("Menu-bar-only activation requires a custom runtime");
+  if (expo.extra?.legend?.updates) issues.push("Update feed configuration requires a custom runtime");
   if (expo.scheme || expo.extra?.legend?.documentTypes?.length)
     issues.push("URL schemes and document associations require a custom runtime");
   if (expo.extra?.legend?.customRuntime)

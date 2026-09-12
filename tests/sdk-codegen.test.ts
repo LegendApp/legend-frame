@@ -30,7 +30,7 @@ test("SDK production selection retains host and only the imported capability pod
   const result = selection(packages, new Set(["@legend-apps/clipboard"]));
   expect(result.included.map(pkg => pkg.name)).toContain("@legend-apps/desktop-app");
   expect(result.included.map(pkg => pkg.name)).toContain("@legend-apps/clipboard");
-  for (const name of ["desktop-windows", "desktop-links", "desktop-shortcuts", "file-dialog", "native-menu", "context-menu", "secure-storage", "file-system"])
+  for (const name of ["desktop-windows", "desktop-links", "desktop-shortcuts", "file-dialog", "native-menu", "context-menu", "secure-storage", "file-system", "notifications", "tray", "updates"])
     expect(result.excluded.map(pkg => pkg.name)).toContain(`@legend-apps/${name}`);
 });
 test("test-only modules cannot leak into Go or distribution binaries", () => {

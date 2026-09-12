@@ -1,4 +1,5 @@
 const { validateWindow } = require("@legend-apps/window-options");
+const { updatePlist } = require("./updates.cjs");
 function identity(config) {
   const projectId = config.extra?.legend?.projectId ?? config.macos?.bundleIdentifier;
   if (typeof projectId !== "string" || !projectId.length || projectId.length > 200) throw new Error("Set extra.legend.projectId to a stable project identifier");
@@ -10,9 +11,13 @@ function identity(config) {
     if (document.role && !["Editor", "Viewer"].includes(document.role)) throw new Error("Document role must be Editor or Viewer");
     return { CFBundleTypeName: document.name, CFBundleTypeRole: document.role ?? "Editor", LSItemContentTypes: document.contentTypes, LSHandlerRank: "Alternate" };
   });
+  if (config.extra?.legend?.menuBarOnly !== undefined && typeof config.extra.legend.menuBarOnly !== "boolean") throw new Error("menuBarOnly must be a boolean");
   return {
+    LSUIElement: config.extra?.legend?.menuBarOnly === true,
+    LegendMenuBarOnly: config.extra?.legend?.menuBarOnly === true,
     LegendProjectIdentifier: projectId,
     LegendWindowConfiguration: validateWindow(config.extra?.legend?.window ?? {}),
+    ...updatePlist(config),
     // The app may need JS to save edits before accepting a quit request.
     NSSupportsAutomaticTermination: false,
     NSSupportsSuddenTermination: false,

@@ -1,0 +1,89 @@
+import { readAppConfig, writeUpdates } from "./project.ts";
+import { createHash, createPublicKey, verify } from "node:crypto";
+import { cpSync, existsSync, mkdirSync, readFileSync, renameSync, rmSync } from "node:fs";
+import path from "node:path";
+import { createRequire } from "node:module";
+import { legendHome } from "./local.ts";
+import { run } from "./commands.ts";
+import { readJson, writeJson } from "./project.ts";
+import type { Runner } from "./credentials.ts";
+
+const { updateConfiguration } = createRequire(import.meta.url)("@legend-apps/desktop-config/updates.cjs");
+export const SPARKLE_VERSION = "2.9.6";
+const archiveHash = "52bf9e88cdd972fc0c81501377a880e90d47031bd8ca5462488f843e2609e192";
+export async function sparkleTools(root: string, execute: Runner = run) {
+  const directory = path.join(legendHome(), "tools", `sparkle-${SPARKLE_VERSION}`);
+  if (existsSync(path.join(directory, "bin/generate_appcast"))) return path.join(directory, "bin");
+  const temporary = `${directory}-${crypto.randomUUID()}`;
+  mkdirSync(temporary, { recursive: true });
+  try {
+    console.log(`Downloading Sparkle ${SPARKLE_VERSION} release tools…`);
+    const response = await fetch(`https://github.com/sparkle-project/Sparkle/releases/download/${SPARKLE_VERSION}/Sparkle-${SPARKLE_VERSION}.tar.xz`, { signal: AbortSignal.timeout(120000) });
+    if (!response.ok) throw new Error(`Sparkle tools download failed: HTTP ${response.status}`);
+    const bytes = new Uint8Array(await response.arrayBuffer());
+    if (createHash("sha256").update(bytes).digest("hex") !== archiveHash) throw new Error("Sparkle tools archive checksum mismatch");
+    const archive = path.join(temporary, "tools.tar.xz");
+    await Bun.write(archive, bytes);
+    await execute(root, ["tar", "-xJf", archive, "-C", temporary], { capture: true });
+    rmSync(archive);
+    try { renameSync(temporary, directory); } catch (error) { if (!existsSync(path.join(directory, "bin/generate_appcast"))) throw error; }
+    return path.join(directory, "bin");
+  } finally { rmSync(temporary, { recursive: true, force: true }); }
+}
+function account(expo: any) { return `legend.${expo.extra?.legend?.projectId ?? expo.macos.bundleIdentifier}`; }
+export async function initializeUpdates(root: string, feedURL: string, execute: Runner = run) {
+  const config = readAppConfig(root);
+  // Validate the URL before creating a Keychain entry. This placeholder is public.
+  updateConfiguration({ extra: { legend: { updates: { feedURL, publicKey: Buffer.alloc(32).toString("base64") } } } });
+  const bin = await sparkleTools(root, execute);
+  await execute(root, [path.join(bin, "generate_keys"), "--account", account(config.expo)], { capture: true });
+  const publicKey = (await execute(root, [path.join(bin, "generate_keys"), "--account", account(config.expo), "-p"], { capture: true })).trim();
+  updateConfiguration({ extra: { legend: { updates: { feedURL, publicKey } } } });
+  if (config.expo.extra?.legend?.updates?.publicKey && config.expo.extra.legend.updates.publicKey !== publicKey) throw new Error("This Mac's update key differs from the configured public key. Import the existing Sparkle key instead of replacing it.");
+  writeUpdates(root, { feedURL, publicKey });
+  console.log("Updates configured. The private key stays in Keychain. Import @legend-apps/desktop/updates and run legend package to generate a signed feed.");
+}
+export function verifyUpdateSignature(archive: string, signature: string, publicKey: string) {
+  const key = createPublicKey({ key: Buffer.concat([Buffer.from("302a300506032b6570032100", "hex"), Buffer.from(publicKey, "base64")]), format: "der", type: "spki" });
+  if (!/^[A-Za-z0-9+/]{86}==$/.test(signature) || !verify(null, readFileSync(archive), key, Buffer.from(signature, "base64"))) throw new Error("Update signature does not match the app's public key or archive");
+}
+type UpdateDependencies = { run: Runner; tools: typeof sparkleTools; keyFile?: string };
+export async function prepareUpdate(root: string, archive: string, buildVersion: string, dependencies: UpdateDependencies = { run, tools: sparkleTools }) {
+  const expo = readAppConfig(root).expo;
+  const updates = updateConfiguration(expo);
+  if (!updates) return undefined;
+  if (!/^[0-9]+(?:\.[0-9]+){0,2}$/.test(buildVersion)) throw new Error("Updates require a numeric macOS buildNumber, increasing for every release");
+  const directory = path.join(root, "dist/updates");
+  const recordsFile = path.join(directory, "releases.json");
+  const records = existsSync(recordsFile) ? readJson(recordsFile) : {};
+  const hash = createHash("sha256").update(readFileSync(archive)).digest("hex");
+  if (records[buildVersion] && records[buildVersion].sha256 !== hash) throw new Error(`Build ${buildVersion} was already packaged with different bytes. Increase macos.buildNumber before publishing another update.`);
+  const bin = await dependencies.tools(root, dependencies.run);
+  const keyArgs = dependencies.keyFile ? ["--ed-key-file", dependencies.keyFile] : ["--account", account(expo)];
+  const signature = (await dependencies.run(root, [path.join(bin, "sign_update"), ...keyArgs, "-p", archive], { capture: true })).trim();
+  verifyUpdateSignature(archive, signature, updates.publicKey);
+  const staging = path.join(root, ".legend", `update-feed-${crypto.randomUUID()}`);
+  mkdirSync(staging, { recursive: true });
+  try {
+    if (existsSync(directory)) cpSync(directory, staging, { recursive: true });
+    const name = `${path.basename(archive, ".zip")}-build-${buildVersion}.zip`;
+    cpSync(archive, path.join(staging, name));
+    const url = new URL(updates.feedURL);
+    const feed = path.join(staging, path.basename(url.pathname));
+    await dependencies.run(root, [path.join(bin, "generate_appcast"), ...keyArgs, "--download-url-prefix", new URL(".", url).href, "--maximum-deltas", "0", "--maximum-versions", "0", "-o", feed, staging], { capture: true });
+    if (!existsSync(feed) || !readFileSync(feed, "utf8").includes(`sparkle:edSignature="${signature}"`)) throw new Error("Generated appcast did not include the signed update archive");
+    // Verify the signed feed using the same key; Sparkle verifies it in the app.
+    await dependencies.run(root, [path.join(bin, "sign_update"), ...keyArgs, "--verify", feed], { capture: true });
+    records[buildVersion] = { sha256: hash, archive: name };
+    writeJson(path.join(staging, "releases.json"), records);
+    mkdirSync(directory, { recursive: true });
+    // Publish archives before the feed, so a feed never points at incomplete bytes.
+    cpSync(path.join(staging, name), path.join(directory, name));
+    cpSync(path.join(staging, "releases.json"), recordsFile);
+    const target = path.join(directory, path.basename(feed));
+    const temporary = `${target}.${process.pid}.tmp`;
+    cpSync(feed, temporary); renameSync(temporary, target);
+    console.log(`Signed update ready: ${target}\nUpload the ZIP and appcast to ${new URL(".", url).href}`);
+    return { feed: target, archive: path.join(directory, name) };
+  } finally { rmSync(staging, { recursive: true, force: true }); }
+}

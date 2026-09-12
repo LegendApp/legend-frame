@@ -32,6 +32,9 @@ mock.module("react-native", () => ({
     }
   },
 }));
+const notifications = await import("../packages/notifications/src/index");
+const tray = await import("../packages/tray/src/index");
+const updates = await import("../packages/updates/src/index");
 const app = await import("../packages/desktop-app/src/index");
 const windows = await import("../packages/desktop-windows/src/index");
 const files = await import("../packages/file-system/src/index");
@@ -162,4 +165,49 @@ test("menu owner ids and patch payloads survive native transport", async () => {
   expect(calls[0]?.args).toEqual(["owner", JSON.stringify(configuration)]); expect(calls.map(call => call.method)).toEqual(["configureMenus", "updateMenuItems", "clearMenus", "clearAllMenus"]);
   let received: unknown; const sub = menus.addNativeMenuActionListener(event => { received = event; }); const event = { ownerId: "owner", menuId: "file", itemId: "save" };
   emit("NativeMenu", "NativeMenuAction", event); expect(received).toEqual(event); sub.remove();
+});
+
+test("notifications validate before transport and distinguish permission reads from prompts", async () => {
+  for (const notification of [{ id: "../bad", title: "test" }, { id: "test", title: " " }, { id: "test", title: "test", delay: 0 }]) expect(() => notifications.showNotification(notification)).toThrow();
+  expect(calls).toHaveLength(0);
+  await notifications.getNotificationPermission(); await notifications.requestNotificationPermission();
+  await notifications.showNotification({ id: "test", title: "Hello", delay: 2, data: { route: "inbox" } });
+  await notifications.cancelNotification("test"); await notifications.clearNotifications();
+  expect(calls.map(call => call.method)).toEqual(["permission", "requestPermission", "show", "cancel", "clear"]);
+});
+test("notification responses deduplicate queued/live overlap and dispose", async () => {
+  const event = { type: "notificationResponse", id: "r1", notificationId: "n1", action: "open", data: {} };
+  handlers.set("NativeDesktopNotifications.responses", () => { emit("NativeDesktopApp", "desktop", event); return [event]; });
+  const results: unknown[] = []; const sub = await notifications.onNotificationResponse(event => results.push(event));
+  expect(results).toHaveLength(1); sub.remove(); emit("NativeDesktopApp", "desktop", { ...event, id: "r2" }); expect(results).toHaveLength(1);
+});
+test("failed notification subscriptions remove their native listener", async () => {
+  handlers.set("NativeDesktopNotifications.responses", () => { throw new Error("unavailable"); });
+  await expect(notifications.onNotificationResponse(() => {})).rejects.toThrow("unavailable");
+  expect(subscriptions.get("NativeDesktopApp.desktop")?.size).toBe(0);
+});
+test("tray validates duplicate menu ids and cleans failed registrations", async () => {
+  await expect(tray.createTray({ id: "x", title: "X", menu: [{ id: "a", title: "A" }, { id: "a", title: "B" }] })).rejects.toThrow("unique");
+  handlers.set("NativeDesktopTray.create", () => { throw nativeError("E_TRAY_EXISTS"); });
+  await expect(tray.createTray({ id: "x", title: "X" })).rejects.toThrow("E_TRAY_EXISTS");
+  expect(subscriptions.get("NativeDesktopApp.desktop")?.size).toBe(0);
+});
+test("tray scopes actions, serializes updates and waits before removing", async () => {
+  const actions: unknown[] = []; const item = await tray.createTray({ id: "test", symbol: "star" }, event => actions.push(event));
+  emit("NativeDesktopApp", "desktop", { type: "trayClick", trayId: "other" });
+  emit("NativeDesktopApp", "desktop", { type: "trayAction", trayId: "test", itemId: "open" }); expect(actions).toHaveLength(1);
+  await Promise.all([item.update({ title: "One" }), item.update({ title: "Two" }), item.remove()]);
+  await item.remove(); expect(calls.map(call => call.method)).toEqual(["create", "update", "update", "remove"]);
+  await expect(item.update({ title: "Late" })).rejects.toThrow("removed");
+});
+test("updates expose availability without starting and preserve native errors", async () => {
+  handlers.set("NativeDesktopUpdates.status", () => ({ available: false, reason: "go" }));
+  expect(await updates.getUpdateStatus()).toMatchObject({ available: false, reason: "go" });
+  expect(calls.map(call => call.method)).toEqual(["status"]);
+  handlers.set("NativeDesktopUpdates.check", () => { throw nativeError("E_UPDATES_UNAVAILABLE"); });
+  await expect(updates.checkForUpdates()).rejects.toThrow("E_UPDATES_UNAVAILABLE");
+  await updates.startUpdates(); await updates.setAutomaticUpdateChecks(true);
+  const events: unknown[] = []; const sub = updates.onUpdateEvent(event => events.push(event));
+  emit("NativeDesktopApp", "desktop", { type: "update", state: "available", version: "2" });
+  emit("NativeDesktopApp", "desktop", { type: "trayClick" }); expect(events).toHaveLength(1); sub.remove();
 });

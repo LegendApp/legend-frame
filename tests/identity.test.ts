@@ -24,3 +24,11 @@ test("Go allows identity, but URL and document registration needs a custom host"
   expect(goConfigurationIssues({ expo: { scheme: "demo" } })).toHaveLength(1);
   expect(goConfigurationIssues({ expo: { extra: { legend: { documentTypes: [{ name: "Text", contentTypes: ["public.text"] }] } } } })).toHaveLength(1);
 });
+
+test("menu-bar-only apps hide the Dock and require a custom runtime", () => {
+  const config = { macos: { bundleIdentifier: "test.tray" }, extra: { legend: { menuBarOnly: true } } };
+  expect(identity(config)).toMatchObject({ LSUIElement: true, LegendMenuBarOnly: true });
+  expect(identity({ ...config, extra: {} })).toMatchObject({ LSUIElement: false, LegendMenuBarOnly: false });
+  expect(goConfigurationIssues(config)).toContain("Menu-bar-only activation requires a custom runtime");
+  expect(() => identity({ ...config, extra: { legend: { menuBarOnly: "yes" } } })).toThrow("boolean");
+});

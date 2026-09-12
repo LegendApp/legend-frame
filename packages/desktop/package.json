@@ -14,7 +14,10 @@
     "./context-menu": "./context-menu.ts",
     "./shortcuts": "./shortcuts.ts",
     "./links": "./links.ts",
-    "./secure-storage": "./secure-storage.ts"
+    "./secure-storage": "./secure-storage.ts",
+    "./notifications": "./notifications.ts",
+    "./tray": "./tray.ts",
+    "./updates": "./updates.ts"
   },
   "files": [
     "*.ts"
@@ -30,6 +33,9 @@
     "@legend-apps/context-menu": "0.1.0-prototype.0",
     "@legend-apps/desktop-shortcuts": "0.1.0-prototype.0",
     "@legend-apps/desktop-links": "0.1.0-prototype.0",
-    "@legend-apps/secure-storage": "0.1.0-prototype.0"
+    "@legend-apps/secure-storage": "0.1.0-prototype.0",
+    "@legend-apps/notifications": "0.1.0-prototype.0",
+    "@legend-apps/tray": "0.1.0-prototype.0",
+    "@legend-apps/updates": "0.1.0-prototype.0"
   }
 }

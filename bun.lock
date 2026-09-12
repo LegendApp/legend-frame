@@ -90,8 +90,11 @@
         "@legend-apps/file-dialog": "0.1.0-prototype.0",
         "@legend-apps/file-system": "0.1.0-prototype.0",
         "@legend-apps/native-menu": "0.1.0-prototype.0",
+        "@legend-apps/notifications": "0.1.0-prototype.0",
         "@legend-apps/secure-storage": "0.1.0-prototype.0",
         "@legend-apps/settings": "0.1.0-prototype.0",
+        "@legend-apps/tray": "0.1.0-prototype.0",
+        "@legend-apps/updates": "0.1.0-prototype.0",
       },
     },
     "packages/desktop-app": {
@@ -170,6 +173,17 @@
         "react-native": "0.81.6",
       },
     },
+    "packages/notifications": {
+      "name": "@legend-apps/notifications",
+      "version": "0.1.0-prototype.0",
+      "dependencies": {
+        "@legend-apps/desktop-app": "0.1.0-prototype.0",
+      },
+      "peerDependencies": {
+        "react": "19.1.4",
+        "react-native": "0.81.6",
+      },
+    },
     "packages/secure-storage": {
       "name": "@legend-apps/secure-storage",
       "version": "0.1.0-prototype.0",
@@ -186,6 +200,28 @@
       "version": "0.1.0-prototype.0",
       "dependencies": {
         "@legend-apps/file-system": "0.1.0-prototype.0",
+      },
+    },
+    "packages/tray": {
+      "name": "@legend-apps/tray",
+      "version": "0.1.0-prototype.0",
+      "dependencies": {
+        "@legend-apps/desktop-app": "0.1.0-prototype.0",
+      },
+      "peerDependencies": {
+        "react": "19.1.4",
+        "react-native": "0.81.6",
+      },
+    },
+    "packages/updates": {
+      "name": "@legend-apps/updates",
+      "version": "0.1.0-prototype.0",
+      "dependencies": {
+        "@legend-apps/desktop-app": "0.1.0-prototype.0",
+      },
+      "peerDependencies": {
+        "react": "19.1.4",
+        "react-native": "0.81.6",
       },
     },
     "packages/window-options": {
@@ -338,11 +374,17 @@
 
     "@legend-apps/native-menu": ["@legend-apps/native-menu@workspace:packages/native-menu"],
 
+    "@legend-apps/notifications": ["@legend-apps/notifications@workspace:packages/notifications"],
+
     "@legend-apps/sdk-test-driver": ["@legend-apps/sdk-test-driver@workspace:fixtures/sdk-test-driver"],
 
     "@legend-apps/secure-storage": ["@legend-apps/secure-storage@workspace:packages/secure-storage"],
 
     "@legend-apps/settings": ["@legend-apps/settings@workspace:packages/settings"],
+
+    "@legend-apps/tray": ["@legend-apps/tray@workspace:packages/tray"],
+
+    "@legend-apps/updates": ["@legend-apps/updates@workspace:packages/updates"],
 
     "@legend-apps/window-options": ["@legend-apps/window-options@workspace:packages/window-options"],
 

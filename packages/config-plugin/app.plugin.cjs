@@ -32,12 +32,26 @@ module.exports = function withLegendDesktop(config) {
     return mod;
   });
   config = withInfoPlist(config, (mod) => {
-    Object.assign(mod.modResults, identity(config));
+    const generated = identity(config);
+    for (const key of ["SUFeedURL", "SUPublicEDKey", "SUEnableAutomaticChecks", "SUAutomaticallyUpdate", "SUAllowsAutomaticUpdates", "SUEnableSystemProfiling", "SURequireSignedFeed", "SUVerifyUpdateBeforeExtraction"])
+      if (!(key in generated)) delete mod.modResults[key];
+    Object.assign(mod.modResults, generated);
     mod.modResults.LegendFrameworkVersion = "0.1.0-prototype.0";
     mod.modResults.NSAppTransportSecurity = { NSAllowsLocalNetworking: true };
     return mod;
   });
   return withPodfile(config, (mod) => {
+    const selectionFile = path.join(mod.modRequest.projectRoot, ".legend/native-selection.json");
+    const included = fs.existsSync(selectionFile) ? JSON.parse(fs.readFileSync(selectionFile, "utf8")).included : [];
+    const updatePackage = included.find(pkg => pkg.name === "@legend-apps/updates");
+    // Pin the spec and archive with the SDK, avoiding a mutable CocoaPods index.
+    const sparkleMarker = "# Legend: Sparkle pod";
+    mod.modResults.contents = mod.modResults.contents.replace(/^.*# Legend: Sparkle pod\n/gm, "");
+    if (updatePackage) {
+      const spec = path.join(updatePackage.root, "Sparkle.podspec.json");
+      const rubyPath = JSON.stringify(spec).replace(/#\{/g, "\\#{");
+      mod.modResults.contents += `\npod 'Sparkle', :podspec => ${rubyPath} ${sparkleMarker}\n`;
+    }
     const marker = "# Legend: Fabric enabled";
     if (!mod.modResults.contents.includes(marker)) {
       mod.modResults.contents = `${marker}\nENV['RCT_NEW_ARCH_ENABLED'] = '1'\n${mod.modResults.contents}`;

@@ -4,6 +4,7 @@ import { parseArgs } from "node:util";
 import { existsSync } from "node:fs";
 import { create, refreshLocalPackages } from "./create.ts";
 import { buildMode } from "./build-mode.ts";
+import { initializeUpdates } from "./updates.ts";
 import { packageApp } from "./package.ts";
 import { credentials } from "./credentials.ts";
 import { build, analyze } from "./build.ts";
@@ -47,7 +48,7 @@ try {
 
 Inside an app: bun dev, bun run build, bun run package
 
-Advanced: credentials, doctor, analyze, open [app], build --dev, build --preview
+Advanced: updates init <feedURL>, credentials, doctor, analyze, open [app], build --dev, build --preview
 SDK maintainers: sdk pack, sdk build-go, sdk register <Go.app>
 Overrides: --project <directory>, --port <number>, dev --go <Go.app>, create --packages <manifest>`);
   } else switch (command) {
@@ -90,6 +91,11 @@ Overrides: --project <directory>, --port <number>, dev --go <Go.app>, create --p
       await doctor(start);
       console.log("Native toolchain available.");
       break;
+    case "updates": {
+      if (positionals[1] !== "init" || !positionals[2]) throw new Error("Usage: legend updates init https://example.com/updates/appcast.xml");
+      await initializeUpdates(project(), positionals[2]);
+      break;
+    }
     case "credentials":
       await credentials(project(), true);
       console.log("Signing credentials configured. Run legend package to prepare a distribution archive.");

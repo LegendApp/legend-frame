@@ -13,8 +13,11 @@
     "pack:local": "bun scripts/pack.ts",
     "legend": "bun packages/cli/src/index.ts",
     "test:camera": "bun scripts/test-camera.ts",
+    "test:sparkle": "bun tests/sparkle.integration.ts",
     "kitchen-sink": "bun scripts/kitchen-sink.ts",
-    "test:native": "bun scripts/test-native.ts"
+    "test:native": "bun scripts/test-native.ts",
+    "test:integrations": "bun scripts/test-integrations.ts",
+    "test:updates": "bun scripts/test-updates.ts"
   },
   "devDependencies": {
     "@types/bun": "1.3.14",

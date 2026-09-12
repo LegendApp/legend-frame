@@ -1,3 +1,5 @@
+import { readAppConfig } from "./project.ts";
+import { prepareUpdate } from "./updates.ts";
 import { createHash } from "node:crypto";
 import { cpSync, existsSync, mkdirSync, readdirSync, readFileSync, readlinkSync, lstatSync, rmSync, renameSync, openSync, closeSync, writeFileSync } from "node:fs";
 import path from "node:path";
@@ -20,8 +22,8 @@ export function artifactHash(file: string): string {
   return hash.digest("hex");
 }
 
-type PackageState = { phase: "signed" | "submitting" | "submitted" | "accepted" | "complete"; stagedHash: string; archiveHash: string; submissionId?: string; output?: string };
-type Dependencies = { run: Runner; build: typeof build; credentials: (root: string) => Promise<SigningCredentials>; wait: (ms: number) => Promise<unknown> };
+type PackageState = { phase: "signed" | "submitting" | "submitted" | "accepted" | "complete"; stagedHash: string; archiveHash: string; submissionId?: string; output?: string; outputHash?: string };
+type Dependencies = { run: Runner; build: typeof build; credentials: (root: string) => Promise<SigningCredentials>; wait: (ms: number) => Promise<unknown>; prepareUpdate?: typeof prepareUpdate };
 const defaults: Dependencies = { run, build, credentials, wait: (ms) => Bun.sleep(ms) };
 
 export async function packageApp(root: string, options: { force?: boolean; submissionId?: string; waitMs?: number } = {}, dependencies: Dependencies = defaults) {
@@ -55,7 +57,8 @@ async function packageUnlocked(root: string, options: { force?: boolean; submiss
   const identity = await deps.credentials(root);
   console.log(`Signing identity: ${identity.name}`);
   const result = await deps.build(root, "release", options.force);
-  const config = readJson(path.join(root, "app.json")).expo;
+  const config = readAppConfig(root).expo;
+  if (config.extra?.legend?.updates && !result.runtime.modules["@legend-apps/updates"]) throw new Error("Updates are configured but the module was pruned. Import @legend-apps/desktop/updates from the app entry.");
   const entitlements = distributionEntitlements(appEntitlements(root, result.runtime.modules));
   const byPath = config.extra?.legend?.signing?.macos?.entitlementsByPath ?? {};
   const info = JSON.parse(await execute(root, ["plutil", "-convert", "json", "-o", "-", path.join(result.app, "Contents/Info.plist")], { capture: true }));
@@ -85,6 +88,14 @@ async function packageUnlocked(root: string, options: { force?: boolean; submiss
     await execute(root, ["ditto", "-c", "-k", "--sequesterRsrc", "--keepParent", app, upload], { capture: true });
     state = { phase: "signed", stagedHash: artifactHash(app), archiveHash: createHash("sha256").update(readFileSync(upload)).digest("hex") };
     writeJson(statePath, state);
+  }
+  // Reuse the exact verified distribution bytes on retries, including when feed
+  // signing failed after notarization. Re-stapling could change the archive.
+  if (state.phase === "complete" && state.output && state.outputHash && existsSync(state.output)) {
+    if (createHash("sha256").update(readFileSync(state.output)).digest("hex") !== state.outputHash) throw new Error("The completed distribution archive changed. Restore it or package a new build number.");
+    const update = await (deps.prepareUpdate ?? prepareUpdate)(root, state.output, String(expected.buildVersion));
+    console.log(`Ready: ${state.output}`);
+    return { pending: false as const, output: state.output, update, submissionId: state.submissionId };
   }
   const notary = async (command: string, ...args: string[]) => JSON.parse(await execute(root, ["xcrun", "notarytool", command, ...args, ...notaryAuth(identity), "--output-format", "json"], { capture: true }));
   if (options.submissionId) {
@@ -156,7 +167,9 @@ async function packageUnlocked(root: string, options: { force?: boolean; submiss
   renameSync(temporary, output);
   state.phase = "complete";
   state.output = output;
+  state.outputHash = createHash("sha256").update(readFileSync(output)).digest("hex");
   writeJson(statePath, state);
+  const update = await (deps.prepareUpdate ?? prepareUpdate)(root, output, String(expected.buildVersion));
   console.log(`✓ Notarization ticket attached\n✓ Distribution archive verified\n\nReady: ${output}`);
-  return { pending: false as const, output, submissionId: state.submissionId };
+  return { pending: false as const, output, update, submissionId: state.submissionId };
 }
