@@ -1,0 +1,320 @@
+diff --git a/NitroImage.podspec b/NitroImage.podspec
+index 4b8f577..6aa9982 100644
+--- a/NitroImage.podspec
++++ b/NitroImage.podspec
+@@ -10,14 +10,18 @@ Pod::Spec.new do |s|
+   s.license      = package["license"]
+   s.authors      = package["author"]
+ 
+-  s.platforms    = { :ios => min_ios_version_supported, :visionos => 1.0 }
++  s.platforms    = { :ios => min_ios_version_supported, :visionos => 1.0, :osx => "14.0" }
++  s.osx.prefix_header_contents = "#include <CoreGraphics/CoreGraphics.h>"
+   s.source       = { :git => "https://github.com/mrousavy/nitro.git", :tag => "#{s.version}" }
+ 
++  s.ios.source_files = "ios/**/*.{swift,m,mm}"
++  s.visionos.source_files = "ios/**/*.{swift,m,mm}"
++  s.osx.source_files = "macos/**/*.swift"
+   s.source_files = [
+     # Implementation (Swift)
+-    "ios/**/*.{swift}",
++    
+     # Autolinking/Registration (Objective-C++)
+-    "ios/**/*.{m,mm}",
++    
+     # Implementation (C++ objects)
+     "cpp/**/*.{hpp,cpp}",
+   ]
+diff --git a/macos/MacImage.swift b/macos/MacImage.swift
+new file mode 100644
+index 0000000..3c5623e
+--- /dev/null
++++ b/macos/MacImage.swift
+@@ -0,0 +1,183 @@
++import AppKit
++import CoreGraphics
++import CoreImage
++import ImageIO
++import UniformTypeIdentifiers
++import NitroModules
++
++public protocol NativeImage { var cgImage: CGImage { get } }
++
++private func bitmap(_ width: Double, _ height: Double) throws -> CGContext {
++  guard width.isFinite, height.isFinite, width > 0, height > 0, width <= 32768, height <= 32768,
++        let context = CGContext(data: nil, width: Int(width.rounded(.up)), height: Int(height.rounded(.up)), bitsPerComponent: 8, bytesPerRow: Int(width.rounded(.up)) * 4, space: CGColorSpace(name: CGColorSpace.sRGB)!, bitmapInfo: CGImageAlphaInfo.premultipliedLast.rawValue) else {
++    throw RuntimeError.error(withMessage: "Invalid image dimensions")
++  }
++  return context
++}
++
++public final class HybridCGImage: HybridImageSpec, NativeImage {
++  public let cgImage: CGImage
++  public init(cgImage: CGImage) { self.cgImage = cgImage; super.init() }
++  public var width: Double { Double(cgImage.width) }
++  public var height: Double { Double(cgImage.height) }
++  public var memorySize: Int { cgImage.bytesPerRow * cgImage.height }
++  private func render(_ width: Double, _ height: Double, draw: (CGContext) -> Void) throws -> any HybridImageSpec {
++    let context = try bitmap(width, height); draw(context)
++    guard let image = context.makeImage() else { throw RuntimeError.error(withMessage: "Failed to render image") }
++    return HybridCGImage(cgImage: image)
++  }
++  public func toRawPixelData(allowGpu: Bool?) throws -> RawPixelData {
++    let context = try bitmap(width, height)
++    context.draw(cgImage, in: CGRect(x: 0, y: 0, width: width, height: height))
++    guard let pointer = context.data else { throw RuntimeError.error(withMessage: "Missing pixel data") }
++    let data = Data(bytes: pointer, count: context.bytesPerRow * context.height)
++    return RawPixelData(buffer: try ArrayBuffer.copy(data: data), width: width, height: height, pixelFormat: .rgba)
++  }
++  public func toRawPixelDataAsync(allowGpu: Bool?) throws -> Promise<RawPixelData> { Promise.async { try self.toRawPixelData(allowGpu: allowGpu) } }
++  public func toEncodedImageData(format: ImageFormat, quality: Double?) throws -> EncodedImageData {
++    let type: CFString
++    switch format { case .jpg: type = UTType.jpeg.identifier as CFString; case .png: type = UTType.png.identifier as CFString; case .heic: type = UTType.heic.identifier as CFString }
++    let data = NSMutableData()
++    guard let destination = CGImageDestinationCreateWithData(data, type, 1, nil) else { throw RuntimeError.error(withMessage: "Image encoder is unavailable") }
++    CGImageDestinationAddImage(destination, cgImage, [kCGImageDestinationLossyCompressionQuality: max(0, min(100, quality ?? 100)) / 100] as CFDictionary)
++    guard CGImageDestinationFinalize(destination) else { throw RuntimeError.error(withMessage: "Image encoding failed") }
++    return EncodedImageData(buffer: try ArrayBuffer.copy(data: data as Data), width: width, height: height, imageFormat: format)
++  }
++  public func toEncodedImageDataAsync(format: ImageFormat, quality: Double?) throws -> Promise<EncodedImageData> { Promise.async { try self.toEncodedImageData(format: format, quality: quality) } }
++  public func resize(width: Double, height: Double) throws -> any HybridImageSpec {
++    try render(width, height) { $0.interpolationQuality = .high; $0.draw(cgImage, in: CGRect(x: 0, y: 0, width: width, height: height)) }
++  }
++  public func resizeAsync(width: Double, height: Double) throws -> Promise<any HybridImageSpec> { Promise.async { try self.resize(width: width, height: height) } }
++  public func rotate(degrees: Double, allowFastFlagRotation: Bool?) throws -> any HybridImageSpec {
++    guard degrees.isFinite else { throw RuntimeError.error(withMessage: "Invalid rotation") }
++    let radians = degrees * .pi / 180
++    let bounds = CGRect(x: 0, y: 0, width: width, height: height).applying(CGAffineTransform(rotationAngle: radians))
++    return try render(abs(bounds.width), abs(bounds.height)) { context in
++      context.translateBy(x: abs(bounds.width) / 2, y: abs(bounds.height) / 2); context.rotate(by: -radians)
++      context.draw(cgImage, in: CGRect(x: -width / 2, y: -height / 2, width: width, height: height))
++    }
++  }
++  public func rotateAsync(degrees: Double, allowFastFlagRotation: Bool?) throws -> Promise<any HybridImageSpec> { Promise.async { try self.rotate(degrees: degrees, allowFastFlagRotation: allowFastFlagRotation) } }
++  public func crop(startX: Double, startY: Double, endX: Double, endY: Double) throws -> any HybridImageSpec {
++    guard startX >= 0, startY >= 0, endX <= width, endY <= height, endX > startX, endY > startY,
++          let image = cgImage.cropping(to: CGRect(x: startX, y: startY, width: endX - startX, height: endY - startY)) else { throw RuntimeError.error(withMessage: "Invalid crop rectangle") }
++    return HybridCGImage(cgImage: image)
++  }
++  public func cropAsync(startX: Double, startY: Double, endX: Double, endY: Double) throws -> Promise<any HybridImageSpec> { Promise.async { try self.crop(startX: startX, startY: startY, endX: endX, endY: endY) } }
++  public func mirrorHorizontally() throws -> any HybridImageSpec { try render(width, height) { $0.translateBy(x: width, y: 0); $0.scaleBy(x: -1, y: 1); $0.draw(cgImage, in: CGRect(x: 0, y: 0, width: width, height: height)) } }
++  public func mirrorHorizontallyAsync() throws -> Promise<any HybridImageSpec> { Promise.async { try self.mirrorHorizontally() } }
++  public func saveToFileAsync(path: String, format: ImageFormat, quality: Double?) throws -> Promise<Void> {
++    Promise.async {
++      let url = path.hasPrefix("file://") ? URL(string: path)! : URL(fileURLWithPath: path)
++      try FileManager.default.createDirectory(at: url.deletingLastPathComponent(), withIntermediateDirectories: true)
++      let encoded = try self.toEncodedImageData(format: format, quality: quality)
++      try encoded.buffer.toData(copyIfNeeded: false).write(to: url, options: .atomic)
++    }
++  }
++  public func saveToTemporaryFileAsync(format: ImageFormat, quality: Double?) throws -> Promise<String> {
++    Promise.async {
++      let path = FileManager.default.temporaryDirectory.appendingPathComponent("\(UUID()).\(format.stringValue)").path
++      let encoded = try self.toEncodedImageData(format: format, quality: quality)
++      try encoded.buffer.toData(copyIfNeeded: false).write(to: URL(fileURLWithPath: path), options: .atomic)
++      return path
++    }
++  }
++  public func toThumbHash() throws -> ArrayBuffer { throw RuntimeError.error(withMessage: "ThumbHash is not implemented in the macOS prototype") }
++  public func toThumbHashAsync() throws -> Promise<ArrayBuffer> { Promise.async { try self.toThumbHash() } }
++  public func renderInto(image: any HybridImageSpec, x: Double, y: Double, width: Double, height: Double) throws -> any HybridImageSpec {
++    guard let target = image as? NativeImage else { throw RuntimeError.error(withMessage: "Expected a native macOS image") }
++    return try render(image.width, image.height) { context in
++      context.draw(target.cgImage, in: CGRect(x: 0, y: 0, width: image.width, height: image.height))
++      context.draw(cgImage, in: CGRect(x: x, y: image.height - y - height, width: width, height: height))
++    }
++  }
++  public func renderIntoAsync(image: any HybridImageSpec, x: Double, y: Double, width: Double, height: Double) throws -> Promise<any HybridImageSpec> { Promise.async { try self.renderInto(image: image, x: x, y: y, width: width, height: height) } }
++}
++
++final class HybridImageFactory: HybridImageFactorySpec {
++  func createBlankImage(width: Double, height: Double, enableAlpha: Bool, fill: Color?) throws -> any HybridImageSpec {
++    let context = try bitmap(width, height)
++    context.setFillColor(red: fill?.r ?? 0, green: fill?.g ?? 0, blue: fill?.b ?? 0, alpha: enableAlpha ? (fill?.a ?? 0) : 1)
++    context.fill(CGRect(x: 0, y: 0, width: width, height: height))
++    return HybridCGImage(cgImage: context.makeImage()!)
++  }
++  func createBlankImageAsync(width: Double, height: Double, enableAlpha: Bool, fill: Color?) throws -> Promise<any HybridImageSpec> { Promise.async { try self.createBlankImage(width: width, height: height, enableAlpha: enableAlpha, fill: fill) } }
++  func loadFromFile(filePath: String) throws -> any HybridImageSpec {
++    let url = filePath.hasPrefix("file://") ? URL(string: filePath)! : URL(fileURLWithPath: filePath)
++    return try decode(Data(contentsOf: url))
++  }
++  private func decode(_ data: Data) throws -> any HybridImageSpec {
++    guard let source = CGImageSourceCreateWithData(data as CFData, nil), let image = CGImageSourceCreateImageAtIndex(source, 0, nil) else { throw RuntimeError.error(withMessage: "Failed to decode image") }
++    let properties = CGImageSourceCopyPropertiesAtIndex(source, 0, nil) as? [CFString: Any]
++    let orientation = (properties?[kCGImagePropertyOrientation] as? NSNumber)?.int32Value ?? 1
++    let oriented = CIImage(cgImage: image).oriented(forExifOrientation: orientation)
++    guard let result = CIContext().createCGImage(oriented, from: oriented.extent) else { throw RuntimeError.error(withMessage: "Failed to orient image") }
++    return HybridCGImage(cgImage: result)
++  }
++  func loadFromFileAsync(filePath: String) throws -> Promise<any HybridImageSpec> { Promise.async { try self.loadFromFile(filePath: filePath) } }
++  func loadFromResources(name: String) throws -> any HybridImageSpec {
++    guard let url = Bundle.main.url(forResource: name, withExtension: nil) else { throw RuntimeError.error(withMessage: "Image resource not found: \(name)") }
++    return try loadFromFile(filePath: url.path)
++  }
++  func loadFromResourcesAsync(name: String) throws -> Promise<any HybridImageSpec> { Promise.async { try self.loadFromResources(name: name) } }
++  func loadFromSymbol(symbolName: String) throws -> any HybridImageSpec {
++    guard let image = NSImage(systemSymbolName: symbolName, accessibilityDescription: nil), let cgImage = image.cgImage(forProposedRect: nil, context: nil, hints: nil) else { throw RuntimeError.error(withMessage: "Symbol not found: \(symbolName)") }
++    return HybridCGImage(cgImage: cgImage)
++  }
++  func loadFromRawPixelData(data: RawPixelData, allowGpu: Bool?) throws -> any HybridImageSpec {
++    guard data.pixelFormat == .rgba, data.width > 0, data.height > 0, data.width <= 32768, data.height <= 32768, data.width.rounded() == data.width, data.height.rounded() == data.height else { throw RuntimeError.error(withMessage: "The macOS prototype accepts RGBA pixel data with integer dimensions") }
++    let bytes = data.buffer.toData(copyIfNeeded: true)
++    guard bytes.count == Int(data.width) * Int(data.height) * 4,
++          let provider = CGDataProvider(data: bytes as CFData),
++          let image = CGImage(width: Int(data.width), height: Int(data.height), bitsPerComponent: 8, bitsPerPixel: 32, bytesPerRow: Int(data.width) * 4, space: CGColorSpace(name: CGColorSpace.sRGB)!, bitmapInfo: CGBitmapInfo(rawValue: CGImageAlphaInfo.premultipliedLast.rawValue), provider: provider, decode: nil, shouldInterpolate: true, intent: .defaultIntent) else { throw RuntimeError.error(withMessage: "Invalid raw pixel buffer") }
++    return HybridCGImage(cgImage: image)
++  }
++  func loadFromRawPixelDataAsync(data: RawPixelData, allowGpu: Bool?) throws -> Promise<any HybridImageSpec> { Promise.async { try self.loadFromRawPixelData(data: data, allowGpu: allowGpu) } }
++  func loadFromEncodedImageData(data: EncodedImageData) throws -> any HybridImageSpec { try decode(data.buffer.toData(copyIfNeeded: true)) }
++  func loadFromEncodedImageDataAsync(data: EncodedImageData) throws -> Promise<any HybridImageSpec> { Promise.async { try self.loadFromEncodedImageData(data: data) } }
++  func loadFromThumbHash(thumbhash: ArrayBuffer) throws -> any HybridImageSpec { throw RuntimeError.error(withMessage: "ThumbHash is not implemented in the macOS prototype") }
++  func loadFromThumbHashAsync(thumbhash: ArrayBuffer) throws -> Promise<any HybridImageSpec> { Promise.async { try self.loadFromThumbHash(thumbhash: thumbhash) } }
++}
++
++final class HybridImageUtils: HybridImageUtilsSpec {
++  var supportsHeicLoading: Bool { (CGImageSourceCopyTypeIdentifiers() as! [String]).contains(UTType.heic.identifier) }
++  var supportsHeicWriting: Bool { (CGImageDestinationCopyTypeIdentifiers() as! [String]).contains(UTType.heic.identifier) }
++  func thumbHashToBase64String(thumbhash: ArrayBuffer) throws -> String { thumbhash.toData(copyIfNeeded: false).base64EncodedString() }
++  func thumbhashFromBase64String(thumbhashBase64: String) throws -> ArrayBuffer {
++    guard let data = Data(base64Encoded: thumbhashBase64) else { throw RuntimeError.error(withMessage: "Invalid base64") }
++    return try ArrayBuffer.copy(data: data)
++  }
++}
++
++final class HybridImageLoader: HybridImageLoaderSpec {
++  let load: () throws -> any HybridImageSpec
++  init(load: @escaping () throws -> any HybridImageSpec) { self.load = load; super.init() }
++  func loadImage() throws -> Promise<any HybridImageSpec> { Promise.async { try self.load() } }
++  func requestImage(forView: any HybridNitroImageViewSpec) throws { DispatchQueue.main.async { (forView as? HybridImageView)?.load(self) } }
++  func dropImage(forView: any HybridNitroImageViewSpec) throws { DispatchQueue.main.async { (forView as? HybridImageView)?.clear() } }
++}
++final class HybridImageLoaderFactory: HybridImageLoaderFactorySpec {
++  let factory = HybridImageFactory()
++  func createFileImageLoader(filePath: String) throws -> any HybridImageLoaderSpec { HybridImageLoader { try self.factory.loadFromFile(filePath: filePath) } }
++  func createResourceImageLoader(name: String) throws -> any HybridImageLoaderSpec { HybridImageLoader { try self.factory.loadFromResources(name: name) } }
++  func createSymbolImageLoader(symbolName: String) throws -> any HybridImageLoaderSpec { HybridImageLoader { try self.factory.loadFromSymbol(symbolName: symbolName) } }
++  func createRawPixelDataImageLoader(data: RawPixelData) throws -> any HybridImageLoaderSpec { HybridImageLoader { try self.factory.loadFromRawPixelData(data: data, allowGpu: false) } }
++  func createEncodedImageDataImageLoader(data: EncodedImageData) throws -> any HybridImageLoaderSpec { HybridImageLoader { try self.factory.loadFromEncodedImageData(data: data) } }
++}
++final class HybridImageView: HybridNitroImageViewSpec {
++  let view = NSView()
++  private var generation = 0
++  var resizeMode: ResizeMode? { didSet { view.layer?.contentsGravity = resizeMode == .contain ? .resizeAspect : resizeMode == .stretch ? .resize : resizeMode == .center ? .center : .resizeAspectFill } }
++  var recyclingKey: String? { didSet { if recyclingKey != oldValue { clear() } } }
++  var image: Variant__any_HybridImageSpec___any_HybridImageLoaderSpec_? { didSet {
++    clear()
++    switch image { case .first(let image): view.layer?.contents = (image as? NativeImage)?.cgImage; case .second(let loader): load(loader); case nil: break }
++  } }
++  override init() { super.init(); view.wantsLayer = true; view.layer?.masksToBounds = true; view.layer?.contentsGravity = .resizeAspectFill }
++  func clear() { generation += 1; view.layer?.contents = nil }
++  func load(_ loader: any HybridImageLoaderSpec) {
++    generation += 1; let token = generation
++    do { try loader.loadImage().then { [weak self] image in DispatchQueue.main.async { guard let self, self.generation == token else { return }; self.view.layer?.contents = (image as? NativeImage)?.cgImage } }.catch { [weak self] _ in DispatchQueue.main.async { guard let self, self.generation == token else { return }; self.clear() } } } catch { clear() }
++  }
++  func onDropView() { clear() }
++}
+diff --git a/nitrogen/generated/ios/NitroImage+autolinking.rb b/nitrogen/generated/ios/NitroImage+autolinking.rb
+index 06be8b7..2114874 100644
+--- a/nitrogen/generated/ios/NitroImage+autolinking.rb
++++ b/nitrogen/generated/ios/NitroImage+autolinking.rb
+@@ -54,6 +54,8 @@ def add_nitrogen_files(spec)
+     "CLANG_CXX_LANGUAGE_STANDARD" => "c++20",
+     # Enables C++ <-> Swift interop (by default it's only ObjC)
+     "SWIFT_OBJC_INTEROP_MODE" => "objcxx",
++    # Nitro's Fabric-only templates must not enter its Swift umbrella.
++    "HEADER_SEARCH_PATHS" => "$(inherited) $(PODS_ROOT)/Headers/Private",
+     # Enables stricter modular headers
+     "DEFINES_MODULE" => "YES",
+     # Disable auto-generated ObjC header for Swift (Static linkage on Xcode 26.4 breaks here)
+diff --git a/nitrogen/generated/ios/c++/views/HybridNitroImageViewComponent.mm b/nitrogen/generated/ios/c++/views/HybridNitroImageViewComponent.mm
+index 34ef3c1..b45a8b2 100644
+--- a/nitrogen/generated/ios/c++/views/HybridNitroImageViewComponent.mm
++++ b/nitrogen/generated/ios/c++/views/HybridNitroImageViewComponent.mm
+@@ -12,7 +12,12 @@
+ #import <React/RCTComponentViewFactory.h>
+ #import <React/UIView+ComponentViewProtocol.h>
+ #import <NitroModules/NitroDefines.hpp>
++#import <TargetConditionals.h>
++#if TARGET_OS_OSX
++#import <AppKit/AppKit.h>
++#else
+ #import <UIKit/UIKit.h>
++#endif
+ 
+ #import "HybridNitroImageViewSpecSwift.hpp"
+ #import "NitroImage-Swift-Cxx-Umbrella.hpp"
+@@ -65,12 +70,21 @@ - (void) updateView {
+ 
+   // 2. Get UIView*
+   void* viewUnsafe = swiftPart.getView();
++  #if TARGET_OS_OSX
++  NSView* view = (__bridge_transfer NSView*) viewUnsafe;
++#else
+   UIView* view = (__bridge_transfer UIView*) viewUnsafe;
++#endif
+ 
+   // 3. Update RCTViewComponentView's [contentView]
+   [self setContentView:view];
+ }
+ 
++// RN < 0.82 does not call invalidate for views which opt out of recycling.
++- (void) dealloc {
++  if (_hybridView != nullptr) [self notifyOnDropView];
++}
++
+ - (void) notifyOnDropView {
+   // A recycled component can later be invalidated. Notify only once per mount.
+   if (_didDropView) {
+diff --git a/nitrogen/generated/shared/c++/views/HybridNitroImageViewComponent.cpp b/nitrogen/generated/shared/c++/views/HybridNitroImageViewComponent.cpp
+index a65f0aa..1de5350 100644
+--- a/nitrogen/generated/shared/c++/views/HybridNitroImageViewComponent.cpp
++++ b/nitrogen/generated/shared/c++/views/HybridNitroImageViewComponent.cpp
+@@ -7,6 +7,9 @@
+ 
+ #include "HybridNitroImageViewComponent.hpp"
+ 
++#if defined(__APPLE__)
++#include <TargetConditionals.h>
++#endif
+ #include <NitroModules/NitroHash.hpp>
+ #include <NitroModules/ReactProp.hpp>
+ 
+@@ -19,7 +22,11 @@ namespace margelo::nitro::image::views {
+   HybridNitroImageViewProps::HybridNitroImageViewProps(const react::PropsParserContext& context,
+                                                        const HybridNitroImageViewProps& sourceProps,
+                                                        const react::RawProps& rawProps):
+-    react::ViewProps(context, sourceProps, rawProps, filterObjectKeys),
++    react::ViewProps(context, sourceProps, rawProps
++    #if !TARGET_OS_OSX
++          , filterObjectKeys
++    #endif
++        ),
+     image(nitro::ReactProp<std::optional<std::variant<std::shared_ptr<HybridImageSpec>, std::shared_ptr<HybridImageLoaderSpec>>>>::fromRawValue("NitroImageView", "image", rawProps, sourceProps.image)),
+     resizeMode(nitro::ReactProp<std::optional<ResizeMode>>::fromRawValue("NitroImageView", "resizeMode", rawProps, sourceProps.resizeMode)),
+     recyclingKey(nitro::ReactProp<std::optional<std::string>>::fromRawValue("NitroImageView", "recyclingKey", rawProps, sourceProps.recyclingKey)),
+diff --git a/package.json b/package.json
+index f22fe12..94be214 100644
+--- a/package.json
++++ b/package.json
+@@ -28,7 +28,8 @@
+     "app.plugin.js",
+     "nitro.json",
+     "*.podspec",
+-    "README.md"
++    "README.md",
++    "macos/**/*.swift"
+   ],
+   "scripts": {
+     "build": "rm -rf tsconfig.tsbuildinfo && rm -rf lib && bun typecheck && bob build",
+diff --git a/react-native.config.js b/react-native.config.js
+index 3fdf8ea..9c4bc69 100644
+--- a/react-native.config.js
++++ b/react-native.config.js
+@@ -7,6 +7,7 @@ module.exports = {
+        * @type {import('@react-native-community/cli-types').IOSDependencyParams}
+        */
+       ios: {},
++      macos: { podspecPath: __dirname + "/NitroImage.podspec" },
+       /**
+        * @type {import('@react-native-community/cli-types').AndroidDependencyParams}
+        */

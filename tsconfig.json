@@ -19,6 +19,7 @@
     "tests/**/*.ts"
   ],
   "exclude": [
+    "examples/camera",
     "packages/cli/templates"
   ]
 }

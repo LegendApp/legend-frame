@@ -11,7 +11,8 @@
     "test": "bun test tests",
     "typecheck": "tsc --noEmit",
     "pack:local": "bun scripts/pack.ts",
-    "legend": "bun packages/cli/src/index.ts"
+    "legend": "bun packages/cli/src/index.ts",
+    "test:camera": "bun scripts/test-camera.ts"
   },
   "devDependencies": {
     "@types/bun": "1.3.14",

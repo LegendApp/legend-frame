@@ -1,0 +1,158 @@
+diff --git a/lib/autolinking/ios/createPodspecRubyExtension.js b/lib/autolinking/ios/createPodspecRubyExtension.js
+index b2fa5db..63d8eb0 100644
+--- a/lib/autolinking/ios/createPodspecRubyExtension.js
++++ b/lib/autolinking/ios/createPodspecRubyExtension.js
+@@ -54,6 +54,8 @@ def add_nitrogen_files(spec)
+     "CLANG_CXX_LANGUAGE_STANDARD" => "c++20",
+     # Enables C++ <-> Swift interop (by default it's only ObjC)
+     "SWIFT_OBJC_INTEROP_MODE" => "objcxx",
++    # Nitro's Fabric-only templates must not enter its Swift umbrella.
++    "HEADER_SEARCH_PATHS" => "$(inherited) $(PODS_ROOT)/Headers/Private",
+     # Enables stricter modular headers
+     "DEFINES_MODULE" => "YES",
+     # Disable auto-generated ObjC header for Swift (Static linkage on Xcode 26.4 breaks here)
+diff --git a/lib/views/CppHybridViewComponent.js b/lib/views/CppHybridViewComponent.js
+index 1893bf0..22cf166 100644
+--- a/lib/views/CppHybridViewComponent.js
++++ b/lib/views/CppHybridViewComponent.js
+@@ -127,7 +127,11 @@ namespace ${namespace} {
+ } // namespace ${namespace}
+ `.trim();
+     const propInitializers = [
+-        'react::ViewProps(context, sourceProps, rawProps, filterObjectKeys)',
++        `react::ViewProps(context, sourceProps, rawProps
++#if !TARGET_OS_OSX
++      , filterObjectKeys
++#endif
++    )`,
+         ...props.map((prop) => {
+             const name = escapeCppName(prop.name);
+             const type = prop.type.getCode('c++');
+@@ -140,6 +144,9 @@ ${createFileMetadataString(`${component}.cpp`)}
+ 
+ #include "${component}.hpp"
+ 
++#if defined(__APPLE__)
++#include <TargetConditionals.h>
++#endif
+ #include <NitroModules/NitroHash.hpp>
+ #include <NitroModules/ReactProp.hpp>
+ 
+diff --git a/lib/views/swift/SwiftHybridViewManager.js b/lib/views/swift/SwiftHybridViewManager.js
+index f2d4e3a..e49dd35 100644
+--- a/lib/views/swift/SwiftHybridViewManager.js
++++ b/lib/views/swift/SwiftHybridViewManager.js
+@@ -39,7 +39,12 @@ ${createFileMetadataString(`${component}.mm`)}
+ #import <React/RCTComponentViewFactory.h>
+ #import <React/UIView+ComponentViewProtocol.h>
+ #import <NitroModules/NitroDefines.hpp>
++#import <TargetConditionals.h>
++#if TARGET_OS_OSX
++#import <AppKit/AppKit.h>
++#else
+ #import <UIKit/UIKit.h>
++#endif
+ 
+ #import "${HybridTSpecSwift}.hpp"
+ #import "${getUmbrellaHeaderName()}"
+@@ -92,12 +97,21 @@ using namespace ${namespace}::views;
+ 
+   // 2. Get UIView*
+   void* viewUnsafe = swiftPart.getView();
++  #if TARGET_OS_OSX
++  NSView* view = (__bridge_transfer NSView*) viewUnsafe;
++#else
+   UIView* view = (__bridge_transfer UIView*) viewUnsafe;
++#endif
+ 
+   // 3. Update RCTViewComponentView's [contentView]
+   [self setContentView:view];
+ }
+ 
++// RN < 0.82 does not call invalidate for views which opt out of recycling.
++- (void) dealloc {
++  if (_hybridView != nullptr) [self notifyOnDropView];
++}
++
+ - (void) notifyOnDropView {
+   // A recycled component can later be invalidated. Notify only once per mount.
+   if (_didDropView) {
+diff --git a/src/autolinking/ios/createPodspecRubyExtension.ts b/src/autolinking/ios/createPodspecRubyExtension.ts
+index b3334d2..7613c37 100644
+--- a/src/autolinking/ios/createPodspecRubyExtension.ts
++++ b/src/autolinking/ios/createPodspecRubyExtension.ts
+@@ -61,6 +61,8 @@ def add_nitrogen_files(spec)
+     "CLANG_CXX_LANGUAGE_STANDARD" => "c++20",
+     # Enables C++ <-> Swift interop (by default it's only ObjC)
+     "SWIFT_OBJC_INTEROP_MODE" => "objcxx",
++    # Nitro's Fabric-only templates must not enter its Swift umbrella.
++    "HEADER_SEARCH_PATHS" => "$(inherited) $(PODS_ROOT)/Headers/Private",
+     # Enables stricter modular headers
+     "DEFINES_MODULE" => "YES",
+     # Disable auto-generated ObjC header for Swift (Static linkage on Xcode 26.4 breaks here)
+diff --git a/src/views/CppHybridViewComponent.ts b/src/views/CppHybridViewComponent.ts
+index 6a697d3..426019b 100644
+--- a/src/views/CppHybridViewComponent.ts
++++ b/src/views/CppHybridViewComponent.ts
+@@ -171,7 +171,11 @@ namespace ${namespace} {
+ `.trim()
+ 
+   const propInitializers = [
+-    'react::ViewProps(context, sourceProps, rawProps, filterObjectKeys)',
++    `react::ViewProps(context, sourceProps, rawProps
++#if !TARGET_OS_OSX
++      , filterObjectKeys
++#endif
++    )`,
+     ...props.map((prop) => {
+       const name = escapeCppName(prop.name)
+       const type = prop.type.getCode('c++')
+@@ -184,6 +188,9 @@ ${createFileMetadataString(`${component}.cpp`)}
+ 
+ #include "${component}.hpp"
+ 
++#if defined(__APPLE__)
++#include <TargetConditionals.h>
++#endif
+ #include <NitroModules/NitroHash.hpp>
+ #include <NitroModules/ReactProp.hpp>
+ 
+diff --git a/src/views/swift/SwiftHybridViewManager.ts b/src/views/swift/SwiftHybridViewManager.ts
+index 39d7b88..124452f 100644
+--- a/src/views/swift/SwiftHybridViewManager.ts
++++ b/src/views/swift/SwiftHybridViewManager.ts
+@@ -66,7 +66,12 @@ ${createFileMetadataString(`${component}.mm`)}
+ #import <React/RCTComponentViewFactory.h>
+ #import <React/UIView+ComponentViewProtocol.h>
+ #import <NitroModules/NitroDefines.hpp>
++#import <TargetConditionals.h>
++#if TARGET_OS_OSX
++#import <AppKit/AppKit.h>
++#else
+ #import <UIKit/UIKit.h>
++#endif
+ 
+ #import "${HybridTSpecSwift}.hpp"
+ #import "${getUmbrellaHeaderName()}"
+@@ -119,12 +124,21 @@ using namespace ${namespace}::views;
+ 
+   // 2. Get UIView*
+   void* viewUnsafe = swiftPart.getView();
++  #if TARGET_OS_OSX
++  NSView* view = (__bridge_transfer NSView*) viewUnsafe;
++#else
+   UIView* view = (__bridge_transfer UIView*) viewUnsafe;
++#endif
+ 
+   // 3. Update RCTViewComponentView's [contentView]
+   [self setContentView:view];
+ }
+ 
++// RN < 0.82 does not call invalidate for views which opt out of recycling.
++- (void) dealloc {
++  if (_hybridView != nullptr) [self notifyOnDropView];
++}
++
+ - (void) notifyOnDropView {
+   // A recycled component can later be invalidated. Notify only once per mount.
+   if (_didDropView) {

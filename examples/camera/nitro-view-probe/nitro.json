@@ -1,0 +1,6 @@
+{
+  "cxxNamespace": ["legendprobe"], "ios": {"iosModuleName": "LegendNitroProbe"},
+  "android": {"androidNamespace": ["legendprobe"], "androidCxxLibName": "LegendNitroProbe"},
+  "autolinking": {"CompatibilityView": {"ios": {"language": "swift", "implementationClassName": "HybridCompatibilityView"}}},
+  "ignorePaths": ["**/node_modules"]
+}

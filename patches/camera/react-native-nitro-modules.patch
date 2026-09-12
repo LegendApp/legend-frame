@@ -1,0 +1,50 @@
+diff --git a/NitroModules.podspec b/NitroModules.podspec
+index 9163edc..5067d95 100644
+--- a/NitroModules.podspec
++++ b/NitroModules.podspec
+@@ -51,10 +51,6 @@ Pod::Spec.new do |s|
+     "cpp/utils/NitroDefines.hpp",
+     "cpp/utils/PropNameIDCache.hpp",
+     "cpp/views/CachedProp.hpp",
+-    "cpp/views/RawPropsCompat.hpp",
+-    "cpp/views/ReactProp.hpp",
+-    "cpp/views/ViewComponentDescriptor.hpp",
+-    "cpp/views/ViewPropsHolderState.hpp",
+     # Public iOS-specific headers that will be exposed in modulemap (for Swift)
+     "ios/core/ArrayBufferHolder.hpp",
+     "ios/core/PromiseHolder.hpp",
+@@ -65,6 +61,9 @@ Pod::Spec.new do |s|
+     "ios/utils/SwiftClosure.hpp",
+   ]
+ 
++  # These templates are consumed by generated C++ views, not Swift.
++  s.private_header_files = ["cpp/views/RawPropsCompat.hpp", "cpp/views/ReactProp.hpp", "cpp/views/ViewComponentDescriptor.hpp", "cpp/views/ViewPropsHolderState.hpp"]
++
+   xcconfig = {
+     # Use C++ 20
+     "CLANG_CXX_LANGUAGE_STANDARD" => "c++20",
+diff --git a/ios/views/HybridView.swift b/ios/views/HybridView.swift
+index 94a422e..88928fd 100644
+--- a/ios/views/HybridView.swift
++++ b/ios/views/HybridView.swift
+@@ -6,12 +6,18 @@
+ //
+ 
+ #if canImport(UIKit)
++import UIKit
++public typealias NitroPlatformView = UIView
++#elseif canImport(AppKit)
++import AppKit
++public typealias NitroPlatformView = NSView
++#endif
+ 
+-  import UIKit
++#if canImport(UIKit) || canImport(AppKit)
+ 
+   /// A base protocol for all Swift-based Hybrid Views.
+   public protocol HybridView: HybridObject {
+-    associatedtype ViewType: UIView
++    associatedtype ViewType: NitroPlatformView
+     /**
+      * Get the ``UIView`` this HybridView is holding.
+      *

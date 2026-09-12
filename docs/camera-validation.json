@@ -1,0 +1,277 @@
+{
+  "date": "2026-09-12",
+  "scope": "camera-free native compatibility; hardware capture pending",
+  "nitroView": {
+    "passed": true,
+    "react": "19.1.4",
+    "reactNative": "0.81.6",
+    "reactNativeMacOS": "0.81.7",
+    "nitro": "0.37.0",
+    "results": [
+      {
+        "name": "Mount, native props and layout",
+        "passed": true,
+        "detail": {
+          "width": 320,
+          "label": "Initial native label",
+          "height": 120,
+          "attached": true,
+          "drops": 0
+        }
+      },
+      {
+        "name": "React prop update and native resize",
+        "passed": true,
+        "detail": {
+          "height": 120,
+          "drops": 0,
+          "attached": true,
+          "label": "Updated from React",
+          "width": 480
+        }
+      },
+      {
+        "name": "Unmount detaches and cleans up exactly once",
+        "passed": true,
+        "detail": {
+          "label": "Updated from React",
+          "height": 120,
+          "drops": 1,
+          "width": 480,
+          "attached": false
+        }
+      },
+      {
+        "name": "Remount and native method call",
+        "passed": true,
+        "detail": {
+          "label": "Updated from React",
+          "height": 120,
+          "drops": 0,
+          "width": 480,
+          "attached": true
+        }
+      }
+    ]
+  },
+  "debug": {
+    "passed": true,
+    "versions": {
+      "reactNative": "0.81.6",
+      "reactNativeMacOS": "0.81.7",
+      "nitro": "0.37.0",
+      "nitroImage": "0.15.2",
+      "visionCamera": "5.2.3"
+    },
+    "results": [
+      {
+        "name": "Native RGBA pixels and row stride",
+        "passed": true,
+        "detail": {
+          "bytes": [
+            255,
+            0,
+            0,
+            255,
+            255,
+            0,
+            0,
+            255,
+            255,
+            0,
+            0,
+            255,
+            255,
+            0,
+            0,
+            255,
+            255,
+            0,
+            0,
+            255,
+            255,
+            0,
+            0,
+            255
+          ]
+        }
+      },
+      {
+        "name": "Raw image preserves pixel order",
+        "passed": true
+      },
+      {
+        "name": "Horizontal image mirror",
+        "passed": true
+      },
+      {
+        "name": "PNG encode and decode",
+        "passed": true
+      },
+      {
+        "name": "Native image resize",
+        "passed": true
+      },
+      {
+        "name": "Image file save and reload",
+        "passed": true
+      },
+      {
+        "name": "Camera native module and device discovery",
+        "passed": true,
+        "detail": {
+          "count": 0,
+          "devices": []
+        }
+      },
+      {
+        "name": "Native capture session creation",
+        "passed": true
+      },
+      {
+        "name": "Native preview output creation",
+        "passed": true
+      },
+      {
+        "name": "VisionCamera AppKit preview view mounts",
+        "passed": true
+      },
+      {
+        "name": "Native photo output creation",
+        "passed": true
+      },
+      {
+        "name": "Native video output creation",
+        "passed": true
+      },
+      {
+        "name": "Unsupported multi-camera request rejects",
+        "passed": true
+      }
+    ],
+    "nativeViewPassed": true,
+    "hardwareChecks": "Pending on a Mac with a camera: permission, preview, photo, video, microphone, device reconnect"
+  },
+  "release": {
+    "passed": true,
+    "versions": {
+      "reactNative": "0.81.6",
+      "reactNativeMacOS": "0.81.7",
+      "nitro": "0.37.0",
+      "nitroImage": "0.15.2",
+      "visionCamera": "5.2.3"
+    },
+    "results": [
+      {
+        "name": "Native RGBA pixels and row stride",
+        "passed": true,
+        "detail": {
+          "bytes": [
+            255,
+            0,
+            0,
+            255,
+            255,
+            0,
+            0,
+            255,
+            255,
+            0,
+            0,
+            255,
+            255,
+            0,
+            0,
+            255,
+            255,
+            0,
+            0,
+            255,
+            255,
+            0,
+            0,
+            255
+          ]
+        }
+      },
+      {
+        "name": "Raw image preserves pixel order",
+        "passed": true
+      },
+      {
+        "name": "Horizontal image mirror",
+        "passed": true
+      },
+      {
+        "name": "PNG encode and decode",
+        "passed": true
+      },
+      {
+        "name": "Native image resize",
+        "passed": true
+      },
+      {
+        "name": "Image file save and reload",
+        "passed": true
+      },
+      {
+        "name": "Camera native module and device discovery",
+        "passed": true,
+        "detail": {
+          "count": 0,
+          "devices": []
+        }
+      },
+      {
+        "name": "Native capture session creation",
+        "passed": true
+      },
+      {
+        "name": "Native preview output creation",
+        "passed": true
+      },
+      {
+        "name": "VisionCamera AppKit preview view mounts",
+        "passed": true
+      },
+      {
+        "name": "Native photo output creation",
+        "passed": true
+      },
+      {
+        "name": "Native video output creation",
+        "passed": true
+      },
+      {
+        "name": "Unsupported multi-camera request rejects",
+        "passed": true
+      }
+    ],
+    "nativeViewPassed": true,
+    "hardwareChecks": "Pending on a Mac with a camera: permission, preview, photo, video, microphone, device reconnect"
+  },
+  "transfer": {
+    "passed": true,
+    "nativeChecks": 13,
+    "extractedArchive": true,
+    "developmentEnvironmentVariablesRemoved": true,
+    "signatureVerified": true
+  },
+  "nativeUI": {
+    "textContrast": "passed",
+    "syntheticImage": "solid red",
+    "noCameraStartDisabled": "passed",
+    "navigateToKitchenSinkAndBack": "passed",
+    "nativeSaveDialogLogExport": "passed"
+  },
+  "frameworkTests": {
+    "passed": 115,
+    "failed": 0,
+    "assertions": 439
+  },
+  "typechecks": {
+    "framework": "passed",
+    "cameraExample": "passed"
+  },
+  "hardwareCapture": "not tested: no camera available"
+}
