@@ -1,3 +1,4 @@
+import { resolveHelpers } from "./helpers.ts";
 import { readConfig as readAppConfig, prepareConfig, writeUpdates } from "@legend-apps/desktop-config/config.cjs";
 export { readAppConfig, prepareConfig, writeUpdates };
 import { createHash } from "node:crypto";
@@ -149,7 +150,7 @@ export function nativePackages(root: string): NativePackage[] {
     )
     .map((pkg) => ({
       ...pkg,
-      sdk: pkg.json.legend?.sdk === true,
+      sdk: pkg.json.legend?.sdk === true || ["react-native-webview", "@op-engineering/op-sqlite"].includes(pkg.name),
       requires: pkg.json.legend?.requires ?? [],
       signature: (signature => pkg.name === "@legend-apps/desktop-app" ? digest(signature + adapters) : signature)(hashFiles(pkg.root, [
         "package.json",
@@ -263,6 +264,7 @@ export function runtimeFor(
         modules,
         pins,
         config: readAppConfig(root),
+        helpers: hashFiles(root, resolveHelpers(root, readAppConfig(root).expo?.extra?.legend?.helpers).map(helper => helper.relative)),
         adapter: hashFiles(root, [
           "node_modules/@legend-apps/desktop-host",
           "node_modules/@legend-apps/desktop-config",
@@ -290,10 +292,11 @@ export function incompatible(
 export function goConfigurationIssues(config: any): string[] {
   const expo = config.expo ?? config;
   const issues: string[] = [];
-  if (expo.extra?.legend?.menuBarOnly) issues.push("Menu-bar-only activation requires a custom runtime");
-  if (expo.extra?.legend?.updates) issues.push("Update feed configuration requires a custom runtime");
   if (expo.scheme || expo.extra?.legend?.documentTypes?.length)
     issues.push("URL schemes and document associations require a custom runtime");
+  if (expo.extra?.legend?.menuBarOnly) issues.push("Menu-bar-only activation requires a custom runtime");
+  if (expo.extra?.legend?.updates) issues.push("Update feed configuration requires a custom runtime");
+  if (Object.keys(expo.extra?.legend?.helpers ?? {}).length) issues.push("Bundled helpers require a custom runtime");
   if (expo.extra?.legend?.customRuntime)
     issues.push("app configuration requires a custom runtime");
   if (

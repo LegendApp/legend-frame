@@ -1,2 +1,1 @@
-export * from "@legend-apps/file-dialog";
 export * from "@legend-apps/message-dialog";

@@ -12,6 +12,8 @@ import { showContextMenu } from "@legend-apps/desktop/context-menu";
 import { configureMenus, clearMenus, addNativeMenuActionListener } from "@legend-apps/desktop/menus";
 import { openFileDialog, saveFileDialog, revealInFinder } from "@legend-apps/desktop/dialogs";
 import { runChecks, type Check } from "./checks";
+import { ExpansionChecks } from "./ExpansionChecks";
+import { Expansion } from "./Expansion";
 import { Integrations } from "./Integrations";
 import { testDriver } from "./test-driver";
 
@@ -21,6 +23,8 @@ export default function App(props: Props) {
   const args = props.launchArguments ?? [];
   const report = argument(args, "--legend-test-report");
   if (props.windowId && props.windowId !== "main") return <SecondaryWindow {...props} />;
+  const expansionReport = argument(args, "--legend-expansion-report");
+  if (expansionReport) return <ExpansionChecks report={expansionReport} />;
   if (report) return <AutomatedChecks report={report} args={args} />;
   return <KitchenSink {...props} />;
 }
@@ -114,7 +118,8 @@ function KitchenSink({ runtime, projectId }: Props) {
       <Card title="Links and documents"><View style={styles.row}><Button title="Open example.com" onPress={() => void action(() => links.openURL("https://example.com"))} /><Button title="Recent documents" onPress={() => void action(links.getRecentDocuments)} /></View><Text style={styles.text}>Incoming links and files appear in the event log. OS associations require a custom build.</Text></Card>
       <Card title="Secure storage"><TextInput accessibilityLabel="Demo secret" secureTextEntry style={styles.input} value={secret} onChangeText={setSecret} placeholder="Demo secret (stored in Keychain)" /><View style={styles.row}>
         <Button title="Store demo secret" onPress={() => void action(async () => { await secureStorage.set("kitchen-demo", secret); return "Stored demo secret"; })} /><Button title="Load demo secret" onPress={() => void action(async () => { setSecret(await secureStorage.get("kitchen-demo") ?? ""); return "Loaded demo secret"; })} /><Button title="Delete demo secret" onPress={() => void action(async () => { await secureStorage.remove("kitchen-demo"); setSecret(""); return "Deleted demo secret"; })} /></View></Card>
-      <Card title="Desktop integrations"><Integrations report={report} /></Card>
+      <Card title="Desktop integrations"><Integrations report={report} />
+        <Expansion report={report} /></Card>
       <Card title="Event log"><Button title="Clear log" onPress={() => setLog([])} />{log.map((line, index) => <Text key={`${index}-${line}`} selectable style={styles.log}>{line}</Text>)}</Card>
     </ScrollView>
   </View>;

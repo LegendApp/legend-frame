@@ -1,3 +1,4 @@
+import { copyHelpers } from "./helpers.ts";
 import { readAppConfig } from "./project.ts";
 import {
   cpSync,
@@ -296,6 +297,7 @@ async function buildUnlocked(
     path.join(destination, "Contents/Resources/legend-runtime.json"),
     result.runtime,
   );
+  copyHelpers(root, destination, readAppConfig(root).expo?.extra?.legend?.helpers);
   // Local standalone outputs remain ad-hoc. `legend package` signs a separate
   // staging copy with Developer ID for distribution.
   await run(

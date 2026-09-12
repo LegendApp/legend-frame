@@ -17,7 +17,14 @@
     "./secure-storage": "./secure-storage.ts",
     "./notifications": "./notifications.ts",
     "./tray": "./tray.ts",
-    "./updates": "./updates.ts"
+    "./updates": "./updates.ts",
+    "./processes": "./processes.ts",
+    "./system": "./system.ts",
+    "./message-dialog": "./message-dialog.ts",
+    "./global-shortcuts": "./global-shortcuts.ts",
+    "./drag-drop": "./drag-drop.ts",
+    "./webview": "./webview.ts",
+    "./sqlite": "./sqlite.ts"
   },
   "files": [
     "*.ts"
@@ -36,6 +43,13 @@
     "@legend-apps/secure-storage": "0.1.0-prototype.0",
     "@legend-apps/notifications": "0.1.0-prototype.0",
     "@legend-apps/tray": "0.1.0-prototype.0",
-    "@legend-apps/updates": "0.1.0-prototype.0"
+    "@legend-apps/updates": "0.1.0-prototype.0",
+    "@legend-apps/processes": "0.1.0-prototype.0",
+    "@legend-apps/system": "0.1.0-prototype.0",
+    "@legend-apps/message-dialog": "0.1.0-prototype.0",
+    "@legend-apps/global-shortcuts": "0.1.0-prototype.0",
+    "@legend-apps/drag-drop": "0.1.0-prototype.0",
+    "@legend-apps/webview": "0.1.0-prototype.0",
+    "@legend-apps/sqlite": "0.1.0-prototype.0"
   }
 }

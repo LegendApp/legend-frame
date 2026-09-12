@@ -12,12 +12,14 @@
     "typecheck": "tsc --noEmit",
     "pack:local": "bun scripts/pack.ts",
     "legend": "bun packages/cli/src/index.ts",
-    "test:camera": "bun scripts/test-camera.ts",
-    "test:sparkle": "bun tests/sparkle.integration.ts",
     "kitchen-sink": "bun scripts/kitchen-sink.ts",
     "test:native": "bun scripts/test-native.ts",
+    "test:all": "bun run typecheck && bun test tests && bun run test:sparkle && bun run test:updates && bun run test:integrations && bun run test:native && bun run test:expansion",
+    "test:sparkle": "bun tests/sparkle.integration.ts",
+    "test:updates": "bun scripts/test-updates.ts",
     "test:integrations": "bun scripts/test-integrations.ts",
-    "test:updates": "bun scripts/test-updates.ts"
+    "test:expansion": "bun scripts/test-expansion.ts",
+    "test:camera": "bun scripts/test-camera.ts"
   },
   "devDependencies": {
     "@types/bun": "1.3.14",

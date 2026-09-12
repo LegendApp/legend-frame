@@ -1,0 +1,40 @@
+{
+  "name": "@legend-apps/drag-drop",
+  "version": "0.1.0-prototype.0",
+  "license": "MIT",
+  "main": "src/index.tsx",
+  "react-native": "src/index.tsx",
+  "files": [
+    "src",
+    "macos",
+    "*.podspec"
+  ],
+  "peerDependencies": {
+    "react": "19.1.4",
+    "react-native": "0.81.6"
+  },
+  "codegenConfig": {
+    "name": "RNDesktopDragSpec",
+    "type": "components",
+    "jsSrcsDir": "src",
+    "ios": {
+      "componentProvider": {
+        "DesktopDragView": "RNDesktopDragView"
+      }
+    }
+  },
+  "legend": {
+    "sdk": true,
+    "nativeModules": [],
+    "pod": "RNDesktopDrag",
+    "platforms": [
+      "macos"
+    ],
+    "requires": [
+      "@legend-apps/desktop-app"
+    ]
+  },
+  "dependencies": {
+    "@legend-apps/desktop-app": "0.1.0-prototype.0"
+  }
+}

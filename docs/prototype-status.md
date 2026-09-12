@@ -2,7 +2,32 @@
 
 The local Apple Silicon prototype is implemented and its Go → custom development build → reduced standalone app flow was validated on 2026-09-10.
 
-## Verified
+## Desktop API stages 1–4 — 2026-09-11
+
+Framework-owned `desktop.config.json`, window styles/child sheets, global
+shortcuts, drag/drop, processes/helpers, rich dialogs/clipboard, system integration,
+WebView and SQLite are implemented. The kitchen sink covers these APIs. See the
+[API guide](desktop-api-expansion.md) and [current validation](desktop-expansion-validation.md).
+
+The earlier pending custom Save/quit acceptance below is now passed: the real
+Save button was exercised through computer use and the full native suite completed.
+The current scope remains macOS 14+ / Apple Silicon.
+
+## Notifications, tray and updates — 2026-09-11
+
+The three integrations are implemented. The suite now has 89 passing tests; Go,
+custom native APIs, signed-feed tooling, and standalone Release updater startup
+passed. GUI and production install/relaunch acceptance remain outstanding.
+See [integration validation](integrations-validation.md).
+
+## Initial SDK expansion — 2026-09-11
+
+The five SDK groups and kitchen sink are implemented. Typecheck, 73 Bun tests,
+three Go isolation runs, and actual reduced-binary checks passed. Final custom
+Save/quit UI acceptance is pending: XCTest cannot connect to its service and the
+Mac is locked. See [SDK validation](sdk-validation.md) and [SDK usage](sdk.md).
+
+## Original prototype verification — 2026-09-10
 
 | Check | Result |
 | --- | --- |
@@ -51,12 +76,12 @@ Artifacts are ignored by Git and can be regenerated using the development instru
 
 ## Remaining scope
 
-This is a local prototype, not the MVP or public beta. Runtime downloads/caching, public package releases, real Developer ID/notarization acceptance, update delivery, broader SDK APIs, and a real product-app migration remain the next milestones. Local ad-hoc signing is used for the test binaries.
+This is a local prototype, not the MVP or public beta. Runtime downloads/caching, public package releases, real Developer ID/notarization acceptance, production update-install acceptance and a real product-app migration remain the next milestones. Local ad-hoc signing is used for the test binaries.
 
 The `legend package` command now implements credential setup, signing, resumable notarization, stapling, and ZIP validation. Simulated end-to-end tests and real ad-hoc signature verification pass; no real Developer ID identity or notarization submission has been used. See [packaging validation limits](packaging.md#validation-status).
 
-The prototype supports static `app.json`, one JS application entry, and framework-owned module pruning. It conservatively retains third-party native packages. Dynamic app configuration, multiple window entrypoints, arbitrary runtime module lookup, and wider platform support are not claimed as implemented.
+The prototype supports static `desktop.config.json` (with legacy `app.json` fallback), one JS application entry, and framework-owned module pruning. It also prunes the explicitly supported WebView and SQLite packages; other third-party native packages are retained conservatively. Dynamic app configuration, disconnected JS entrypoints, arbitrary runtime module lookup, and wider platform support are not claimed as implemented. Secondary windows now mount separate React roots from the same application entry.
 
-Native source availability and the absence of native build-command invocations were tested on a development machine. A genuinely toolchain-free machine remains part of the pre-MVP acquisition test. The debugger-opening action is implemented against the pinned Expo endpoint but was not included in the UI acceptance run.
+Native source availability and the absence of native build-command invocations were tested on a development machine. The user subsequently confirmed the transferred Go test kit worked on another Mac. The expanded SDK still needs that same external retest. The debugger-opening action is implemented against the pinned Expo endpoint but was not included in the UI acceptance run.
 
 Extracted menu/dialog source is currently an integration copy. `legend-apps` has not been migrated; the canonical ownership cutover is the next scoped integration task now that these packages are validated. Do not maintain divergent implementations indefinitely.

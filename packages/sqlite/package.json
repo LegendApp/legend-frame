@@ -1,0 +1,15 @@
+{
+  "name": "@legend-apps/sqlite",
+  "version": "0.1.0-prototype.0",
+  "license": "MIT",
+  "main": "src/index.ts",
+  "react-native": "src/index.ts",
+  "files": [
+    "src"
+  ],
+  "dependencies": {
+    "@op-engineering/op-sqlite": "18.2.1",
+    "@legend-apps/desktop-app": "0.1.0-prototype.0",
+    "@legend-apps/file-system": "0.1.0-prototype.0"
+  }
+}

@@ -29,6 +29,8 @@
     "@types/react": "19.1.10"
   },
   "overrides": {
+    "react-native-webview": "16.0.0",
+    "@op-engineering/op-sqlite": "18.2.1",
     "expo-asset": "12.0.13",
     "expo-constants": "18.0.14",
     "expo-file-system": "19.0.24",

@@ -211,3 +211,71 @@ test("updates expose availability without starting and preserve native errors", 
   emit("NativeDesktopApp", "desktop", { type: "update", state: "available", version: "2" });
   emit("NativeDesktopApp", "desktop", { type: "trayClick" }); expect(events).toHaveLength(1); sub.remove();
 });
+
+const processes = await import("../packages/processes/src/index");
+const globalShortcuts = await import("../packages/global-shortcuts/src/index");
+const system = await import("../packages/system/src/index");
+const messages = await import("../packages/message-dialog/src/index");
+test("global hotkey conflicts clean subscriptions and distinct registrations dispose independently", async () => {
+  let hits = 0;
+  const first = await globalShortcuts.registerGlobalShortcut("Cmd+Shift+J", () => hits++);
+  const firstID = calls.at(-1)!.args.id;
+  const second = await globalShortcuts.registerGlobalShortcut("Cmd+Shift+K", () => hits += 10);
+  emit("NativeDesktopApp", "desktop", { type: "globalShortcut", id: firstID }); expect(hits).toBe(1);
+  await first.remove(); await first.remove();
+  emit("NativeDesktopApp", "desktop", { type: "globalShortcut", id: firstID }); expect(hits).toBe(1);
+  handlers.set("NativeDesktopGlobalShortcuts.register", () => { throw nativeError("E_SHORTCUT_CONFLICT"); });
+  await expect(globalShortcuts.registerGlobalShortcut("Cmd+Shift+K", () => {})).rejects.toThrow("E_SHORTCUT_CONFLICT");
+  expect(subscriptions.get("NativeDesktopApp.desktop")?.size).toBe(1); await second.remove();
+});
+test("process subscriptions exist before launch and survive immediate exit", async () => {
+  handlers.set("NativeDesktopProcesses.spawn", args => {
+    emit("NativeDesktopApp", "desktop", { type: "processOutput", processId: args.id, stream: "stdout", base64: "aGk=" });
+    emit("NativeDesktopApp", "desktop", { type: "processExit", processId: args.id, result: { exitCode: 0, stdout: "hi" } });
+  });
+  const chunks: string[] = [];
+  const child = await processes.spawn({ executable: "/bin/echo", args: ["hi"] }, chunk => chunks.push(chunk.base64));
+  expect(await child.exited).toMatchObject({ stdout: "hi", exitCode: 0 }); expect(chunks).toEqual(["aGk="]);
+  expect(subscriptions.get("NativeDesktopApp.desktop")?.size).toBe(0); await child.terminate();
+  await expect(child.write("late")).rejects.toThrow("exited");
+});
+test("process validation and failed launches do not leak listeners", async () => {
+  for (const options of [{ executable: "echo" }, { executable: "/bin/echo", timeoutMs: -1 }, { executable: "/bin/echo", env: { "BAD=KEY": "x" } }]) await expect(processes.spawn(options)).rejects.toThrow();
+  handlers.set("NativeDesktopProcesses.spawn", () => { throw nativeError("E_NOT_FOUND"); });
+  await expect(processes.spawn({ executable: "/missing" })).rejects.toThrow("E_NOT_FOUND"); expect(subscriptions.get("NativeDesktopApp.desktop")?.size).toBe(0);
+});
+test("dialog cancellation, default buttons and input validation", async () => {
+  handlers.set("NativeDesktopMessageDialog.show", () => ({ button: 0, checked: false }));
+  expect(await messages.confirm("Continue?", { windowId: "main" })).toBe(false);
+  expect(calls.at(-1)?.args).toMatchObject({ windowId: "main", defaultButton: 1, cancelButton: 0 });
+  await expect(messages.showMessage({ title: "Bad", buttons: [] })).rejects.toThrow();
+  await expect(messages.showMessage({ title: "Bad", defaultButton: 5 })).rejects.toThrow();
+});
+test("rich clipboard validates file paths before replacing clipboard contents", async () => {
+  await clipboard.writeClipboard({ text: "Hello", html: "<b>Hello</b>" });
+  expect(calls.at(-1)?.args).toEqual({ text: "Hello", html: "<b>Hello</b>" });
+  await expect(clipboard.writeClipboard({ files: ["relative"] })).rejects.toThrow();
+  await expect(clipboard.writeClipboard({ files: ["/tmp/a"], text: "mixed" })).rejects.toThrow();
+  handlers.set("NativeDesktopClipboard.read", () => ({ text: "Hello", files: ["/tmp/a"] })); expect(await clipboard.readClipboard()).toMatchObject({ files: ["/tmp/a"] });
+});
+test("sleep assertions release once and system events filter unrelated traffic", async () => {
+  handlers.set("NativeDesktopSystem.preventSleep", () => 123);
+  const assertion = await system.preventSleep("Exporting"); await assertion.remove(); await assertion.remove();
+  expect(calls.filter(call => call.method === "allowSleep")).toHaveLength(1);
+  const events: string[] = []; const subscription = await system.onSystemEvent(event => events.push(event.type));
+  emit("NativeDesktopApp", "desktop", { type: "wake" }); emit("NativeDesktopApp", "desktop", { type: "activate" }); expect(events).toEqual(["wake"]); subscription.remove();
+});
+test("window styling uses the same constraints as startup config", async () => {
+  expect(() => windows.setWindowOptions("main", { minWidth: 1000, maxWidth: 400 })).toThrow();
+  expect(() => windows.openWindow({ id: "sheet", modal: true })).toThrow();
+  await windows.setWindowOptions("main", { titleBarStyle: "overlay", resizable: false });
+  expect(calls.at(-1)?.args).toEqual({ id: "main", options: { titleBarStyle: "overlay", resizable: false } });
+});
+test("Dock menus identify their owner and remove only once", async () => {
+  const selected: string[] = [];
+  const menu = await system.setDockMenu([{ id: "open", title: "Open" }], id => selected.push(id));
+  const owner = calls.at(-1)?.args.owner;
+  emit("NativeDesktopApp", "desktop", { type: "dockAction", owner: "other", id: "open" });
+  emit("NativeDesktopApp", "desktop", { type: "dockAction", owner, id: "open" }); expect(selected).toEqual(["open"]);
+  await menu.remove(); await menu.remove(); expect(calls.filter(call => call.method === "clearDockMenu")).toHaveLength(1);
+});
