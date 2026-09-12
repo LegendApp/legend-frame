@@ -7,10 +7,12 @@ With the local SDK packed and a Go runtime registered, run from the framework ch
 ```sh
 bun run legend create /tmp/MyLegendApp
 cd /tmp/MyLegendApp
-bun dev
+bun run macos
 ```
 
-`create` finds the local package manifest. `dev` discovers a registered Go runtime matching the SDK version and native module signatures, chooses an available port, and opens the app. Running a compatible Go binary invokes no native build tools. The CLI finds the app root when invoked from a subdirectory.
+`bun run macos`, `bun start`, and `bun dev` all start the same managed Legend development session. Existing apps can add `"macos": "legend dev"` and `"start": "legend dev"` to their package scripts.
+
+`create` copies the starter shipped in the CLI package and finds the local package manifest. `dev` discovers a registered Go runtime matching the SDK version and native module signatures, chooses an available port, and opens the app. Running a compatible Go binary invokes no native build tools. The CLI finds the app root when invoked from a subdirectory.
 
 The running terminal shows the current runtime and available actions:
 
@@ -122,3 +124,9 @@ Do not use workspace symlinks as the sole distribution test. The Go builder and 
 - `.legend/session.json`: current compatibility gate for the managed Metro session.
 
 Keep generated files out of version control. Commit application source/configuration and its package-manager lockfile.
+
+## Starter template and Expo Desktop integration
+
+Edit `packages/cli/templates/blank-typescript/` to change the starter. The template contains the dependency pins, scripts, app source, Metro configuration, and TypeScript configuration. The CLI supplies app identity, local archive paths, and Expo config during creation. The `gitignore` asset becomes `.gitignore` in the app. Repack the CLI after changing template files.
+
+This is a local Legend template, not a published Expo Desktop template. `legend create` is the supported entry point today. Native generation continues to use the pinned upstream bare-minimum template and Legend config plugins. See the [integration handoff](expo-desktop-integration.md) for the proposed direct Expo Desktop template and binary-launch integration.

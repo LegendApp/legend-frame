@@ -7,7 +7,8 @@
     "legend": "src/index.ts"
   },
   "files": [
-    "src"
+    "src",
+    "templates"
   ],
   "engines": {
     "bun": ">=1.3.14"

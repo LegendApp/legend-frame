@@ -8,12 +8,17 @@
     "noEmit": true,
     "allowImportingTsExtensions": true,
     "jsx": "react-jsx",
-    "types": ["bun"]
+    "types": [
+      "bun"
+    ]
   },
   "include": [
     "packages/**/*.ts",
     "fixtures/**/*.ts",
     "scripts/**/*.ts",
     "tests/**/*.ts"
+  ],
+  "exclude": [
+    "packages/cli/templates"
   ]
 }

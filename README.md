@@ -24,9 +24,11 @@ After the SDK has a registered Go runtime:
 ```sh
 bun run legend create /tmp/MyLegendApp
 cd /tmp/MyLegendApp
-bun dev
+bun run macos # bun dev and bun start are equivalent
 # When ready to build a standalone app:
 bun run build
 ```
 
 Framework maintainers build and register Go once with `bun run legend sdk build-go`, or register an existing binary with `bun run legend sdk register /path/to/Go.app`. SDK archives and Go paths are discovered automatically for app development.
+
+For Expo Desktop contributors, see the [integration handoff](docs/expo-desktop-integration.md) for the starter structure, current ownership boundaries, and proposed upstream launch contract.
