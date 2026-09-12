@@ -136,3 +136,13 @@ test("Go launch identity is explicit, validated, and optional for opening a stan
     expect(() => projectEnvironment(root)).toThrow("stable project identifier");
   } finally { rmSync(root, { recursive: true, force: true }); }
 });
+test("optional native peers do not force unused integrations into production", () => {
+  const packages = [
+    { name: "host", sdk: false, requires: [], json: { peerDependencies: { webview: "*" }, peerDependenciesMeta: { webview: { optional: true } } } },
+    { name: "webview", sdk: true, requires: [], json: {} },
+  ] as any;
+  expect(selection(packages, new Set()).included.map(pkg => pkg.name)).toEqual(["host"]);
+  expect(selection(packages, new Set(["webview"])).included.map(pkg => pkg.name)).toEqual(["host", "webview"]);
+  packages[0].json.dependencies = { webview: "1.0.0" };
+  expect(selection(packages, new Set()).included.map(pkg => pkg.name)).toEqual(["host", "webview"]);
+});

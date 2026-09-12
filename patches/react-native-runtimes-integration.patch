@@ -1,0 +1,59 @@
+diff --git a/packages/core/ios/ThreadedRuntime.mm b/packages/core/ios/ThreadedRuntime.mm
+index a8f28db..7a29500 100644
+--- a/packages/core/ios/ThreadedRuntime.mm
++++ b/packages/core/ios/ThreadedRuntime.mm
+@@ -1,3 +1,4 @@
++#include "../cpp/nativecompose/threadedruntime/RuntimeFunctionScheduler.h"
+ #import "ThreadedRuntime.h"
+ 
+ #import <React/RCTConvert.h>
+@@ -609,6 +610,7 @@ + (void)destroyRuntime:(NSString *)runtimeName
+                                      resultJson:nil
+                                       errorJson:ThreadedRuntimeErrorJson(message)];
+   }
++  nativecompose::threadedruntime::unregisterRuntimeDispatcher(normalizedRuntimeName.UTF8String);
+   [ThreadedRuntimeHosts() removeObjectForKey:normalizedRuntimeName];
+   [ThreadedRuntimeHostDelegates() removeObjectForKey:normalizedRuntimeName];
+   [ThreadedRuntimeTurboModuleDelegates() removeObjectForKey:normalizedRuntimeName];
+@@ -619,6 +621,7 @@ + (void)destroyRuntime:(NSString *)runtimeName
+ 
+ + (void)destroyAllRuntimes
+ {
++  for (NSString *name in [self runtimeNames]) [self destroyRuntime:name];
+   [ThreadedRuntimeHosts() removeAllObjects];
+   [ThreadedRuntimeHostDelegates() removeAllObjects];
+   [ThreadedRuntimeTurboModuleDelegates() removeAllObjects];
+diff --git a/packages/core/metro.js b/packages/core/metro.js
+index 364b9a5..187b9ed 100644
+--- a/packages/core/metro.js
++++ b/packages/core/metro.js
+@@ -175,6 +175,7 @@ function generateThreadedRuntimeEntry({
+   generatedEntry,
+   projectRoot = process.cwd(),
+   roots = ['App.tsx', 'src'],
++  runtimeEntries: selectedRuntimeEntries,
+ }) {
+   const root = path.resolve(projectRoot);
+   const files = collectSourceFiles(root, roots);
+@@ -182,7 +183,7 @@ function generateThreadedRuntimeEntry({
+   const runtimeFunctions = files.flatMap(file =>
+     scanRuntimeFunctions(file, root),
+   );
+-  const runtimeEntries = collectRuntimeEntryFiles(root);
++  const runtimeEntries = selectedRuntimeEntries ?? collectRuntimeEntryFiles(root);
+   const seenNames = new Map();
+   const seenRuntimeFunctionIds = new Map();
+ 
+diff --git a/packages/core/src/ThreadedRuntime.tsx b/packages/core/src/ThreadedRuntime.tsx
+--- a/packages/core/src/ThreadedRuntime.tsx
++++ b/packages/core/src/ThreadedRuntime.tsx
+@@ -859,6 +859,9 @@
+   ) => void;
+ 
+ function installThreadedRuntimeEventEmitterFallback() {
++  // A headless worker has no renderer. Never replace the main renderer's event
++  // receiver when this module is imported after the UI is already mounted.
++  if (isMainRuntime()) return;
+   if (!['ios', 'macos'].includes(Platform.OS) || didInstallThreadedRuntimeEventEmitterFallback) {
+     return;
+   }

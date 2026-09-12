@@ -1,0 +1,145 @@
+diff --git a/packages/core/NativeComposeThreadedRuntime.podspec b/packages/core/NativeComposeThreadedRuntime.podspec
+index 40210f6..c6596e7 100644
+--- a/packages/core/NativeComposeThreadedRuntime.podspec
++++ b/packages/core/NativeComposeThreadedRuntime.podspec
+@@ -10,7 +10,7 @@ Pod::Spec.new do |s|
+   s.license      = "MIT"
+   s.authors      = "Native Compose"
+ 
+-  s.platforms    = { :ios => min_ios_version_supported }
++  s.platforms    = { :ios => min_ios_version_supported, :osx => "14.0" }
+   s.source       = { :git => "https://github.com/react-native-runtimes/core.git", :tag => "#{s.version}" }
+ 
+   s.source_files = [
+diff --git a/packages/core/ios/ThreadedRuntimeSurfaceManager.mm b/packages/core/ios/ThreadedRuntimeSurfaceManager.mm
+index 5e13760..fdc7d84 100644
+--- a/packages/core/ios/ThreadedRuntimeSurfaceManager.mm
++++ b/packages/core/ios/ThreadedRuntimeSurfaceManager.mm
+@@ -9,7 +9,11 @@ @implementation ThreadedRuntimeSurfaceManager
+ 
+ RCT_EXPORT_MODULE(ThreadedRuntimeSurface)
+ 
++#if TARGET_OS_OSX
++- (NSView *)view
++#else
+ - (UIView *)view
++#endif
+ {
+   return [ThreadedRuntimeSurfaceView new];
+ }
+diff --git a/packages/core/ios/ThreadedRuntimeSurfaceView.h b/packages/core/ios/ThreadedRuntimeSurfaceView.h
+index 9c1d205..f528c39 100644
+--- a/packages/core/ios/ThreadedRuntimeSurfaceView.h
++++ b/packages/core/ios/ThreadedRuntimeSurfaceView.h
+@@ -1,8 +1,17 @@
++#import <TargetConditionals.h>
++#if TARGET_OS_OSX
++#import <React/RCTUIKit.h>
++#else
+ #import <UIKit/UIKit.h>
++#endif
+ 
+ NS_ASSUME_NONNULL_BEGIN
+ 
++#if TARGET_OS_OSX
++@interface ThreadedRuntimeSurfaceView : RCTUIView
++#else
+ @interface ThreadedRuntimeSurfaceView : UIView
++#endif
+ 
+ @property (nonatomic, copy) NSString *appName;
+ @property (nonatomic, copy) NSString *blockStatus;
+diff --git a/packages/core/ios/ThreadedRuntimeSurfaceView.mm b/packages/core/ios/ThreadedRuntimeSurfaceView.mm
+index 0764a63..ff00d43 100644
+--- a/packages/core/ios/ThreadedRuntimeSurfaceView.mm
++++ b/packages/core/ios/ThreadedRuntimeSurfaceView.mm
+@@ -26,7 +26,11 @@ - (instancetype)initWithFrame:(CGRect)frame
+     _mode = @"";
+     _runtimeName = ThreadedRuntimeSurfaceDefaultRuntimeName;
+     _surfaceKey = @"";
++    #if TARGET_OS_OSX
++    self.backgroundColor = NSColor.clearColor;
++#else
+     self.backgroundColor = UIColor.clearColor;
++#endif
+   }
+   return self;
+ }
+@@ -196,7 +200,12 @@ - (void)ensureSurface
+   _surfaceView = [[RCTSurfaceHostingView alloc] initWithSurface:_surface
+                                                 sizeMeasureMode:RCTSurfaceSizeMeasureModeWidthExact |
+                                                                 RCTSurfaceSizeMeasureModeHeightExact];
++  #if TARGET_OS_OSX
++  _surfaceView.wantsLayer = YES;
++  _surfaceView.layer.backgroundColor = NSColor.clearColor.CGColor;
++#else
+   _surfaceView.backgroundColor = UIColor.clearColor;
++#endif
+   _surfaceView.frame = self.bounds;
+   [self addSubview:_surfaceView];
+   [_surface setSize:self.bounds.size];
+diff --git a/packages/core/src/ThreadedRuntime.tsx b/packages/core/src/ThreadedRuntime.tsx
+index 2d9c936..13ca253 100644
+--- a/packages/core/src/ThreadedRuntime.tsx
++++ b/packages/core/src/ThreadedRuntime.tsx
+@@ -686,7 +686,7 @@ function prewarmRuntime(
+   runtimeName: ThreadedRuntimeName = DEFAULT_RUNTIME_NAME,
+   options: ThreadedRuntimePrewarmOptions = {},
+ ) {
+-  if (Platform.OS !== 'android' && Platform.OS !== 'ios') {
++  if (!['android', 'ios', 'macos'].includes(Platform.OS)) {
+     return Promise.resolve();
+   }
+   const kind = options.kind ?? DEFAULT_RUNTIME_KIND;
+@@ -736,7 +736,7 @@ export const ThreadedRuntime = {
+     taskName: string,
+     options: ThreadedHeadlessTaskOptions<Payload> = {},
+   ) {
+-    if (Platform.OS !== 'android' && Platform.OS !== 'ios') {
++    if (!['android', 'ios', 'macos'].includes(Platform.OS)) {
+       return Promise.resolve();
+     }
+ 
+@@ -759,7 +759,7 @@ export const ThreadedRuntime = {
+     fn: RuntimeFunction<TFunction>,
+     ...args: Parameters<TFunction>
+   ): Promise<Awaited<ReturnType<TFunction>>> {
+-    if (Platform.OS !== 'android' && Platform.OS !== 'ios') {
++    if (!['android', 'ios', 'macos'].includes(Platform.OS)) {
+       return Promise.resolve(fn(...args)) as Promise<
+         Awaited<ReturnType<TFunction>>
+       >;
+@@ -829,21 +829,21 @@ export const ThreadedRuntime = {
+   },
+ 
+   destroy(runtimeName: ThreadedRuntimeName = DEFAULT_RUNTIME_NAME) {
+-    if (Platform.OS !== 'android' && Platform.OS !== 'ios') {
++    if (!['android', 'ios', 'macos'].includes(Platform.OS)) {
+       return Promise.resolve();
+     }
+     return nativeRuntime?.destroyRuntime?.(runtimeName) ?? Promise.resolve();
+   },
+ 
+   destroyAll() {
+-    if (Platform.OS !== 'android' && Platform.OS !== 'ios') {
++    if (!['android', 'ios', 'macos'].includes(Platform.OS)) {
+       return Promise.resolve();
+     }
+     return nativeRuntime?.destroyAllRuntimes?.() ?? Promise.resolve();
+   },
+ 
+   getRuntimeNames() {
+-    if (Platform.OS !== 'android' && Platform.OS !== 'ios') {
++    if (!['android', 'ios', 'macos'].includes(Platform.OS)) {
+       return Promise.resolve([] as string[]);
+     }
+     return (
+@@ -859,7 +859,7 @@ const registerCallableModule =
+   ) => void;
+ 
+ function installThreadedRuntimeEventEmitterFallback() {
+-  if (Platform.OS !== 'ios' || didInstallThreadedRuntimeEventEmitterFallback) {
++  if (!['ios', 'macos'].includes(Platform.OS) || didInstallThreadedRuntimeEventEmitterFallback) {
+     return;
+   }
+ 

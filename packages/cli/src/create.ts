@@ -1,4 +1,4 @@
-import { cpSync, existsSync, mkdirSync, renameSync } from "node:fs";
+import { cpSync, existsSync, mkdirSync, renameSync, readFileSync } from "node:fs";
 import path from "node:path";
 import { readJson, writeJson, prepareConfig } from "./project.ts";
 import { run } from "./commands.ts";
@@ -18,6 +18,7 @@ export async function refreshLocalPackages(root: string, manifest: string) {
   }
   writeJson(path.join(root, "package.json"), pkg);
   await run(root, ["bun", "install"]);
+  upgradeManagedEntry(root);
 }
 
 export async function create(root: string, archiveManifest: string) {
@@ -55,4 +56,19 @@ export async function create(root: string, archiveManifest: string) {
   prepareConfig(root);
   await run(root, ["bun", "install"]);
   console.log(`Created ${root}.\n\n  cd ${JSON.stringify(root)}\n  bun run macos`);
+}
+
+export function upgradeManagedEntry(root: string) {
+  const oldMetro = `const { makeMetroConfig } = require("expo-desktop-metro-config");
+const { gate } = require("@legend-apps/cli/src/metro-gate.cjs");
+const config = makeMetroConfig(__dirname);
+config.server = { ...config.server, enhanceMiddleware: (middleware) => gate(__dirname, middleware) };
+module.exports = config;
+`;
+  const oldEntry = 'import { registerRootComponent } from "expo";\nimport App from "./App";\nregisterRootComponent(App);\n';
+  const metro = path.join(root, "metro.config.js"), entry = path.join(root, "index.ts");
+  // Upgrade only the exact generated pair; customized entries remain user-owned.
+  if (existsSync(metro) && existsSync(entry) && readFileSync(metro, "utf8") === oldMetro && readFileSync(entry, "utf8") === oldEntry) {
+    for (const file of ["metro.config.js", "index.ts"]) cpSync(path.join(template, file), path.join(root, file));
+  }
 }

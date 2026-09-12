@@ -5,6 +5,7 @@ import {
   existsSync,
   mkdirSync,
   readFileSync,
+  realpathSync,
   readdirSync,
   rmSync,
   writeFileSync,
@@ -34,7 +35,7 @@ export async function analyze(root: string, packages = nativePackages(root)) {
   prepareConfig(root);
   const dir = stateFile(root, "analysis");
   mkdirSync(dir, { recursive: true });
-  await run(
+  const exportBundle = async (env: Record<string, string>) => run(
     root,
     [
       binary(root, "expo"),
@@ -54,8 +55,27 @@ export async function analyze(root: string, packages = nativePackages(root)) {
       "--max-workers",
       "2",
     ],
-    { env: { CI: "1" }, capture: true },
+    { env: { CI: "1", ...env }, capture: true },
   );
+  await exportBundle({ LEGEND_RUNTIME_DISCOVERY: "1" });
+  const discovery = readJson(path.join(dir, "app.map"));
+  const runtimeCore = packages.find(pkg => pkg.name === "@react-native-runtimes/core");
+  const roots = (discovery.sources as string[]).filter(source => !source.includes("\0")).map(source => {
+    const absolute = path.resolve(root, source);
+    // Expo emits URL-like /node_modules and /App.tsx paths as well as absolute paths.
+    return existsSync(absolute) ? absolute : path.resolve(root, source.replace(/^\//, ""));
+  }).filter(source => existsSync(source)).map(source => realpathSync(source));
+  const enabled = !!runtimeCore && (discovery.sources as string[]).some(source => (source.startsWith(runtimeCore.root + "/") || source.includes("/node_modules/@react-native-runtimes/core/")) && !source.endsWith("secondary-runtime-polyfill.js"));
+  if (enabled && !(discovery.sources as string[]).some(source => source.endsWith("/@legend-apps/cli/src/runtime-entry.cjs"))) {
+    throw new Error("Runtimes requires withDesktop in metro.config.js and the worker-aware index.ts. See docs/runtimes.md migration instructions.");
+  }
+  const runtimeSources = path.join(dir, "runtime-sources.json");
+  writeJson(runtimeSources, { enabled, roots: roots.filter(source =>
+    /\.[jt]sx?$/.test(source) && !source.endsWith(".d.ts") &&
+    !source.includes("/node_modules/@react-native-runtimes/core/") &&
+    (!source.includes("/node_modules/") || /["']@react-native-runtimes\/core["']/.test(readFileSync(source, "utf8")))
+  ) });
+  await exportBundle({ LEGEND_RUNTIME_SOURCES: runtimeSources });
   const map = readJson(path.join(dir, "app.map"));
   const used = new Set<string>();
   for (const source of map.sources as string[]) {
@@ -268,7 +288,7 @@ async function buildUnlocked(
       "build",
     ],
     {
-      env: { RCT_NEW_ARCH_ENABLED: "1", ENTRY_FILE: pkg.main ?? "index.ts" },
+      env: { RCT_NEW_ARCH_ENABLED: "1", ENTRY_FILE: pkg.main ?? "index.ts", ...(productionGraph ? { LEGEND_RUNTIME_SOURCES: stateFile(root, "analysis/runtime-sources.json") } : {}) },
       capture: true,
     },
   );

@@ -2,6 +2,14 @@
 
 The local Apple Silicon prototype is implemented and its Go → custom development build → reduced standalone app flow was validated on 2026-09-10.
 
+## Margelo Runtimes prototype — 2026-09-12
+
+A small macOS compatibility patch enables background Hermes execution with
+`@react-native-runtimes/core`. Six native checks passed in both Debug and standalone
+Release, including CPU responsiveness, native filesystem access and runtime recreation.
+This is an optional custom-build prototype; Go and the default SDK are unchanged.
+See [Runtimes prototype and upstream patch](runtimes-prototype.md).
+
 ## Desktop API stages 1–4 — 2026-09-11
 
 Framework-owned `desktop.config.json`, window styles/child sheets, global
@@ -85,3 +93,7 @@ The prototype supports static `desktop.config.json` (with legacy `app.json` fall
 Native source availability and the absence of native build-command invocations were tested on a development machine. The user subsequently confirmed the transferred Go test kit worked on another Mac. The expanded SDK still needs that same external retest. The debugger-opening action is implemented against the pinned Expo endpoint but was not included in the UI acceptance run.
 
 Extracted menu/dialog source is currently an integration copy. `legend-apps` has not been migrated; the canonical ownership cutover is the next scoped integration task now that these packages are validated. Do not maintain divergent implementations indefinitely.
+
+## Integrated background runtimes
+
+Margelo Runtimes is integrated using direct `@react-native-runtimes/core` imports, with automatic host/Metro setup and production module pruning. See [runtimes.md](runtimes.md) for the pinned patches and verification commands.

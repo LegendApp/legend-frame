@@ -150,7 +150,7 @@ export function nativePackages(root: string): NativePackage[] {
     )
     .map((pkg) => ({
       ...pkg,
-      sdk: pkg.json.legend?.sdk === true || ["react-native-webview", "@op-engineering/op-sqlite"].includes(pkg.name),
+      sdk: pkg.json.legend?.sdk === true || ["react-native-webview", "@op-engineering/op-sqlite", "@react-native-runtimes/core", "react-native-nitro-modules"].includes(pkg.name),
       requires: pkg.json.legend?.requires ?? [],
       signature: (signature => pkg.name === "@legend-apps/desktop-app" ? digest(signature + adapters) : signature)(hashFiles(pkg.root, [
         "package.json",
@@ -159,7 +159,7 @@ export function nativePackages(root: string): NativePackage[] {
         "apple",
         "cpp",
         "src",
-        "common",
+        "common", "nitrogen/generated", "nitro.json",
         "expo-module.config.json",
         "react-native.config.js",
         ...readdirSync(pkg.root).filter((name) => name.endsWith(".podspec")),
@@ -207,7 +207,7 @@ export function selection(
         ...pkg.requires,
         ...Object.keys({
           ...pkg.json.dependencies,
-          ...pkg.json.peerDependencies,
+          ...Object.fromEntries(Object.entries(pkg.json.peerDependencies ?? {}).filter(([name]) => !pkg.json.peerDependenciesMeta?.[name]?.optional)),
         }).filter((n) => packages.some((p) => p.name === n)),
       ];
       for (const name of nativeDeps) {

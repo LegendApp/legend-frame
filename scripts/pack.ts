@@ -1,3 +1,4 @@
+import { packRuntimes } from "./prepare-runtimes";
 import { mkdirSync, readFileSync, copyFileSync, readdirSync } from "node:fs";
 import { createHash } from "node:crypto";
 import path from "node:path";
@@ -12,7 +13,7 @@ const packages = [
   "fixtures/native-greeting",
   "fixtures/sdk-test-driver",
 ];
-const manifest: Record<string, string> = {};
+const manifest: Record<string, string> = await packRuntimes(root, output);
 for (const dir of packages) {
   const pkg = readJson(path.join(root, dir, "package.json"));
   const file = `${pkg.name.replace(/^@/, "").replaceAll("/", "-")}-${pkg.version}.tgz`;

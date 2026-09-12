@@ -1,4 +1,5 @@
 node_modules/
+.threaded-runtime/
 .legend/
 macos/
 dist/

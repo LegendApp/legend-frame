@@ -50,6 +50,8 @@
     "@legend-apps/global-shortcuts": "0.1.0-prototype.0",
     "@legend-apps/drag-drop": "0.1.0-prototype.0",
     "@legend-apps/webview": "0.1.0-prototype.0",
-    "@legend-apps/sqlite": "0.1.0-prototype.0"
+    "@legend-apps/sqlite": "0.1.0-prototype.0",
+    "@react-native-runtimes/core": "0.1.0-alpha.2",
+    "react-native-nitro-modules": "0.35.7"
   }
 }

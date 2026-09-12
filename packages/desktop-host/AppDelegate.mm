@@ -4,6 +4,10 @@
 #import <React-RCTAppDelegate/RCTRootViewFactory.h>
 #import <ReactAppDependencyProvider/RCTAppDependencyProvider.h>
 
+#if __has_include(<NativeComposeThreadedRuntime/ThreadedRuntime.h>)
+#import <NativeComposeThreadedRuntime/ThreadedRuntime.h>
+#import <React/RCTReloadCommand.h>
+#endif
 
 @implementation AppDelegate
 - (void)applicationDidFinishLaunching:(NSNotification *)notification
@@ -12,8 +16,19 @@
   self.moduleName = @"main";
   self.dependencyProvider = [RCTAppDependencyProvider new];
   self.initialProps = LegendInitialProps(@"main", @{});
+#if __has_include(<NativeComposeThreadedRuntime/ThreadedRuntime.h>)
+  [ThreadedRuntime configureWithReactNativeDelegate:self launchOptions:@{}];
+  // Fired before React Native enumerates reload listeners, so workers are
+  // discarded before the main app restarts. Worker invalidation owns no app UI.
+  [[NSNotificationCenter defaultCenter] addObserver:self selector:@selector(legendResetRuntimes:)
+    name:RCTTriggerReloadCommandNotification object:nil];
+#endif
   [super applicationDidFinishLaunching:notification];
 }
+#if __has_include(<NativeComposeThreadedRuntime/ThreadedRuntime.h>)
+- (void)legendResetRuntimes:(NSNotification *)notification { [ThreadedRuntime destroyAllRuntimes]; }
+- (void)applicationWillTerminate:(NSNotification *)notification { [ThreadedRuntime destroyAllRuntimes]; }
+#endif
 - (void)loadReactNativeWindow:(NSDictionary *)launchOptions {
   NSView *root = [self.rootViewFactory viewWithModuleName:self.moduleName initialProperties:self.initialProps launchOptions:launchOptions];
   self.window = [[NSWindow alloc] initWithContentRect:NSMakeRect(0, 0, 1000, 700)
