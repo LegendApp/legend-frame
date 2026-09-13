@@ -242,4 +242,8 @@ The main boundaries are `packages/cli` for orchestration, `packages/config-plugi
 
 [ARCHITECTURE.md](ARCHITECTURE.md) explains these boundaries, runtime compatibility, production pruning, generated artifacts, and where to change code. It also documents the integrated Windows adapter and the work remaining beyond the development slice. The [Expo Desktop handoff](docs/expo-desktop-integration.md) separates integration available today from the proposed upstream `--binary` launch contract.
 
+The [Expo API adapters](docs/expo-api-adapters.md) document the current clipboard, secure-storage, and linking migration and its kitchen-sink checks. The [API ownership policy](docs/external-libraries.md#public-contracts-and-replaceable-implementations) describes stable framework contracts with replaceable native, Expo, or community implementations. The larger Router/UI work is deferred.
+
+The [universal API plan](docs/universal-api-plan.md) proposes one web/mobile/desktop codebase, Expo-aligned capability APIs, Expo UI adapters, and declarative window presentation through Expo Router. It is awaiting review and does not describe implemented functionality. The earlier [API structure review](docs/api-structure-review.md) retains the current SDK inventory.
+
 Use the [implementation plan](docs/implementation-plan.md) for original decisions and milestones; newer feature guides and dated validation reports describe subsequent work. These documents describe an evolving source checkout, not a claim that every feature is published or production-qualified.

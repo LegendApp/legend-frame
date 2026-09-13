@@ -1,6 +1,34 @@
 # Integrated external libraries
 
-The framework integrates external libraries without taking ownership of their APIs. Prefer imports from the original package and use its documentation. New framework wrappers should exist only when necessary for framework-specific behavior; native setup, version pinning, Go support and production pruning do not by themselves require a new JavaScript API.
+The framework owns public contracts for capabilities it makes work across platforms. Their implementations can be framework modules, Expo modules, or community libraries. Library-specific APIs retain upstream ownership: prefer imports from the original package and use its documentation. Native setup, version pinning, Go support and production pruning do not by themselves require a new JavaScript API.
+
+The [clipboard, secure-storage, and linking adapters](expo-api-adapters.md) implement the first small shared contracts. The larger [universal API plan](universal-api-plan.md) remains deferred. Neither direction implies reexporting every dependency.
+
+## Public contracts and replaceable implementations
+
+The agreed direction is one application codebase for web, mobile, and desktop, with a curated framework API. Expo provides familiar contracts where their semantics fit. Framework-owned desktop capabilities and explicit platform extensions remain useful alongside those shared contracts.
+
+- Keep implementations behind capability-level platform adapters. Do not expose the native bridge or backend-specific objects as part of a backend-independent contract.
+- Document the supported methods, options, results, errors, lifecycle, and platform limitations. Similar method names alone do not establish compatibility with a complete Expo module.
+- Own the shared type contract and verify observable behavior. Narrow upstream reexports are acceptable where they satisfy that contract; they must not accidentally expand the promise when an upstream package changes.
+- Keep dependencies modular and platform imports safe. Using one capability must not require every optional module or evaluate another platform's native code.
+- Retain direct upstream imports for library-specific functionality, including React Native primitives, database APIs, and routing. Add a framework UI export only where it supplies a meaningful shared component contract.
+
+Our own native implementation can supply a capability initially. As Expo or community support develops, replace it when the candidate meets the contract and improves functionality, reliability, maintenance, or dependency cost. Run the same acceptance cases against the replacement. Preserve specialized desktop behavior separately if the upstream library does not cover it. A backend swap must preserve application imports and promised behavior; otherwise it is an explicit API migration.
+
+Eventually a library may be suitable enough that direct upstream imports become the recommendation. That requires a documented, gradual migration rather than silently removing the framework contract. Adoption or popularity alone is not a reason to replace a working backend.
+
+## Migration paths
+
+| Starting application | Intended path |
+| --- | --- |
+| Expo mobile app adding desktop | Keep supported upstream imports; adopt framework adapters for individual missing cross-platform capabilities. |
+| Electron desktop app | Map native capabilities to framework APIs and adapt the UI/runtime deliberately. Do not promise Electron's process, preload, `webContents`, or general Node runtime compatibility. |
+| Existing Electron desktop and React Native mobile apps | Share application logic through capability contracts incrementally. An Electron backend could support staged adoption, but none is implemented or committed to by this policy. |
+
+The current individual capability packages remain the supported shared import locations. New umbrella names, universal starters, Router/window integration, and a broad UI catalog are deferred design work.
+
+## External integrations
 
 Our documentation provides a shared place to discover integrations, with attribution and the desktop-specific setup and limitations. Upstream documentation remains the reference for upstream APIs. Compatibility patches stay explicit and separate from framework behavior.
 

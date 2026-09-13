@@ -160,7 +160,9 @@ Test-only packages must not ship in Go or distribution artifacts. Keep them in e
 
 ## External libraries and background runtimes
 
-External libraries retain their upstream APIs and attribution. Integration, version pinning, Go inclusion, and pruning do not by themselves justify a new framework wrapper. See [external libraries](docs/external-libraries.md) before adding another facade.
+The framework owns a curated set of public capability contracts, with replaceable platform implementations. The [clipboard, secure-storage, and linking adapters](docs/expo-api-adapters.md) are implemented; they use existing native desktop backends and selected Expo backends on mobile/web, with explicit platform gaps. The [universal API plan](docs/universal-api-plan.md) retains deferred UI and Router-based window proposals. The earlier [API structure review](docs/api-structure-review.md) is historical; its source inventory remains useful.
+
+External libraries retain their upstream APIs and attribution. Shared behavior across different platform backends can justify a framework adapter; integration, version pinning, Go inclusion, and pruning alone do not. An upstream implementation can replace ours when it satisfies the supported contract and acceptance checks, preserving application imports and behavior. See [external libraries](docs/external-libraries.md) for ownership, replacement criteria, and migration paths.
 
 Margelo Runtimes is imported directly as `@react-native-runtimes/core`. The pack step fetches a pinned revision, applies the separate macOS and integration patches, and creates an ordinary dependency archive. Consumers do not need a Git checkout or patch hook. The recipe and patch inputs contribute to archive identity.
 
