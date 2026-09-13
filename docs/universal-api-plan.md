@@ -2,7 +2,7 @@
 
 Date: 2026-09-13
 
-Status: deferred in favor of the smaller [clipboard, secure-storage, and linking migration](expo-api-adapters.md). Retained for future review. This document plans implementation; creating it does not start the implementation, upgrade dependencies, or authorize publishing. It supersedes the desktop-first direction of the [API structure review](api-structure-review.md), while retaining that document's source inventory and useful implementation findings.
+Status: the narrower [shared Settings starter](universal-settings.md) and three-control [UI foundation](ui.md) are now implemented. Router, declarative windows, and the broader phases below remain deferred. The original proposal was deferred in favor of the smaller [clipboard, secure-storage, and linking migration](expo-api-adapters.md). Retained for future review. This document plans implementation; creating it does not start the implementation, upgrade dependencies, or authorize publishing. It supersedes the desktop-first direction of the [API structure review](api-structure-review.md), while retaining that document's source inventory and useful implementation findings.
 
 The subsequent [API ownership decision](external-libraries.md#public-contracts-and-replaceable-implementations) establishes curated framework contracts with replaceable implementations, rather than a blanket reexport layer. The three small adapters are implemented. Package names and the phases below remain proposals, not an instruction to resume the larger work automatically.
 

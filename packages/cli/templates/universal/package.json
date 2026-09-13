@@ -1,0 +1,72 @@
+{
+  "name": "legend-template-universal",
+  "version": "0.0.1",
+  "private": true,
+  "main": "index.ts",
+  "scripts": {
+    "start": "legend dev",
+    "macos": "legend dev --platform macos",
+    "dev": "legend dev",
+    "build": "legend build",
+    "package": "legend package",
+    "doctor": "legend doctor",
+    "windows": "legend dev --platform windows",
+    "ios": "legend dev --platform ios",
+    "android": "legend dev --platform android",
+    "web": "legend dev --platform web",
+    "postinstall": "node node_modules/@legend-apps/cli/src/init-template.cjs"
+  },
+  "dependencies": {
+    "@legend-apps/cli": "0.1.0-prototype.0",
+    "@legend-apps/desktop-config": "0.1.0-prototype.0",
+    "expo": "54.0.37",
+    "expo-desktop": "1.0.0-beta.5",
+    "expo-desktop-prebuild-config": "1.1.0-beta.1",
+    "expo-desktop-config-plugins": "1.2.0-beta.0",
+    "expo-desktop-metro-config": "54.81.0-beta.3",
+    "expo-desktop-template-bare-minimum": "54.81.1-beta.5",
+    "react": "19.1.4",
+    "react-native": "0.81.6",
+    "react-native-macos": "0.81.7",
+    "@react-native-community/cli": "20.1.3",
+    "typescript": "5.9.3",
+    "@types/react": "19.1.10",
+    "react-native-windows": "0.81.35",
+    "expo-desktop-modules-core": "54.0.14-beta.0",
+    "expo-desktop-stubs": "54.0.14-beta.0",
+    "@legend-apps/ui": "0.1.0-prototype.0",
+    "@legend-apps/clipboard": "0.1.0-prototype.0",
+    "@legend-apps/secure-storage": "0.1.0-prototype.0",
+    "@legend-apps/desktop-links": "0.1.0-prototype.0",
+    "@expo/ui": "0.2.0-beta.9",
+    "expo-dev-client": "6.0.21",
+    "expo-clipboard": "8.0.8",
+    "expo-secure-store": "15.0.8",
+    "expo-linking": "8.0.12",
+    "react-dom": "19.1.4",
+    "react-native-web": "0.21.0"
+  },
+  "overrides": {
+    "react-native-nitro-modules": "0.35.7",
+    "react-native-webview": "16.0.0",
+    "@op-engineering/op-sqlite": "18.2.1",
+    "expo-asset": "12.0.13",
+    "expo-constants": "18.0.14",
+    "expo-file-system": "19.0.24",
+    "expo-font": "14.0.12",
+    "expo-keep-awake": "15.0.8",
+    "expo-modules-core": "3.0.30",
+    "expo-desktop-modules-core": "54.0.14-beta.0",
+    "expo-desktop-stubs": "54.0.14-beta.0",
+    "react": "19.1.4",
+    "react-native": "0.81.6"
+  },
+  "expo": {
+    "install": {
+      "exclude": [
+        "react",
+        "react-native"
+      ]
+    }
+  }
+}

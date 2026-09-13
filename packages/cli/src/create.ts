@@ -1,8 +1,8 @@
-import { hostPlatform, type DesktopPlatform } from "./platform.ts";
-import { windowsPins, windowsProjectConfig } from "./windows.ts";
-import { cpSync, existsSync, mkdirSync, renameSync, readFileSync, writeFileSync, rmSync } from "node:fs";
+import { hostPlatform, type AppPlatform } from "./platform.ts";
+import { nodeCommand } from "./windows.ts";
+import { cpSync, existsSync, readFileSync } from "node:fs";
 import path from "node:path";
-import { readJson, writeJson, prepareConfig } from "./project.ts";
+import { readJson, writeJson } from "./project.ts";
 import { run } from "./commands.ts";
 
 // Resolve relative to the installed CLI so packed consumers use the same starter.
@@ -23,52 +23,25 @@ export async function refreshLocalPackages(root: string, manifest: string) {
   upgradeManagedEntry(root);
 }
 
-export async function create(root: string, archiveManifest: string, platform: DesktopPlatform = hostPlatform()) {
-  if (existsSync(path.join(root, "package.json")))
-    throw new Error(`Project already exists: ${root}`);
-  const archives: Record<string, string> = readJson(archiveManifest);
-  const local = Object.fromEntries(
-    Object.entries(archives).map(([name, file]) => [
-      name,
-      path.resolve(path.dirname(archiveManifest), file),
-    ]),
-  );
-  mkdirSync(root, { recursive: true });
-  cpSync(template, root, { recursive: true });
-  // Keep the ignore file in npm archives; restore its application filename here.
-  renameSync(path.join(root, "gitignore"), path.join(root, ".gitignore"));
-  const name = path.basename(root).replace(/[^a-zA-Z0-9]/g, "") || "HelloWorld";
-  const pkg = readJson(path.join(root, "package.json"));
-  pkg.name = name.toLowerCase();
-  if (platform === "windows") {
-    // Native SDK modules remain opt-in until their Windows implementations exist.
-    for (const dependency of ["@legend-apps/desktop", "@react-native-runtimes/core", "react-native-macos"]) delete pkg.dependencies[dependency];
-    Object.assign(pkg.dependencies, windowsPins, { "@legend-apps/desktop-host": "0.1.0-prototype.0" });
-    rmSync(path.join(root, "App.tsx"));
-    renameSync(path.join(root, "App.windows.tsx"), path.join(root, "App.tsx"));
-    writeFileSync(path.join(root, "react-native.config.js"), windowsProjectConfig);
-    delete pkg.scripts.macos;
-    pkg.scripts.windows = "legend dev";
-  } else rmSync(path.join(root, "App.windows.tsx"));
-  for (const dependency of Object.keys(pkg.dependencies)) {
-    if (local[dependency]) pkg.dependencies[dependency] = local[dependency];
-  }
-  pkg.overrides = {
-    ...pkg.overrides,
-    ...local,
-    react: pkg.dependencies.react,
-    "react-native": pkg.dependencies["react-native"],
-  };
-  writeJson(path.join(root, "package.json"), pkg);
-  const config = readJson(path.join(root, "desktop.config.json"));
-  config.name = name;
-  config.platforms = [platform];
-  config.projectId = crypto.randomUUID();
-  if (platform === "windows") { delete config.macos; delete config.window; }
-  else config.macos.bundleIdentifier = `so.legend.prototype.${name.toLowerCase()}`;
-  writeJson(path.join(root, "desktop.config.json"), config);
-  prepareConfig(root);
-  await run(root, ["bun", "install"]);
+export async function create(root: string, archiveManifest: string, platform: AppPlatform = hostPlatform(), universal = false) {
+  const templatesFile = path.join(path.dirname(archiveManifest), "templates.json");
+  if (!existsSync(templatesFile)) throw new Error("Pack the SDK again to produce Expo Desktop templates: legend sdk pack");
+  const variant = universal ? "universal" : platform;
+  const archive = readJson(templatesFile)[variant];
+  if (typeof archive !== "string") throw new Error(`No ${variant} template was packed on this host`);
+  const templateFile = path.resolve(path.dirname(templatesFile), archive);
+  if (!existsSync(templateFile)) throw new Error(`Missing template archive: ${templateFile}. Run legend sdk pack again.`);
+  // The upstream CLI owns validation, extraction, app IDs, install, and Git setup.
+  // The templates' postinstall initializes Legend configuration once.
+  const name = path.basename(root);
+  // beta.5 misreads npm 12's record-shaped pack metadata for a local tarball.
+  // Use the compatible npm executable for upstream extraction; Bun still installs.
+  const npmBin = path.join(import.meta.dir, "npm-bin");
+  const child = Bun.spawn(nodeCommand(path.resolve(import.meta.dir, ".."), "expo-desktop", "expo-desktop", [
+    "create-app", root, "--template", templateFile, "--yes", "--no-agents-md",
+    "--display-name", name, "--rdns", `so.legend.prototype.${name.toLowerCase()}`,
+  ]), { cwd: process.cwd(), env: { ...process.env, PATH: `${npmBin}${path.delimiter}${process.env.PATH ?? ""}`, npm_config_user_agent: `bun/${Bun.version}`, CI: "1" }, stdout: "inherit", stderr: "inherit" });
+  if (await child.exited) throw new Error("Expo Desktop could not create the app. See its output above.");
   console.log(`Created ${root}.\n\n  cd ${JSON.stringify(root)}\n  bun run ${platform}`);
 }
 

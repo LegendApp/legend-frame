@@ -1,9 +1,9 @@
 const fs = require("node:fs");
-const path = require("node:path");
+const { statePath } = require("@legend-apps/desktop-config/config.cjs");
 // Builds/export operate independently. Only a managed live session enables this gate.
 exports.gate = (root, middleware) => (req, res, next) => {
   if (/\.(bundle|delta)(\?|$)/.test(req.url || "")) {
-    const file = path.join(root, ".legend", "session.json");
+    const file = statePath(root, "session.json");
     if (fs.existsSync(file)) {
       let session;
       try {

@@ -9,17 +9,17 @@ const root = path.resolve(process.argv[2] ?? ".legend/api-platforms");
 if (existsSync(path.join(root, "package.json")) && !existsSync(path.join(root, ".legend-api-probe"))) throw new Error("Choose an empty directory for the API platform probe");
 await run(framework, ["bun", "scripts/pack.ts"]);
 const manifest = readJson(path.join(framework, "artifacts/packages/manifest.json"));
-const packages = ["@legend-apps/clipboard", "@legend-apps/secure-storage", "@legend-apps/desktop-links", "@legend-apps/desktop-app"];
+const packages = ["@legend-apps/clipboard", "@legend-apps/secure-storage", "@legend-apps/desktop-links", "@legend-apps/desktop-app", "@legend-apps/ui"];
 const archives = Object.fromEntries(packages.map(name => [name, path.join(framework, "artifacts/packages", manifest[name])]));
 mkdirSync(root, { recursive: true }); writeFileSync(path.join(root, ".legend-api-probe"), "managed\n");
 writeJson(path.join(root, "package.json"), {
   name: "legend-api-platform-probe", private: true, version: "1.0.0", main: "index.ts",
-  dependencies: { ...archives, expo: "54.0.37", "expo-clipboard": "8.0.8", "expo-secure-store": "15.0.8", "expo-linking": "8.0.12", react: "19.1.4", "react-native": "0.81.6", "react-dom": "19.1.4", "react-native-web": "0.21.0" },
+  dependencies: { ...archives, "@expo/ui": "0.2.0-beta.9", expo: "54.0.37", "expo-clipboard": "8.0.8", "expo-secure-store": "15.0.8", "expo-linking": "8.0.12", react: "19.1.4", "react-native": "0.81.6", "react-dom": "19.1.4", "react-native-web": "0.21.0" },
   overrides: { ...archives, expo: "54.0.37", "expo-constants": "18.0.14", "expo-modules-core": "3.0.30" },
 });
 writeJson(path.join(root, "app.json"), { expo: { name: "API Platform Probe", slug: "legend-api-probe", platforms: ["ios", "android", "web"] } });
 writeFileSync(path.join(root, "metro.config.js"), 'const {getDefaultConfig} = require("expo/metro-config"); module.exports = getDefaultConfig(__dirname);\n');
-writeFileSync(path.join(root, "index.ts"), 'import * as clipboard from "@legend-apps/clipboard";\nimport * as secureStore from "@legend-apps/secure-storage";\nimport * as linking from "@legend-apps/desktop-links";\n(globalThis as any).__API_PROBE__ = {clipboard, secureStore, linking};\n');
+writeFileSync(path.join(root, "index.ts"), 'import * as clipboard from "@legend-apps/clipboard";\nimport * as secureStore from "@legend-apps/secure-storage";\nimport * as linking from "@legend-apps/desktop-links";\nimport { Button } from "@legend-apps/ui";\n(globalThis as any).__API_PROBE__ = {clipboard, secureStore, linking, Button};\n');
 await run(root, ["bun", "install"]);
 const output = path.join(root, "results"); mkdirSync(output, { recursive: true });
 const results = [];
@@ -27,10 +27,14 @@ for (const platform of ["ios", "android", "web"]) {
   const sourceMap = path.join(output, `${platform}.map`);
   await run(root, [binary(root, "expo"), "export:embed", "--entry-file", "index.ts", "--platform", platform, "--dev", "true", "--max-workers", "2", "--bundle-output", path.join(output, `${platform}.js`), "--sourcemap-output", sourceMap], { capture: true });
   const sources: string[] = readJson(sourceMap).sources;
-  if (sources.some(source => source.includes("NativeDesktop") || source.includes("desktop-app/src"))) throw new Error(`${platform} bundle loads desktop native modules`);
+  if (sources.some(source => source.includes("NativeDesktop") || source.includes("desktop-app/src") || source.includes("LegendButtonNativeComponent"))) throw new Error(`${platform} bundle loads desktop native modules`);
   for (const name of ["clipboard", "secure-storage", "desktop-links"]) {
     if (!sources.some(source => source.includes(`@legend-apps/${name}/src/index.${platform}.ts`))) throw new Error(`${platform} did not select ${name}'s platform adapter`);
   }
+  if (!sources.some(source => source.includes(`@legend-apps/ui/src/index.${platform}.tsx`))) throw new Error(`${platform} did not select the UI adapter`);
+  const expoUI = sources.filter(source => source.includes("@expo/ui/"));
+  if (platform === "web" && expoUI.length) throw new Error("Web UI loaded Expo's native controls");
+  if (platform !== "web" && !expoUI.some(source => source.includes(platform === "ios" ? "/swift-ui/Button/" : "/jetpack-compose/Button/"))) throw new Error(`${platform} UI did not load the Expo native button`);
   if (platform === "web" && sources.some(source => source.includes("expo-secure-store/"))) throw new Error("Web secure storage loaded an unavailable native backend");
   results.push({ platform, passed: true, modules: sources.length });
   console.log(`PASS [${platform}] packed adapters bundle without desktop native modules`);

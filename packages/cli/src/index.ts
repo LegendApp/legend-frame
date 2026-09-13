@@ -1,8 +1,10 @@
 #!/usr/bin/env bun
-import { hostPlatform, type DesktopPlatform } from "./platform.ts";
+import { hostPlatform, type AppPlatform } from "./platform.ts";
 import path from "node:path";
 import { parseArgs } from "node:util";
-import { existsSync } from "node:fs";
+import { existsSync, readFileSync, writeFileSync } from "node:fs";
+import { prepareConfig, readConfig } from "@legend-apps/desktop-config/config.cjs";
+import { nodeCommand, prepareWindows } from "./windows.ts";
 import { create, refreshLocalPackages } from "./create.ts";
 import { buildMode } from "./build-mode.ts";
 import { initializeUpdates } from "./updates.ts";
@@ -20,6 +22,8 @@ try {
     args: argv,
     allowPositionals: true,
     options: {
+      universal: { type: "boolean" },
+      device: { type: "string" },
       project: { type: "string" },
       platform: { type: "string" },
       packages: { type: "string" },
@@ -34,21 +38,42 @@ try {
       help: { type: "boolean", short: "h" },
     },
   });
-  if (values.platform && !["macos", "windows"].includes(values.platform)) throw new Error("Platform must be macos or windows.");
-  if (values.platform && positionals[0] !== "create" && !(positionals[0] === "sdk" && ["build-go", "pack"].includes(positionals[1] ?? ""))) throw new Error("--platform selects the create or SDK build-go target; other commands use desktop.config.json.");
-  const platform = (values.platform ?? hostPlatform()) as DesktopPlatform;
+  if (values.platform && !["macos", "windows", "ios", "android", "web"].includes(values.platform)) throw new Error("Platform must be macos, windows, ios, android, or web.");
+  if (values.platform) process.env.LEGEND_PLATFORM = values.platform;
+  const platform = (values.platform ?? hostPlatform()) as AppPlatform;
   const projectOption = values.project as string | undefined;
   const start = path.resolve(projectOption ?? process.cwd());
   const project = () => findProject(start);
   const port = values.port === undefined ? undefined : Number(values.port);
   if (port !== undefined && (!Number.isInteger(port) || port < 1 || port > 65535)) throw new Error("Port must be an integer between 1 and 65535.");
   const command = positionals[0];
+  if (values.universal && command !== "create") throw new Error("--universal is a create option.");
+  if (!values.help && ["dev", "build", "prebuild"].includes(command ?? "")) {
+    const root = project();
+    const selected = readConfig(root).expo.platforms[0];
+    if (["ios", "android", "web"].includes(selected)) {
+      if (command === "build" && selected === "web") throw new Error("Use expo export --platform web for web production output.");
+      if (command === "prebuild" && selected === "web") throw new Error("Web has no native project to prebuild.");
+      if (values.go || values.release || values.preview || (command === "build" && !values.dev)) throw new Error("Mobile builds use --dev in this slice; Expo owns mobile distribution workflows.");
+      prepareConfig(root);
+      const args = command === "dev" ? ["start", ...(selected === "web" ? [] : ["--dev-client"]), ...(values["no-open"] ? [] : [`--${selected}`]), ...(port ? ["--port", String(port)] : [])] : command === "prebuild" ? ["prebuild", "--platform", selected, "--no-install"] : [`run:${selected}`, ...(values.device ? ["--device", values.device] : []), ...(port ? ["--port", String(port)] : [])];
+      const manifest = readFileSync(path.join(root, "package.json"), "utf8");
+      try {
+        const child = Bun.spawn(nodeCommand(root, "expo", "expo", args), { cwd: root, env: process.env, stdin: "inherit", stdout: "inherit", stderr: "inherit" });
+        process.exitCode = await child.exited;
+      } finally {
+        if (command !== "dev") writeFileSync(path.join(root, "package.json"), manifest);
+      }
+      process.exit(process.exitCode);
+    }
+  }
   if (values.help || !command) {
     console.log(`Legend
 
-  legend create MyApp  Create an app (--platform macos|windows; defaults to this machine)
+  legend create MyApp  Create an app (--universal for shared Settings; --platform selects a target)
   legend dev           Develop with Fast Refresh
-  legend build         Build a standalone app
+  legend build         Build a standalone desktop app
+  legend prebuild      Generate a Windows/mobile native project
   legend package       Sign and notarize a distribution archive
 
 Inside an app: bun dev, bun run build, bun run package
@@ -56,14 +81,17 @@ Inside an app: bun dev, bun run build, bun run package
 Advanced: updates init <feedURL>, credentials, doctor, analyze, open [app], build --dev, build --preview
 Windows: dev and build --dev; production builds are not yet supported.
 SDK maintainers: sdk pack, sdk build-go [--platform windows], sdk register <runtime directory>
+Targets: dev/build/prebuild --platform macos|windows|ios|android|web
 Overrides: --project <directory>, --port <number>, dev --go <Go.app>, create --packages <manifest>`);
   } else switch (command) {
     case "create": {
       if (!positionals[1]) throw new Error("Usage: legend create MyApp");
-      await create(path.resolve(positionals[1]), packageManifest(values.packages as string | undefined), platform);
+      if (!values.universal && !["macos", "windows"].includes(platform)) throw new Error("Use create --universal for mobile/web targets");
+      await create(path.resolve(positionals[1]), packageManifest(values.packages as string | undefined), platform, !!values.universal);
       break;
     }
     case "sdk": {
+      if (!["macos", "windows"].includes(platform)) throw new Error("SDK commands require a desktop target");
       switch (positionals[1]) {
         case "pack": {
           const framework = findFramework(start) ?? findFramework();
@@ -93,6 +121,10 @@ Overrides: --project <directory>, --port <number>, dev --go <Go.app>, create --p
       }
       break;
     }
+    case "prebuild":
+      if (readConfig(project()).expo.platforms[0] !== "windows") throw new Error("For macOS, legend build --dev generates and builds the native project.");
+      await prepareWindows(project(), "dev");
+      break;
     case "doctor":
       await doctor(start);
       console.log("Native toolchain available.");

@@ -1,3 +1,4 @@
+const { statePath } = require("./config.cjs");
 const fs = require("node:fs");
 const path = require("node:path");
 const {
@@ -15,7 +16,7 @@ module.exports = function withLegendDesktop(config) {
   // callbacks run. Capture the declared values before that mutation.
   const declaredEntitlements = structuredClone(config.macos?.entitlements ?? {});
   config = withEntitlementsPlist(config, (mod) => {
-    const selection = path.join(mod.modRequest.projectRoot, ".legend/native-selection.json");
+    const selection = statePath(mod.modRequest.projectRoot, "native-selection.json", "macos");
     const packages = fs.existsSync(selection)
       ? JSON.parse(fs.readFileSync(selection, "utf8")).included.map((pkg) => JSON.parse(fs.readFileSync(path.join(pkg.root, "package.json"), "utf8")))
       : [];
@@ -42,7 +43,7 @@ module.exports = function withLegendDesktop(config) {
     return mod;
   });
   return withPodfile(config, (mod) => {
-    const selectionFile = path.join(mod.modRequest.projectRoot, ".legend/native-selection.json");
+    const selectionFile = statePath(mod.modRequest.projectRoot, "native-selection.json", "macos");
     const included = fs.existsSync(selectionFile) ? JSON.parse(fs.readFileSync(selectionFile, "utf8")).included : [];
     const updatePackage = included.find(pkg => pkg.name === "@legend-apps/updates");
     // Pin the spec and archive with the SDK, avoiding a mutable CocoaPods index.

@@ -36,6 +36,16 @@ static NSView *FindView(NSView *view, NSString *identifier) {
   for (NSView *child in view.subviews) { NSView *found = FindView(child, identifier); if (found) return found; }
   return nil;
 }
+static NSControl *FindControl(NSView *view, NSString *identifier) {
+  if ([view isKindOfClass:NSControl.class] && [view.accessibilityIdentifier isEqual:identifier]) return (NSControl *)view;
+  for (NSView *child in view.subviews) { NSControl *found = FindControl(child, identifier); if (found) return found; }
+  return nil;
+}
+static NSButton *FindControlButton(NSView *view, NSString *identifier) {
+  if ([view isKindOfClass:NSButton.class] && [view.accessibilityIdentifier isEqual:identifier]) return (NSButton *)view;
+  for (NSView *child in view.subviews) { NSButton *found = FindControlButton(child, identifier); if (found) return found; }
+  return nil;
+}
 @interface NSView (LegendDragTest)
 - (NSView *)hitTest:(CGPoint)point withEvent:(id)event;
 - (void)draggingSession:(NSDraggingSession *)session endedAtPoint:(NSPoint)point operation:(NSDragOperation)operation;
@@ -103,6 +113,38 @@ RCT_EXPORT_MODULE(NativeSDKTestDriver)
       NSButton *button = FindButton(sheet.contentView, @"Keep");
       if (!button) { reject(@"E_TEST", @"Message sheet button not found", nil); return; }
       [button performClick:nil];
+    }
+    else if ([method isEqual:@"buttonState"] || [method isEqual:@"buttonClick"]) {
+      NSButton *button = nil;
+      for (NSWindow *window in NSApp.windows) button = button ?: FindControlButton(window.contentView, args[@"id"]);
+      if (!button) { reject(@"E_TEST", @"Native button has not mounted", nil); return; }
+      if ([method isEqual:@"buttonClick"]) [button performClick:nil];
+      NSPoint center = NSMakePoint(NSMidX(button.frame), NSMidY(button.frame));
+      BOOL hit = [button.superview hitTest:center withEvent:nil] == button;
+      resolve(LegendJSON(@{ @"enabled": @(button.enabled), @"title": button.title, @"native": @YES,
+        @"width": @(button.bounds.size.width), @"height": @(button.bounds.size.height), @"hit": @(hit) })); return;
+    }
+    else if ([method isEqual:@"fieldState"] || [method isEqual:@"fieldEdit"] || [method isEqual:@"selectState"] || [method isEqual:@"selectChange"]) {
+      NSControl *control = nil;
+      for (NSWindow *window in NSApp.windows) control = control ?: FindControl(window.contentView, args[@"id"]);
+      if (!control) { reject(@"E_TEST", @"Native control has not mounted", nil); return; }
+      if ([control isKindOfClass:NSTextField.class]) {
+        NSTextField *field = (NSTextField *)control;
+        if ([method isEqual:@"fieldEdit"]) {
+          field.stringValue = args[@"value"];
+          [field.delegate controlTextDidChange:[NSNotification notificationWithName:NSControlTextDidChangeNotification object:field]];
+        }
+        resolve(LegendJSON(@{ @"value": field.stringValue, @"width": @(field.bounds.size.width), @"height": @(field.bounds.size.height) })); return;
+      }
+      if ([control isKindOfClass:NSPopUpButton.class]) {
+        NSPopUpButton *select = (NSPopUpButton *)control;
+        if ([method isEqual:@"selectChange"]) {
+          for (NSMenuItem *item in select.itemArray) if ([item.representedObject isEqual:args[@"value"]]) { [select selectItem:item]; break; }
+          [select sendAction:select.action to:select.target];
+        }
+        resolve(LegendJSON(@{ @"value": select.selectedItem.representedObject ?: @"", @"count": @(select.numberOfItems), @"width": @(select.bounds.size.width), @"height": @(select.bounds.size.height) })); return;
+      }
+      reject(@"E_TEST", @"Unexpected native control type", nil); return;
     }
     else if ([method isEqual:@"saveClipboard"]) {
       NSMutableArray *items = [NSMutableArray new];

@@ -9,5 +9,8 @@
   },
   "macos": {
     "bundleIdentifier": "so.legend.prototype.helloworld"
-  }
+  },
+  "platforms": [
+    "macos"
+  ]
 }

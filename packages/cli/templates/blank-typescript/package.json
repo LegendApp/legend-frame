@@ -9,7 +9,8 @@
     "dev": "legend dev",
     "build": "legend build",
     "package": "legend package",
-    "doctor": "legend doctor"
+    "doctor": "legend doctor",
+    "postinstall": "node node_modules/@legend-apps/cli/src/init-template.cjs"
   },
   "dependencies": {
     "@legend-apps/cli": "0.1.0-prototype.0",

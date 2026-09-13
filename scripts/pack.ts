@@ -1,3 +1,4 @@
+import { packTemplates } from "./pack-templates";
 import { packRuntimes } from "./prepare-runtimes";
 import { mkdirSync, readFileSync, copyFileSync, readdirSync, existsSync } from "node:fs";
 import { createHash } from "node:crypto";
@@ -35,5 +36,6 @@ for (const dir of packages) {
   manifest[pkg.name] = immutable;
 }
 writeJson(path.join(output, "manifest.json"), manifest);
+await packTemplates(root, output, manifest);
 registerPackages(path.join(output, "manifest.json"));
 console.log("Local SDK packages registered. Create an app with legend create MyApp.");

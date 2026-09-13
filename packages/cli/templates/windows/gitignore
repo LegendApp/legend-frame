@@ -1,0 +1,8 @@
+node_modules/
+.threaded-runtime/
+.legend/
+macos/
+dist/
+app.json
+windows/
+.expo/

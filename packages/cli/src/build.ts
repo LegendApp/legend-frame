@@ -1,4 +1,5 @@
 import { projectPlatform } from "./platform.ts";
+import { isUniversal } from "@legend-apps/desktop-config/config.cjs";
 import { buildWindows } from "./windows.ts";
 import { copyHelpers } from "./helpers.ts";
 import { readAppConfig } from "./project.ts";
@@ -169,7 +170,7 @@ async function buildUnlocked(
   validateBuildModules(mode, chosen.included);
   const runtime = runtimeFor(root, chosen.included, mode);
   const productionHash = productionGraph
-    ? hashFiles(root, [".legend/analysis/app.js"])
+    ? hashFiles(root, [path.relative(root, stateFile(root, "analysis/app.js"))])
     : undefined;
   if (productionHash)
     runtime.fingerprint = digest(runtime.fingerprint + productionHash);
@@ -197,15 +198,17 @@ async function buildUnlocked(
     throw new Error(
       "Existing react-native.config.js is not Legend-managed. Compose the native selection explicitly before building.",
     );
-  writeFileSync(
+  if (!isUniversal(root)) writeFileSync(
     rnConfig,
     `${marker}\nconst selection = require('./.legend/native-selection.json');\nmodule.exports = { dependencies: Object.fromEntries([\n...selection.included.map(p => [p.name, { root: p.root }]),\n...selection.excluded.map(name => [name, { platforms: { ios: null, macos: null, android: null } }])\n]) };\n`,
   );
   const pkg = readJson(path.join(root, "package.json"));
-  pkg.expo ??= {};
-  pkg.expo.autolinking ??= {};
-  pkg.expo.autolinking.exclude = chosen.excluded.map((p) => p.name);
-  writeJson(path.join(root, "package.json"), pkg);
+  if (!isUniversal(root)) {
+    pkg.expo ??= {};
+    pkg.expo.autolinking ??= {};
+    pkg.expo.autolinking.exclude = chosen.excluded.map((p) => p.name);
+    writeJson(path.join(root, "package.json"), pkg);
+  }
   const preparation = digest(
     JSON.stringify({
       config: readAppConfig(root),
@@ -230,23 +233,27 @@ async function buildUnlocked(
     readJson(preparedFile).fingerprint !== preparation ||
     !existsSync(path.join(root, "macos/Pods/Manifest.lock"));
   if (needsPreparation) {
-    await run(
-      root,
-      [
-        binary(root, "expo-desktop"),
-        "prebuild",
-        "--platform",
-        "macos",
-        "--template",
-        "expo-desktop-template-bare-minimum@54.81.1-beta.5",
-        "--no-install",
-        ...(force ? ["--clean"] : []),
-      ],
-      { env: { CI: "1" }, capture: true },
-    );
-    // beta.5 copies all-platform template dependencies even for macOS. Preserve this
-    // platform's installed manifest instead of silently adding uninstalled Windows packages.
-    writeJson(path.join(root, "package.json"), pkg);
+    const manifest = readFileSync(path.join(root, "package.json"), "utf8");
+    try {
+      await run(
+        root,
+        [
+          binary(root, "expo-desktop"),
+          "prebuild",
+          "--platform",
+          "macos",
+          "--template",
+          "expo-desktop-template-bare-minimum@54.81.1-beta.5",
+          "--no-install",
+          ...(force ? ["--clean"] : []),
+        ],
+        { env: { CI: "1" }, capture: true },
+      );
+      // beta.5 copies all-platform template dependencies even for macOS. Preserve this
+      // platform's installed manifest instead of silently adding uninstalled Windows packages.
+    } finally {
+      writeFileSync(path.join(root, "package.json"), manifest);
+    }
     // ReactCodegen's source glob must not pick up bindings from a previously larger graph.
     rmSync(path.join(root, "macos/build/generated"), {
       recursive: true,

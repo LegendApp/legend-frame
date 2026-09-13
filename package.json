@@ -13,6 +13,7 @@
     "pack:local": "bun scripts/pack.ts",
     "legend": "bun packages/cli/src/index.ts",
     "kitchen-sink": "bun scripts/kitchen-sink.ts",
+    "settings": "bun scripts/settings.ts",
     "test:native": "bun scripts/test-native.ts",
     "test:all": "bun run typecheck && bun test tests && bun run test:sparkle && bun run test:updates && bun run test:integrations && bun run test:native && bun run test:expansion && bun run test:runtimes:all",
     "test:sparkle": "bun tests/sparkle.integration.ts",
@@ -26,7 +27,10 @@
     "test:windows": "bun scripts/test-windows.ts",
     "test:windows:prepare": "bun scripts/test-windows.ts --prepare-only",
     "test:api-adapters": "bun scripts/test-api-adapters.ts",
-    "test:api-platforms": "bun scripts/test-api-platforms.ts"
+    "test:api-platforms": "bun scripts/test-api-platforms.ts",
+    "test:ui": "bun scripts/test-ui.ts",
+    "test:universal": "bun scripts/test-universal.ts",
+    "test:templates": "bun scripts/test-templates.ts"
   },
   "devDependencies": {
     "@types/bun": "1.3.14",
@@ -38,6 +42,8 @@
     "react-native": "0.81.6",
     "@legend-apps/desktop-config": "workspace:*",
     "@legend-apps/window-options": "workspace:*",
+    "@legend-apps/ui": "workspace:*",
+    "@expo/ui": "0.2.0-beta.9",
     "expo-clipboard": "8.0.8",
     "expo-linking": "8.0.12",
     "expo-secure-store": "15.0.8",

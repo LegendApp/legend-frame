@@ -17,9 +17,9 @@ function runtimePlan(root, env = process.env) {
 }
 function withDesktop(config, options = {}) {
   const root = path.resolve(config.projectRoot || process.cwd());
-  const appFile = path.join(root, "app.json");
-  const windows = fs.existsSync(appFile) && JSON.parse(fs.readFileSync(appFile, "utf8")).expo?.platforms?.join() === "windows";
-  if (windows) {
+  const { readConfig } = require("@legend-apps/desktop-config/config.cjs");
+  const windows = readConfig(root).expo?.platforms?.join() === "windows";
+  if (windows || options.runtimes === false) {
     const enhance = config.server?.enhanceMiddleware;
     return { ...config, server: { ...config.server, enhanceMiddleware(middleware, server) {
       return gate(root, enhance ? enhance(middleware, server) : middleware);

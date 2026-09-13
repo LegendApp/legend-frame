@@ -1,0 +1,54 @@
+import { createHash } from "node:crypto";
+import { existsSync, mkdirSync, readFileSync, readdirSync } from "node:fs";
+import path from "node:path";
+import { create } from "../packages/cli/src/create";
+import { run } from "../packages/cli/src/commands";
+import { nodeCommand } from "../packages/cli/src/windows";
+import { readJson, writeJson } from "../packages/cli/src/project";
+
+// Fresh packed consumer: real native generation plus the same App.tsx in all five bundles.
+const framework = path.resolve(import.meta.dir, "..");
+const root = path.resolve(process.argv[2] ?? `.legend/universal-tests/Settings${Date.now()}`);
+await run(framework, ["bun", "scripts/pack.ts"]);
+await create(root, path.join(framework, "artifacts/packages/manifest.json"), "macos", true);
+const shared = ["desktop.config.json", "package.json", "App.tsx", "index.ts", "metro.config.js", "react-native.config.js", "app.config.js"];
+const originals = shared.map(file => readFileSync(path.join(root, file), "utf8"));
+const output = path.join(root, ".legend/universal-checks"); mkdirSync(output, { recursive: true });
+const native = ["ios", "android", "windows"];
+const hashes = new Map<string, string>();
+function hashProject(target: string) {
+  const hash = createHash("sha256");
+  function visit(dir: string) {
+    for (const entry of readdirSync(dir, { withFileTypes: true }).sort((a, b) => a.name.localeCompare(b.name))) {
+      const file = path.join(dir, entry.name);
+      if (entry.isDirectory()) visit(file);
+      else if (entry.isFile()) { hash.update(path.relative(root, file)); hash.update(readFileSync(file)); }
+    }
+  }
+  visit(path.join(root, target)); return hash.digest("hex");
+}
+function assertPreserved() {
+  for (const [index, file] of shared.entries()) if (readFileSync(path.join(root, file), "utf8") !== originals[index]) throw new Error(`Target switching changed ${file}`);
+  for (const [target, hash] of hashes) if (hashProject(target) !== hash) throw new Error(`Target switching changed the ${target} project`);
+}
+for (const platform of native) {
+  await run(root, ["bun", "node_modules/@legend-apps/cli/src/index.ts", "prebuild", "--platform", platform], { capture: true, env: { CI: "1" } });
+  assertPreserved();
+  if (!existsSync(path.join(root, platform))) throw new Error(`${platform} project missing`);
+  hashes.set(platform, hashProject(platform));
+  console.log(`PASS ${platform} generation preserves shared files and earlier native projects`);
+}
+const results = [];
+for (const platform of ["ios", "android", "web", "windows", "macos"]) {
+  const sourceMap = path.join(output, `${platform}.map`);
+  await run(root, nodeCommand(root, "expo", "expo", ["export:embed", "--entry-file", "index.ts", "--platform", platform, "--dev", "true", "--max-workers", "2", "--bundle-output", path.join(output, `${platform}.js`), "--sourcemap-output", sourceMap]), { capture: true, env: { CI: "1", LEGEND_PLATFORM: platform } });
+  const sources: string[] = readJson(sourceMap).sources;
+  const adapter = platform === "macos" ? "index.tsx" : `index.${platform}.tsx`;
+  if (!sources.some(source => source.includes(`@legend-apps/ui/src/${adapter}`))) throw new Error(`${platform} did not select its UI adapter`);
+  if (platform !== "macos" && sources.some(source => /Legend(?:Button|TextInput|Select)NativeComponent|NativeDesktop/.test(source))) throw new Error(`${platform} loads an AppKit native binding`);
+  if (["macos", "windows", "web"].includes(platform) && sources.some(source => source.includes("@expo/ui/"))) throw new Error(`${platform} loads Expo's mobile UI backend`);
+  assertPreserved(); results.push({ platform, modules: sources.length });
+  console.log(`PASS ${platform} shared Settings bundle and preserved projects`);
+}
+writeJson(path.join(output, "summary.json"), { passed: true, results, generated: native, scope: "Generation and bundles; native execution requires separate platform checks" });
+console.log(`Universal report: ${output}`);

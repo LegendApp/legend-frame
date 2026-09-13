@@ -1,7 +1,7 @@
 import { cpSync, existsSync } from "node:fs";
 import path from "node:path";
 import { create, refreshLocalPackages } from "../packages/cli/src/create.ts";
-import { writeJson } from "../packages/cli/src/project.ts";
+import { readJson, writeJson } from "../packages/cli/src/project.ts";
 import { run } from "../packages/cli/src/commands.ts";
 export async function prepareKitchenSink(root: string) {
   const marker = path.join(root, ".legend/kitchen-sink.json");
@@ -12,6 +12,10 @@ export async function prepareKitchenSink(root: string) {
   const manifest = path.join(framework, "artifacts/packages/manifest.json");
   if (!existsSync(path.join(root, "package.json"))) await create(root, manifest);
   else await refreshLocalPackages(root, manifest);
+  const pkg = readJson(path.join(root, "package.json"));
+  pkg.dependencies["@legend-apps/ui"] = pkg.overrides["@legend-apps/ui"];
+  writeJson(path.join(root, "package.json"), pkg);
+  await run(root, ["bun", "install"]);
   writeJson(marker, { managed: true });
   cpSync(path.join(framework, "examples/kitchen-sink"), root, { recursive: true });
   return root;

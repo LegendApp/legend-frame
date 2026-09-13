@@ -8,7 +8,7 @@ import { nodeCommand, prepareWindows } from "../packages/cli/src/windows.ts";
 import { run } from "../packages/cli/src/commands.ts";
 
 const { values } = parseArgs({ args: process.argv.slice(2), options: { project: { type: "string" }, "prepare-only": { type: "boolean" } } });
-const root = path.resolve(values.project ?? ".legend/windows-probe");
+const root = path.resolve(values.project ?? ".legend/windows-probe/WindowsProbe");
 const prepareOnly = !!values["prepare-only"];
 if (!prepareOnly && (process.platform !== "win32" || process.arch !== "x64")) throw new Error("Run the native verifier on Windows x64, or pass --prepare-only to check generation and bundles here.");
 if (existsSync(path.join(root, "package.json"))) throw new Error("Choose a fresh --project directory; this test installs a native fixture.");
@@ -28,7 +28,12 @@ async function wait(check: () => boolean | Promise<boolean>, message: string, ti
   }
   throw new Error(message);
 }
-function stage(name: string) { report.currentStage = name; writeJson(stateFile(root, "windows-verification.json"), report); console.log(name); }
+function stage(name: string) {
+  report.currentStage = name;
+  // Expo Desktop must receive an empty destination when creating the fixture.
+  if (existsSync(path.join(root, "package.json"))) writeJson(stateFile(root, "windows-verification.json"), report);
+  console.log(name);
+}
 function pass(details?: unknown) { report.stages.push({ name: report.currentStage, passed: true, details }); }
 async function bundle() {
   await run(root, nodeCommand(root, "expo", "expo", ["export:embed", "--platform", "windows", "--entry-file", "index.ts", "--bundle-output", stateFile(root, "windows-check.bundle"), "--dev", "true", "--minify", "false", "--max-workers", "2"]), { capture: true });

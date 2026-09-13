@@ -1,0 +1,61 @@
+{
+  "$schema": "./node_modules/@legend-apps/desktop-config/schema.json",
+  "name": "HelloWorld",
+  "version": "0.0.1",
+  "window": {
+    "width": 1000,
+    "height": 700,
+    "restoreFrame": true
+  },
+  "macos": {
+    "bundleIdentifier": "so.legend.prototype.helloworld"
+  },
+  "platforms": [
+    "ios",
+    "android",
+    "web",
+    "macos",
+    "windows"
+  ],
+  "expo": {
+    "web": {
+      "bundler": "metro"
+    }
+  },
+  "expoByPlatform": {
+    "macos": {
+      "autolinking": {
+        "exclude": [
+          "@expo/ui",
+          "expo-clipboard",
+          "expo-linking",
+          "expo-secure-store",
+          "expo-dev-client",
+          "expo-dev-launcher",
+          "expo-dev-menu",
+          "expo-dev-menu-interface",
+          "expo-manifests",
+          "expo-updates-interface",
+          "react-native-windows"
+        ]
+      }
+    },
+    "windows": {
+      "autolinking": {
+        "exclude": [
+          "@expo/ui",
+          "expo-clipboard",
+          "expo-linking",
+          "expo-secure-store",
+          "expo-dev-client",
+          "expo-dev-launcher",
+          "expo-dev-menu",
+          "expo-dev-menu-interface",
+          "expo-manifests",
+          "expo-updates-interface",
+          "react-native-macos"
+        ]
+      }
+    }
+  }
+}

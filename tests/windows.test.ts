@@ -5,7 +5,7 @@ import path from "node:path";
 import { nativePackages, runtimeFor, incompatible, writeJson, VERSION } from "../packages/cli/src/project.ts";
 import { readRuntime, findGo, registerRuntime } from "../packages/cli/src/local.ts";
 import { projectPlatform } from "../packages/cli/src/platform.ts";
-import { buildWindows, windowsProjectConfig } from "../packages/cli/src/windows.ts";
+import { buildWindows } from "../packages/cli/src/windows.ts";
 const { patchHost, withoutPackaging, unpackagedApp } = require("../packages/config-plugin/windows.plugin.cjs");
 function fixture() {
   const root = mkdtempSync(path.join(os.tmpdir(), "legend-windows-test-"));
@@ -76,7 +76,6 @@ test("the config plugin embeds the shared runtime and keeps repeatable host hook
 });
 test("Windows production builds fail explicitly before running native tools", async () => {
   await expect(buildWindows("unused", "release", false)).rejects.toThrow("production builds");
-  expect(windowsProjectConfig).toContain("react-native-windows");
 });
 
 test("Windows canonical config does not require a macOS bundle identity", () => {

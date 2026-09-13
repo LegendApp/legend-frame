@@ -1,0 +1,10 @@
+{
+  "expo": {
+    "name": "HelloWorld",
+    "slug": "helloworld",
+    "version": "0.0.1",
+    "platforms": [
+      "windows"
+    ]
+  }
+}

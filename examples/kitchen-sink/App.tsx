@@ -13,6 +13,7 @@ import { configureMenus, clearMenus, addNativeMenuActionListener } from "@legend
 import { openFileDialog, saveFileDialog, revealInFinder } from "@legend-apps/desktop/dialogs";
 import { runChecks, type Check } from "./checks";
 import { APIChecks } from "./APIChecks";
+import { NativeControls } from "./NativeControls";
 import { ExpansionChecks } from "./ExpansionChecks";
 import { Expansion } from "./Expansion";
 import { Integrations } from "./Integrations";
@@ -24,6 +25,8 @@ export default function App(props: Props) {
   const args = props.launchArguments ?? [];
   const report = argument(args, "--legend-test-report");
   if (props.windowId && props.windowId !== "main") return <SecondaryWindow {...props} />;
+  const uiReport = argument(args, "--legend-ui-report");
+  if (uiReport) return <NativeControls report={uiReport} />;
   const apiReport = argument(args, "--legend-api-report");
   if (apiReport) return <APIChecks report={apiReport} expectedInitial={argument(args, "--legend-api-initial") ?? null} />;
   const expansionReport = argument(args, "--legend-expansion-report");
@@ -123,6 +126,7 @@ function KitchenSink({ runtime, projectId }: Props) {
       <Card title="Links and documents"><View style={styles.row}><Button title="Open example.com" onPress={() => void action(() => links.openURL("https://example.com"))} /><Button title="Initial URL" onPress={() => void action(links.getInitialURL)} /><Button title="Can open HTTPS" onPress={() => void action(() => links.canOpenURL("https://example.com"))} /><Button title="Recent documents" onPress={() => void action(links.getRecentDocuments)} /></View><Text style={styles.text}>Incoming links and files appear in the event log. OS associations require a custom build.</Text></Card>
       <Card title="Secure storage"><TextInput accessibilityLabel="Demo secret" secureTextEntry style={styles.input} value={secret} onChangeText={setSecret} placeholder="Demo secret (stored in Keychain)" /><View style={styles.row}>
         <Button title="Store demo secret" onPress={() => void action(async () => { await secureStore.setItemAsync("kitchen-demo", secret); return "Stored demo secret"; })} /><Button title="Load demo secret" onPress={() => void action(async () => { setSecret(await secureStore.getItemAsync("kitchen-demo") ?? ""); return "Loaded demo secret"; })} /><Button title="Delete demo secret" onPress={() => void action(async () => { await secureStore.deleteItemAsync("kitchen-demo"); setSecret(""); return "Deleted demo secret"; })} /></View></Card>
+      <Card title="Native UI"><NativeControls /></Card>
       <Card title="Expo-aligned APIs"><APIChecks /></Card>
       <Card title="Desktop integrations"><Integrations report={report} />
         <Expansion report={report} /></Card>

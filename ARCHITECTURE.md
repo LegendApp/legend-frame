@@ -58,23 +58,23 @@ Directory names do not always match published package names. In particular, `pac
 
 ## Application creation and local distribution
 
-The starter is bundled inside the CLI's published-file set, at `templates/blank-typescript`. It includes app source, entrypoint, Metro setup, TypeScript config, dependency pins, and package scripts. Its plain `gitignore` asset is renamed to `.gitignore` when copied into an app so packaging does not discard it.
+The CLI ships complete macOS, Windows, and universal template sources under `templates/`. Each owns its dependencies, scripts, source, and configuration defaults. The pack step resolves local SDK archive references and produces ordinary npm template tarballs listed in `artifacts/packages/templates.json`.
 
-`legend create` resolves a local SDK archive manifest, copies the template, supplies app identity and local dependency paths, prepares configuration, and installs packages. It must work from an installed CLI outside the framework repository. It should not depend on finding source files through a workspace symlink.
+`legend create` selects a template and invokes the pinned `expo-desktop create-app --template` command. Expo Desktop owns directory/name validation, extraction (including `gitignore` renaming), native identifiers, dependency installation, and Git initialization. A template postinstall initializes only Legend's canonical configuration once, using the upstream-assigned name, bundle identifiers, and project GUID. It preserves later user configuration edits. Application directories follow Expo Desktop's alphanumeric basename requirement; parent directories can contain spaces.
 
-The current distribution mechanism is local tarballs. `scripts/pack.ts` writes archives under `artifacts/packages`, includes content hashes in their filenames, writes a manifest, and registers it under the local Legend home. The hash prevents a changed prototype package with the same version from being mistaken for an older cached archive.
+The current distribution mechanism is local tarballs. `scripts/pack.ts` writes content-hashed SDK archives and template archives under `artifacts/packages`, then registers the SDK manifest under the local Legend home. Templates use absolute local archive references during this unpublished development phase; moving a template alone does not distribute the SDK. Repack on the destination machine.
 
 `~/.legend` is the default global registry; `LEGEND_HOME` overrides it. SDK records are versioned. Runtime registration records a path rather than copying an application. The managed Go build project is created under the Legend home unless a project is supplied explicitly. App-local `.legend` data and the global Legend home are different scopes.
 
-The starter dependency matrix, Windows additions in `packages/cli/src/windows.ts`, and `scripts/prepare-runtimes.ts` are the authoritative pins for their respective targets. Notable current versions include Expo Desktop beta.5, Expo 54.0.37, React Native 0.81.6, React Native macOS 0.81.7, and React Native Windows 0.81.35. Updating a package is a compatibility change, not just a package-manager operation; validate the resulting native binary and external consumer together.
+The template manifests and `scripts/prepare-runtimes.ts` are the authoritative pins. We remain on Expo Desktop `1.0.0-beta.5` and native template `54.81.1-beta.5`, with Expo 54.0.37, React Native 0.81.6, React Native macOS 0.81.7, and React Native Windows 0.81.35. Creation uses a subprocess-scoped npm 11 executable because beta.5 misreads npm 12's local-tarball metadata. Bun still installs dependencies. This compatibility adapter does not patch upstream or change the host npm installation.
 
-`legend create --platform windows` uses the same packaged starter machinery, selecting a minimal Windows app and dependency set. It records the target in app configuration, adds the Windows script, and omits unported SDK features and secondary runtimes. Native fixture sources are packed with the existing `@legend-apps/native-greeting` package. Windows SDK packing does not prepare the macOS Runtimes patch, and preserves any existing archive entry for it.
+Windows uses its own complete application template, with no runtime removal/replacement of macOS source files. Windows SDK packing does not prepare the macOS Runtimes patch; it preserves an existing archive when available and omits the macOS app template if that archive is absent.
 
-Direct `expo-desktop create-app --template` consumption and public runtime acquisition are not established by the local template extraction. See the [integration handoff](docs/expo-desktop-integration.md).
+Direct `expo-desktop create-app --template` consumption is validated against local archives. Public runtime acquisition remains separate. See the [integration handoff](docs/expo-desktop-integration.md) for delegated responsibilities, beta limitations, and checks.
 
 ## Configuration and identity
 
-For new apps, `desktop.config.json` is the canonical source. [config.cjs](packages/config-plugin/config.cjs) validates it and produces the Expo `app.json` transport file. Existing static `app.json` projects remain readable when desktop config is absent. A desktop-config project cannot simultaneously use a dynamic `app.config.js` or `app.config.ts` through this workflow.
+For new apps, `desktop.config.json` is the canonical source. [config.cjs](packages/config-plugin/config.cjs) validates it and produces the Expo `app.json` transport file. Existing static `app.json` projects remain readable when desktop config is absent. Single-target desktop-config projects reject competing dynamic Expo config files. Universal starters use the managed dynamic config described below.
 
 The project ID is stable application identity. It scopes data directories, settings, Keychain service names, recent documents, window restoration, and single-instance behavior. Renaming an app should not change its ID. Independently cloned apps should receive different IDs when their data and instances should be independent.
 
@@ -158,9 +158,21 @@ This removes complete native modules. It does not promise individual native-meth
 
 Test-only packages must not ship in Go or distribution artifacts. Keep them in explicit custom test builds, and retain the build-time rejection of prohibited fixture modules.
 
+## Universal application target selection
+
+The [shared Settings starter](docs/universal-settings.md) owns one application source and manifest for five targets. It uses the existing desktop session/build pipeline and Expo's mobile/web pipeline. The starter has an ordinary Expo root entry; Runtimes and Router integration are not part of this slice.
+
+`desktop.config.json.platforms` describes application support; `LEGEND_PLATFORM` selects one invocation. Shared `expo` configuration merges with `expoByPlatform[target]` without mutating either. A managed dynamic Expo config reads that selection. Root Metro and React Native configuration dispatch by target rather than being replaced when switching. Mobile autolinking excludes AppKit pods, and desktop configuration excludes the mobile-only Expo backends.
+
+Universal desktop state paths are `.legend/platforms/<target>/...`, including native selection, sessions, build fingerprints, products, and logs. Single-target projects retain their existing paths. Build adapters restore the root manifest after upstream generation, including failure; native generation must run sequentially because upstream temporarily writes shared files. Selected native projects can change during prebuild, while other platform directories remain intact. Configuration preservation does not imply preservation of live React state across processes.
+
+Windows adapters with explicit platform entry points can coexist in a universal dependency graph without pretending to supply native capabilities. The Settings screen reports the current Windows gap before rendering unavailable controls. Desktop-only projects retain the stricter rejection of unsupported native dependencies.
+
 ## External libraries and background runtimes
 
-The framework owns a curated set of public capability contracts, with replaceable platform implementations. The [clipboard, secure-storage, and linking adapters](docs/expo-api-adapters.md) are implemented; they use existing native desktop backends and selected Expo backends on mobile/web, with explicit platform gaps. The [universal API plan](docs/universal-api-plan.md) retains deferred UI and Router-based window proposals. The earlier [API structure review](docs/api-structure-review.md) is historical; its source inventory remains useful.
+[`@legend-apps/ui`](docs/ui.md) uses the same contract/adapter boundary for native controls. Its initial controls are `Button`, uncontrolled `TextInput`, and value-based `Select`: AppKit Fabric components on macOS, Expo UI SwiftUI/Compose adapters on mobile, native HTML controls on web, and explicit Windows unavailability. The capability package is installed separately; it does not require consumers to adopt a framework layout or routing system.
+
+The framework owns a curated set of public capability contracts, with replaceable platform implementations. The [clipboard, secure-storage, and linking adapters](docs/expo-api-adapters.md) are implemented; they use existing native desktop backends and selected Expo backends on mobile/web, with explicit platform gaps. The [universal API plan](docs/universal-api-plan.md) retains the deferred broader UI and Router-based window proposals. The earlier [API structure review](docs/api-structure-review.md) is historical; its source inventory remains useful.
 
 External libraries retain their upstream APIs and attribution. Shared behavior across different platform backends can justify a framework adapter; integration, version pinning, Go inclusion, and pruning alone do not. An upstream implementation can replace ours when it satisfies the supported contract and acceptance checks, preserving application imports and behavior. See [external libraries](docs/external-libraries.md) for ownership, replacement criteria, and migration paths.
 

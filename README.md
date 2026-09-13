@@ -45,7 +45,7 @@ bun run legend sdk pack
 bun run legend sdk build-go
 ```
 
-`pack` creates real package archives and registers their manifest. `build-go` creates or refreshes the SDK's managed build project, compiles the generic native runtime, and registers it for app development.
+`pack` creates SDK package archives and Expo Desktop-compatible application templates, then registers their manifest. `build-go` creates or refreshes the SDK's managed build project, compiles the generic native runtime, and registers it for app development.
 
 If you already have a compatible runtime, register it instead of building it:
 
@@ -149,9 +149,17 @@ The SDK guide documents error behavior, disposal, event delivery, and platform-s
 
 For external libraries, prefer their upstream imports and documentation. Legend supplies integration, native setup, tested pins, and supported production pruning. For example, background work uses `@react-native-runtimes/core` directly. It runs in independent Hermes heaps inside the application process and ends when the app quits. Read the [Runtimes guide](docs/runtimes.md) for serialization, cleanup, native-module restrictions, and production reachability.
 
+## One app for mobile, web, and desktop
+
+`bun run settings /tmp/MySettings` packs the shared Settings template and creates it through Expo Desktop beta. It uses the existing capability adapters, ordinary React Native layout, and native `Button`, `TextInput`, and `Select` controls from `@legend-apps/ui`. Mobile controls use the pinned Expo UI backend; desktop and web select their own implementations.
+
+Run `bun run web`, `bun run ios`, `bun run android`, or `bun run macos` inside the generated app. Native targets first need their development build. Windows currently loads a capability-gap message until its UI backends are implemented. See [the shared Settings guide](docs/universal-settings.md) for build commands, platform status, and verification.
+
+A universal project declares all targets together. Switching with `--platform` preserves its shared configuration/source and the other generated native projects. Router integration and declarative windows remain deferred.
+
 ## Application configuration
 
-New starters use static `desktop.config.json`. The CLI validates it and generates the `app.json` consumed by Expo Desktop. Legacy projects containing only `app.json` remain supported. When desktop config is present, edit that source rather than the generated Expo file.
+New starters use static `desktop.config.json`. For single-target desktop starters, the CLI validates it and generates the `app.json` consumed by Expo Desktop. Universal starters use a managed dynamic `app.config.js` and target-specific overrides instead. Legacy projects containing only `app.json` remain supported. When desktop config is present, edit that source rather than the generated Expo file.
 
 A typical generated configuration looks like this; retain the `projectId` assigned to your app:
 
@@ -242,7 +250,7 @@ The main boundaries are `packages/cli` for orchestration, `packages/config-plugi
 
 [ARCHITECTURE.md](ARCHITECTURE.md) explains these boundaries, runtime compatibility, production pruning, generated artifacts, and where to change code. It also documents the integrated Windows adapter and the work remaining beyond the development slice. The [Expo Desktop handoff](docs/expo-desktop-integration.md) separates integration available today from the proposed upstream `--binary` launch contract.
 
-The [Expo API adapters](docs/expo-api-adapters.md) document the current clipboard, secure-storage, and linking migration and its kitchen-sink checks. The [API ownership policy](docs/external-libraries.md#public-contracts-and-replaceable-implementations) describes stable framework contracts with replaceable native, Expo, or community implementations. The larger Router/UI work is deferred.
+The [Expo API adapters](docs/expo-api-adapters.md) document the current clipboard, secure-storage, and linking migration and its kitchen-sink checks. [Native UI](docs/ui.md) starts with an AppKit button and Expo UI mobile adapters. The [API ownership policy](docs/external-libraries.md#public-contracts-and-replaceable-implementations) describes stable framework contracts with replaceable native, Expo, or community implementations. Router integration and the broader UI catalog remain deferred.
 
 The [universal API plan](docs/universal-api-plan.md) proposes one web/mobile/desktop codebase, Expo-aligned capability APIs, Expo UI adapters, and declarative window presentation through Expo Router. It is awaiting review and does not describe implemented functionality. The earlier [API structure review](docs/api-structure-review.md) retains the current SDK inventory.
 

@@ -1,7 +1,7 @@
 import { projectPlatform, architecture, type DesktopPlatform } from "./platform.ts";
 import { resolveHelpers } from "./helpers.ts";
-import { readConfig as readAppConfig, prepareConfig, writeUpdates } from "@legend-apps/desktop-config/config.cjs";
-export { readAppConfig, prepareConfig, writeUpdates };
+import { readConfig as readAppConfig, prepareConfig, writeUpdates, statePath, isUniversal } from "@legend-apps/desktop-config/config.cjs";
+export { readAppConfig, prepareConfig, writeUpdates, statePath, isUniversal };
 import { createHash } from "node:crypto";
 import { createRequire } from "node:module";
 import {
@@ -44,7 +44,7 @@ export function digest(value: string) {
   return createHash("sha256").update(value).digest("hex");
 }
 export function stateFile(root: string, name: string) {
-  return path.join(root, ".legend", name);
+  return statePath(root, name);
 }
 export function installedPackages(root: string): Package[] {
   const found = new Map<string, Package>();
@@ -140,7 +140,8 @@ export function nativePackages(root: string): NativePackage[] {
   // Fold it into the mandatory app module's compatibility signature for Go.
   const adapters = installed.filter(pkg => ["@legend-apps/desktop-host", "@legend-apps/desktop-config"].includes(pkg.name))
     .map(pkg => hashFiles(pkg.root, ["package.json", "AppDelegate.mm", ...readdirSync(pkg.root).filter(name => name.endsWith(".cjs"))])).join(":");
-  return installed
+  const excluded = isUniversal(root) ? readAppConfig(root).expo?.autolinking?.exclude ?? [] : [];
+  return installed.filter(pkg => !excluded.includes(pkg.name))
     .filter(
       (pkg) =>
         pkg.json.codegenConfig ||
@@ -356,8 +357,10 @@ function windowsNativePackages(root: string, installed: Package[]): NativePackag
   const direct = readJson(path.join(root, "package.json")).dependencies ?? {};
   const supported = (pkg: Package) => pkg.name !== "expo-desktop-template-bare-minimum" && (existsSync(path.join(pkg.root, "windows")) ||
     ["react-native", "react-native-windows", "@legend-apps/desktop-host"].includes(pkg.name));
+  const explicitlyExcluded = isUniversal(root) ? readAppConfig(root).expo?.autolinking?.exclude ?? [] : [];
   for (const pkg of installed) {
-    if (direct[pkg.name] && pkg.name !== "expo" && !supported(pkg) && (pkg.json.codegenConfig || pkg.json.legend?.nativeModules || readdirSync(pkg.root).some(name => name.endsWith(".podspec") || name === "expo-module.config.json"))) {
+    const platformAdapter = isUniversal(root) && ["src/index.windows.ts", "src/index.windows.tsx"].some(file => existsSync(path.join(pkg.root, file)));
+    if (!platformAdapter && !explicitlyExcluded.includes(pkg.name) && direct[pkg.name] && pkg.name !== "expo" && !supported(pkg) && (pkg.json.codegenConfig || pkg.json.legend?.nativeModules || readdirSync(pkg.root).some(name => name.endsWith(".podspec") || name === "expo-module.config.json"))) {
       throw new Error(`${pkg.name} has no Windows implementation. Remove it from this Windows development app until it is ported.`);
     }
   }

@@ -1,3 +1,4 @@
+const { statePath } = require("./config.cjs");
 const fs = require('node:fs');
 const path = require('node:path');
 
@@ -17,7 +18,7 @@ module.exports = config => {
   const { withAppCpp } = require('expo-desktop-config-plugins');
   config = withAppCpp(config, mod => {
     const root = mod.modRequest.projectRoot;
-    const metadata = JSON.parse(fs.readFileSync(path.join(root, '.legend/windows-build-input.json'), 'utf8'));
+    const metadata = JSON.parse(fs.readFileSync(statePath(root, 'windows-build-input.json', 'windows'), 'utf8'));
     mod.modResults.contents = patchHost(mod.modResults.contents, fs.readFileSync(require.resolve('@legend-apps/desktop-host/windows/runtime.inc'), 'utf8'), metadata);
     return mod;
   });

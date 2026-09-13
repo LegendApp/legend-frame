@@ -12,7 +12,7 @@ bun run macos
 
 `bun run macos`, `bun start`, and `bun dev` all start the same managed Legend development session. Existing apps can add `"macos": "legend dev"` and `"start": "legend dev"` to their package scripts.
 
-`create` copies the starter shipped in the CLI package and finds the local package manifest. `dev` discovers a registered Go runtime matching the SDK version and native module signatures, chooses an available port, and opens the app. Running a compatible Go binary invokes no native build tools. The CLI finds the app root when invoked from a subdirectory.
+`create` selects a packed Legend template and delegates extraction, identity assignment, and installation to Expo Desktop beta. `dev` discovers a registered Go runtime matching the SDK version and native module signatures, chooses an available port, and opens the app. Running a compatible Go binary invokes no native build tools. The CLI finds the app root when invoked from a subdirectory.
 
 The running terminal shows the current runtime and available actions:
 
@@ -127,6 +127,8 @@ Keep generated files out of version control. Commit application source/configura
 
 ## Starter template and Expo Desktop integration
 
-Edit `packages/cli/templates/blank-typescript/` to change the starter. The template contains the dependency pins, scripts, app source, Metro configuration, and TypeScript configuration. The CLI supplies app identity, local archive paths, and Expo config during creation. The `gitignore` asset becomes `.gitignore` in the app. Repack the CLI after changing template files.
+Edit the complete templates under `packages/cli/templates/`: `blank-typescript` (macOS), `windows`, or `universal`. Their manifests own dependency pins and scripts. `legend sdk pack` resolves local SDK archives into template dependencies and emits npm tarballs plus `artifacts/packages/templates.json`. Repack after changing a template or SDK package.
 
-This is a local Legend template, not a published Expo Desktop template. `legend create` is the supported entry point today. Native generation continues to use the pinned upstream bare-minimum template and Legend config plugins. See the [integration handoff](expo-desktop-integration.md) for the proposed direct Expo Desktop template and binary-launch integration.
+`legend create` invokes `expo-desktop@1.0.0-beta.5 create-app --template <archive>`. Expo Desktop validates the directory/name, extracts files, assigns app/native identity, installs dependencies, and initializes Git. A template postinstall initializes Legend's configuration once. It does not overwrite an existing project ID or user edits. Project basenames must be alphanumeric, following upstream validation; spaces in parent directories are supported.
+
+Direct Expo Desktop template creation is also checked by `bun run test:templates`, including a consumer outside the checkout. These local archives reference local SDK tarballs; they are not a published package distribution. The [integration handoff](expo-desktop-integration.md) documents the npm compatibility pin and remaining build/launch limitations.

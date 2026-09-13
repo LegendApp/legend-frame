@@ -186,12 +186,36 @@
     "platforms": {
       "type": "array",
       "minItems": 1,
-      "maxItems": 1,
+      "uniqueItems": true,
       "items": {
         "enum": [
+          "ios",
+          "android",
+          "web",
           "macos",
           "windows"
         ]
+      }
+    },
+    "expoByPlatform": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "ios": {
+          "type": "object"
+        },
+        "android": {
+          "type": "object"
+        },
+        "web": {
+          "type": "object"
+        },
+        "macos": {
+          "type": "object"
+        },
+        "windows": {
+          "type": "object"
+        }
       }
     }
   },

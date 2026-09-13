@@ -1,0 +1,51 @@
+#import "RNLegendButton.h"
+#import <react/renderer/components/RNLegendUISpec/ComponentDescriptors.h>
+#import <react/renderer/components/RNLegendUISpec/EventEmitters.h>
+#import <react/renderer/components/RNLegendUISpec/Props.h>
+using namespace facebook::react;
+
+@implementation RNLegendButton {
+  NSButton *_button;
+}
+- (instancetype)init {
+  if (self = [super init]) {
+    _props = std::make_shared<const LegendButtonProps>();
+    _button = [NSButton buttonWithTitle:@"" target:self action:@selector(pressed:)];
+    _button.buttonType = NSButtonTypeMomentaryPushIn;
+    _button.bezelStyle = NSBezelStyleRounded;
+    _button.controlSize = NSControlSizeRegular;
+    _button.font = [NSFont systemFontOfSize:NSFont.systemFontSize];
+    [self addSubview:_button];
+  }
+  return self;
+}
+- (BOOL)isFlipped { return YES; }
+- (void)pressed:(id)sender {
+  if (!_button.enabled) return;
+  auto emitter = std::static_pointer_cast<const LegendButtonEventEmitter>(_eventEmitter);
+  if (emitter) emitter->onButtonPress({});
+}
+- (void)updateProps:(Props::Shared const &)props oldProps:(Props::Shared const &)oldProps {
+  const auto &value = *std::static_pointer_cast<const LegendButtonProps>(props);
+  _button.title = [NSString stringWithUTF8String:value.title.c_str()];
+  _button.enabled = !value.disabled;
+  _button.bordered = value.variant != LegendButtonVariant::Borderless;
+  _button.accessibilityIdentifier = [NSString stringWithUTF8String:value.testId.c_str()];
+  [super updateProps:props oldProps:oldProps];
+}
+- (void)layoutSubviews { [super layoutSubviews]; _button.frame = self.bounds; }
+- (void)updateLayoutMetrics:(const LayoutMetrics &)layoutMetrics oldLayoutMetrics:(const LayoutMetrics &)oldLayoutMetrics {
+  [super updateLayoutMetrics:layoutMetrics oldLayoutMetrics:oldLayoutMetrics];
+  [self layoutSubviews];
+}
+- (void)prepareForRecycle {
+  [super prepareForRecycle];
+  _button.title = @"";
+  _button.enabled = YES;
+  _button.bordered = YES;
+  _button.accessibilityIdentifier = nil;
+  _button.highlighted = NO;
+  if (self.window.firstResponder == _button) [self.window makeFirstResponder:nil];
+}
++ (ComponentDescriptorProvider)componentDescriptorProvider { return concreteComponentDescriptorProvider<LegendButtonComponentDescriptor>(); }
+@end
