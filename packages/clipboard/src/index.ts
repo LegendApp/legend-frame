@@ -15,3 +15,24 @@ export async function writeClipboard(content: ClipboardContent) {
   for (const key of ["text", "html", "rtf", "imagePNG"] as const) if (content[key] !== undefined && typeof content[key] !== "string") throw new Error(`Invalid clipboard ${key}`);
   await Native.call("write", JSON.stringify(content));
 }
+
+import { StringFormat } from "./formats";
+export { StringFormat } from "./formats";
+export type GetStringOptions = { preferredFormat?: StringFormat };
+export type SetStringOptions = { inputFormat?: StringFormat };
+function stringOptions(options: object, key: string) {
+  if (!options || Object.keys(options).some(name => name !== key)) throw new Error("Unsupported clipboard option");
+  const format = (options as Record<string, unknown>)[key] ?? StringFormat.PLAIN_TEXT;
+  if (format !== StringFormat.PLAIN_TEXT && format !== StringFormat.HTML) throw new Error("Invalid clipboard string format");
+  return format;
+}
+/** Expo-compatible text/HTML subset. Rich desktop formats remain available above. */
+export async function getStringAsync(options: GetStringOptions = {}): Promise<string> {
+  return call("getString", { format: stringOptions(options, "preferredFormat") });
+}
+export async function setStringAsync(text: string, options: SetStringOptions = {}): Promise<boolean> {
+  if (typeof text !== "string") throw new TypeError("Clipboard text must be a string");
+  await call("setString", { text, format: stringOptions(options, "inputFormat") });
+  return true;
+}
+export const hasStringAsync = (): Promise<boolean> => call("hasString");

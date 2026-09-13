@@ -6,6 +6,42 @@ RCT_EXPORT_MODULE(NativeDesktopClipboard)
   dispatch_async(dispatch_get_main_queue(), ^{
     NSPasteboard *board = NSPasteboard.generalPasteboard;
     NSDictionary *args = LegendArgs(json);
+    if ([method isEqual:@"hasString"]) {
+      resolve(LegendJSON(@([board availableTypeFromArray:@[NSPasteboardTypeString, NSPasteboardTypeHTML, NSPasteboardTypeRTF]] != nil))); return;
+    }
+    if ([method isEqual:@"getString"] || [method isEqual:@"setString"]) {
+      NSString *format = args[@"format"];
+      if (![@[@"plainText", @"html"] containsObject:format]) { LegendInvalid(reject, @"Invalid clipboard string format"); return; }
+      BOOL html = [format isEqual:@"html"];
+      if ([method isEqual:@"setString"]) {
+        NSString *text = args[@"text"];
+        if (![text isKindOfClass:NSString.class]) { LegendInvalid(reject, @"Expected clipboard text"); return; }
+        NSPasteboardItem *item = [NSPasteboardItem new];
+        [item setString:text forType:html ? NSPasteboardTypeHTML : NSPasteboardTypeString];
+        if (html) {
+          NSAttributedString *rich = [[NSAttributedString alloc] initWithData:[text dataUsingEncoding:NSUTF8StringEncoding]
+            options:@{NSDocumentTypeDocumentAttribute: NSHTMLTextDocumentType, NSCharacterEncodingDocumentAttribute: @(NSUTF8StringEncoding)} documentAttributes:nil error:nil];
+          if (rich) [item setString:rich.string forType:NSPasteboardTypeString];
+        }
+        [board clearContents];
+        if (![board writeObjects:@[item]]) { reject(@"E_CLIPBOARD", @"Could not write clipboard", nil); return; }
+        resolve(@"null"); return;
+      }
+      NSString *text = [board stringForType:html ? NSPasteboardTypeHTML : NSPasteboardTypeString];
+      if (!text) {
+        NSString *sourceType = [board availableTypeFromArray:@[NSPasteboardTypeHTML, NSPasteboardTypeRTF, NSPasteboardTypeString]];
+        NSData *data = sourceType ? [board dataForType:sourceType] : nil;
+        NSString *documentType = [sourceType isEqual:NSPasteboardTypeHTML] ? NSHTMLTextDocumentType :
+          [sourceType isEqual:NSPasteboardTypeRTF] ? NSRTFTextDocumentType : NSPlainTextDocumentType;
+        NSAttributedString *rich = data ? [[NSAttributedString alloc] initWithData:data
+          options:@{NSDocumentTypeDocumentAttribute: documentType, NSCharacterEncodingDocumentAttribute: @(NSUTF8StringEncoding)} documentAttributes:nil error:nil] : nil;
+        if (html && rich) {
+          NSData *encoded = [rich dataFromRange:NSMakeRange(0, rich.length) documentAttributes:@{NSDocumentTypeDocumentAttribute: NSHTMLTextDocumentType} error:nil];
+          text = [[NSString alloc] initWithData:encoded encoding:NSUTF8StringEncoding];
+        } else text = rich.string;
+      }
+      resolve(LegendJSON(text ?: @"")); return;
+    }
     if ([method isEqual:@"formats"]) { resolve(LegendJSON(board.types ?: @[])); return; }
     if ([method isEqual:@"clear"]) { [board clearContents]; resolve(@"null"); return; }
     NSDictionary *types = @{ @"text": NSPasteboardTypeString, @"html": NSPasteboardTypeHTML, @"rtf": NSPasteboardTypeRTF };

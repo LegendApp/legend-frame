@@ -18,8 +18,13 @@ RCT_EXPORT_MODULE(NativeDesktopLinks)
     if (!url.scheme.length) { LegendInvalid(reject, @"URL must have a scheme"); return; }
     if ([method isEqual:@"canOpen"]) resolve(LegendJSON(@([NSWorkspace.sharedWorkspace URLForApplicationToOpenURL:url] != nil)));
     else if ([method isEqual:@"open"]) {
-      if (![NSWorkspace.sharedWorkspace openURL:url]) { reject(@"E_OPEN_URL", @"No application opened this URL", nil); return; }
-      resolve(@"null");
+      // Opening a URL can deliver an Apple event back to this app. Keep its
+      // main run loop free while LaunchServices resolves and opens the target.
+      [NSWorkspace.sharedWorkspace openURL:url configuration:NSWorkspaceOpenConfiguration.configuration
+        completionHandler:^(NSRunningApplication *application, NSError *error) {
+          if (error) reject(@"E_OPEN_URL", error.localizedDescription, error);
+          else resolve(@"null");
+        }];
     } else if ([method isEqual:@"noteRecent"]) {
       if (!url.isFileURL) { LegendInvalid(reject, @"Recent documents must be file URLs"); return; }
       NSString *key = [LegendNamespace() stringByAppendingString:@".recentDocuments"];

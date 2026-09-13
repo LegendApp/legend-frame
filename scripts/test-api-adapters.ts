@@ -1,0 +1,92 @@
+import { existsSync, mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
+import path from "node:path";
+import { homedir } from "node:os";
+import { prepareKitchenSink } from "./kitchen-sink";
+import { build } from "../packages/cli/src/build";
+import { binary, run } from "../packages/cli/src/commands";
+import { availablePort } from "../packages/cli/src/local";
+import { readJson, writeJson, prepareConfig } from "../packages/cli/src/project";
+
+// Focused checks run the actual kitchen-sink screen with a test-only native driver.
+const root = path.resolve(process.argv[2] ?? ".legend/api-tests/KitchenSink");
+await prepareKitchenSink(root);
+const pkgFile = path.join(root, "package.json");
+const pkg = readJson(pkgFile);
+pkg.dependencies["@legend-apps/sdk-test-driver"] = pkg.overrides["@legend-apps/sdk-test-driver"];
+writeJson(pkgFile, pkg);
+await run(root, ["bun", "install"]);
+const configFile = path.join(root, "desktop.config.json");
+const originalConfig = readFileSync(configFile, "utf8");
+const originalDriver = readFileSync(path.join(root, "test-driver.ts"), "utf8");
+const configuration = readJson(configFile);
+configuration.scheme = "legend-api-test";
+configuration.macos = { ...configuration.macos, bundleIdentifier: "so.legend.prototype.apiadapters" };
+writeJson(configFile, configuration);
+writeFileSync(path.join(root, "test-driver.ts"), 'import driver from "@legend-apps/sdk-test-driver";\nexport type TestDriver = typeof driver;\nexport const testDriver = driver;\n');
+const directory = path.join(root, ".legend/api-results"); mkdirSync(directory, { recursive: true });
+const port = await availablePort();
+let metro: ReturnType<typeof Bun.spawn> | undefined;
+let directApp: ReturnType<typeof Bun.spawn> | undefined;
+let launchedPID: number | undefined;
+let staging: string | undefined;
+let application: string | undefined;
+const lsregister = "/System/Library/Frameworks/CoreServices.framework/Frameworks/LaunchServices.framework/Support/lsregister";
+async function waitFor<T>(read: () => Promise<T | undefined>, description: string, timeout = 120000): Promise<T> {
+  const deadline = Date.now() + timeout;
+  while (Date.now() < deadline) { const value = await read(); if (value !== undefined) return value; await Bun.sleep(200); }
+  throw new Error(`Timed out waiting for ${description}; see ${directory}`);
+}
+try {
+  const product = await build(root, "dev");
+  const executableName = (await run(root, ["/usr/libexec/PlistBuddy", "-c", "Print :CFBundleExecutable", path.join(product.app, "Contents/Info.plist")], { capture: true })).trim();
+  // LaunchServices excludes apps in /tmp from URL-handler lookup, even after registration.
+  // A temporary user Applications copy exercises the same installed-app behavior as a consumer.
+  const applications = path.join(homedir(), "Applications"); mkdirSync(applications, { recursive: true });
+  staging = mkdtempSync(path.join(applications, "LegendAPIChecks-"));
+  application = path.join(staging, "KitchenSink.app");
+  await run(root, ["ditto", product.app, application]);
+  await run(root, [lsregister, "-f", application]);
+  const executable = path.join(application, "Contents/MacOS", executableName);
+  writeJson(path.join(root, ".legend/session.json"), { compatible: true, target: "test", port });
+  const log = Bun.file(path.join(directory, "metro.log"));
+  metro = Bun.spawn([binary(root, "expo"), "start", "--localhost", "--port", String(port), "--max-workers", "2"], { cwd: root, env: { ...process.env, CI: "1" }, stdout: log, stderr: log });
+  await waitFor(async () => fetch(`http://127.0.0.1:${port}/status`, { signal: AbortSignal.timeout(1000) }).then(r => r.ok ? true : undefined, () => undefined), "Metro", 60000);
+  const bundleURL = `http://127.0.0.1:${port}/index.bundle?platform=macos&dev=true&minify=false`;
+  const summary: Record<string, unknown> = {};
+  for (const cold of [false, true]) {
+    const phase = cold ? "cold-url" : "normal-launch";
+    const report = path.join(directory, `${phase}-${Date.now()}.json`);
+    const initial = `legend-api-test://initial/${Date.now()}`;
+    const args = ["-RCT_jsLocation", `127.0.0.1:${port}`, "--legend-api-report", report];
+    if (cold) {
+      // LaunchServices delivers a real cold-open Apple event, rather than simulating it in JS.
+      await run(root, ["open", "-n", "-a", application, "--env", `LEGEND_BUNDLE_URL=${bundleURL}`, "--stdout", path.join(directory, `${phase}.log`), "--stderr", path.join(directory, `${phase}.log`), initial, "--args", ...args, "--legend-api-initial", initial]);
+      const listing = await run(root, ["ps", "-axo", "pid=,command="], { capture: true });
+      const owned = listing.split("\n").find(line => line.includes(executable) && line.includes(report));
+      if (owned) launchedPID = Number(owned.trim().split(/\s+/)[0]);
+    } else {
+      const output = Bun.file(path.join(directory, `${phase}.log`));
+      directApp = Bun.spawn([executable, ...args], { cwd: root, env: { ...process.env, LEGEND_BUNDLE_URL: bundleURL }, stdout: output, stderr: output });
+    }
+    const outcome = await waitFor(async () => existsSync(report) ? readJson(report) : undefined, phase);
+    for (const check of outcome.results ?? []) console.log(`${check.passed ? "PASS" : "FAIL"} [${phase}] ${check.name}${check.error ? `: ${check.error}` : ""}`);
+    if (!outcome.passed || !outcome.nativeDriver || outcome.results.length !== 6) throw new Error(`Kitchen-sink API checks failed: ${report}`);
+    summary[phase] = { report, ...outcome };
+    if (directApp) { await directApp.exited; directApp = undefined; }
+    if (launchedPID) {
+      const pid = launchedPID;
+      await waitFor(async () => { try { process.kill(pid, 0); return undefined; } catch { return true; } }, "test application quit", 15000);
+      launchedPID = undefined;
+    }
+  }
+  writeJson(path.join(directory, "summary.json"), { passed: true, ...summary });
+  console.log(`Kitchen-sink API validation passed: ${directory}`);
+} finally {
+  if (directApp && directApp.exitCode === null) { directApp.kill(); await directApp.exited; }
+  if (launchedPID) { try { process.kill(launchedPID, "SIGTERM"); } catch {} }
+  if (metro) { metro.kill(); await metro.exited; }
+  if (application) await run(root, [lsregister, "-u", application]);
+  if (staging) rmSync(staging, { recursive: true });
+  writeFileSync(configFile, originalConfig); prepareConfig(root);
+  writeFileSync(path.join(root, "test-driver.ts"), originalDriver);
+}

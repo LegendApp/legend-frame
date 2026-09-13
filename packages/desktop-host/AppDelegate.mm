@@ -13,6 +13,7 @@
 - (void)applicationDidFinishLaunching:(NSNotification *)notification
 {
   if (!LegendAcquireInstance()) { [NSApp terminate:nil]; return; }
+  LegendMarkLaunchComplete();
   self.moduleName = @"main";
   self.dependencyProvider = [RCTAppDependencyProvider new];
   self.initialProps = LegendInitialProps(@"main", @{});

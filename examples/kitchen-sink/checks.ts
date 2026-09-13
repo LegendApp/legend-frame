@@ -1,3 +1,4 @@
+import { runAPIChecks } from "./api-checks";
 import { runIntegrationChecks } from "./integration-checks";
 import * as app from "@legend-apps/desktop/app";
 import * as windows from "@legend-apps/desktop/windows";
@@ -5,7 +6,7 @@ import * as files from "@legend-apps/desktop/files";
 import { settings } from "@legend-apps/desktop/settings";
 import * as clipboard from "@legend-apps/desktop/clipboard";
 import * as links from "@legend-apps/desktop/links";
-import { secureStorage } from "@legend-apps/desktop/secure-storage";
+import * as secureStore from "@legend-apps/desktop/secure-storage";
 import { registerShortcut } from "@legend-apps/desktop/shortcuts";
 import { showContextMenu } from "@legend-apps/desktop/context-menu";
 import { configureMenus, clearMenus, addNativeMenuActionListener } from "@legend-apps/desktop/menus";
@@ -37,6 +38,7 @@ export async function runChecks(onResult: (result: Check) => void | Promise<void
   await files.mkdir(root);
   try {
     await runIntegrationChecks(check);
+    await runAPIChecks(check, driver);
     await check("app: identity and runtime metadata", async () => {
       const context = await app.getAppContext();
       assert(context.projectId.length && context.name.length && context.runtime.mode, "Missing host identity");
@@ -85,14 +87,14 @@ export async function runChecks(onResult: (result: Check) => void | Promise<void
       const file = `${await files.getDirectory("data")}/${key}.txt`;
       const context = await app.getAppContext();
       const previous = await settings.get<string>(key);
-      const secret = await secureStorage.get(key);
+      const secret = await secureStore.getItemAsync(key);
       const present = await files.exists(file);
       assert((previous !== null) === (isolation.expect === "present"), "Settings leaked across projects or did not persist");
       assert((secret !== null) === (isolation.expect === "present"), "Keychain leaked across projects or did not persist");
       assert(present === (isolation.expect === "present"), "File data leaked across projects or did not persist");
       if (present) assert(await files.readText(file) === context.projectId && previous === context.projectId && secret === context.projectId, "Persisted identity mismatch");
-      await files.writeText(file, context.projectId); await settings.set(key, context.projectId); await secureStorage.set(key, context.projectId);
-      if (isolation.cleanup) { await files.remove(file); await settings.remove(key); await secureStorage.remove(key); }
+      await files.writeText(file, context.projectId); await settings.set(key, context.projectId); await secureStore.setItemAsync(key, context.projectId);
+      if (isolation.cleanup) { await files.remove(file); await settings.remove(key); await secureStore.deleteItemAsync(key); }
     });
     await check("dialogs: file IO and optimistic save conflicts", async () => {
       const path = `${root}/document.txt`; await writeTextFile(path, "initial");
@@ -127,16 +129,16 @@ export async function runChecks(onResult: (result: Check) => void | Promise<void
       } finally { await guard?.remove(); sub.remove(); if ((await windows.listWindows()).some(window => window.id === token)) await windows.closeWindow(token); await windows.showWindow("main"); }
     });
     await check("clipboard: native reads", async () => {
-      assert(typeof await clipboard.readClipboardText() === "string", "Clipboard text result");
-      assert(typeof await clipboard.hasClipboardText() === "boolean", "Clipboard presence result");
+      assert(typeof await clipboard.getStringAsync() === "string", "Clipboard text result");
+      assert(typeof await clipboard.hasStringAsync() === "boolean", "Clipboard presence result");
     });
     await check("secure storage: missing, write, update, empty value and delete", async () => {
       try {
-        await secureStorage.remove(token); assert(await secureStorage.get(token) === null, "Missing key should be null");
-        await secureStorage.set(token, "secret 🌍"); assert(await secureStorage.get(token) === "secret 🌍", "Keychain roundtrip");
-        await secureStorage.set(token, ""); assert(await secureStorage.get(token) === "", "Empty key differs from missing key");
-        await secureStorage.remove(token); assert(await secureStorage.get(token) === null, "Delete failed");
-      } finally { await secureStorage.remove(token); }
+        await secureStore.deleteItemAsync(token); assert(await secureStore.getItemAsync(token) === null, "Missing key should be null");
+        await secureStore.setItemAsync(token, "secret 🌍"); assert(await secureStore.getItemAsync(token) === "secret 🌍", "Keychain roundtrip");
+        await secureStore.setItemAsync(token, ""); assert(await secureStore.getItemAsync(token) === "", "Empty key differs from missing key");
+        await secureStore.deleteItemAsync(token); assert(await secureStore.getItemAsync(token) === null, "Delete failed");
+      } finally { await secureStore.deleteItemAsync(token); }
     });
     await check("links: URL resolution and recent-document listing", async () => {
       assert(await links.canOpenURL("https://example.com"), "No HTTPS handler");
@@ -160,7 +162,7 @@ export async function runChecks(onResult: (result: Check) => void | Promise<void
     if (driver) {
       await check("clipboard: write and restore every original pasteboard format", async () => {
         await driverCall("saveClipboard");
-        try { await clipboard.writeClipboardText(token); assert(await clipboard.readClipboardText() === token && await clipboard.hasClipboardText(), "Clipboard write failed"); }
+        try { await clipboard.setStringAsync(token); assert(await clipboard.getStringAsync() === token && await clipboard.hasStringAsync(), "Clipboard write failed"); }
         finally { await driverCall("restoreClipboard"); }
       });
       await check("clipboard: HTML, RTF, PNG and file URL roundtrips", async () => {
@@ -171,7 +173,7 @@ export async function runChecks(onResult: (result: Check) => void | Promise<void
           const rich = await clipboard.readClipboard();
           assert(rich.text === token && rich.html === `<b>${token}</b>` && rich.rtf?.includes("SDK test") && !!rich.imagePNG, "Rich clipboard lost a representation");
           try { await clipboard.writeClipboard({ imagePNG: "invalid" }); } catch {}
-          assert(await clipboard.readClipboardText() === token, "Invalid image erased clipboard");
+          assert(await clipboard.getStringAsync() === token, "Invalid image erased clipboard");
           await clipboard.writeClipboard({ files: [`${root}/text.txt`] });
           assert((await clipboard.readClipboard()).files?.[0] === `${root}/text.txt`, "File URL clipboard failed");
         } finally { await driverCall("restoreClipboard"); }

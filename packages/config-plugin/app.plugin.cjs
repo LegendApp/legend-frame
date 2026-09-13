@@ -53,6 +53,10 @@ module.exports = function withLegendDesktop(config) {
       const rubyPath = JSON.stringify(spec).replace(/#\{/g, "\\#{");
       mod.modResults.contents += `\npod 'Sparkle', :podspec => ${rubyPath} ${sparkleMarker}\n`;
     }
+    const autolinkMarker = "# Legend: macOS autolinking";
+    if (!mod.modResults.contents.includes(autolinkMarker)) {
+      mod.modResults.contents = `${autolinkMarker}\nENV['LEGEND_DESKTOP_AUTOLINK'] = 'macos'\n${mod.modResults.contents}`;
+    }
     const marker = "# Legend: Fabric enabled";
     if (!mod.modResults.contents.includes(marker)) {
       mod.modResults.contents = `${marker}\nENV['RCT_NEW_ARCH_ENABLED'] = '1'\n${mod.modResults.contents}`;

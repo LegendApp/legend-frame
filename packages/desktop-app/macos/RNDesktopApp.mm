@@ -15,6 +15,7 @@ RCT_EXPORT_MODULE(NativeDesktopApp)
   dispatch_async(dispatch_get_main_queue(), ^{
     NSDictionary *args = LegendArgs(json);
     if ([method isEqual:@"context"]) resolve(LegendJSON(LegendContext()));
+    else if ([method isEqual:@"initialURL"]) resolve(LegendJSON(LegendInitialURL()));
     else if ([method isEqual:@"pendingURLs"]) resolve(LegendJSON(LegendPendingURLs()));
     else if ([method isEqual:@"quit"]) { resolve(@"null");
       // AppKit can enter a modal run loop while awaiting the JS decision. Do

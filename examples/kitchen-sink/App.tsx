@@ -6,12 +6,13 @@ import * as files from "@legend-apps/desktop/files";
 import { settings } from "@legend-apps/desktop/settings";
 import * as clipboard from "@legend-apps/desktop/clipboard";
 import * as links from "@legend-apps/desktop/links";
-import { secureStorage } from "@legend-apps/desktop/secure-storage";
+import * as secureStore from "@legend-apps/desktop/secure-storage";
 import { registerShortcut } from "@legend-apps/desktop/shortcuts";
 import { showContextMenu } from "@legend-apps/desktop/context-menu";
 import { configureMenus, clearMenus, addNativeMenuActionListener } from "@legend-apps/desktop/menus";
 import { openFileDialog, saveFileDialog, revealInFinder } from "@legend-apps/desktop/dialogs";
 import { runChecks, type Check } from "./checks";
+import { APIChecks } from "./APIChecks";
 import { ExpansionChecks } from "./ExpansionChecks";
 import { Expansion } from "./Expansion";
 import { Integrations } from "./Integrations";
@@ -23,6 +24,8 @@ export default function App(props: Props) {
   const args = props.launchArguments ?? [];
   const report = argument(args, "--legend-test-report");
   if (props.windowId && props.windowId !== "main") return <SecondaryWindow {...props} />;
+  const apiReport = argument(args, "--legend-api-report");
+  if (apiReport) return <APIChecks report={apiReport} expectedInitial={argument(args, "--legend-api-initial") ?? null} />;
   const expansionReport = argument(args, "--legend-expansion-report");
   if (expansionReport) return <ExpansionChecks report={expansionReport} />;
   if (report) return <AutomatedChecks report={report} args={args} />;
@@ -85,7 +88,9 @@ function KitchenSink({ runtime, projectId }: Props) {
     retain(addNativeMenuActionListener(event => { if (event.ownerId === "kitchen-sink") void action(event.itemId === "open" ? load : save); }));
     retain(app.onAppEvent(report)); retain(windows.onWindowEvent(report));
     void registerShortcut("Command+Shift+K", () => report("Shortcut: Command+Shift+K")).then(retain).catch(report);
-    void links.onOpen(report).then(retain).catch(report);
+    void links.onOpen(event => { if (event.type === "openFile") report(event); }).then(retain).catch(report);
+    retain(links.addEventListener("url", event => report({ url: event.url })));
+    void links.getInitialURL().then(url => { if (!disposed && url) report({ initialURL: url }); }).catch(report);
     const confirmClose = () => documentRef.current.text === documentRef.current.saved || new Promise<boolean>(resolve => Alert.alert("Unsaved document", "Discard your changes?", [{ text: "Keep editing", style: "cancel", onPress: () => resolve(false) }, { text: "Discard", style: "destructive", onPress: () => resolve(true) }]));
     void app.beforeQuit(confirmClose).then(retain).catch(report);
     void windows.beforeWindowClose("main", confirmClose).then(retain).catch(report);
@@ -112,12 +117,13 @@ function KitchenSink({ runtime, projectId }: Props) {
       </Card>
       <Card title="Settings"><Text style={styles.text}>Persistent counter: {count ?? "Loading…"}</Text><Button title="Increment and persist" disabled={count === null} onPress={() => void action(async () => { const value = await settings.update<number>("kitchen-count", count => (count ?? 0) + 1); setCount(value); return value; })} /></Card>
       <Card title="Menus, shortcuts and clipboard"><Text style={styles.text}>Use the Document menu or press ⌘⇧K. Right-click-like menus are native popups.</Text><View style={styles.row}>
-        <Button title="Show context menu" onPress={event => void action(() => showContextMenu([{ id: "copy", title: "Copy greeting" }, { id: "checked", title: "Checked item", checked: true }, { id: "disabled", title: "Disabled item", enabled: false }], { x: event.nativeEvent.pageX, y: event.nativeEvent.pageY }).then(async selected => { if (selected === "copy") await clipboard.writeClipboardText("Hello desktop"); return selected ?? "Context menu cancelled"; }))} />
-        <Button title="Copy greeting" onPress={() => void action(() => clipboard.writeClipboardText("Hello desktop"))} /><Button title="Read clipboard" onPress={() => void action(clipboard.readClipboardText)} />
+        <Button title="Show context menu" onPress={event => void action(() => showContextMenu([{ id: "copy", title: "Copy greeting" }, { id: "checked", title: "Checked item", checked: true }, { id: "disabled", title: "Disabled item", enabled: false }], { x: event.nativeEvent.pageX, y: event.nativeEvent.pageY }).then(async selected => { if (selected === "copy") await clipboard.setStringAsync("Hello desktop"); return selected ?? "Context menu cancelled"; }))} />
+        <Button title="Copy greeting" onPress={() => void action(() => clipboard.setStringAsync("Hello desktop"))} /><Button title="Read clipboard" onPress={() => void action(() => clipboard.getStringAsync())} /><Button title="Has clipboard text" onPress={() => void action(clipboard.hasStringAsync)} /><Button title="Copy HTML" onPress={() => void action(() => clipboard.setStringAsync("<b>Hello desktop</b>", { inputFormat: clipboard.StringFormat.HTML }))} />
       </View></Card>
-      <Card title="Links and documents"><View style={styles.row}><Button title="Open example.com" onPress={() => void action(() => links.openURL("https://example.com"))} /><Button title="Recent documents" onPress={() => void action(links.getRecentDocuments)} /></View><Text style={styles.text}>Incoming links and files appear in the event log. OS associations require a custom build.</Text></Card>
+      <Card title="Links and documents"><View style={styles.row}><Button title="Open example.com" onPress={() => void action(() => links.openURL("https://example.com"))} /><Button title="Initial URL" onPress={() => void action(links.getInitialURL)} /><Button title="Can open HTTPS" onPress={() => void action(() => links.canOpenURL("https://example.com"))} /><Button title="Recent documents" onPress={() => void action(links.getRecentDocuments)} /></View><Text style={styles.text}>Incoming links and files appear in the event log. OS associations require a custom build.</Text></Card>
       <Card title="Secure storage"><TextInput accessibilityLabel="Demo secret" secureTextEntry style={styles.input} value={secret} onChangeText={setSecret} placeholder="Demo secret (stored in Keychain)" /><View style={styles.row}>
-        <Button title="Store demo secret" onPress={() => void action(async () => { await secureStorage.set("kitchen-demo", secret); return "Stored demo secret"; })} /><Button title="Load demo secret" onPress={() => void action(async () => { setSecret(await secureStorage.get("kitchen-demo") ?? ""); return "Loaded demo secret"; })} /><Button title="Delete demo secret" onPress={() => void action(async () => { await secureStorage.remove("kitchen-demo"); setSecret(""); return "Deleted demo secret"; })} /></View></Card>
+        <Button title="Store demo secret" onPress={() => void action(async () => { await secureStore.setItemAsync("kitchen-demo", secret); return "Stored demo secret"; })} /><Button title="Load demo secret" onPress={() => void action(async () => { setSecret(await secureStore.getItemAsync("kitchen-demo") ?? ""); return "Loaded demo secret"; })} /><Button title="Delete demo secret" onPress={() => void action(async () => { await secureStore.deleteItemAsync("kitchen-demo"); setSecret(""); return "Deleted demo secret"; })} /></View></Card>
+      <Card title="Expo-aligned APIs"><APIChecks /></Card>
       <Card title="Desktop integrations"><Integrations report={report} />
         <Expansion report={report} /></Card>
       <Card title="Event log"><Button title="Clear log" onPress={() => setLog([])} />{log.map((line, index) => <Text key={`${index}-${line}`} selectable style={styles.log}>{line}</Text>)}</Card>

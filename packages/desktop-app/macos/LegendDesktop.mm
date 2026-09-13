@@ -8,6 +8,8 @@ static BOOL quitGuard = NO;
 static BOOL quitting = NO;
 static NSUInteger quitGeneration = 0;
 static NSMutableArray *pendingURLs;
+static NSString *initialURL;
+static BOOL launchComplete = NO;
 
 NSString *LegendJSON(id value) {
   NSData *data = [NSJSONSerialization dataWithJSONObject:value ?: NSNull.null options:NSJSONWritingFragmentsAllowed error:nil];
@@ -71,11 +73,14 @@ void LegendEmit(NSDictionary *event) {
   NSCAssert(NSThread.isMainThread, @"Desktop events are main-thread confined");
   [NSNotificationCenter.defaultCenter postNotificationName:LegendDesktopEvent object:nil userInfo:event];
 }
+void LegendMarkLaunchComplete(void) { launchComplete = YES; }
+NSString *LegendInitialURL(void) { return initialURL; }
 void LegendOpenURLs(NSArray<NSURL *> *urls) {
   if (!pendingURLs) pendingURLs = [NSMutableArray new];
   for (NSURL *url in urls) {
+    if (!launchComplete && !url.isFileURL && !initialURL) initialURL = url.absoluteString;
     NSDictionary *event = @{ @"type": url.isFileURL ? @"openFile" : @"openURL", @"url": url.absoluteString,
-      @"id": NSUUID.UUID.UUIDString };
+      @"id": NSUUID.UUID.UUIDString, @"initial": @(!launchComplete) };
     [pendingURLs addObject:event];
     if (pendingURLs.count > 100) [pendingURLs removeObjectAtIndex:0];
     LegendEmit(event);

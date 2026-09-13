@@ -137,7 +137,7 @@ test("links deduplicate queued/live overlap and stop delivery on removal", async
 test("links registration failures clean up listeners and URL validation is early", async () => {
   handlers.set("NativeDesktopApp.pendingURLs", () => { throw new Error("bridge"); });
   await expect(links.onOpen(() => {})).rejects.toThrow("bridge"); expect(subscriptions.get("NativeDesktopApp.desktop")?.size).toBe(0);
-  expect(() => links.openURL("example.com")).toThrow("scheme"); await links.openURL("https://example.com"); await links.canOpenURL("demo://test"); await links.noteRecentDocument("file:///tmp/a"); await links.getRecentDocuments(); await links.clearRecentDocuments();
+  await expect(links.openURL("example.com")).rejects.toThrow("scheme"); expect(await links.openURL("https://example.com")).toBe(true); await links.canOpenURL("demo://test"); await links.noteRecentDocument("file:///tmp/a"); await links.getRecentDocuments(); await links.clearRecentDocuments();
 });
 test("shortcuts dispatch only their registration and clean up on failure/removal", async () => {
   let count = 0; const sub = await shortcuts.registerShortcut("Cmd+K", () => { count++; }); const id = calls[0]?.args.id;
@@ -278,4 +278,94 @@ test("Dock menus identify their owner and remove only once", async () => {
   emit("NativeDesktopApp", "desktop", { type: "dockAction", owner: "other", id: "open" });
   emit("NativeDesktopApp", "desktop", { type: "dockAction", owner, id: "open" }); expect(selected).toEqual(["open"]);
   await menu.remove(); await menu.remove(); expect(calls.filter(call => call.method === "clearDockMenu")).toHaveLength(1);
+});
+
+test("Expo clipboard subset handles formats, boolean results, and native failures", async () => {
+  handlers.set("NativeDesktopClipboard.getString", args => args.format === "html" ? "<b>Hello</b>" : "Hello");
+  handlers.set("NativeDesktopClipboard.hasString", () => true);
+  expect(await clipboard.getStringAsync()).toBe("Hello");
+  expect(await clipboard.getStringAsync({ preferredFormat: clipboard.StringFormat.HTML })).toBe("<b>Hello</b>");
+  expect(await clipboard.setStringAsync("<b>Hello</b>", { inputFormat: clipboard.StringFormat.HTML })).toBe(true);
+  expect(calls.at(-1)?.args).toEqual({ text: "<b>Hello</b>", format: "html" });
+  expect(await clipboard.hasStringAsync()).toBe(true);
+  await expect(clipboard.setStringAsync(123 as any)).rejects.toThrow("string");
+  await expect(clipboard.getStringAsync({ preferredFormat: "bad" as any })).rejects.toThrow("format");
+  handlers.set("NativeDesktopClipboard.setString", () => { throw nativeError("E_CLIPBOARD"); });
+  await expect(clipboard.setStringAsync("fail")).rejects.toThrow("E_CLIPBOARD");
+});
+
+test("Expo SecureStore subset shares legacy storage and rejects unsupported options", async () => {
+  const store = await import("../packages/secure-storage/src/index");
+  expect(await store.isAvailableAsync()).toBe(true);
+  expect(await store.getItemAsync("missing")).toBeNull();
+  handlers.set("NativeDesktopSecureStorage.get", () => "");
+  expect(await store.getItemAsync("empty")).toBe("");
+  expect(await store.setItemAsync("key", "value")).toBeUndefined();
+  expect(calls.at(-1)?.args).toEqual({ key: "key", value: "value" });
+  expect(await store.deleteItemAsync("key")).toBeUndefined();
+  await expect(store.getItemAsync("key with spaces")).rejects.toThrow("keys");
+  await expect(store.setItemAsync("key", 123 as any)).rejects.toThrow("strings");
+  const previous = calls.length;
+  await expect(store.getItemAsync("key", { requireAuthentication: true } as any)).rejects.toThrow("options");
+  expect(calls).toHaveLength(previous);
+  handlers.set("NativeDesktopSecureStorage.get", () => { throw nativeError("E_KEYCHAIN"); });
+  await expect(store.getItemAsync("key")).rejects.toThrow("E_KEYCHAIN");
+});
+
+test("Expo linking separates stable initial URLs, live URLs, and legacy file events", async () => {
+  handlers.set("NativeDesktopApp.initialURL", () => "demo://initial");
+  const received: string[] = [];
+  const subscription = links.addEventListener("url", event => received.push(event.url));
+  expect(await links.getInitialURL()).toBe("demo://initial");
+  emit("NativeDesktopApp", "desktop", { type: "openURL", url: "demo://initial", initial: true });
+  emit("NativeDesktopApp", "desktop", { type: "openFile", url: "file:///tmp/a" });
+  emit("NativeDesktopApp", "desktop", { type: "openURL", url: "demo://warm", initial: false });
+  expect(received).toEqual(["demo://warm"]);
+  expect(await links.getInitialURL()).toBe("demo://initial");
+  subscription.remove(); subscription.remove();
+  emit("NativeDesktopApp", "desktop", { type: "openURL", url: "demo://removed" });
+  expect(received).toHaveLength(1);
+  expect(() => links.addEventListener("bad" as any, () => {})).toThrow();
+});
+
+test("web and Windows unavailability does not load a native module or store secrets", async () => {
+  const web = await import("../packages/secure-storage/src/index.web");
+  const win = await import("../packages/clipboard/src/index.windows");
+  expect(await web.isAvailableAsync()).toBe(false);
+  await expect(web.setItemAsync("secret", "value")).rejects.toThrow("unavailable");
+  await expect(win.getStringAsync()).rejects.toThrow("Windows");
+  expect(calls).toHaveLength(0);
+});
+
+test("mobile adapters delegate the shared subset to Expo without native dispatch", async () => {
+  const forwarded: string[] = [];
+  mock.module("expo-clipboard", () => ({
+    getStringAsync: async () => "expo text",
+    setStringAsync: async () => { forwarded.push("clipboard"); return false; },
+    hasStringAsync: async () => true,
+    StringFormat: { PLAIN_TEXT: "plainText", HTML: "html" },
+  }));
+  mock.module("expo-secure-store", () => ({
+    isAvailableAsync: async () => true,
+    getItemAsync: async () => "expo secret",
+    setItemAsync: async () => { forwarded.push("secret"); },
+    deleteItemAsync: async () => { forwarded.push("delete"); },
+  }));
+  mock.module("expo-linking", () => ({
+    getInitialURL: async () => "expo://initial",
+    openURL: async () => { forwarded.push("url"); },
+    canOpenURL: async () => true,
+    addEventListener: () => ({ remove() {} }),
+  }));
+  const mobileClipboard = await import("../packages/clipboard/src/index.ios");
+  const mobileSecure = await import("../packages/secure-storage/src/index.android");
+  const mobileLinks = await import("../packages/desktop-links/src/index.web");
+  expect(await mobileClipboard.getStringAsync()).toBe("expo text");
+  expect(await mobileClipboard.setStringAsync("text")).toBe(false);
+  expect(await mobileSecure.getItemAsync("key")).toBe("expo secret");
+  await mobileSecure.setItemAsync("key", "value"); await mobileSecure.deleteItemAsync("key");
+  expect(await mobileLinks.getInitialURL()).toBe("expo://initial");
+  await mobileLinks.openURL("https://example.com");
+  expect(forwarded).toEqual(["clipboard", "secret", "delete", "url"]);
+  expect(calls).toHaveLength(0);
 });

@@ -9,6 +9,8 @@ FOUNDATION_EXPORT NSString *LegendNamespace(void);
 FOUNDATION_EXPORT void LegendEmit(NSDictionary *event);
 FOUNDATION_EXPORT void LegendOpenURLs(NSArray<NSURL *> *urls);
 FOUNDATION_EXPORT NSArray *LegendPendingURLs(void);
+FOUNDATION_EXPORT NSString *LegendInitialURL(void);
+FOUNDATION_EXPORT void LegendMarkLaunchComplete(void);
 FOUNDATION_EXPORT NSApplicationTerminateReply LegendShouldQuit(void);
 FOUNDATION_EXPORT NSString *LegendJSON(id value);
 FOUNDATION_EXPORT NSDictionary *LegendArgs(NSString *json);
