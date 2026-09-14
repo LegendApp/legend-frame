@@ -25,7 +25,7 @@ export function NativeControls({ report }: { report?: string }) {
     return () => clearTimeout(timer);
   }, [report]);
   return <View style={styles.container}>
-    <Text style={styles.text} testID="native-button-count">Native button presses: {count}</Text>
+    <Text style={styles.text} className="text-muted" testID="native-button-count">Native button presses: {count}</Text>
     <View style={styles.row}>
       <Button key={generation} testID="native-button-increment" disabled={disabled}
         onPress={() => setCount(value => value + 1)}>Increment natively</Button>
@@ -37,8 +37,8 @@ export function NativeControls({ report }: { report?: string }) {
     </View>
     <TextInput testID="native-field" accessibilityLabel="Name" defaultValue={generation ? "New default" : "Initial name"} onChangeText={setName} />
     <Select testID="native-select" accessibilityLabel="Choice" options={options} value={choice} onValueChange={setChoice} />
-    <Text style={styles.text}>Name: {name}; choice: {choice}</Text>
-    <Text style={styles.text}>AppKit buttons with native focus and activation. Remount preserves the disabled state and application counter.</Text>
+    <Text style={styles.text} className="text-muted">Name: {name}; choice: {choice}</Text>
+    <Text style={styles.text} className="text-muted">AppKit buttons with native focus and activation. Remount preserves the disabled state and application counter.</Text>
   </View>;
 }
 
@@ -88,5 +88,5 @@ async function runNativeButtonChecks(snapshot: () => { count: number; generation
 }
 const styles = StyleSheet.create({
   container: { gap: 8 }, row: { flexDirection: "row", flexWrap: "wrap", gap: 8 },
-  text: { color: "#34435a", fontSize: 14 },
+  text: { fontSize: 14 },
 });

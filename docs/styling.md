@@ -36,6 +36,10 @@ The starter omits Tailwind Preflight because React Native Web supplies its own r
 
 Keep the generated `uniwind-types.d.ts` in the application's TypeScript includes. Define theme tokens in the application's CSS, as the Settings starter does. Tailwind scans relative to that CSS file; use `@source` for shared source directories outside that root. Restart Metro with a cleared cache when first adding the transformer.
 
+## Kitchen sink
+
+`bun run kitchen-sink` also configures Uniwind while preserving the desktop runtime Metro integration. The header native button cycles System → Light → Dark → System. Every launch begins in System; the selection is shared by React windows in the current JavaScript runtime and is not persisted. Cards, text, editors, status colors, drag targets, and the embedded WebView demo follow the theme. All application action buttons use `@legend-apps/ui/uniwind`; the embedded HTML demo retains its browser button.
+
 ## Components
 
 Ordinary React Native views and text accept classes through Uniwind:
@@ -68,6 +72,7 @@ Use standard spacing, size, and responsive utilities for static layout. The Sett
 ## Recorded validation — 2026-09-14
 
 - Workspace and generated consumer TypeScript checks passed; 157 unit/codegen tests passed.
+- The kitchen sink passed all six native UI checks. A separate AppKit action check exercised its real header button through System → Light → Dark → System, verifying the native hit target, 288-point frame, label updates, app colors, and native Appearance.
 - A fresh packed consumer generated iOS, Android, and Windows projects and bundled Settings for all five targets. Shared CSS, manifests, Metro configuration, and prior generated projects were preserved. Desktop bundles select Uniwind's native runtime.
 - The iOS simulator app built and ran. Native text entry, light/dark/system menu selection, copying preferences, and the themed native controls were checked interactively.
 - Browser input and theme change events passed. At 1100 pixels wide, button frames were 224 pixels; at 500 pixels, they stacked at 434 pixels with no horizontal overflow. Browser controls retain native chrome because the starter omits Tailwind Preflight.

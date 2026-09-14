@@ -1,5 +1,6 @@
+import { Button } from "./Controls";
 import React, { useEffect, useRef, useState } from "react";
-import { Button, Text, View } from "react-native";
+import { Text, View } from "react-native";
 import * as notifications from "@legend-apps/desktop/notifications";
 import { createTray } from "@legend-apps/desktop/tray";
 import * as updates from "@legend-apps/desktop/updates";
@@ -36,23 +37,23 @@ export function Integrations({ report }: { report: (value: unknown) => void }) {
     } finally { if (mounted.current) setBusy(false); }
   }
   return <View style={{ gap: 18 }}>
-    <Text style={{ fontSize: 18, fontWeight: "600", color: "#152238" }}>Notifications</Text>
-    <Text style={{ color: "#34435a" }}>Permission: {permission}. Go shares its host’s notification permission.</Text>
+    <Text style={{ fontSize: 18, fontWeight: "600" }} className="text-foreground">Notifications</Text>
+    <Text className="text-muted">Permission: {permission}. Go shares its host’s notification permission.</Text>
     <View style={{ flexDirection: "row", flexWrap: "wrap", gap: 12 }}>
-      <Button title="Enable notifications" onPress={() => void act(async () => setPermission(await notifications.requestNotificationPermission()))} />
-      <Button title="Send test notification" onPress={() => void act(async () => { await notifications.showNotification({ id: "kitchen-demo", title: "Hello from the kitchen sink", body: "Click to exercise notification responses.", data: { screen: "kitchen" } }); report("Notification submitted"); })} />
-      <Button title="Clear project notifications" onPress={() => void act(notifications.clearNotifications)} />
+      <Button onPress={() => void act(async () => setPermission(await notifications.requestNotificationPermission()))}>Enable notifications</Button>
+      <Button onPress={() => void act(async () => { await notifications.showNotification({ id: "kitchen-demo", title: "Hello from the kitchen sink", body: "Click to exercise notification responses.", data: { screen: "kitchen" } }); report("Notification submitted"); })}>Send test notification</Button>
+      <Button onPress={() => void act(notifications.clearNotifications)}>Clear project notifications</Button>
     </View>
-    <Text style={{ fontSize: 18, fontWeight: "600", color: "#152238" }}>Menu bar</Text>
-    <View style={{ flexDirection: "row", gap: 12 }}>
-      <Button title={trayActive ? "Remove menu-bar item" : "Create menu-bar item"} disabled={busy} onPress={() => void act(toggleTray)} />
-      <Button title="Update menu-bar title" disabled={!trayActive || busy} onPress={() => void act(async () => { await tray.current?.update({ title: "Hello" }); })} />
-    </View>
-    <Text style={{ fontSize: 18, fontWeight: "600", color: "#152238" }}>App updates</Text>
-    <Text style={{ color: "#34435a" }}>{updateStatus?.available ? "Signed updates configured" : `Updates unavailable: ${updateStatus?.reason ?? "Loading…"}`}</Text>
+    <Text style={{ fontSize: 18, fontWeight: "600" }} className="text-foreground">Menu bar</Text>
     <View style={{ flexDirection: "row", flexWrap: "wrap", gap: 12 }}>
-      <Button title="Check for updates" disabled={!updateStatus?.available} onPress={() => void act(updates.checkForUpdates)} />
-      <Button title={updateStatus?.automaticallyChecks ? "Disable automatic checks" : "Enable automatic checks"} disabled={!updateStatus?.available} onPress={() => void act(async () => { await updates.setAutomaticUpdateChecks(!updateStatus?.automaticallyChecks); setUpdateStatus(await updates.getUpdateStatus()); })} />
+      <Button disabled={busy} onPress={() => void act(toggleTray)}>{trayActive ? "Remove menu-bar item" : "Create menu-bar item"}</Button>
+      <Button disabled={!trayActive || busy} onPress={() => void act(async () => { await tray.current?.update({ title: "Hello" }); })}>Update menu-bar title</Button>
+    </View>
+    <Text style={{ fontSize: 18, fontWeight: "600" }} className="text-foreground">App updates</Text>
+    <Text className="text-muted">{updateStatus?.available ? "Signed updates configured" : `Updates unavailable: ${updateStatus?.reason ?? "Loading…"}`}</Text>
+    <View style={{ flexDirection: "row", flexWrap: "wrap", gap: 12 }}>
+      <Button disabled={!updateStatus?.available} onPress={() => void act(updates.checkForUpdates)}>Check for updates</Button>
+      <Button disabled={!updateStatus?.available} onPress={() => void act(async () => { await updates.setAutomaticUpdateChecks(!updateStatus?.automaticallyChecks); setUpdateStatus(await updates.getUpdateStatus()); })}>{updateStatus?.automaticallyChecks ? "Disable automatic checks" : "Enable automatic checks"}</Button>
     </View>
   </View>;
 }

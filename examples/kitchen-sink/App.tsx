@@ -1,5 +1,6 @@
+import { Button } from "./Controls";
 import React, { useCallback, useEffect, useRef, useState } from "react";
-import { Alert, Button, ScrollView, StyleSheet, Text, TextInput, View } from "react-native";
+import { Alert, ScrollView, StyleSheet, Text, TextInput, View } from "react-native";
 import * as app from "@legend-apps/desktop/app";
 import * as windows from "@legend-apps/desktop/windows";
 import * as files from "@legend-apps/desktop/files";
@@ -17,6 +18,7 @@ import { NativeControls } from "./NativeControls";
 import { ExpansionChecks } from "./ExpansionChecks";
 import { Expansion } from "./Expansion";
 import { Integrations } from "./Integrations";
+import { ThemeToggle } from "./ThemeToggle";
 import { testDriver } from "./test-driver";
 
 type Props = Partial<app.AppContext> & { windowId?: string; windowProps?: { message?: string; readyFile?: string } };
@@ -40,9 +42,9 @@ function SecondaryWindow(props: Props) {
     if (file) void files.writeText(file, props.windowProps?.message ?? "").catch(console.error);
     return () => { if (file) void files.writeText(`${file}.closed`, "unmounted").catch(console.error); };
   }, [props.windowProps?.readyFile, props.windowProps?.message]);
-  return <View style={styles.root} testID="secondary-window">
-    <Text style={styles.title}>Secondary window</Text><Text style={styles.text}>{props.windowProps?.message ?? props.windowId}</Text>
-    <Button title="Close this window" onPress={() => void windows.closeWindow(props.windowId).catch(console.error)} />
+  return <View style={styles.root} className="bg-background" testID="secondary-window">
+    <Text style={styles.title} className="text-foreground">Secondary window</Text><Text className="text-muted">{props.windowProps?.message ?? props.windowId}</Text>
+    <Button onPress={() => void windows.closeWindow(props.windowId).catch(console.error)}>Close this window</Button>
   </View>;
 }
 function AutomatedChecks({ report, args }: { report: string; args: string[] }) {
@@ -61,12 +63,13 @@ function AutomatedChecks({ report, args }: { report: string; args: string[] }) {
     }, 500);
     return () => clearTimeout(timer);
   }, [report, args]);
-  return <ScrollView style={styles.root} testID="automated-checks"><Text style={styles.title}>Native SDK checks</Text>{checks.map(check => <Text key={check.name} style={styles.text}>{check.passed ? "PASS" : "FAIL"} {check.name} {check.error}</Text>)}</ScrollView>;
+  return <ScrollView style={styles.root} className="bg-background" testID="automated-checks"><Text style={styles.title} className="text-foreground">Native SDK checks</Text>{checks.map(check => <Text key={check.name} className="text-muted">{check.passed ? "PASS" : "FAIL"} {check.name} {check.error}</Text>)}</ScrollView>;
 }
-function Card({ title, children }: React.PropsWithChildren<{ title: string }>) { return <View style={styles.card}><Text style={styles.heading}>{title}</Text>{children}</View>; }
+function Card({ title, children }: React.PropsWithChildren<{ title: string }>) { return <View style={styles.card} className="bg-surface"><Text style={styles.heading} className="text-foreground">{title}</Text>{children}</View>; }
 function KitchenSink({ runtime, projectId }: Props) {
   const [log, setLog] = useState<string[]>([]);
   const [document, setDocument] = useState({ path: "", saved: "", text: "Hello from a native desktop app.\n" });
+  const contextMenuAnchor = useRef<View>(null);
   const documentRef = useRef(document); documentRef.current = document;
   const [count, setCount] = useState<number | null>(null);
   const [secret, setSecret] = useState("");
@@ -106,37 +109,37 @@ function KitchenSink({ runtime, projectId }: Props) {
     void files.watch(document.path, path => report(`File changed: ${path}`)).then(value => { sub = value; if (disposed) void value.remove(); }).catch(report);
     return () => { disposed = true; void sub?.remove(); };
   }, [document.path, report]);
-  return <View style={{ flex: 1, backgroundColor: "#f4f5f8" }}>
-    <View style={styles.header}><Text style={styles.title}>Desktop Kitchen Sink</Text><Text style={styles.text}>{runtime?.mode ?? "unknown"} · {projectId}</Text></View>
+  return <View style={{ flex: 1 }} className="bg-background">
+    <View style={styles.header} className="border-border"><Text style={styles.title} className="text-foreground">Desktop Kitchen Sink</Text><Text className="text-muted">{runtime?.mode ?? "unknown"} · {projectId}</Text><ThemeToggle /></View>
     <ScrollView contentContainerStyle={styles.content} testID="kitchen-sink">
       <Card title="App and windows"><View style={styles.row}>
-        <Button title="Open second window" onPress={() => void action(() => windows.openWindow({ id: "demo", title: "Kitchen Sink · Second window", props: { message: "Same JavaScript bundle, separate native window." }, restoreFrame: true }))} />
-        <Button title="List windows and displays" onPress={() => void action(async () => ({ windows: await windows.listWindows(), displays: await windows.getDisplays() }))} />
-        <Button title="Quit (checks unsaved edits)" onPress={() => void action(app.quit)} />
+        <Button onPress={() => void action(() => windows.openWindow({ id: "demo", title: "Kitchen Sink · Second window", props: { message: "Same JavaScript bundle, separate native window." }, restoreFrame: true }))}>Open second window</Button>
+        <Button onPress={() => void action(async () => ({ windows: await windows.listWindows(), displays: await windows.getDisplays() }))}>List windows and displays</Button>
+        <Button onPress={() => void action(app.quit)}>Quit (checks unsaved edits)</Button>
       </View></Card>
-      <Card title="Document, dialogs and filesystem"><Text style={styles.text}>{document.path || "Untitled"}{document.text !== document.saved ? " · Unsaved" : ""}</Text>
-        <TextInput multiline accessibilityLabel="Document text" testID="document-text" style={styles.editor} value={document.text} onChangeText={text => setDocument(previous => ({ ...previous, text }))} />
-        <View style={styles.row}><Button title="Open document" onPress={() => void action(load)} /><Button title="Save document" onPress={() => void action(save)} /><Button title="Reveal in Finder" disabled={!document.path} onPress={() => void action(() => revealInFinder(document.path))} /><Button title="App data directory" onPress={() => void action(() => files.getDirectory("data"))} /></View>
+      <Card title="Document, dialogs and filesystem"><Text className="text-muted">{document.path || "Untitled"}{document.text !== document.saved ? " · Unsaved" : ""}</Text>
+        <TextInput multiline accessibilityLabel="Document text" testID="document-text" style={styles.editor} className="border-border bg-surface text-foreground" value={document.text} onChangeText={text => setDocument(previous => ({ ...previous, text }))} />
+        <View style={styles.row}><Button onPress={() => void action(load)}>Open document</Button><Button onPress={() => void action(save)}>Save document</Button><Button disabled={!document.path} onPress={() => void action(() => revealInFinder(document.path))}>Reveal in Finder</Button><Button onPress={() => void action(() => files.getDirectory("data"))}>App data directory</Button></View>
       </Card>
-      <Card title="Settings"><Text style={styles.text}>Persistent counter: {count ?? "Loading…"}</Text><Button title="Increment and persist" disabled={count === null} onPress={() => void action(async () => { const value = await settings.update<number>("kitchen-count", count => (count ?? 0) + 1); setCount(value); return value; })} /></Card>
-      <Card title="Menus, shortcuts and clipboard"><Text style={styles.text}>Use the Document menu or press ⌘⇧K. Right-click-like menus are native popups.</Text><View style={styles.row}>
-        <Button title="Show context menu" onPress={event => void action(() => showContextMenu([{ id: "copy", title: "Copy greeting" }, { id: "checked", title: "Checked item", checked: true }, { id: "disabled", title: "Disabled item", enabled: false }], { x: event.nativeEvent.pageX, y: event.nativeEvent.pageY }).then(async selected => { if (selected === "copy") await clipboard.setStringAsync("Hello desktop"); return selected ?? "Context menu cancelled"; }))} />
-        <Button title="Copy greeting" onPress={() => void action(() => clipboard.setStringAsync("Hello desktop"))} /><Button title="Read clipboard" onPress={() => void action(() => clipboard.getStringAsync())} /><Button title="Has clipboard text" onPress={() => void action(clipboard.hasStringAsync)} /><Button title="Copy HTML" onPress={() => void action(() => clipboard.setStringAsync("<b>Hello desktop</b>", { inputFormat: clipboard.StringFormat.HTML }))} />
+      <Card title="Settings"><Text className="text-muted">Persistent counter: {count ?? "Loading…"}</Text><Button disabled={count === null} onPress={() => void action(async () => { const value = await settings.update<number>("kitchen-count", count => (count ?? 0) + 1); setCount(value); return value; })}>Increment and persist</Button></Card>
+      <Card title="Menus, shortcuts and clipboard"><Text className="text-muted">Use the Document menu or press ⌘⇧K. Right-click-like menus are native popups.</Text><View style={styles.row}>
+        <View ref={contextMenuAnchor} collapsable={false} className="max-w-full"><Button onPress={() => contextMenuAnchor.current?.measureInWindow((x, y, _width, height) => void action(() => showContextMenu([{ id: "copy", title: "Copy greeting" }, { id: "checked", title: "Checked item", checked: true }, { id: "disabled", title: "Disabled item", enabled: false }], { x, y: y + height }).then(async selected => { if (selected === "copy") await clipboard.setStringAsync("Hello desktop"); return selected ?? "Context menu cancelled"; })))}>Show context menu</Button></View>
+        <Button onPress={() => void action(() => clipboard.setStringAsync("Hello desktop"))}>Copy greeting</Button><Button onPress={() => void action(() => clipboard.getStringAsync())}>Read clipboard</Button><Button onPress={() => void action(clipboard.hasStringAsync)}>Has clipboard text</Button><Button onPress={() => void action(() => clipboard.setStringAsync("<b>Hello desktop</b>", { inputFormat: clipboard.StringFormat.HTML }))}>Copy HTML</Button>
       </View></Card>
-      <Card title="Links and documents"><View style={styles.row}><Button title="Open example.com" onPress={() => void action(() => links.openURL("https://example.com"))} /><Button title="Initial URL" onPress={() => void action(links.getInitialURL)} /><Button title="Can open HTTPS" onPress={() => void action(() => links.canOpenURL("https://example.com"))} /><Button title="Recent documents" onPress={() => void action(links.getRecentDocuments)} /></View><Text style={styles.text}>Incoming links and files appear in the event log. OS associations require a custom build.</Text></Card>
-      <Card title="Secure storage"><TextInput accessibilityLabel="Demo secret" secureTextEntry style={styles.input} value={secret} onChangeText={setSecret} placeholder="Demo secret (stored in Keychain)" /><View style={styles.row}>
-        <Button title="Store demo secret" onPress={() => void action(async () => { await secureStore.setItemAsync("kitchen-demo", secret); return "Stored demo secret"; })} /><Button title="Load demo secret" onPress={() => void action(async () => { setSecret(await secureStore.getItemAsync("kitchen-demo") ?? ""); return "Loaded demo secret"; })} /><Button title="Delete demo secret" onPress={() => void action(async () => { await secureStore.deleteItemAsync("kitchen-demo"); setSecret(""); return "Deleted demo secret"; })} /></View></Card>
+      <Card title="Links and documents"><View style={styles.row}><Button onPress={() => void action(() => links.openURL("https://example.com"))}>Open example.com</Button><Button onPress={() => void action(links.getInitialURL)}>Initial URL</Button><Button onPress={() => void action(() => links.canOpenURL("https://example.com"))}>Can open HTTPS</Button><Button onPress={() => void action(links.getRecentDocuments)}>Recent documents</Button></View><Text className="text-muted">Incoming links and files appear in the event log. OS associations require a custom build.</Text></Card>
+      <Card title="Secure storage"><TextInput accessibilityLabel="Demo secret" secureTextEntry style={styles.input} className="border-border bg-surface text-foreground" placeholderTextColorClassName="accent-muted" value={secret} onChangeText={setSecret} placeholder="Demo secret (stored in Keychain)" /><View style={styles.row}>
+        <Button onPress={() => void action(async () => { await secureStore.setItemAsync("kitchen-demo", secret); return "Stored demo secret"; })}>Store demo secret</Button><Button onPress={() => void action(async () => { setSecret(await secureStore.getItemAsync("kitchen-demo") ?? ""); return "Loaded demo secret"; })}>Load demo secret</Button><Button onPress={() => void action(async () => { await secureStore.deleteItemAsync("kitchen-demo"); setSecret(""); return "Deleted demo secret"; })}>Delete demo secret</Button></View></Card>
       <Card title="Native UI"><NativeControls /></Card>
       <Card title="Expo-aligned APIs"><APIChecks /></Card>
       <Card title="Desktop integrations"><Integrations report={report} />
         <Expansion report={report} /></Card>
-      <Card title="Event log"><Button title="Clear log" onPress={() => setLog([])} />{log.map((line, index) => <Text key={`${index}-${line}`} selectable style={styles.log}>{line}</Text>)}</Card>
+      <Card title="Event log"><Button onPress={() => setLog([])}>Clear log</Button>{log.map((line, index) => <Text key={`${index}-${line}`} selectable style={styles.log} className="text-muted">{line}</Text>)}</Card>
     </ScrollView>
   </View>;
 }
 const styles = StyleSheet.create({
-  root: { flex: 1, padding: 24, backgroundColor: "#f4f5f8", gap: 16 }, header: { padding: 24, gap: 8, borderBottomWidth: StyleSheet.hairlineWidth, borderColor: "#cbd0da" },
-  content: { padding: 24, gap: 16 }, title: { fontSize: 28, fontWeight: "700", color: "#152238" }, heading: { fontSize: 18, fontWeight: "600", color: "#152238" }, text: { color: "#34435a" },
-  card: { padding: 20, borderRadius: 12, backgroundColor: "white", gap: 12 }, row: { flexDirection: "row", flexWrap: "wrap", gap: 12 },
-  editor: { height: 150, borderWidth: 1, borderColor: "#cbd0da", padding: 12, color: "#152238", borderRadius: 6, fontSize: 15 }, input: { borderWidth: 1, borderColor: "#cbd0da", padding: 8, color: "#152238", borderRadius: 6 }, log: { color: "#34435a", fontFamily: "Menlo", fontSize: 12 },
+  root: { flex: 1, padding: 24, gap: 16 }, header: { padding: 24, gap: 8, borderBottomWidth: StyleSheet.hairlineWidth },
+  content: { padding: 24, gap: 16 }, title: { fontSize: 28, fontWeight: "700" }, heading: { fontSize: 18, fontWeight: "600" },
+  card: { padding: 20, borderRadius: 12, gap: 12 }, row: { flexDirection: "row", flexWrap: "wrap", gap: 12 },
+  editor: { height: 150, borderWidth: 1, padding: 12, borderRadius: 6, fontSize: 15 }, input: { borderWidth: 1, padding: 8, borderRadius: 6 }, log: { fontFamily: "Menlo", fontSize: 12 },
 });

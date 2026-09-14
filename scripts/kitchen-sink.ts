@@ -14,6 +14,8 @@ export async function prepareKitchenSink(root: string) {
   else await refreshLocalPackages(root, manifest);
   const pkg = readJson(path.join(root, "package.json"));
   pkg.dependencies["@legend-apps/ui"] = pkg.overrides["@legend-apps/ui"];
+  pkg.dependencies.uniwind = "1.6.3";
+  pkg.dependencies.tailwindcss = "4.2.4";
   writeJson(path.join(root, "package.json"), pkg);
   await run(root, ["bun", "install"]);
   writeJson(marker, { managed: true });

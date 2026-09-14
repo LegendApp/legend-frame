@@ -50,9 +50,9 @@ export function ExpansionChecks({ report }: { report: string }) {
       await writeText(report, JSON.stringify({ passed: results.every(result => result.passed), results }));
     })().catch(error => void writeText(report, JSON.stringify({ passed: false, error: String(error), results })));
   }, [report]);
-  return <View style={{ flex: 1 }}><Text>Desktop expansion integration checks</Text>
-    <DragDropView testID="expansion-drop-target" onDrop={event => { drop.current = event; }} style={{ height: 70 }}><Text>Drop target</Text></DragDropView>
-    <DragDropView testID="expansion-drag-source" source={dragSource} onDragEnd={event => { ended.current = event.accepted; }} style={{ height: 70, alignItems: "center", justifyContent: "center" }}><Text>Drag source child text</Text></DragDropView>
+  return <View style={{ flex: 1 }} className="bg-background"><Text className="text-foreground">Desktop expansion integration checks</Text>
+    <DragDropView testID="expansion-drop-target" onDrop={event => { drop.current = event; }} style={{ height: 70 }}><Text className="text-foreground">Drop target</Text></DragDropView>
+    <DragDropView testID="expansion-drag-source" source={dragSource} onDragEnd={event => { ended.current = event.accepted; }} style={{ height: 70, alignItems: "center", justifyContent: "center" }}><Text className="text-foreground">Drag source child text</Text></DragDropView>
     <WebView source={source} injectedJavaScript={injection} onMessage={event => { webMessage.current = event.nativeEvent.data; }} onError={event => { webError.current = event.nativeEvent.description; }} style={{ height: 200 }} />
   </View>;
 }

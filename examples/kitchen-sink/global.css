@@ -1,0 +1,37 @@
+/* RN Web supplies its reset. Keep browser-native form control chrome. */
+@layer theme, base, components, utilities;
+@import 'tailwindcss/theme.css' layer(theme);
+@import 'tailwindcss/utilities.css' layer(utilities);
+@import 'uniwind';
+
+/* Keep tokens in the application, as in legend-apps. */
+@layer theme {
+  :root {
+    @variant light {
+      --color-background: #f5f6f8;
+      --color-foreground: #111827;
+      --color-muted: #6b7280;
+      --color-surface: #ffffff;
+      --color-border: #d1d5db;
+      --color-success: #17633b;
+      --color-danger: #aa2430;
+      --color-highlight: #dbeafe;
+    }
+    @variant dark {
+      --color-background: #191a1b;
+      --color-foreground: #f5f5f5;
+      --color-muted: #a3a3a3;
+      --color-surface: #242526;
+      --color-border: #3e4042;
+      --color-success: #86efac;
+      --color-danger: #fca5a5;
+      --color-highlight: #1e3a5f;
+    }
+  }
+}
+
+/* Browser-native controls follow the same theme as the surrounding RN views. */
+@layer base {
+  :root.light { color-scheme: light; }
+  :root.dark { color-scheme: dark; }
+}
