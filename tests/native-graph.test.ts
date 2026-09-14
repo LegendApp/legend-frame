@@ -146,3 +146,21 @@ test("optional native peers do not force unused integrations into production", (
   packages[0].json.dependencies = { webview: "1.0.0" };
   expect(selection(packages, new Set()).included.map(pkg => pkg.name)).toEqual(["host", "webview"]);
 });
+
+test("an optional peer in a parent workspace is not a native requirement unless the app declares it", () => {
+  const workspace = mkdtempSync(path.join(os.tmpdir(), "legend-optional-parent-"));
+  const root = path.join(workspace, "apps/consumer");
+  const adapter = path.join(root, "node_modules/adapter");
+  const optional = path.join(workspace, "node_modules/mobile-backend");
+  const manifest = { name: "consumer", dependencies: { adapter: "1.0.0" } as Record<string, string> };
+  try {
+    mkdirSync(adapter, { recursive: true }); mkdirSync(optional, { recursive: true });
+    writeFileSync(path.join(root, "package.json"), JSON.stringify(manifest));
+    writeFileSync(path.join(adapter, "package.json"), JSON.stringify({ name: "adapter", version: "1.0.0", peerDependencies: { "mobile-backend": "1.0.0" }, peerDependenciesMeta: { "mobile-backend": { optional: true } } }));
+    writeFileSync(path.join(optional, "package.json"), JSON.stringify({ name: "mobile-backend", version: "1.0.0", codegenConfig: { name: "MobileBackend" } }));
+    expect(nativePackages(root).map(pkg => pkg.name)).not.toContain("mobile-backend");
+    manifest.dependencies["mobile-backend"] = "1.0.0";
+    writeFileSync(path.join(root, "package.json"), JSON.stringify(manifest));
+    expect(nativePackages(root).map(pkg => pkg.name)).toContain("mobile-backend");
+  } finally { rmSync(workspace, { recursive: true, force: true }); }
+});

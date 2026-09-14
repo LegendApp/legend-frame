@@ -66,7 +66,11 @@ export function installedPackages(root: string): Package[] {
     const names = Object.keys({
       ...current.json.dependencies,
       ...(current.app ? current.json.devDependencies : {}),
-      ...current.json.peerDependencies,
+      // Optional peers do not require a native module. If an application uses
+      // one, its own dependency edge includes it. Resolving optional peers here
+      // can accidentally pull native modules from a parent workspace.
+      ...Object.fromEntries(Object.entries(current.json.peerDependencies ?? {})
+        .filter(([name]) => !current.json.peerDependenciesMeta?.[name]?.optional)),
     }).sort();
     for (const name of names) {
       let file: string;

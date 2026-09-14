@@ -156,6 +156,8 @@ Framework SDK packages are eligible for pruning. Selected integrations such as W
 
 The resulting selection must agree across generated config, autolinking, codegen, native compilation, runtime metadata, and final JavaScript. Leaving an excluded package in a project reference or generated binding defeats pruning. Removing a required package produces a broken binary.
 
+Development compatibility follows required dependency edges. Optional peers become native requirements only when reachable through another required edge, such as an explicit application dependency; an optional mobile backend found in a parent workspace must not make desktop Go incompatible.
+
 This removes complete native modules. It does not promise individual native-method elimination, arbitrary third-party tree shaking, or export-level JavaScript dead-code elimination. An import inside a reachable module can retain a dependency even if an exported function is never called. Keep all application screens reachable from the main entry; disconnected bundles and arbitrary native lookup are outside this analyzer's supported model.
 
 Test-only packages must not ship in Go or distribution artifacts. Keep them in explicit custom test builds, and retain the build-time rejection of prohibited fixture modules.
