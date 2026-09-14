@@ -44,6 +44,7 @@ test("all templates retain the tested beta matrix", () => {
     expect(pkg.dependencies["expo-desktop"]).toBe("1.0.0-beta.5");
     expect(pkg.dependencies["expo-desktop-template-bare-minimum"]).toBe("54.81.1-beta.5");
     expect(pkg.dependencies.expo).toBe("54.0.37");
+    expect(pkg.overrides["@expo/cli"]).toBe("54.0.27");
     expect(pkg.dependencies["react-native"]).toBe("0.81.6");
     expect(pkg.scripts.postinstall).toBe("node node_modules/@legend-apps/cli/src/init-template.cjs");
   }

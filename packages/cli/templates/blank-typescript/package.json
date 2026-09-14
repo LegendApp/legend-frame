@@ -31,6 +31,7 @@
     "@react-native-runtimes/core": "0.1.0-alpha.2"
   },
   "overrides": {
+    "@expo/cli": "54.0.27",
     "react-native-nitro-modules": "0.35.7",
     "react-native-webview": "16.0.0",
     "@op-engineering/op-sqlite": "18.2.1",

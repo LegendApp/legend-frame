@@ -115,7 +115,7 @@ export async function addDesktop(root: string, manifestFile: string) {
     if (!previous) pkg.dependencies[name] = version;
   }
   // Resolve local transitive SDK packages without replacing any mobile pins.
-  const overrides = Object.fromEntries(local.map(name => [name, dependencies[name]]));
+  const overrides = { ...Object.fromEntries(local.map(name => [name, dependencies[name]])), "@expo/cli": "54.0.27" };
   const overrideField = manager === "yarn" ? "resolutions" : "overrides";
   const owner = manager === "pnpm" ? (pkg.pnpm ??= {}) : pkg;
   for (const [name, version] of Object.entries(overrides)) if (owner[overrideField]?.[name] && owner[overrideField][name] !== version) throw new Error(`Existing ${name} override conflicts with the local SDK. No files were changed.`);

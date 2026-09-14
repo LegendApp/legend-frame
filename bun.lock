@@ -375,6 +375,7 @@
     },
   },
   "overrides": {
+    "@expo/cli": "54.0.27",
     "expo": "54.0.37",
     "expo-constants": "18.0.14",
     "expo-modules-core": "3.0.30",

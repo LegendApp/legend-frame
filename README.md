@@ -70,7 +70,7 @@ bun run macos
 
 `bun run macos`, `bun start`, and `bun dev` all run the same managed development session. The CLI discovers the registered runtime and chooses an available Metro port. The terminal provides actions to open, reload, debug, change runtime, build when required, and quit.
 
-Edit `App.tsx` to change the application. In the development terminal, `s` changes runtime target, `b` builds when a custom binary is required, and `q` closes the session's processes. See the [development guide](docs/development.md) for flags, logs, debugger behavior, and adding native dependencies.
+Edit `App.tsx` to change the application. The development terminal is Expo CLI with desktop actions: `d` opens macOS or Windows, `g` switches Legend Go/development build, `b` builds when required, and Ctrl+C exits. Expo retains its normal reload, debugger, mobile, and web keys. See the [development guide](docs/development.md) for flags, logs, debugger behavior, and adding native dependencies.
 
 ### 3. Build a standalone app
 

@@ -10,23 +10,23 @@ cd /tmp/MyLegendApp
 bun run macos
 ```
 
-`bun run macos`, `bun start`, and `bun dev` all start the same managed Legend development session. Existing apps can add `"macos": "legend dev"` and `"start": "legend dev"` to their package scripts.
+`bun run macos`, `bun start`, and `bun dev` run Expo CLI's development terminal with Legend desktop actions. Existing apps can use `"macos": "legend dev"` and `"start": "legend dev"`; the small Legend supervisor starts the installed `expo start` with inherited terminal input/output. Expo owns Metro, prompts, reload, debugging, logs, and its mobile/web keys.
 
-`create` selects a packed Legend template and delegates extraction, identity assignment, and installation to Expo Desktop beta. `dev` discovers a registered Go runtime matching the SDK version and native module signatures, chooses an available port, and opens the app. Running a compatible Go binary invokes no native build tools. The CLI finds the app root when invoked from a subdirectory.
+`create` delegates template extraction, identity assignment, and installation to Expo Desktop beta. `dev` discovers a compatible registered Go runtime, chooses an available localhost port, and opens the app after Expo is ready. Running compatible Go invokes no native build tools. Use `--no-open` to wait for a desktop launch key instead.
 
-The running terminal shows the current runtime and available actions:
+Expo's command table adds:
 
 ```text
-Legend · MyLegendApp
-
-● Running in Legend Go
-  Fast Refresh enabled
-
-o  Open app · r  Reload · j  Debugger
-s  Change runtime · q  Quit
+› Press d │ open macOS (Legend Go)
+› Press g │ switch desktop to development build
+› Press b │ build and open macOS development build
 ```
 
-`s` changes the selected runtime. If a custom runtime needs compilation, the CLI offers `b` to build and open it. Native compilation begins only after that action. `q` closes processes owned by the session. Switching runtimes may reset React state. The selected target is remembered in `.legend/settings.json`.
+On Windows, the actions target Windows. They are disabled when the target cannot run on the host. `g` switches between Legend Go and a custom development build; it never compiles automatically. `b` becomes available when a custom build is required. Switching binaries can reset React state. Selection is remembered in `.legend/settings.json`.
+
+Expo retains `r` for reload, `j` for debugging, `m` for the dev menu, `w` for web, `o` for your editor, and `s` for the **mobile** Expo Go/development-client switch. `?` shows the current command table. **Ctrl+C** exits Expo and closes the native app owned by this session. Metro output appears directly in the terminal; native build logs remain in `.legend/logs/`.
+
+The extension uses a process-local patch to `@expo/cli@54.0.27`, verified against the exact upstream source before startup. It does not modify installed Expo files or affect ordinary `expo start` calls. See [Expo Desktop integration](expo-desktop-integration.md#expo-development-terminal-patch) for patch maintenance.
 
 The normal production command is:
 

@@ -1,0 +1,96 @@
+import { expect, test } from "bun:test";
+import { createRequire } from "node:module";
+import { mkdtempSync, mkdirSync, readFileSync, rmSync, writeFileSync } from "node:fs";
+import os from "node:os";
+import path from "node:path";
+
+const require = createRequire(import.meta.url);
+const { preparePatch, VERSION } = require("../packages/cli/src/expo-dev-patch.cjs");
+const { commands } = require("../packages/cli/src/expo-dev-extension.cjs");
+const root = path.resolve(import.meta.dir, "..");
+const preload = path.join(root, "packages/cli/src/expo-dev-preload.cjs");
+
+test("desktop keys follow host/target and leave Expo's existing shortcuts available", () => {
+  for (const [target, host, label] of [["macos", "darwin", "macOS"], ["windows", "win32", "Windows"]]) {
+    const go = commands(target, host, { target: "go", canBuild: false });
+    expect(go.map((item: any) => item.key)).toEqual(["d", "g", "b"]);
+    expect(go[0].msg).toBe(`open ${label} (Legend Go)`);
+    expect(go[0].disabled).toBe(false);
+    expect(go[2].disabled).toBe(true);
+    const dev = commands(target, host, { target: "dev", canBuild: true });
+    expect(dev[1].msg).toContain("Legend Go");
+    expect(dev[2].disabled).toBe(false);
+  }
+  expect(commands("windows", "darwin").every((item: any) => item.disabled)).toBe(true);
+  expect(commands("macos", "win32").every((item: any) => item.disabled)).toBe(true);
+  expect(commands("ios", "darwin")).toEqual([]);
+});
+
+test("the patch rejects unsupported versions and modified upstream sources without writing installed files", () => {
+  const patches = preparePatch(root) as Map<string, string>;
+  const temp = mkdtempSync(path.join(os.tmpdir(), "legend-expo-patch-"));
+  try {
+    mkdirSync(path.join(temp, "node_modules/expo"), { recursive: true });
+    writeFileSync(path.join(temp, "package.json"), "{}");
+    writeFileSync(path.join(temp, "node_modules/expo/package.json"), "{}");
+    const cli = path.join(temp, "node_modules/@expo/cli");
+    mkdirSync(cli, { recursive: true });
+    writeFileSync(path.join(cli, "package.json"), JSON.stringify({ version: "unsupported" }));
+    expect(() => preparePatch(temp)).toThrow(`require @expo/cli ${VERSION}`);
+    writeFileSync(path.join(cli, "package.json"), JSON.stringify({ version: VERSION }));
+    for (const [file, patched] of patches) {
+      const source = readFileSync(file, "utf8");
+      expect(source).not.toContain("expo-dev-extension.cjs");
+      expect(patched).toContain("expo-dev-extension.cjs");
+      expect(() => new Function("require", "module", "exports", patched)).not.toThrow();
+      const dest = path.join(cli, "build/src/start", file.split("/build/src/start/")[1]!);
+      mkdirSync(path.dirname(dest), { recursive: true });
+      writeFileSync(dest, source);
+    }
+    expect(preparePatch(temp).size).toBe(3);
+    writeFileSync(path.join(cli, "build/src/start/interface/commandsTable.js"), "changed upstream source");
+    expect(() => preparePatch(temp)).toThrow("Unsupported Expo CLI source");
+  } finally { rmSync(temp, { recursive: true, force: true }); }
+});
+
+test("Expo's real key handler routes desktop actions over IPC and retains reload/menu actions", async () => {
+  const actions: string[] = [];
+  const child = Bun.spawn(["node", "--require", preload, path.join(import.meta.dir, "fixtures/expo-dev-session.cjs")], {
+    cwd: root, env: { ...process.env, LEGEND_PLATFORM: "macos", FORCE_COLOR: "0" },
+    stdout: "pipe", stderr: "pipe", serialization: "json",
+    ipc(message, sender) {
+      if (message.type === "test:ready") sender.send({ type: "legend:state", state: { target: "go", canBuild: true } });
+      if (message.type === "legend:action") {
+        actions.push(message.action);
+        sender.send({ type: "legend:state", state: { target: "dev", canBuild: true } });
+        sender.send({ type: "legend:result", id: message.id, ...(message.action === "build" ? { error: "Test build failure" } : {}) });
+      }
+    },
+  });
+  try {
+    const [out, err, code] = await Promise.all([new Response(child.stdout).text(), new Response(child.stderr).text(), child.exited]);
+    expect(code, err).toBe(0);
+    expect(out).toContain("open macOS (Legend Go)");
+    const [compact, rest] = out.split("VERBOSE_COMMANDS");
+    const verbose = rest!.split("END_COMMANDS")[0]!;
+    for (const table of [compact!, verbose]) {
+      const keys = [...table.matchAll(/Press ([a-z?]) /g)].map(match => match[1]);
+      expect(keys.indexOf("g")).toBe(keys.indexOf("s") + 1);
+      expect(keys.indexOf("d")).toBe(keys.indexOf("w") + 1);
+      expect(keys.indexOf("b")).toBe(keys.indexOf("d") + 1);
+      for (const key of ["d", "g", "b"]) expect(keys.filter(item => item === key)).toHaveLength(1);
+    }
+    expect(out).toContain('"broadcasts":["reload","devMenu","reload"]');
+    expect(out).toContain('"target":"open macOS (development build)"');
+    expect(err).toContain("Test build failure");
+    expect(actions).toEqual(["open", "switch", "build"]);
+  } finally { if (child.exitCode === null) child.kill(); }
+}, 20000);
+
+test("Metro child processes ignore the inherited preload", async () => {
+  const child = Bun.spawn(["node", "--require", preload, "-e", "console.log('worker ready')"], {
+    cwd: os.tmpdir(), env: { ...process.env, LEGEND_EXPO_PRELOADED: "1" }, stdout: "pipe", stderr: "pipe",
+  });
+  expect(await new Response(child.stdout).text()).toContain("worker ready");
+  expect(await child.exited).toBe(0);
+});

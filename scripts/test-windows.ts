@@ -1,4 +1,4 @@
-import { existsSync, mkdirSync, readFileSync, rmSync, writeFileSync } from "node:fs";
+import { appendFileSync, existsSync, mkdirSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import path from "node:path";
 import { parseArgs } from "node:util";
 import { create } from "../packages/cli/src/create.ts";
@@ -9,6 +9,7 @@ import { run } from "../packages/cli/src/commands.ts";
 
 const { values } = parseArgs({ args: process.argv.slice(2), options: { project: { type: "string" }, "prepare-only": { type: "boolean" } } });
 const root = path.resolve(values.project ?? ".legend/windows-probe/WindowsProbe");
+const cli = path.join(root, "node_modules/@legend-apps/cli/src/index.ts");
 const prepareOnly = !!values["prepare-only"];
 if (!prepareOnly && (process.platform !== "win32" || process.arch !== "x64")) throw new Error("Run the native verifier on Windows x64, or pass --prepare-only to check generation and bundles here.");
 if (existsSync(path.join(root, "package.json"))) throw new Error("Choose a fresh --project directory; this test installs a native fixture.");
@@ -19,6 +20,13 @@ let server: ReturnType<typeof Bun.serve> | undefined;
 let originalApp: string | undefined;
 let proof: any;
 const token = crypto.randomUUID();
+function startSession(extra: string[] = []) {
+  const child = Bun.spawn(["bun", cli, "dev", "--project", root, ...extra], { cwd: root, env: { ...process.env, LEGEND_SESSION_TOKEN: token }, stdin: "pipe", stdout: "pipe", stderr: "pipe" });
+  for (const stream of [child.stdout, child.stderr]) void (async () => {
+    for await (const chunk of stream) appendFileSync(stateFile(root, "logs/windows-session.log"), chunk);
+  })();
+  return child;
+}
 async function wait(check: () => boolean | Promise<boolean>, message: string, timeout = 120000) {
   const end = Date.now() + timeout;
   while (Date.now() < end) {
@@ -41,7 +49,6 @@ async function bundle() {
 try {
   stage("Create through the framework starter");
   await create(root, manifest, "windows"); pass();
-  const cli = path.join(root, "node_modules/@legend-apps/cli/src/index.ts");
   originalApp = readFileSync(path.join(root, "App.tsx"), "utf8");
   const baseline = runtimeFor(root, nativePackages(root), "go");
   let go: any;
@@ -79,11 +86,7 @@ export default function App() {
 `);
     stage("Launch through legend dev and execute the native core with Hermes");
     mkdirSync(stateFile(root, "logs"), { recursive: true });
-    session = Bun.spawn(["bun", cli, "dev", "--project", root, "--go", go.app], { cwd: root, env: { ...process.env, LEGEND_SESSION_TOKEN: token }, stdin: "pipe", stdout: "pipe", stderr: "pipe" });
-    const { appendFileSync } = await import("node:fs");
-    for (const stream of [session.stdout, session.stderr]) void (async () => {
-      for await (const chunk of stream) appendFileSync(stateFile(root, "logs/windows-session.log"), chunk);
-    })();
+    session = startSession(["--go", go.app]);
     await wait(() => proof?.marker === "initial", "The native Go app did not report");
     if (!proof.hermes || proof.native.fingerprint !== go.runtime.fingerprint || proof.native.mode !== "go") throw new Error("Wrong Go runtime or JavaScript engine");
     pass(proof);
@@ -107,8 +110,12 @@ export default function App() {
     }, "legend dev did not reject the incompatible Go runtime");
     pass(issues);
     writeFileSync(path.join(root, "WindowsExtra.ts"), 'import { getGreeting } from "@legend-apps/native-greeting";\nexport const greeting = getGreeting;\n');
-    stage("Build and switch using the normal dev session b command");
-    session!.stdin!.write("b\n");
+    stage("Build explicitly and reopen through Expo's noninteractive development session");
+    session!.kill();
+    await session!.exited;
+    session = undefined;
+    await run(root, ["bun", cli, "build", "--dev", "--project", root]);
+    session = startSession();
     await wait(() => proof?.native.mode === "dev" && proof.greeting === "Hello from the custom native module", "The custom runtime did not report", 20 * 60 * 1000);
     const custom = readJson(stateFile(root, "dev-build.json"));
     if (!proof.hermes || proof.native.fingerprint !== custom.runtime.fingerprint) throw new Error("Custom native runtime identity did not match the build");
@@ -121,7 +128,7 @@ export default function App() {
   report.error = String(error); process.exitCode = 1; console.error(error);
 } finally {
   if (session && session.exitCode === null) {
-    session.stdin!.write("q\n");
+    session.kill();
     await Promise.race([session.exited, Bun.sleep(5000)]);
     if (session.exitCode === null) session.kill();
   }

@@ -44,7 +44,7 @@ bun run windows
 
 Edit `App.tsx` to test Fast Refresh. Click the counter first and confirm it retains its value after a text edit. The native window title uses the current project's launch identity even when Go was built from another starter. Other desktop window options and SDK features have not been ported by this slice.
 
-Use the existing session commands: `o` opens, `r` reloads, `j` opens the debugger when supported by RNW/Expo, `s` switches between Go and a custom development build, `b` builds when required, and `q` exits. Adding a supported native dependency or changing its native source invalidates an incompatible runtime; the session stops its owned app and offers a development build.
+The session uses Expo CLI with desktop keys: `d` opens Windows, `g` switches between Legend Go and a custom development build, and `b` builds when required. Expo owns `r` for reload, `j` for debugging when supported by RNW/Expo, and Ctrl+C to exit. Its `w` still opens web and `s` still switches the mobile runtime. Adding a supported native dependency or changing its native source invalidates an incompatible runtime; the session stops its owned app and offers a development build.
 
 A direct custom build uses the same command as macOS:
 

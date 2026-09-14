@@ -71,6 +71,7 @@
     "tailwindcss": "4.2.4"
   },
   "overrides": {
+    "@expo/cli": "54.0.27",
     "react": "19.1.4",
     "react-native": "0.81.6",
     "expo": "54.0.37",

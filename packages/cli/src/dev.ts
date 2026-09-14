@@ -1,11 +1,12 @@
 import { projectPlatform } from "./platform.ts";
 import { nodeCommand } from "./windows.ts";
 import { readAppConfig } from "./project.ts";
-import { existsSync, rmSync, watch, appendFileSync, mkdirSync } from "node:fs";
+import { existsSync, rmSync, watch } from "node:fs";
 import path from "node:path";
-import { binary, run, cancelCommands } from "./commands.ts";
+import { run, cancelCommands } from "./commands.ts";
 import { build } from "./build.ts";
-import { reload } from "./metro.ts";
+import { createRequire } from "node:module";
+const { preparePatch } = createRequire(import.meta.url)("./expo-dev-patch.cjs");
 import { availablePort, findGo, readRuntime, registerRuntime } from "./local.ts";
 import { sessionStatus } from "./session-status.ts";
 import {
@@ -69,6 +70,7 @@ export async function dev(
   noOpen = false,
 ) {
   const platform = projectPlatform(root);
+  preparePatch(root);
   const port = await availablePort(requestedPort);
   let target: "go" | "dev" = "go";
   const settingsFile = stateFile(root, "settings.json");
@@ -84,7 +86,6 @@ export async function dev(
   let busy = false;
   let status = "";
   let canBuild = false;
-  const appName = readAppConfig(root).expo?.name ?? path.basename(root);
   let stamp = dependencyStamp(root);
   let restartPending = false;
   let reopenPending = false;
@@ -102,52 +103,46 @@ export async function dev(
       previous.kill();
       await previous.exited;
     }
-    const env = { ...process.env };
-    delete env.CI;
-    mkdirSync(stateFile(root, "logs"), { recursive: true });
-    const log = stateFile(root, "logs/metro.log");
-    const metroArgs = ["start", "--localhost", "--port", String(port), "--max-workers", "2"];
-    const child = Bun.spawn(
-      platform === "windows" ? nodeCommand(root, "expo", "expo", metroArgs) : [
-        binary(root, "expo"),
-        "start",
-        "--localhost",
-        "--port",
-        String(port),
-        "--max-workers",
-        "2",
-      ],
-      { cwd: root, env, stdin: "ignore", stdout: "pipe", stderr: "pipe" },
-    );
+    let ready!: (port: number) => void;
+    const started = new Promise<number>(resolve => { ready = resolve; });
+    const [, expo, ...args] = nodeCommand(root, "expo", "expo", [
+      "start", "--localhost", "--port", String(port), "--max-workers", "2",
+    ]);
+    // Expo owns stdin and the terminal. JSON IPC carries desktop actions only;
+    // reload, debugger, mobile/web actions, prompts and shutdown remain Expo's.
+    const child = Bun.spawn([
+      "node", "--require", path.join(import.meta.dir, "expo-dev-preload.cjs"), expo!, ...args,
+    ], {
+      cwd: root, env: { ...process.env, LEGEND_PLATFORM: platform },
+      stdin: "inherit", stdout: "inherit", stderr: "inherit", serialization: "json",
+      ipc(message, sender) {
+        if (message?.type === "legend:ready") ready(message.port);
+        if (message?.type === "legend:action") {
+          void action(message.action).then(
+            () => { if (sender.exitCode === null) sender.send({ type: "legend:result", id: message.id }); },
+            error => { if (sender.exitCode === null) sender.send({ type: "legend:result", id: message.id, error: String(error) }); },
+          );
+        }
+      },
+    });
     metro = child;
-    async function logStream(stream: ReadableStream<Uint8Array>) {
-      for await (const chunk of stream) appendFileSync(log, chunk);
-    }
-    void logStream(child.stdout);
-    void logStream(child.stderr);
-    void child.exited.then(() => {
+    child.send({ type: "legend:state", state: { target, canBuild } });
+    void child.exited.then(code => {
       if (metro === child && !closing) {
-        console.error(`Metro exited. See ${log}`);
+        process.exitCode = code;
         close();
       }
     });
-    for (let attempt = 0; attempt < 120; attempt++) {
-      if (child.exitCode !== null)
-        throw new Error(`Metro failed to start. See ${log}`);
-      if (
-        await fetch(`http://127.0.0.1:${port}/status`, { signal: AbortSignal.timeout(1000) }).then(
-          (r) => r.ok,
-          () => false,
-        )
-      ) {
-        console.log(`Metro ready at http://127.0.0.1:${port} (log: ${log})`);
-        restartPending = false;
-        return;
-      }
-      await Bun.sleep(500);
-    }
-    child.kill();
-    throw new Error(`Metro did not become ready. See ${log}`);
+    let timeout: ReturnType<typeof setTimeout> | undefined;
+    try {
+      const actualPort = await Promise.race([
+        started,
+        child.exited.then(code => { throw new Error(`Expo exited before starting (exit ${code}). See its output above.`); }),
+        new Promise<never>((_, reject) => { timeout = setTimeout(() => reject(new Error("Expo did not become ready.")), 60_000); }),
+      ]);
+      if (actualPort !== port) throw new Error(`Expo selected port ${actualPort}; expected ${port}. Restart dev with an available port.`);
+      restartPending = false;
+    } finally { clearTimeout(timeout); }
   }
   async function check() {
     const native = nativePackages(root);
@@ -200,6 +195,7 @@ export async function dev(
       reason: next,
       target,
       port,
+      canBuild,
     });
     // An existing HMR websocket can push code without another bundle request.
     // Stop only the process owned by this session when its native ABI is stale.
@@ -207,26 +203,58 @@ export async function dev(
       appProcess.kill();
       await appProcess.exited;
     }
+    if (metro?.exitCode === null) metro.send({ type: "legend:state", state: { target, canBuild } });
     if (next !== status) {
       status = next;
-      console.log(
-        `\nLegend · ${appName}\n\n${status}\n\n${view.actions}`,
-      );
+      console.log(`\n› Desktop: ${status}\n${view.compatible ? "" : view.actions + "\n"}`);
     }
     return view.compatible;
   }
   async function open() {
     if ((await check()) && current) {
       if (restartPending) await startMetro();
+      if (closing) return;
       if (appProcess && appProcess.exitCode === null) {
         appProcess.kill();
         await appProcess.exited;
       }
       appProcess = await launch(root, current.app, port);
+      if (closing) { appProcess.kill(); return; }
       launchedRuntime = { app: current.app, fingerprint: current.runtime.fingerprint };
       reopenPending = false;
       await check();
     }
+  }
+  async function action(name: string) {
+    if (busy || closing) throw new Error("Desktop runtime is busy. Try again in a moment.");
+    busy = true;
+    try {
+      if (name === "switch") {
+        target = target === "dev" ? "go" : "dev";
+        if (appProcess?.exitCode === null) {
+          appProcess.kill();
+          await appProcess.exited;
+        }
+        await open();
+        writeJson(settingsFile, { target, goApp });
+      } else if (name === "build") {
+        if ((await check()) || !canBuild) return;
+        writeJson(stateFile(root, "session.json"), { compatible: false, reason: "Preparing custom development build" });
+        if (appProcess?.exitCode === null) {
+          appProcess.kill();
+          await appProcess.exited;
+        }
+        await build(root, "dev");
+        if (closing) return;
+        target = "dev";
+        restartPending = true;
+        await open();
+        writeJson(settingsFile, { target, goApp });
+      } else if (name === "open") await open();
+    } catch (error) {
+      if (!closing) await check();
+      throw error;
+    } finally { busy = false; }
   }
   function close() {
     if (closing) return;
@@ -239,7 +267,6 @@ export async function dev(
     cancelCommands(root);
     rmSync(stateFile(root, "session.json"), { force: true });
     if (process.stdin.isTTY) process.stdin.setRawMode(false);
-    process.stdin.pause();
     finish();
   }
   let debounce: ReturnType<typeof setTimeout> | undefined;
@@ -306,74 +333,12 @@ export async function dev(
     if (!noOpen) await open();
   } catch (error) {
     close();
+    process.off("SIGINT", close);
+    process.off("SIGTERM", close);
     throw error;
   } finally {
     busy = false;
   }
-  if (process.stdin.isTTY) process.stdin.setRawMode(true);
-  process.stdin.resume();
-  process.stdin.on("data", async (data) => {
-    const key = data.toString().trim().toLowerCase();
-    if (key === "q" || key === "\u0003") {
-      close();
-      return;
-    }
-    if (busy || closing) return;
-    busy = true;
-    try {
-      if (key === "s") {
-        // Selecting a target never starts a compiler. The next prompt offers `b` if needed.
-        target = target === "dev" ? "go" : "dev";
-        if (appProcess && appProcess.exitCode === null) {
-          appProcess.kill();
-          await appProcess.exited;
-        }
-        await open();
-        writeJson(settingsFile, { target, goApp });
-      } else if (key === "b" && !(await check()) && canBuild) {
-        writeJson(stateFile(root, "session.json"), {
-          compatible: false,
-          reason: "Preparing custom development build",
-        });
-        if (appProcess && appProcess.exitCode === null) {
-          appProcess.kill();
-          await appProcess.exited;
-        }
-        await build(root, "dev");
-        if (closing) return;
-        target = "dev";
-        restartPending = true;
-        await open();
-        writeJson(settingsFile, { target, goApp });
-      } else if (key === "o") await open();
-      else if (key === "r") await reload(port);
-      else if (key === "j") {
-        const targets = (await fetch(`http://127.0.0.1:${port}/json/list`).then(
-          (r) => r.json(),
-        )) as { id: string; reactNative?: { logicalDeviceId?: string } }[];
-        const inspector = targets
-          .reverse()
-          .find((item) => item.reactNative?.logicalDeviceId);
-        if (!inspector)
-          throw new Error("No compatible Hermes debugger is connected.");
-        const response = await fetch(
-          `http://127.0.0.1:${port}/open-debugger?target=${encodeURIComponent(inspector.id)}`,
-          { method: "POST", signal: AbortSignal.timeout(5000) },
-        );
-        if (!response.ok)
-          throw new Error(
-            `Debugger could not open (${response.status}). See the Metro log.`,
-          );
-      }
-    } catch (error) {
-      if (!closing) {
-        console.error(String(error));
-        await check();
-      }
-    } finally {
-      busy = false;
-    }
-  });
   writeJson(settingsFile, { target, goApp });
   await finished;
   process.off("SIGINT", close);

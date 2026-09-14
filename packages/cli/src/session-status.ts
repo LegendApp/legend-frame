@@ -3,18 +3,18 @@ export function sessionStatus(target: "go" | "dev", available: boolean, issues: 
     compatible: false,
     canBuild: false,
     message: "Legend Go isn’t installed for this SDK.\nInstall an SDK bundle containing a matching Go client (bun install.ts), or register a prebuilt client with legend sdk register <runtime directory>.",
-    actions: "s  Use development build · q  Quit",
+    actions: "g  Use development build · Ctrl+C  Exit",
   };
   if (issues.length || !available) return {
     compatible: false,
     canBuild: true,
     message: `${target === "dev" && available ? "The development build needs rebuilding." : "A development build is needed."}${issues.length ? "\n" + issues.join("\n") : ""}`,
-    actions: `b  ${target === "dev" && available ? "Rebuild" : "Build"} and open · s  Change runtime · q  Quit`,
+    actions: `b  ${target === "dev" && available ? "Rebuild" : "Build"} and open · g  Change desktop runtime · Ctrl+C  Exit`,
   };
   return {
     compatible: true,
     canBuild: false,
     message: `● ${running ? "Running in " : "Ready to open "}${target === "go" ? "Legend Go" : "development build"}\n  Fast Refresh enabled`,
-    actions: "o  Open app · r  Reload · j  Debugger\ns  Change runtime · q  Quit",
+    actions: "d  Open desktop · r  Reload · j  Debugger\ng  Change desktop runtime · Ctrl+C  Exit",
   };
 }
