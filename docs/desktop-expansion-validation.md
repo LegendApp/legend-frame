@@ -72,3 +72,9 @@ Local logs and JSON reports are preserved under
 `docs/evidence/expansion-2026-09-11/` (ignored by Git). Local SDK archives are in
 `artifacts/packages/`; the refreshed Go app is in `artifacts/runtimes/LegendGo.app`.
 The full suite and release logs record exactly which binaries and phases ran.
+
+## Kitchen sink event feedback — 2026-09-14
+
+The example displays callback events in their own sections, retains six recent entries per section, and also forwards them to its shared event log. Native macOS checks verified window open/close events, the focused Command+Shift+K shortcut, streamed stdout/stderr and exit status, WebView messages, and the visible button-remount count. Global shortcut registration/removal also passed, but global delivery was not confirmed with synthetic key input. Notification responses, update delivery, incoming OS links/files, cross-app drag/drop, and tray/Dock selection delivery still need their environment-specific acceptance checks.
+
+A separate native crash was observed during global-shortcut testing with keyboard focus inside the embedded WebView: after clicking the shortcut registration button, sending Command+Shift+F12 terminated Go with an `NSInvalidArgumentException`. The stack passes through `WKWebView`, `RCTViewKeyboardEvent keyEventFromEvent:reactTag:`, and `RCTComponentEvent initWithName:viewTag:body:` (attempt to insert a nil object). This was observed with React Native macOS 0.81.7 and react-native-webview 16.0.0; the precise cause and fix remain unverified. The JavaScript event panels cannot catch this native exception.

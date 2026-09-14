@@ -66,6 +66,7 @@
     "@react-native-async-storage/async-storage": "2.2.0",
     "expo-audio": "1.1.1",
     "diff": "8.0.2",
+    "base64-js": "1.5.1",
     "uniwind": "1.6.3",
     "tailwindcss": "4.2.4"
   },

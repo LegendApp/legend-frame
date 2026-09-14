@@ -37,6 +37,7 @@ export function NativeControls({ report }: { report?: string }) {
     </View>
     <TextInput testID="native-field" accessibilityLabel="Name" defaultValue={generation ? "New default" : "Initial name"} onChangeText={setName} />
     <Select testID="native-select" accessibilityLabel="Choice" options={options} value={choice} onValueChange={setChoice} />
+    <Text style={styles.text} className="text-muted" testID="native-button-generation">Button remounts: {generation}</Text>
     <Text style={styles.text} className="text-muted">Name: {name}; choice: {choice}</Text>
     <Text style={styles.text} className="text-muted">AppKit buttons with native focus and activation. Remount preserves the disabled state and application counter.</Text>
   </View>;

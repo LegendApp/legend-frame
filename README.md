@@ -192,7 +192,7 @@ cd .legend/examples/KitchenSink
 bun dev
 ```
 
-The preparation command packs the SDK and creates or refreshes the managed example. Its source lives in [examples/kitchen-sink](examples/kitchen-sink). It exercises desktop APIs with windows, an editor, menus, persistence, and an event log. Its actions use native buttons. The header theme button cycles System → Light → Dark → System, starting with the system appearance; Uniwind tokens theme the screen and React Native Appearance updates native controls. Building/registering Go is required before its first compatible runtime launch.
+The preparation command packs the SDK and creates or refreshes the managed example. Its source lives in [examples/kitchen-sink](examples/kitchen-sink). It exercises desktop APIs with windows, an editor, menus, persistence, and an event log. Its actions use native buttons and show progress, results, and errors beneath the button; each demo also shows its recent callback events, and the event log retains detailed output. The header theme button cycles System → Light → Dark → System, starting with the system appearance; Uniwind tokens theme the screen and React Native Appearance updates native controls. Building/registering Go is required before its first compatible runtime launch.
 
 ## Commands and tests
 

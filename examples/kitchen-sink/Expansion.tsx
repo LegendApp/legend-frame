@@ -1,4 +1,6 @@
-import { Button } from "./Controls";
+import { ActionButton } from "./ActionButton";
+import { EventResults, useEventResults } from "./EventResults";
+import { toByteArray } from "base64-js";
 import React, { useCallback, useEffect, useRef, useState, useMemo } from "react";
 import { StyleSheet, Text, View } from "react-native";
 import { useUniwind, withUniwind } from "uniwind";
@@ -29,19 +31,24 @@ export function Expansion({ report }: { report: (value: unknown) => void }) {
   const dock = useRef<Removable | undefined>(undefined);
   const child = useRef<Awaited<ReturnType<typeof spawn>> | undefined>(undefined);
   const mounted = useRef(false);
-  const act = useCallback(async (action: () => Promise<unknown>) => { try { report(await action()); } catch (error) { report(String(error)); } }, [report]);
+  const [dragEvents, reportDrag] = useEventResults(report);
+  const [shortcutEvents, reportShortcut] = useEventResults(report);
+  const [processEvents, reportProcess] = useEventResults(report);
+  const [systemEvents, reportSystem] = useEventResults(report);
+  const [webEvents, reportWeb] = useEventResults(report);
+  const act = useCallback(async (action: () => Promise<unknown>) => { try { const result = await action(); if (result !== undefined) report(result); return result; } catch (error) { report(String(error)); throw error; } }, [report]);
   useEffect(() => {
     mounted.current = true; let disposed = false;
-    void system.getLoginItemStatus().then(value => { if (!disposed) setLogin(value); }).catch(report);
-    void system.onSystemEvent(report).then(value => { if (disposed) value.remove(); else resources.current.push(value); }).catch(report);
+    void system.getLoginItemStatus().then(value => { if (!disposed) setLogin(value); }).catch(reportSystem);
+    void system.onSystemEvent(reportSystem).then(value => { if (disposed) value.remove(); else resources.current.push(value); }).catch(reportSystem);
     return () => { disposed = true; mounted.current = false; for (const resource of resources.current) void resource.remove(); resources.current = []; void shortcut.current?.remove(); void child.current?.terminate(); };
-  }, [report]);
+  }, [reportSystem]);
   async function toggleShortcut() {
     setBusy(true);
     try {
       if (shortcut.current) { await shortcut.current.remove(); shortcut.current = undefined; setHotkey(false); }
       else {
-        const value = await registerGlobalShortcut("Cmd+Shift+F12", () => report("Global shortcut fired"));
+        const value = await registerGlobalShortcut("Cmd+Shift+F12", () => reportShortcut("Global shortcut fired: ⌘⇧F12"));
         if (!mounted.current) await value.remove(); else { shortcut.current = value; setHotkey(true); }
       }
     } finally { if (mounted.current) setBusy(false); }
@@ -57,44 +64,67 @@ export function Expansion({ report }: { report: (value: unknown) => void }) {
   return <View style={styles.section}>
     <Text style={styles.heading} className="text-foreground">Window styling</Text>
     <View style={styles.row}>
-      <Button onPress={() => void act(async () => { await windows.setWindowOptions("main", { titleBarStyle: style ? "default" : "overlay" }); setStyle(!style); })}>{style ? "Default title bar" : "Overlay title bar"}</Button>
-      <Button onPress={() => void act(() => windows.openWindow({ id: "floating", parentId: "main", title: "Floating child", width: 500, height: 350, minWidth: 300, alwaysOnTop: true, material: "sidebar" }))}>Floating child</Button>
-      <Button onPress={() => void act(() => windows.openWindow({ id: "modal", parentId: "main", modal: true, title: "Modal window", width: 450, height: 300 }))}>Modal window</Button>
+      <ActionButton onPress={() => act(async () => { await windows.setWindowOptions("main", { titleBarStyle: style ? "default" : "overlay" }); setStyle(!style); })}>{style ? "Default title bar" : "Overlay title bar"}</ActionButton>
+      <ActionButton onPress={() => act(() => windows.openWindow({ id: "floating", parentId: "main", title: "Floating child", width: 500, height: 350, minWidth: 300, alwaysOnTop: true, material: "sidebar" }))}>Floating child</ActionButton>
+      <ActionButton onPress={() => act(() => windows.openWindow({ id: "modal", parentId: "main", modal: true, title: "Modal window", width: 450, height: 300 }))}>Modal window</ActionButton>
     </View>
     <Text style={styles.heading} className="text-foreground">Drag and drop</Text>
-    <DragDropView onDrop={event => { setOver(false); report(event); }} onDragEnter={() => setOver(true)} onDragLeave={() => setOver(false)} style={styles.drop} className={over ? "border-border bg-highlight" : "border-border"}>
+    <DragDropView onDrop={event => { setOver(false); reportDrag({ type: "drop", ...event }); }} onDragEnter={() => setOver(true)} onDragLeave={() => setOver(false)} style={styles.drop} className={over ? "border-border bg-highlight" : "border-border"}>
       <Text className="text-muted">Drop files, URLs or text here</Text>
     </DragDropView>
-    <DragDropView source={dragSource} onDragEnd={report} style={styles.drop} className="border-border"><Text className="text-muted">Drag this text into another app</Text></DragDropView>
+    <DragDropView source={dragSource} onDragEnd={event => reportDrag(event.accepted ? "Drag accepted by the destination." : "Drag ended without being accepted.")} style={styles.drop} className="border-border"><Text className="text-muted">Drag this text into another app</Text></DragDropView>
+    <EventResults entries={dragEvents} empty="Drop something here or drag the sample text to see the result." testID="drag-events" />
+    <Text style={styles.heading} className="text-foreground">Global shortcut and processes</Text>
     <View style={styles.row}>
-      <Button disabled={busy} onPress={() => void act(toggleShortcut)}>{hotkey ? "Remove global shortcut" : "Register ⌘⇧F12"}</Button>
-      <Button onPress={() => void act(() => runCommand({ executable: "/usr/bin/uname", args: ["-a"] }))}>Run /usr/bin/uname</Button>
-      <Button disabled={busy} onPress={() => void act(async () => {
+      <ActionButton disabled={busy} onPress={() => act(toggleShortcut)}>{hotkey ? "Remove global shortcut" : "Register ⌘⇧F12"}</ActionButton>
+      <ActionButton onPress={() => act(() => runCommand({ executable: "/usr/bin/uname", args: ["-a"] }))}>Run /usr/bin/uname</ActionButton>
+      <ActionButton disabled={busy} onPress={() => act(async () => {
         setBusy(true);
-        try { child.current = await spawn({ executable: "/bin/sh", args: ["-c", "printf 'First output\\n'; sleep 1; printf 'Second output\\n'"], timeoutMs: 5000 }, report); return await child.current.exited; }
-        finally { child.current = undefined; if (mounted.current) setBusy(false); }
-      })}>Stream a process</Button>
-      <Button onPress={() => void act(async () => child.current?.terminate())}>Cancel process</Button>
+        const decoders = { stdout: new TextDecoder(), stderr: new TextDecoder() };
+        reportProcess("Process starting…");
+        try {
+          child.current = await spawn({ executable: "/bin/sh", args: ["-c", "printf 'First output\\n'; sleep 1; printf 'Second output\\n'; printf 'Example stderr\\n' >&2"], timeoutMs: 5000 }, chunk => {
+            const text = decoders[chunk.stream].decode(toByteArray(chunk.base64), { stream: true });
+            if (text) reportProcess(`${chunk.stream}: ${text}`);
+          });
+          const result = await child.current.exited;
+          reportProcess(`Process exited with code ${result.exitCode}${result.timedOut ? " (timed out)" : ""}.`);
+          report(result);
+          return `Process exited with code ${result.exitCode}${result.timedOut ? " (timed out)" : ""}.`;
+        } catch (error) { reportProcess(error); throw error; }
+        finally {
+          for (const stream of ["stdout", "stderr"] as const) {
+            const text = decoders[stream].decode();
+            if (text) reportProcess(`${stream}: ${text}`);
+          }
+          child.current = undefined; if (mounted.current) setBusy(false);
+        }
+      })}>Stream a process</ActionButton>
+      <ActionButton onPress={() => act(async () => child.current?.terminate())}>Cancel process</ActionButton>
     </View>
+    <EventResults entries={shortcutEvents} empty="Register the shortcut, then press ⌘⇧F12 to see it fire." testID="global-shortcut-events" />
+    <EventResults entries={processEvents} empty="Stream a process to see stdout, stderr, and exit events here." testID="process-events" />
     <Text style={styles.heading} className="text-foreground">Dialogs and rich clipboard</Text>
     <View style={styles.row}>
-      <Button onPress={() => void act(() => showMessage({ title: "Keep these changes?", message: "Native sheet with explicit buttons and checkbox.", windowId: "main", buttons: ["Cancel", "Keep"], defaultButton: 1, cancelButton: 0, checkbox: { label: "Remember my choice" } }))}>Confirmation sheet</Button>
-      <Button onPress={() => void act(() => clipboard.writeClipboard({ text: "Hello desktop", html: "<b>Hello desktop</b>", rtf: "{\\rtf1\\ansi Hello desktop}" }))}>Copy rich text</Button>
-      <Button onPress={() => void act(clipboard.readClipboard)}>Read clipboard</Button>
+      <ActionButton onPress={() => act(() => showMessage({ title: "Keep these changes?", message: "Native sheet with explicit buttons and checkbox.", windowId: "main", buttons: ["Cancel", "Keep"], defaultButton: 1, cancelButton: 0, checkbox: { label: "Remember my choice" } }))}>Confirmation sheet</ActionButton>
+      <ActionButton onPress={() => act(() => clipboard.writeClipboard({ text: "Hello desktop", html: "<b>Hello desktop</b>", rtf: "{\\rtf1\\ansi Hello desktop}" }))}>Copy rich text</ActionButton>
+      <ActionButton onPress={() => act(clipboard.readClipboard)}>Read clipboard</ActionButton>
     </View>
     <Text style={styles.heading} className="text-foreground">Dock, startup and power</Text>
     <Text className="text-muted">Launch at login: {login}</Text>
     <View style={styles.row}>
-      <Button onPress={() => void act(system.getSystemInfo)}>System state</Button>
-      <Button onPress={() => void act(() => system.setDockBadge("3"))}>Dock badge</Button>
-      <Button onPress={() => void act(() => system.setDockBadge(""))}>Clear badge</Button>
-      <Button onPress={() => void act(async () => { await dock.current?.remove(); const value = await system.setDockMenu(dockItems, id => { report(id); void windows.showWindow(); }); dock.current = value; resources.current.push(value); })}>Dock menu</Button>
-      <Button onPress={() => void act(async () => { const value = await system.preventSleep("Kitchen sink demonstration"); resources.current.push(value); setTimeout(() => void value.remove(), 5000); })}>Prevent sleep for 5 seconds</Button>
-      <Button disabled={login === "unavailable" || login === "Loading…"} onPress={() => void act(async () => { await system.setLaunchAtLogin(login !== "enabled"); setLogin(await system.getLoginItemStatus()); })}>{login === "enabled" ? "Disable launch at login" : "Enable launch at login"}</Button>
+      <ActionButton onPress={() => act(system.getSystemInfo)}>System state</ActionButton>
+      <ActionButton onPress={() => act(() => system.setDockBadge("3"))}>Dock badge</ActionButton>
+      <ActionButton onPress={() => act(() => system.setDockBadge(""))}>Clear badge</ActionButton>
+      <ActionButton onPress={() => act(async () => { await dock.current?.remove(); const value = await system.setDockMenu(dockItems, id => { reportSystem(`Dock menu selected: ${id}`); void windows.showWindow().catch(reportSystem); }); dock.current = value; resources.current.push(value); })}>Dock menu</ActionButton>
+      <ActionButton onPress={() => act(async () => { const value = await system.preventSleep("Kitchen sink demonstration"); resources.current.push(value); setTimeout(() => void value.remove(), 5000); })}>Prevent sleep for 5 seconds</ActionButton>
+      <ActionButton disabled={login === "unavailable" || login === "Loading…"} onPress={() => act(async () => { await system.setLaunchAtLogin(login !== "enabled"); setLogin(await system.getLoginItemStatus()); })}>{login === "enabled" ? "Disable launch at login" : "Enable launch at login"}</ActionButton>
     </View>
-    <Text style={styles.heading} className="text-foreground">SQLite</Text><Button onPress={() => void act(sql)}>Insert and count persisted rows</Button>
+    <EventResults entries={systemEvents} empty="Dock menu selections and system changes appear here." testID="system-events" />
+    <Text style={styles.heading} className="text-foreground">SQLite</Text><ActionButton onPress={() => act(sql)}>Insert and count persisted rows</ActionButton>
     <Text style={styles.heading} className="text-foreground">WebView</Text>
-    <WebView source={webSource} style={styles.web} onMessage={event => report(event.nativeEvent.data)} onShouldStartLoadWithRequest={request => request.url === "about:blank"} />
+    <WebView source={webSource} style={styles.web} onMessage={event => reportWeb(event.nativeEvent.data)} onError={event => reportWeb(new Error(event.nativeEvent.description))} onShouldStartLoadWithRequest={request => request.url === "about:blank"} />
+    <EventResults entries={webEvents} empty="Use the button inside the WebView to send a message here." testID="webview-events" />
   </View>;
 }
 const styles = StyleSheet.create({ section: { gap: 16 }, row: { flexDirection: "row", flexWrap: "wrap", gap: 12 }, heading: { fontSize: 18, fontWeight: "600" }, drop: { padding: 24, borderWidth: 1, borderRadius: 8 }, web: { height: 220, flex: 0 } });

@@ -22,6 +22,7 @@
         "@types/bun": "1.3.14",
         "@types/react": "19.1.10",
         "@types/ws": "8.18.1",
+        "base64-js": "1.5.1",
         "diff": "8.0.2",
         "expo": "54.0.37",
         "expo-audio": "1.1.1",
