@@ -1,0 +1,88 @@
+# Add desktop to an existing Expo app
+
+`legend add desktop` integrates the Legend host and development commands into an installed Expo app. Expo remains the source of application configuration. The app keeps its entry point, screens, mobile/web scripts, and existing native mobile projects.
+
+## Current baseline
+
+This integration uses Expo Desktop **1.0.0-beta.5**, native template **54.81.1-beta.5**, React Native macOS **0.81.7**, and React Native Windows **0.81.35**. The first verified baseline requires installed Expo **54.0.37**, React Native **0.81.6**, and React **19.1.4**. The command rejects a different baseline before editing files; upgrading an existing app is a separate change.
+
+Packages are still distributed as local SDK archives. From the framework checkout:
+
+```sh
+bun install
+bun run legend sdk pack
+bun run legend add desktop --project /absolute/path/to/ExistingExpoApp
+```
+
+The command uses the app's declared package manager, or its existing lockfile, for installation. Without either it uses Bun. Conflicting lockfiles require an explicit `packageManager` field. Bun is the verified installer in the integration fixture; npm, pnpm, and Yarn follow their respective install/override conventions but have not received equivalent end-to-end verification.
+
+In the integrated app:
+
+```sh
+# Existing mobile/web commands keep their meaning
+bun run ios
+bun run android
+bun run web
+
+# Build once, then develop on macOS
+bunx --no-install legend build --dev --platform macos
+bun run macos
+
+# On a configured Windows machine
+bunx --no-install legend build --dev --platform windows
+bun run windows
+```
+
+If a `macos` or `windows` script already exists, it is preserved and the added script is named `legend:macos` or `legend:windows`. Direct Legend commands can also select the target with `--platform`. A compatible registered Go client can be used through the existing development session; the initial native build is only necessary when no compatible binary is available.
+
+## Configuration composition
+
+The integration adds `desktop.config.json` with `"extends": "expo"`, stable project identity, desktop options, supported targets, and desktop autolinking exclusions. Names, versions, mobile identifiers, plugins, and environment-dependent application values continue to come from Expo config.
+
+The command composes the existing `app.config.js` or `app.config.ts` export with `withLegendExpo` from `@legend-apps/desktop-config/expo.cjs`. For a static `app.json`, it adds a small `app.config.js` that extends Expo's supplied config. It keeps the original configuration code in the same file and directory, preserving relative imports and environment logic.
+
+Ordinary Expo commands, including commands without `LEGEND_PLATFORM`, retain their original configuration. Only `LEGEND_PLATFORM=macos` or `windows` applies desktop options and the Legend config plugin. Legend commands supply that environment automatically. For direct Expo Desktop commands, set it explicitly:
+
+```sh
+LEGEND_PLATFORM=macos bunx expo config
+```
+
+PowerShell uses `$env:LEGEND_PLATFORM="windows"`. Keep desktop-specific exclusions and options in `desktop.config.json`; keep mobile/web configuration in the existing Expo files. Previously generated iOS and Android projects stay in place. Native generation/build operations against one checkout must run sequentially.
+
+## Metro and native configuration
+
+The existing Metro config gets its defaults through `@legend-apps/cli/src/expo-metro.cjs`. That helper delegates to Expo for mobile/web and Expo Desktop for desktop. Application customizations continue to run after those defaults. Custom resolver fallbacks retain upstream desktop module resolution, and Legend adds its development compatibility gate.
+
+Desktop hosts request `index.bundle` or `index.windows.bundle`. The composed Metro config routes those requests through Expo's virtual entry resolver, which reads the original `package.json` main. There is no generated replacement application entry. Apps must register the normal Expo `main` component through their existing entry.
+
+The existing React Native config export is composed with `withLegendNative`. Mobile commands retain the original object; desktop commands add platform discovery and native selection while preserving application assets and configuration.
+
+## Boundaries and failure handling
+
+- Automatic export composition supports CommonJS `module.exports` and `export default` expressions in Expo config, including TypeScript. Re-exported defaults and default function declarations need explicit composition. Metro and React Native automatic composition currently target `.js` config files; other file formats and projects declaring `type: "module"` require explicit integration.
+- Metro must use Expo's `getDefaultConfig`. Unsupported shapes, occupied script names, conflicting dependency pins, and existing desktop native projects are rejected before file writes. Existing macOS/Windows projects need host composition rather than being overwritten.
+- Once preflight passes, changes remain reviewable if package installation fails. Fix the install error and rerun the command; repeated integration installs dependencies without rewriting configuration or changing project identity.
+- Adding desktop does not port mobile-only dependencies. The initial exclusions cover the known mobile-only backends already handled by the universal starter. Additional native packages/plugins may require desktop implementations or desktop-specific exclusions.
+- Keeping an entry point such as `expo-router/entry` does not establish desktop Router compatibility. Router integration and secondary JavaScript runtimes remain separate work. The fixture uses a custom Expo entry without Router.
+- Windows native acceptance and API parity remain tracked in [known Windows issues](windows-issues.md). This command does not claim Windows release/distribution support.
+
+## Verification
+
+`bun run test:add-desktop` creates an independent Expo app with a custom TypeScript configuration, config plugin, Metro alias, React Native config, and `src/bootstrap.ts` entry. It verifies the app's original mobile bundle, generates its iOS project before integration, and then checks:
+
+- Rejection of an unsupported Metro configuration before any integration files are written.
+- Unchanged mobile/web config and plugin behavior, app source, entry point, existing scripts, and repeated-integration identity.
+- All five bundles using the original entry and custom resolver, plus desktop host request rewriting.
+- Windows generation without changing the existing iOS project or shared app files.
+
+Workspace unit tests separately check export composition and mobile no-op behavior. Native compilation and execution are recorded separately from generation and bundle checks.
+
+## Recorded validation — 2026-09-13
+
+- Workspace TypeScript and 134 unit tests passed (580 assertions).
+- The independent dynamic-config fixture passed its original mobile bundle, all five post-integration bundles, custom resolver and desktop request routing, config/plugin preservation, conflict rejection, and repeated integration checks.
+- Windows generation preserved the previously generated iOS project and shared files. Equivalent project paths produced identical Legend configuration, excluding Expo's diagnostic `_internal` metadata from compatibility inputs.
+- A static `app.json` fixture with no explicit `main` retained its app/config source and bundled on macOS through Expo's default AppEntry.
+- The adopted app compiled on macOS and mounted through the normal Legend development session. A temporary mount callback confirmed its custom entry/Metro alias and Hermes execution; the diagnostic source edit was restored afterward.
+
+Execution used the synchronized `/tmp/legend-api-clean` checkout because Bun stalls in Documents on this host. Windows native execution, arbitrary third-party native libraries/Router, and the other package managers remain outside this acceptance record.

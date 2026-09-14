@@ -1,6 +1,6 @@
 import { projectPlatform, architecture, type DesktopPlatform } from "./platform.ts";
 import { resolveHelpers } from "./helpers.ts";
-import { readConfig as readAppConfig, prepareConfig, writeUpdates, statePath, isUniversal } from "@legend-apps/desktop-config/config.cjs";
+import { readConfig as readAppConfig, prepareConfig, writeUpdates, statePath, isUniversal, isExpoProject } from "@legend-apps/desktop-config/config.cjs";
 export { readAppConfig, prepareConfig, writeUpdates, statePath, isUniversal };
 import { createHash } from "node:crypto";
 import { createRequire } from "node:module";
@@ -45,6 +45,14 @@ export function digest(value: string) {
 }
 export function stateFile(root: string, name: string) {
   return statePath(root, name);
+}
+export function entryFile(root: string) {
+  if (isExpoProject(root)) {
+    const appRequire = createRequire(path.join(root, "package.json"));
+    const expoRequire = createRequire(appRequire.resolve("expo/package.json"));
+    return path.relative(root, expoRequire("@expo/config/paths").resolveEntryPoint(root, { platform: projectPlatform(root) }));
+  }
+  return readJson(path.join(root, "package.json")).main ?? "index.ts";
 }
 export function installedPackages(root: string): Package[] {
   const found = new Map<string, Package>();
@@ -153,7 +161,7 @@ export function nativePackages(root: string): NativePackage[] {
     )
     .map((pkg) => ({
       ...pkg,
-      sdk: pkg.json.legend?.sdk === true || ["react-native-webview", "@op-engineering/op-sqlite", "@react-native-runtimes/core", "react-native-nitro-modules"].includes(pkg.name),
+      sdk: pkg.json.legend?.sdk === true || ["@react-native-async-storage/async-storage", "react-native-webview", "@op-engineering/op-sqlite", "@react-native-runtimes/core", "react-native-nitro-modules"].includes(pkg.name),
       requires: pkg.json.legend?.requires ?? [],
       signature: (signature => pkg.name === "@legend-apps/desktop-app" ? digest(signature + adapters) : signature)(hashFiles(pkg.root, [
         "package.json",
@@ -368,7 +376,7 @@ function windowsNativePackages(root: string, installed: Package[]): NativePackag
     .map(pkg => hashFiles(pkg.root, ["package.json", "windows", ...readdirSync(pkg.root).filter(name => name.endsWith(".cjs"))], true)).join(":");
   const versions = installed.filter(pkg => ["react", "expo", "react-native", "react-native-windows"].includes(pkg.name)).map(pkg => [pkg.name, pkg.json.version]);
   return installed.filter(supported).map(pkg => ({ ...pkg,
-    sdk: pkg.json.legend?.sdk === true, requires: pkg.json.legend?.requires ?? [],
+    sdk: pkg.json.legend?.sdk === true || pkg.name === "@react-native-async-storage/async-storage", requires: pkg.json.legend?.requires ?? [],
     signature: digest(hashFiles(pkg.root, ["package.json", "windows", "src", "cpp", "common", "react-native.config.js"], true) + (pkg.name === "@legend-apps/desktop-host" ? adapter + JSON.stringify(versions) : "")),
   }));
 }

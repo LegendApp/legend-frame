@@ -17,6 +17,8 @@ Legend delegates project creation and native generation to the tested Expo Deskt
 
 The native bare-minimum template remains upstream-owned. Legend config plugins add the host and selected capabilities. The small `/ui` and capability adapters are independent of the creation mechanism.
 
+Existing applications can use [`legend add desktop`](add-desktop.md) to compose desktop support into their Expo config and Metro setup. This path preserves the original entry point and mobile/web commands; it does not create an app from a Legend template.
+
 ## Templates
 
 `packages/cli/templates/blank-typescript`, `windows`, and `universal` are complete application templates. `scripts/pack.ts` first packs SDK dependencies, then `scripts/pack-templates.ts` resolves the local archive paths into the template manifests and packs them. `artifacts/packages/templates.json` maps each variant to its archive.

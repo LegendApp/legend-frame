@@ -39,7 +39,7 @@ flowchart TD
 | Area | Source | Responsibility |
 | --- | --- | --- |
 | CLI routing | [packages/cli/src/index.ts](packages/cli/src/index.ts) | Commands, options, project selection, SDK operations |
-| Starter | [packages/cli/src/create.ts](packages/cli/src/create.ts), [templates](packages/cli/templates/blank-typescript) | Copy starter assets, assign identity, resolve local archives, install dependencies |
+| Starter and adoption | [create.ts](packages/cli/src/create.ts), [add-desktop.ts](packages/cli/src/add-desktop.ts), [templates](packages/cli/templates) | Delegate template creation; compose desktop support into an existing Expo app |
 | Local registry | [packages/cli/src/local.ts](packages/cli/src/local.ts) | SDK manifests, registered binaries, project discovery, available ports |
 | Development session | [packages/cli/src/dev.ts](packages/cli/src/dev.ts), [session-status.ts](packages/cli/src/session-status.ts) | Metro and app process ownership, compatibility checks, target switching, terminal actions |
 | Metro integration | [metro.cjs](packages/cli/src/metro.cjs), [metro-gate.cjs](packages/cli/src/metro-gate.cjs), [metro.ts](packages/cli/src/metro.ts) | Worker registration integration, bundle gate, reload protocol |
@@ -73,6 +73,8 @@ Windows uses its own complete application template, with no runtime removal/repl
 Direct `expo-desktop create-app --template` consumption is validated against local archives. Public runtime acquisition remains separate. See the [integration handoff](docs/expo-desktop-integration.md) for delegated responsibilities, beta limitations, and checks.
 
 ## Configuration and identity
+
+Existing Expo apps can opt into an Expo-owned configuration mode through `legend add desktop`. Their `desktop.config.json` declares `extends: "expo"` and contains only desktop options, target declarations, and stable identity. `withLegendExpo` composes the original dynamic/static Expo config only for desktop commands. Expo's installed config reader evaluates the app's original logic; ordinary mobile/web Expo commands retain their existing behavior. Metro and React Native exports are composed in place, and Expo's virtual entry resolver preserves `package.json` main for desktop launches. See [existing Expo integration](docs/add-desktop.md) for automatic-composition limits and validation.
 
 For new apps, `desktop.config.json` is the canonical source. [config.cjs](packages/config-plugin/config.cjs) validates it and produces the Expo `app.json` transport file. Existing static `app.json` projects remain readable when desktop config is absent. Single-target desktop-config projects reject competing dynamic Expo config files. Universal starters use the managed dynamic config described below.
 
@@ -166,7 +168,7 @@ The [shared Settings starter](docs/universal-settings.md) owns one application s
 
 Universal desktop state paths are `.legend/platforms/<target>/...`, including native selection, sessions, build fingerprints, products, and logs. Single-target projects retain their existing paths. Build adapters restore the root manifest after upstream generation, including failure; native generation must run sequentially because upstream temporarily writes shared files. Selected native projects can change during prebuild, while other platform directories remain intact. Configuration preservation does not imply preservation of live React state across processes.
 
-Windows adapters with explicit platform entry points can coexist in a universal dependency graph without pretending to supply native capabilities. The Settings screen reports the current Windows gap before rendering unavailable controls. Desktop-only projects retain the stricter rejection of unsupported native dependencies.
+Windows adapters with explicit platform entry points can coexist in a universal dependency graph without pretending to supply native capabilities. The Settings screen renders on Windows without a platform exclusion. WinUI Button/TextBox/ComboBox and clipboard, credential, linking, and file-dialog backends now have Windows implementations. UI initialization failures render visible, noninteractive placeholders; unfinished capabilities still report unavailability. Native Windows acceptance is pending. Track missing implementations and native verification in [known Windows issues](docs/windows-issues.md). Desktop-only projects retain the stricter rejection of unsupported native dependencies.
 
 ## External libraries and background runtimes
 
@@ -281,3 +283,31 @@ Keep these invariants intact:
 - Upstream APIs retain ownership and attribution; framework wrappers require framework-specific behavior.
 
 Update README for user-facing workflow/status changes, this document for architecture/invariant changes, and feature guides for API details. Record verification with its date, target, and limits. Do not turn a plan, an implementation, or a mocked test into a claim of completed native acceptance.
+
+## Shared application and SDK transfer
+
+`legend create MyEditor --example document-editor` creates a [shared document editor](docs/document-editor.md) using Expo adapters on mobile, browser file operations on web, and native desktop dialogs. The macOS example exercises windows, menus, shortcuts, file-open events, and unsaved-change guards. Windows includes native control/API/file-dialog implementations, with remaining native acceptance and lifecycle gaps listed in [known Windows issues](docs/windows-issues.md).
+
+[SDK export/import](docs/sdk-distribution.md) packages the CLI, module archives, and optional prebuilt Go clients into a transferable directory. The recipient installs it without this checkout; Expo Desktop beta still owns creation and desktop generation, and Legend retains native compatibility checks.
+
+## Small application examples
+
+[Notes Lite, Music Lite, and Diff Lite](docs/example-apps.md) are standalone universal
+CLI examples, created with `legend create MyApp --example notes-lite` (or
+`music-lite` / `diff-lite`). They share application models and screens, with
+platform files for native lifecycle, selected-file access, and playback. Source
+ships with the CLI and depends only on public package imports.
+
+The examples use upstream AsyncStorage with project-scoped keys and recoverable
+snapshots. The unpackaged Windows host configures its supported database-path
+override. The small [audio contract](docs/audio.md) delegates to Expo Audio on
+mobile, AVPlayer on macOS, MediaPlayer on Windows, and HTML audio on web. Queue and
+note models remain application-owned. The maintained Go profile now includes audio
+and AsyncStorage; existing clients require a rebuild for those native additions.
+
+Windows host source also supplies window roots sharing the host's React runtime,
+close/quit guards, focused shortcuts, basic menus, frame restoration, and launch
+forwarding. Native compilation and acceptance remain tracked in
+[known Windows issues](docs/windows-issues.md); generated bundles do not prove them.
+See [extension development](docs/extensions.md) for adding a native library or
+replacing a backend while preserving a framework contract.

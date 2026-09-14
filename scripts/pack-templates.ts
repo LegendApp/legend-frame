@@ -6,7 +6,7 @@ import { readJson, writeJson } from "../packages/cli/src/project";
 
 export async function packTemplates(root: string, output: string, packages: Record<string, string>) {
   const templates: Record<string, string> = {};
-  const local = Object.fromEntries(Object.entries(packages).map(([name, file]) => [name, path.resolve(output, file)]));
+  const local = Object.fromEntries(Object.entries(packages).map(([name, file]) => [name, `file:./${file}`]));
   for (const [variant, folder] of Object.entries({ macos: "blank-typescript", windows: "windows", universal: "universal" })) {
     const source = path.join(root, "packages/cli/templates", folder);
     const pkg = readJson(path.join(source, "package.json"));

@@ -1,0 +1,147 @@
+import { existsSync, readFileSync, writeFileSync } from "node:fs";
+import path from "node:path";
+import { createRequire } from "node:module";
+import ts from "typescript";
+import { run } from "./commands";
+import { readJson } from "./project";
+
+export const integrationMarker = "// Legend: existing Expo project";
+
+/** Wrap an existing export without reprinting or moving the application's code. */
+export function composeExport(source: string, file: string, module: string, fn: string, root = true) {
+  if (source.includes(integrationMarker)) return source;
+  const parsed = ts.createSourceFile(file, source, ts.ScriptTarget.Latest, true);
+  const exported = parsed.statements.find(ts.isExportAssignment);
+  const wrap = (expression: string) => `require(${JSON.stringify(module)}).${fn}(${expression}${root ? ", __dirname" : ""})`;
+  if (exported && !exported.isExportEquals) {
+    const expression = exported.expression;
+    return source.slice(0, expression.getStart(parsed)) + wrap(expression.getText(parsed)) + source.slice(expression.end) + `\n${integrationMarker}\n`;
+  }
+  let commonJS = false;
+  function visit(node: ts.Node) {
+    if (ts.isBinaryExpression(node) && node.operatorToken.kind === ts.SyntaxKind.EqualsToken && node.left.getText(parsed) === "module.exports") commonJS = true;
+    ts.forEachChild(node, visit);
+  }
+  visit(parsed);
+  if (!commonJS) throw new Error(`Cannot safely compose ${file}: use module.exports or an export default expression. No files were changed.`);
+  return `${source}\n${integrationMarker}\nmodule.exports = ${wrap("module.exports")};\n`;
+}
+
+export function composeMetro(source: string, file: string) {
+  if (source.includes(integrationMarker)) return source;
+  const parsed = ts.createSourceFile(file, source, ts.ScriptTarget.Latest, true);
+  const replacements: { start: number; end: number }[] = [];
+  function visit(node: ts.Node) {
+    if (ts.isStringLiteral(node) && ["expo/metro-config", "@expo/metro-config"].includes(node.text)) replacements.push({ start: node.getStart(parsed), end: node.end });
+    ts.forEachChild(node, visit);
+  }
+  visit(parsed);
+  if (!replacements.length) throw new Error(`Cannot safely compose ${file}: use Expo's getDefaultConfig before adding desktop support. No files were changed.`);
+  for (const { start, end } of replacements.sort((a, b) => b.start - a.start)) source = source.slice(0, start) + '"@legend-apps/cli/src/expo-metro.cjs"' + source.slice(end);
+  return composeExport(source, file, "@legend-apps/cli/src/expo-metro.cjs", "withLegendMetro", false);
+}
+
+function packageManager(root: string, pkg: any) {
+  const declared = pkg.packageManager?.split("@")[0];
+  if (declared) {
+    if (!["bun", "npm", "pnpm", "yarn"].includes(declared)) throw new Error(`Unsupported package manager: ${declared}`);
+    return declared;
+  }
+  const candidates = [["bun", "bun.lock", "bun.lockb"], ["npm", "package-lock.json"], ["pnpm", "pnpm-lock.yaml"], ["yarn", "yarn.lock"]]
+    .filter(([, ...files]) => files.some(file => existsSync(path.join(root, file)))).map(([manager]) => manager!);
+  if (candidates.length > 1) throw new Error("Set packageManager in package.json to choose between the existing lockfiles.");
+  return candidates[0] ?? "bun";
+}
+
+export async function addDesktop(root: string, manifestFile: string) {
+  const pkgFile = path.join(root, "package.json");
+  if (!existsSync(pkgFile)) throw new Error("Run add desktop in an installed Expo app, or pass --project.");
+  const pkg = readJson(pkgFile);
+  if (pkg.type === "module") throw new Error("ES module package configurations need explicit composition; automatic add desktop currently supports Expo's CommonJS project layout. No files were changed.");
+  const manager = packageManager(root, pkg);
+  const req = createRequire(pkgFile);
+  const installed = (name: string) => readJson(req.resolve(`${name}/package.json`)).version;
+  // Never upgrade the mobile baseline as a side effect of adding desktop.
+  for (const [name, version] of Object.entries({ expo: "54.0.37", "react-native": "0.81.6", react: "19.1.4" })) {
+    let actual: string;
+    try { actual = installed(name); } catch { throw new Error(`Install the app's dependencies first; ${name} is missing.`); }
+    if (actual !== version) throw new Error(`The tested Expo Desktop beta needs ${name}@${version}; this app has ${actual}. Align the app's baseline separately, then retry. No files were changed.`);
+  }
+  const desktopFile = path.join(root, "desktop.config.json");
+  if (existsSync(desktopFile)) {
+    if (readJson(desktopFile).extends !== "expo") throw new Error("This app already uses Legend-owned configuration; add desktop is for existing Expo projects.");
+    await run(root, [manager, "install"]);
+    console.log("Desktop integration already exists; dependencies installed. Existing configuration preserved.");
+    return;
+  }
+  for (const file of ["macos", "windows"]) if (existsSync(path.join(root, file))) throw new Error(`Existing ${file} project needs explicit host composition before adopting Legend. No files were changed.`);
+  const expoRequire = createRequire(req.resolve("expo/package.json"));
+  const { getConfig } = expoRequire("@expo/config");
+  const base = getConfig(root, { skipPlugins: true }).exp;
+  if (base.newArchEnabled === false) throw new Error("Legend's desktop host requires the New Architecture. Align that setting before adding desktop.");
+  const files = new Map<string, string>();
+  const configNames = ["app.config.ts", "app.config.js"].filter(file => existsSync(path.join(root, file)));
+  if (configNames.length > 1) throw new Error("Keep one dynamic Expo configuration file before adding desktop.");
+  const configFile = configNames[0] ?? "app.config.js";
+  const configSource = configNames.length ? readFileSync(path.join(root, configFile), "utf8") : "module.exports = ({ config }) => config;\n";
+  files.set(configFile, composeExport(configSource, configFile, "@legend-apps/desktop-config/expo.cjs", "withLegendExpo"));
+  for (const file of ["metro.config.ts", "metro.config.mjs", "metro.config.cjs", "react-native.config.ts", "react-native.config.cjs"]) {
+    if (existsSync(path.join(root, file))) throw new Error(`Compose ${file} explicitly; automatic integration currently supports metro.config.js and react-native.config.js. No files were changed.`);
+  }
+  const metro = "metro.config.js";
+  files.set(metro, composeMetro(existsSync(path.join(root, metro)) ? readFileSync(path.join(root, metro), "utf8") : 'const { getDefaultConfig } = require("expo/metro-config");\nmodule.exports = getDefaultConfig(__dirname);\n', metro));
+  const native = "react-native.config.js";
+  files.set(native, composeExport(existsSync(path.join(root, native)) ? readFileSync(path.join(root, native), "utf8") : "module.exports = {};\n", native, "@legend-apps/cli/src/expo-native.cjs", "withLegendNative"));
+
+  const template = path.resolve(import.meta.dir, "../templates/universal");
+  const defaults = readJson(path.join(template, "package.json"));
+  const archives = readJson(manifestFile);
+  const local = ["@legend-apps/cli", "@legend-apps/desktop-config", "@legend-apps/desktop-host", "@legend-apps/desktop-app", "@legend-apps/window-options"];
+  const dependencies: Record<string, string> = {};
+  for (const name of local) {
+    if (!archives[name]) throw new Error(`SDK is missing ${name}; run legend sdk pack first.`);
+    const file = path.resolve(path.dirname(manifestFile), archives[name]);
+    if (!existsSync(file)) throw new Error(`Missing SDK archive: ${file}`);
+    dependencies[name] = file;
+  }
+  for (const [name, version] of Object.entries(defaults.dependencies)) {
+    if (name.startsWith("expo-desktop") || ["react-native-macos", "react-native-windows", "@react-native-community/cli"].includes(name)) dependencies[name] = version as string;
+  }
+  pkg.dependencies ??= {};
+  for (const [name, version] of Object.entries(dependencies)) {
+    if (["@legend-apps/desktop-app", "@legend-apps/window-options"].includes(name)) continue;
+    const previous = pkg.dependencies[name] ?? pkg.devDependencies?.[name];
+    if (previous && previous !== version) throw new Error(`Existing ${name} dependency conflicts with the tested desktop version. Resolve it explicitly before retrying. No files were changed.`);
+    if (!previous) pkg.dependencies[name] = version;
+  }
+  // Resolve local transitive SDK packages without replacing any mobile pins.
+  const overrides = Object.fromEntries(local.map(name => [name, dependencies[name]]));
+  const overrideField = manager === "yarn" ? "resolutions" : "overrides";
+  const owner = manager === "pnpm" ? (pkg.pnpm ??= {}) : pkg;
+  for (const [name, version] of Object.entries(overrides)) if (owner[overrideField]?.[name] && owner[overrideField][name] !== version) throw new Error(`Existing ${name} override conflicts with the local SDK. No files were changed.`);
+  owner[overrideField] = { ...owner[overrideField], ...overrides };
+  pkg.scripts ??= {};
+  for (const platform of ["macos", "windows"]) {
+    const name = pkg.scripts[platform] ? `legend:${platform}` : platform;
+    const command = `legend dev --platform ${platform}`;
+    if (pkg.scripts[name] && pkg.scripts[name] !== command) throw new Error(`Script ${name} already exists; resolve the script conflict before adding desktop.`);
+    pkg.scripts[name] = command;
+  }
+  files.set("package.json", JSON.stringify(pkg, null, 2) + "\n");
+  const config = readJson(path.join(template, "desktop.config.json"));
+  const { name, version, expo, ...desktop } = config;
+  const projectId = crypto.randomUUID();
+  desktop.extends = "expo";
+  desktop.projectId = projectId;
+  desktop.platforms = [...new Set([...(base.platforms ?? ["ios", "android", "web"]), "macos", "windows"])];
+  desktop.macos = { bundleIdentifier: base.macos?.bundleIdentifier ?? base.ios?.bundleIdentifier ?? `app.legend.id${projectId.replaceAll("-", "")}` };
+  files.set("desktop.config.json", JSON.stringify(desktop, null, 2) + "\n");
+  const ignoreFile = path.join(root, ".gitignore");
+  const ignore = existsSync(ignoreFile) ? readFileSync(ignoreFile, "utf8") : "";
+  files.set(".gitignore", `${ignore}${ignore.endsWith("\n") || !ignore ? "" : "\n"}\n# Legend generated desktop state\n/.legend/\n/macos/\n/windows/\n`);
+  // All conflicts are checked before the first write. The integration is kept
+  // reviewable/retryable if the package manager fails; never regenerate mobile.
+  for (const [file, content] of files) writeFileSync(path.join(root, file), content);
+  await run(root, [manager, "install"]);
+  console.log(`Added desktop support to ${root}. Existing entry point and mobile/web scripts are unchanged.\nRun legend build --dev --platform macos, then legend dev --platform macos. Windows native builds run on Windows.`);
+}

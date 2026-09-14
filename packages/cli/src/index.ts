@@ -1,11 +1,15 @@
 #!/usr/bin/env bun
+import { examples, type Example } from "./examples";
+import { prepareGoProfile } from "./go-profile.ts";
+import { exportSDK, importSDK } from "./sdk-transfer.ts";
 import { hostPlatform, type AppPlatform } from "./platform.ts";
 import path from "node:path";
 import { parseArgs } from "node:util";
 import { existsSync, readFileSync, writeFileSync } from "node:fs";
-import { prepareConfig, readConfig } from "@legend-apps/desktop-config/config.cjs";
+import { prepareConfig, readConfig, isExpoProject } from "@legend-apps/desktop-config/config.cjs";
 import { nodeCommand, prepareWindows } from "./windows.ts";
 import { create, refreshLocalPackages } from "./create.ts";
+import { addDesktop } from "./add-desktop.ts";
 import { buildMode } from "./build-mode.ts";
 import { initializeUpdates } from "./updates.ts";
 import { packageApp } from "./package.ts";
@@ -22,6 +26,8 @@ try {
     args: argv,
     allowPositionals: true,
     options: {
+      example: { type: "string" },
+      runtime: { type: "string", multiple: true },
       universal: { type: "boolean" },
       device: { type: "string" },
       project: { type: "string" },
@@ -47,6 +53,10 @@ try {
   const port = values.port === undefined ? undefined : Number(values.port);
   if (port !== undefined && (!Number.isInteger(port) || port < 1 || port > 65535)) throw new Error("Port must be an integer between 1 and 65535.");
   const command = positionals[0];
+  if (!values.help && !values.platform && !(command === "open" && positionals[1]) && ["dev", "build", "prebuild", "analyze", "package", "open", "updates", "credentials"].includes(command ?? "") && isExpoProject(project())) {
+    process.env.LEGEND_PLATFORM = readConfig(project()).expo.platforms[0];
+  }
+  if (values.example && (command !== "create" || !examples.includes(values.example as Example))) throw new Error(`Use create --example ${examples.join(" | ")}`);
   if (values.universal && command !== "create") throw new Error("--universal is a create option.");
   if (!values.help && ["dev", "build", "prebuild"].includes(command ?? "")) {
     const root = project();
@@ -71,6 +81,11 @@ try {
     console.log(`Legend
 
   legend create MyApp  Create an app (--universal for shared Settings; --platform selects a target)
+  legend create MyEditor --example document-editor  Shared document editor
+  legend create MyNotes --example notes-lite        Local notes
+  legend create MyMusic --example music-lite        Audio queue
+  legend create MyDiff --example diff-lite          Text comparison
+  legend add desktop  Add desktop to an existing Expo app without replacing its entry point
   legend dev           Develop with Fast Refresh
   legend build         Build a standalone desktop app
   legend prebuild      Generate a Windows/mobile native project
@@ -80,19 +95,35 @@ Inside an app: bun dev, bun run build, bun run package
 
 Advanced: updates init <feedURL>, credentials, doctor, analyze, open [app], build --dev, build --preview
 Windows: dev and build --dev; production builds are not yet supported.
+SDK transfer: sdk export <directory> [--runtime <Go directory>], sdk import <directory>
 SDK maintainers: sdk pack, sdk build-go [--platform windows], sdk register <runtime directory>
 Targets: dev/build/prebuild --platform macos|windows|ios|android|web
 Overrides: --project <directory>, --port <number>, dev --go <Go.app>, create --packages <manifest>`);
   } else switch (command) {
+    case "add": {
+      if (positionals[1] !== "desktop") throw new Error("Usage: legend add desktop [--project <Expo app>]");
+      await addDesktop(start, packageManifest(values.packages as string | undefined));
+      break;
+    }
     case "create": {
       if (!positionals[1]) throw new Error("Usage: legend create MyApp");
       if (!values.universal && !["macos", "windows"].includes(platform)) throw new Error("Use create --universal for mobile/web targets");
-      await create(path.resolve(positionals[1]), packageManifest(values.packages as string | undefined), platform, !!values.universal);
+      await create(path.resolve(positionals[1]), packageManifest(values.packages as string | undefined), platform, !!values.universal || !!values.example, values.example as Example | undefined);
       break;
     }
     case "sdk": {
       if (!["macos", "windows"].includes(platform)) throw new Error("SDK commands require a desktop target");
       switch (positionals[1]) {
+        case "export": {
+          if (!positionals[2]) throw new Error("Usage: legend sdk export <directory> [--runtime <Go client directory>]");
+          console.log(`Exported SDK to ${exportSDK(packageManifest(values.packages as string | undefined), positionals[2], values.runtime)}. Transfer the directory and run bun install.ts there.`);
+          break;
+        }
+        case "import": {
+          if (!positionals[2]) throw new Error("Usage: legend sdk import <SDK directory>");
+          console.log(`Registered SDK from ${importSDK(positionals[2])}`);
+          break;
+        }
         case "pack": {
           const framework = findFramework(start) ?? findFramework();
           if (!framework) throw new Error("Run legend sdk pack inside the framework checkout.");
@@ -113,6 +144,7 @@ Overrides: --project <directory>, --port <number>, dev --go <Go.app>, create --p
             const manifest = packageManifest(values.packages as string | undefined);
             if (!existsSync(path.join(root, "package.json"))) await create(root, manifest, platform);
             else await refreshLocalPackages(root, manifest);
+            await prepareGoProfile(root, manifest, platform as "macos" | "windows");
           }
           await build(root, "go", !!values.force);
           break;

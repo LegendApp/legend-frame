@@ -4,11 +4,12 @@ Legend Framework is an experimental framework for building native desktop applic
 
 Application JavaScript runs in **Hermes**. Node and Bun are development tools; neither is embedded as the application's JavaScript runtime. The UI uses React Native's native renderer.
 
-**Current scope:** macOS 14+ on Apple Silicon. The packages, CLI, and native runtime are local prototypes; public npm packages and downloadable Go releases are not available. Windows x64 Go and custom development builds are integrated, with native verification still pending; see the [Windows development guide](docs/windows-slice.md). Intel macOS, Linux, mobile, and Mac App Store distribution are not supported by this framework's current workflow.
+**Current scope:** macOS 14+ on Apple Silicon. The packages, CLI, and native runtime are prototypes. A [transferable SDK with optional prebuilt Go clients](docs/sdk-distribution.md) works outside the checkout; public npm packages and hosted Go releases are not available. Windows x64 Go and custom development builds are integrated, with native verification still pending; see the [Windows development guide](docs/windows-slice.md). Mobile/web development delegates to Expo. Intel macOS, Linux, and Mac App Store distribution are not supported by this framework's current workflow.
 
 ## Start here
 
 - **Build an app:** follow the [quick start](#quick-start) and [development guide](docs/development.md).
+- **Add desktop to an existing Expo app:** use [the integration guide](docs/add-desktop.md) to preserve its entry point and mobile/web setup.
 - **Test Windows development:** use the [integrated Windows workflow](docs/windows-slice.md) and `bun run test:windows`.
 - **Use desktop APIs:** see the [SDK guide](docs/sdk.md) and [expanded API reference](docs/desktop-api-expansion.md).
 - **Understand or change the framework:** read [ARCHITECTURE.md](ARCHITECTURE.md), including its source map and implementation invariants.
@@ -153,7 +154,7 @@ For external libraries, prefer their upstream imports and documentation. Legend 
 
 `bun run settings /tmp/MySettings` packs the shared Settings template and creates it through Expo Desktop beta. It uses the existing capability adapters, ordinary React Native layout, and native `Button`, `TextInput`, and `Select` controls from `@legend-apps/ui`. Mobile controls use the pinned Expo UI backend; desktop and web select their own implementations.
 
-Run `bun run web`, `bun run ios`, `bun run android`, or `bun run macos` inside the generated app. Native targets first need their development build. Windows currently loads a capability-gap message until its UI backends are implemented. See [the shared Settings guide](docs/universal-settings.md) for build commands, platform status, and verification.
+Run `bun run web`, `bun run ios`, `bun run android`, or `bun run macos` inside the generated app. Native targets first need their development build. Windows uses WinUI controls with visible, noninteractive fallbacks if native initialization fails; native Windows acceptance is still pending. Track remaining work in [known Windows issues](docs/windows-issues.md). See [the shared Settings guide](docs/universal-settings.md) for build commands, platform status, and verification.
 
 A universal project declares all targets together. Switching with `--platform` preserves its shared configuration/source and the other generated native projects. Router integration and declarative windows remain deferred.
 
@@ -255,3 +256,31 @@ The [Expo API adapters](docs/expo-api-adapters.md) document the current clipboar
 The [universal API plan](docs/universal-api-plan.md) proposes one web/mobile/desktop codebase, Expo-aligned capability APIs, Expo UI adapters, and declarative window presentation through Expo Router. It is awaiting review and does not describe implemented functionality. The earlier [API structure review](docs/api-structure-review.md) retains the current SDK inventory.
 
 Use the [implementation plan](docs/implementation-plan.md) for original decisions and milestones; newer feature guides and dated validation reports describe subsequent work. These documents describe an evolving source checkout, not a claim that every feature is published or production-qualified.
+
+## Shared application and SDK transfer
+
+`legend create MyEditor --example document-editor` creates a [shared document editor](docs/document-editor.md) using Expo adapters on mobile, browser file operations on web, and native desktop dialogs. The macOS example exercises windows, menus, shortcuts, file-open events, and unsaved-change guards. Windows includes native control/API/file-dialog implementations, with remaining native acceptance and lifecycle gaps listed in [known Windows issues](docs/windows-issues.md).
+
+[SDK export/import](docs/sdk-distribution.md) packages the CLI, module archives, and optional prebuilt Go clients into a transferable directory. The recipient installs it without this checkout; Expo Desktop beta still owns creation and desktop generation, and Legend retains native compatibility checks.
+
+## Small application examples
+
+[Notes Lite, Music Lite, and Diff Lite](docs/example-apps.md) are standalone universal
+CLI examples, created with `legend create MyApp --example notes-lite` (or
+`music-lite` / `diff-lite`). They share application models and screens, with
+platform files for native lifecycle, selected-file access, and playback. Source
+ships with the CLI and depends only on public package imports.
+
+The examples use upstream AsyncStorage with project-scoped keys and recoverable
+snapshots. The unpackaged Windows host configures its supported database-path
+override. The small [audio contract](docs/audio.md) delegates to Expo Audio on
+mobile, AVPlayer on macOS, MediaPlayer on Windows, and HTML audio on web. Queue and
+note models remain application-owned. The maintained Go profile now includes audio
+and AsyncStorage; existing clients require a rebuild for those native additions.
+
+Windows host source also supplies window roots sharing the host's React runtime,
+close/quit guards, focused shortcuts, basic menus, frame restoration, and launch
+forwarding. Native compilation and acceptance remain tracked in
+[known Windows issues](docs/windows-issues.md); generated bundles do not prove them.
+See [extension development](docs/extensions.md) for adding a native library or
+replacing a backend while preserving a framework contract.

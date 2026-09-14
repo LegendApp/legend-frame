@@ -1,0 +1,7 @@
+import { openFileDialog } from "@legend-apps/file-dialog";
+import type { Track } from "./model";
+export async function importTracks(): Promise<Track[]> {
+  const paths = await openFileDialog({ allowedFileTypes: ["mp3", "m4a", "wav", "aac", "flac", "ogg"], allowsMultipleSelection: true });
+  return (paths ?? []).map(uri => ({ id: uri, uri, name: uri.split(/[\\/]/).pop()! }));
+}
+export const resolveTrack = async (track: Track) => ({ uri: track.uri, release() {} });

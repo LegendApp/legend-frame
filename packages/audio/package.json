@@ -1,0 +1,48 @@
+{
+  "name": "@legend-apps/audio",
+  "version": "0.1.0-prototype.0",
+  "license": "MIT",
+  "main": "src/index",
+  "react-native": "src/index",
+  "files": [
+    "src",
+    "macos",
+    "windows",
+    "*.podspec"
+  ],
+  "peerDependencies": {
+    "react": "19.1.4",
+    "react-native": "0.81.6",
+    "expo-audio": "1.1.1"
+  },
+  "peerDependenciesMeta": {
+    "expo-audio": {
+      "optional": true
+    }
+  },
+  "codegenConfig": {
+    "name": "RNLegendAudioSpec",
+    "type": "modules",
+    "jsSrcsDir": "src",
+    "ios": {
+      "modulesProvider": {
+        "NativeLegendAudio": "RNLegendAudio"
+      }
+    }
+  },
+  "legend": {
+    "sdk": true,
+    "nativeModules": [
+      "NativeLegendAudio"
+    ],
+    "pod": "RNLegendAudio",
+    "platforms": [
+      "macos",
+      "windows",
+      "ios",
+      "android",
+      "web"
+    ],
+    "requires": []
+  }
+}
