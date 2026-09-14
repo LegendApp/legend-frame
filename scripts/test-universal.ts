@@ -45,7 +45,7 @@ for (const platform of ["ios", "android", "web", "windows", "macos"]) {
   const sources: string[] = readJson(sourceMap).sources;
   const adapter = platform === "macos" ? "index.tsx" : `index.${platform}.tsx`;
   if (!sources.some(source => source.includes(`@legend-apps/ui/src/${adapter}`))) throw new Error(`${platform} did not select its UI adapter`);
-  if (platform !== "macos" && sources.some(source => /Legend(?:Button|TextInput|Select)NativeComponent|NativeDesktop/.test(source))) throw new Error(`${platform} loads an AppKit native binding`);
+  if (!["macos", "windows"].includes(platform) && sources.some(source => /Legend(?:Button|TextInput|Select)NativeComponent|NativeDesktop/.test(source))) throw new Error(`${platform} loads an AppKit native binding`);
   if (["macos", "windows", "web"].includes(platform) && sources.some(source => source.includes("@expo/ui/"))) throw new Error(`${platform} loads Expo's mobile UI backend`);
   assertPreserved(); results.push({ platform, modules: sources.length });
   console.log(`PASS ${platform} shared Settings bundle and preserved projects`);

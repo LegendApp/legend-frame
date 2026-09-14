@@ -328,12 +328,10 @@ test("Expo linking separates stable initial URLs, live URLs, and legacy file eve
   expect(() => links.addEventListener("bad" as any, () => {})).toThrow();
 });
 
-test("web and Windows unavailability does not load a native module or store secrets", async () => {
+test("web SecureStore stays unavailable without native dispatch", async () => {
   const web = await import("../packages/secure-storage/src/index.web");
-  const win = await import("../packages/clipboard/src/index.windows");
   expect(await web.isAvailableAsync()).toBe(false);
   await expect(web.setItemAsync("secret", "value")).rejects.toThrow("unavailable");
-  await expect(win.getStringAsync()).rejects.toThrow("Windows");
   expect(calls).toHaveLength(0);
 });
 
@@ -368,4 +366,19 @@ test("mobile adapters delegate the shared subset to Expo without native dispatch
   await mobileLinks.openURL("https://example.com");
   expect(forwarded).toEqual(["clipboard", "secret", "delete", "url"]);
   expect(calls).toHaveLength(0);
+});
+
+test("Windows shared adapters dispatch to native backends and reject unsupported rich data", async () => {
+  const win = await import("../packages/clipboard/src/index.windows");
+  const store = await import("../packages/secure-storage/src/index.windows");
+  const linking = await import("../packages/desktop-links/src/index.windows");
+  handlers.set("NativeDesktopClipboard.getString", () => "Windows text");
+  expect(await win.getStringAsync()).toBe("Windows text");
+  expect(await win.setStringAsync("hello")).toBe(true);
+  await expect(win.writeClipboard({ imagePNG: "data" })).rejects.toThrow("text only");
+  await store.setItemAsync("sample", "value");
+  expect(calls.at(-1)?.native).toBe("NativeDesktopSecureStorage");
+  handlers.set("NativeDesktopLinks.canOpen", () => true);
+  expect(await linking.canOpenURL("https://example.com")).toBe(true);
+  expect(() => linking.canOpenURL("invalid")).toThrow("scheme");
 });

@@ -8,7 +8,8 @@
     "src",
     "macos",
     "*.podspec",
-    "react-native.config.js"
+    "react-native.config.js",
+    "windows"
   ],
   "peerDependencies": {
     "react": "19.1.4",
@@ -37,7 +38,8 @@
     "nativeModules": [],
     "pod": "RNLegendUI",
     "platforms": [
-      "macos"
+      "macos",
+      "windows"
     ]
   }
 }

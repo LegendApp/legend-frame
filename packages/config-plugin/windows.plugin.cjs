@@ -12,6 +12,10 @@ function patchHost(source, core, metadata) {
   if (!['go', 'dev'].includes(metadata.mode) || !/^[a-f0-9]{64}$/.test(metadata.fingerprint)) throw new Error('Invalid Windows runtime build metadata');
   source = source.replace(include, `${include}\n// BEGIN LEGEND CORE\n${core.replace('__LEGEND_METADATA__', JSON.stringify(metadata))}\n// END LEGEND CORE\n`);
   source = source.replace(/appWindow\.Title\([^\n]+\);/, title => `${title}\n  // BEGIN LEGEND TITLE\n  const auto legendTitle = LegendWindowsEnv(L"LEGEND_PROJECT_NAME");\n  if (!legendTitle.empty()) appWindow.Title(legendTitle);\n  // END LEGEND TITLE\n`);
+  source = source.replace('LegendWin::Initialize(reactNativeWin32App);', 'appWindow.Resize({1000, 1000});');
+  source = source.replace(/appWindow\.Resize\([^\n]+\);/, 'LegendWin::Initialize(reactNativeWin32App);');
+  source = source.replace(/\n  \/\/ BEGIN LEGEND LAUNCH[\s\S]*?\/\/ END LEGEND LAUNCH\n/g, '');
+  source = source.replace('winrt::init_apartment(winrt::apartment_type::single_threaded);', 'winrt::init_apartment(winrt::apartment_type::single_threaded);\n  // BEGIN LEGEND LAUNCH\n  if (LegendWin::ForwardLaunch()) return 0;\n  // END LEGEND LAUNCH\n');
   return source.replace(anchor, `${anchor}\n  // BEGIN LEGEND CONNECTION\n  settings.SourceBundleHost(L"127.0.0.1");\n  settings.SourceBundlePort(LegendMetroPort());\n  // END LEGEND CONNECTION\n`);
 }
 module.exports = config => {
@@ -19,7 +23,7 @@ module.exports = config => {
   config = withAppCpp(config, mod => {
     const root = mod.modRequest.projectRoot;
     const metadata = JSON.parse(fs.readFileSync(statePath(root, 'windows-build-input.json', 'windows'), 'utf8'));
-    mod.modResults.contents = patchHost(mod.modResults.contents, fs.readFileSync(require.resolve('@legend-apps/desktop-host/windows/runtime.inc'), 'utf8'), metadata);
+    mod.modResults.contents = patchHost(mod.modResults.contents, fs.readFileSync(require.resolve('@legend-apps/desktop-host/windows/runtime.inc'), 'utf8') + '\n' + fs.readFileSync(require.resolve('@legend-apps/desktop-host/windows/application.inc'), 'utf8'), metadata);
     return mod;
   });
   const { withMod } = require('@expo/config-plugins');

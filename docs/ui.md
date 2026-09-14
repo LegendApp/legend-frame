@@ -16,7 +16,7 @@ import { Button, TextInput, Select } from '@legend-apps/ui';
 | iOS | Expo UI SwiftUI Button | Expo UI SwiftUI TextField | Expo UI SwiftUI Picker, menu |
 | Android | Expo UI Compose Button | Expo UI Compose TextInput | Expo UI Compose Picker, segmented |
 | Web | HTML button | HTML input | HTML select |
-| Windows | Pending; rendering throws `E_UNAVAILABLE` | Pending | Pending |
+| Windows | WinUI Button | WinUI TextBox | WinUI ComboBox |
 
 The macOS controls are Fabric components in a standalone pod. Mobile applications install optional peer `@expo/ui@0.2.0-beta.9`, the pinned implementation for Expo 54. Desktop/web implementations do not import it. Compose requires a development build; the universal starter includes `expo-dev-client`. See the [Expo 54 UI documentation](https://docs.expo.dev/versions/v54.0.0/sdk/ui/) and [Compose setup](https://docs.expo.dev/versions/v54.0.0/sdk/ui/jetpack-compose/).
 
@@ -47,7 +47,7 @@ bun test tests
 
 `test:universal` generates real mobile/Windows projects and bundles the shared Settings entry for all five targets. It verifies that shared files and existing generated projects survive target switching and that platform bundles select the expected UI backend. Reports live under the consumer's `.legend` directory.
 
-Native Android and Windows execution remain pending. Windows currently reports its missing backends in the shared screen. Router, declarative windows, and a larger UI catalog remain deferred.
+Native Android and Windows execution remain pending. Windows uses WinUI controls hosted through RNW ContentIsland, with labeled, disabled placeholders if the UI module is absent or native initialization fails. Placeholders preserve layout/test IDs, do not attach action handlers, and do not load unavailable native bindings. Remaining implementations are tracked in [known Windows issues](windows-issues.md). Router, declarative windows, and a larger UI catalog remain deferred.
 
 ## Recorded validation — 2026-09-13
 
@@ -58,3 +58,5 @@ Native Android and Windows execution remain pending. Windows currently reports i
 - All five shared-screen bundles passed. Real iOS/Android/Windows generation preserved shared files and earlier native projects. A separate check also preserved the already-built macOS project and build record while generating Android/Windows.
 
 Bun execution used the synchronized `/tmp/legend-api-clean` checkout because Bun stalled in Documents on this host. Native Android/Windows execution and macOS pointer/keyboard inspection remain unverified; native Mac UI automation was blocked by the locked desktop. These checks do not establish mobile production distribution or Windows UI support.
+
+The new Windows implementations are source-complete for the three contracts but await native compilation and UI acceptance. Run `bun run test:windows:features` on an interactive Windows machine. These are WinUI controls, not Pressable wrappers.

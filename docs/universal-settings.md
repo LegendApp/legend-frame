@@ -36,7 +36,7 @@ Mobile commands delegate to the installed Expo CLI. The starter includes `expo-d
 
 Use `--no-open` to start Metro without launching a target. Separate simultaneous servers need distinct `--port` values. Mobile production/distribution remains an Expo workflow; this slice adds development commands only.
 
-Windows uses the existing [integrated Windows host and CLI](windows-slice.md). The same Settings screen bundles and displays a clear capability-gap message there: the three native UI backends and the example's capability backends are still pending. It does not substitute a Pressable-based button. Build/run on Windows with `legend build --dev --platform windows` and `bun run windows` once that machine's prerequisites are installed.
+Windows uses the existing [integrated Windows host and CLI](windows-slice.md). The same Settings screen renders there without excluding Windows. The three controls now have WinUI implementations and the shared APIs have native backends. Missing or failed UI initialization displays a noninteractive placeholder; native Windows compilation and execution remain pending. These are tracked in [known Windows issues](windows-issues.md). Build/run on Windows with `legend build --dev --platform windows` and `bun run windows` once that machine's prerequisites are installed.
 
 ## What the screen demonstrates
 

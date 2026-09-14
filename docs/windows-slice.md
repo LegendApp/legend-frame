@@ -92,6 +92,10 @@ bun run test:windows:prepare --project /tmp/LegendWindowsCheck
 
 This mode explicitly reports that native execution was not verified. RNW platform discovery may log that Windows PowerShell is unavailable on macOS; the project's platform declaration still lets Metro select the Windows sources.
 
+## Known issues
+
+Track missing implementations, safe placeholders, and native acceptance in [known Windows issues](windows-issues.md). Windows stays in shared screens; a missing UI implementation must not fail during import or render.
+
 ## Implementation and next steps
 
 The CLI's Windows build adapter uses the shared build lock, runtime schema, native graph, build records, registration, and development session. `@legend-apps/desktop-config` installs the Windows hooks from `@legend-apps/desktop-host/windows`. The host embeds the same runtime metadata written to the build record. Native packages use RNW's ordinary autolinking pipeline.
@@ -101,3 +105,17 @@ The development solution excludes the packaging project. The app uses `WindowsPa
 The framework detects supported Windows native packages and rejects directly installed native dependencies without a Windows implementation. This does not establish support for every third-party dependency graph or arbitrary native project customization. The macOS SDK remains available through the macOS starter while its Windows modules are ported incrementally.
 
 No upstream Expo Desktop change is needed to attempt this. Jamie can help if the native verification exposes a Windows bootstrap/prebuild problem, and later with the shared `expo-desktop run windows --binary` contract. The Windows report provides a concrete reproducer for that work.
+
+## Application examples and host integration
+
+The [small examples](example-apps.md) are integrated universal projects. The latest
+host source adds secondary RNW Composition windows on the same ReactNativeHost,
+close/quit guards, focused shortcuts, basic Win32 menus, main-window geometry,
+queued/warm open events, and project-scoped AsyncStorage configuration. Music Lite
+adds MediaPlayer playback. These are source implementations pending a Windows
+build and interaction check; see WIN-09 and WIN-10.
+
+The examples retain Expo Desktop beta generation. No separate Windows source kit
+is required. After updating SDK archives, rebuild the Windows Go/custom client:
+old binaries cannot expose the new host hooks or audio module. Native package
+sources ship in their SDK archives.

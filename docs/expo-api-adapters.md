@@ -35,7 +35,7 @@ The kitchen sink uses the existing `@legend-apps/desktop/clipboard`, `/secure-st
 | macOS | Existing AppKit backend, including text/HTML conversion | Existing project-scoped Keychain backend | Existing native URL opening plus host launch/event tracking |
 | iOS / Android | `expo-clipboard` | `expo-secure-store` | `expo-linking` |
 | Web | `expo-clipboard` and browser restrictions | Unavailable; no local-storage fallback | `expo-linking` |
-| Windows | Explicit unavailable error | Availability is false; operations reject | Explicit unavailable error |
+| Windows | Native text/HTML clipboard | Project-scoped Credential Manager, 2560-byte value limit | Open/query URLs and initial command-line URL; live activation pending |
 
 Mobile/web consumers declare the libraries used by their platform as dependencies. Tested versions are `expo-clipboard@8.0.8`, `expo-secure-store@15.0.8`, and `expo-linking@8.0.12`. These are optional peers of the individual framework packages; they are development dependencies in this repository for adapter verification, not new required dependencies of the desktop SDK.
 
@@ -75,3 +75,5 @@ On this host, Bun execution in Documents can stall; the saved project environmen
 - Packed iOS, Android, and web consumers: bundles select their platform adapters without desktop TurboModules; mobile autolinking excludes AppKit pods. Local report: `docs/evidence/expo-api-adapters/platforms.json`.
 
 Execution used `/tmp/legend-api-clean`, synchronized from this checkout. Evidence JSON is a local generated artifact under the ignored `docs/evidence` directory. Mobile device execution and Windows native backends are not covered by these results.
+
+Windows backends await native acceptance via `bun run test:windows:features`. Live URL events, association registration, recent documents, and rich clipboard parity are tracked in [Windows issues](windows-issues.md).

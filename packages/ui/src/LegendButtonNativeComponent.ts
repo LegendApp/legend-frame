@@ -3,6 +3,7 @@ import type { DirectEventHandler, WithDefault } from "react-native/Libraries/Typ
 import codegenNativeComponent from "react-native/Libraries/Utilities/codegenNativeComponent";
 
 export interface NativeProps extends ViewProps {
+  onUnavailable?: DirectEventHandler<Readonly<{ message: string }>>;
   title: string;
   disabled?: WithDefault<boolean, false>;
   variant?: WithDefault<"default" | "bordered" | "borderless", "default">;
