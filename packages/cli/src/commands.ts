@@ -1,3 +1,4 @@
+import { checkExpoDesktopNode } from "./expo-node";
 import { appendFileSync, mkdirSync } from "node:fs";
 import path from "node:path";
 import { stateFile } from "./project.ts";
@@ -86,6 +87,7 @@ export function binary(root: string, name: string) {
 export async function doctor(root: string) {
   if (process.platform === "win32") {
     for (const tool of ["node", "bun", "pwsh.exe", "dotnet.exe"]) if (!Bun.which(tool)) throw new Error(`Missing ${tool}; see docs/windows-slice.md.`);
+    await checkExpoDesktopNode(root);
     await run(root, ["pwsh.exe", "-File", path.join(root, "node_modules/react-native-windows/Scripts/rnw-dependencies.ps1")]);
     return;
   }
@@ -96,6 +98,7 @@ export async function doctor(root: string) {
       throw new Error(
         `Missing ${tool}. Install the macOS native prerequisites described in docs/development.md, then retry the build.`,
       );
+  await checkExpoDesktopNode(root);
   await run(root, ["xcodebuild", "-version"], { capture: true });
   await run(root, ["xcrun", "--sdk", "macosx", "--show-sdk-path"], {
     capture: true,

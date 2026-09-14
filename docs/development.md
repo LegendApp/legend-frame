@@ -104,6 +104,8 @@ The prototype supports static `app.json` configuration. Programmatic app configu
 
 ## Native prerequisites
 
+Use Node **24.19.0**, pinned in the checkout's `.nvmrc` (`nvm install && nvm use`). Node 24.12.0 fails to import `AndroidConfig` / `IOSConfig` from Expo's generated CommonJS modules when running Expo Desktop beta. Create/prebuild and the native doctor check the installed Expo Desktop config exports with the actual Node executable on PATH, so incompatible runtimes fail before native generation. This check does not patch Expo or change the Expo Desktop beta pin.
+
 `legend doctor` checks Apple Silicon macOS, Node, Bun, CocoaPods, Xcode, and the macOS SDK. Install full Xcode, complete its first-launch/license setup, and select it with the normal Xcode command-line tools settings. Command Line Tools alone cannot build the generated macOS application. Install CocoaPods in a supported Ruby environment and ensure `pod` is on PATH.
 
 The CLI diagnoses missing tooling; it does not silently install Xcode or accept licenses. Re-run the build or switch after completing setup. No native prerequisites are invoked for a compatible prebuilt Go launch.

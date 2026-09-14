@@ -46,6 +46,8 @@ bun run legend sdk pack
 bun run legend sdk build-go
 ```
 
+Use Node 24.19.0 (`nvm install && nvm use` in this checkout). Older Node 24 releases can fail on Expo Desktop beta's CommonJS imports; see [native prerequisites](docs/development.md#native-prerequisites).
+
 `pack` creates SDK package archives and Expo Desktop-compatible application templates, then registers their manifest. `build-go` creates or refreshes the SDK's managed build project, compiles the generic native runtime, and registers it for app development.
 
 If you already have a compatible runtime, register it instead of building it:

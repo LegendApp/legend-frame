@@ -1,3 +1,4 @@
+import { checkExpoDesktopNode } from "./expo-node";
 import { configureExample, type Example } from "./examples";
 import { hostPlatform, type AppPlatform } from "./platform.ts";
 import { nodeCommand } from "./windows.ts";
@@ -26,6 +27,7 @@ export async function refreshLocalPackages(root: string, manifest: string) {
 }
 
 export async function create(root: string, archiveManifest: string, platform: AppPlatform = hostPlatform(), universal = false, example?: Example) {
+  await checkExpoDesktopNode(path.resolve(import.meta.dir, ".."));
   const variant = universal || example ? "universal" : platform === "macos" ? "blank-typescript" : "windows";
   const source = path.resolve(import.meta.dir, "../templates", variant);
   const temporary = mkdtempSync(path.join(os.tmpdir(), "legend-create-"));

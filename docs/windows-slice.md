@@ -8,7 +8,7 @@ The current scope is Go and custom development builds on Windows x64. The Window
 
 ## Set up the Windows machine
 
-Use Windows 11 x64 with an interactive desktop, Node.js 22 or 24, Bun 1.3.14+, Git, PowerShell 7 (`pwsh.exe` on PATH), and the React Native Windows native prerequisites. The pinned RNW 0.81.35 template uses **Visual Studio 2026 / MSVC v145**. Its prerequisite script checks VS 18.6.1+, .NET SDK 10, and the Windows 11 SDK 22621 component; an older VS 2022-only installation does not match this template. See [RNW environment setup](https://microsoft.github.io/react-native-windows/docs/getting-started).
+Use Windows 11 x64 with an interactive desktop, Node.js 24.19.0 (the tested version in `.nvmrc`), Bun 1.3.14+, Git, PowerShell 7 (`pwsh.exe` on PATH), and the React Native Windows native prerequisites. The pinned RNW 0.81.35 template uses **Visual Studio 2026 / MSVC v145**. Its prerequisite script checks VS 18.6.1+, .NET SDK 10, and the Windows 11 SDK 22621 component; an older VS 2022-only installation does not match this template. See [RNW environment setup](https://microsoft.github.io/react-native-windows/docs/getting-started).
 
 Use this repository normally. From its root in PowerShell:
 

@@ -1,3 +1,4 @@
+import { checkExpoDesktopNode } from "./expo-node";
 import { cpSync, existsSync, mkdirSync, readdirSync, rmSync, readFileSync, writeFileSync } from "node:fs";
 import path from "node:path";
 import { createRequire } from "node:module";
@@ -11,6 +12,7 @@ export function nodeCommand(root: string, name: string, bin: string, args: strin
   return ["node", path.resolve(path.dirname(file), typeof pkg.bin === "string" ? pkg.bin : pkg.bin[bin]), ...args];
 }
 export async function prepareWindows(root: string, mode: "go" | "dev") {
+  await checkExpoDesktopNode(root);
   prepareConfig(root);
   const packages = nativePackages(root);
   validateBuildModules(mode, packages);
