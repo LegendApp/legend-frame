@@ -154,7 +154,7 @@ For external libraries, prefer their upstream imports and documentation. Legend 
 
 ## One app for mobile, web, and desktop
 
-`bun run settings /tmp/MySettings` packs the shared Settings template and creates it through Expo Desktop beta. It uses the existing capability adapters, ordinary React Native layout, and native `Button`, `TextInput`, and `Select` controls from `@legend-apps/ui`. Mobile controls use the pinned Expo UI backend; desktop and web select their own implementations.
+`bun run settings /tmp/MySettings` packs the shared Settings template and creates it through Expo Desktop beta. It uses the existing capability adapters, ordinary React Native layout, and native `Button`, `TextInput`, and `Select` controls from `@legend-apps/ui`. Mobile controls use the pinned Expo UI backend; desktop and web select their own implementations. The starter uses [Uniwind](docs/styling.md) for responsive layout and light/dark/system themes, with optional native control bindings at `@legend-apps/ui/uniwind`. Ordinary `style` props remain supported.
 
 Run `bun run web`, `bun run ios`, `bun run android`, or `bun run macos` inside the generated app. Native targets first need their development build. Windows uses WinUI controls with visible, noninteractive fallbacks if native initialization fails; native Windows acceptance is still pending. Track remaining work in [known Windows issues](docs/windows-issues.md). See [the shared Settings guide](docs/universal-settings.md) for build commands, platform status, and verification.
 

@@ -32,6 +32,10 @@ All controls accept `style` for React Native layout and `testID`. Layout styles 
 
 Native bridge types, Expo modifier arrays, and backend-specific props are private implementation details. A future upstream implementation can replace a backend when it satisfies these contracts and their behavior checks without changing application imports. This package does not require a framework layout or routing system.
 
+## Optional Uniwind bindings
+
+Import the same three controls from `@legend-apps/ui/uniwind` to add `className` through upstream `withUniwind` on native platforms and `useResolveClassNames` on web. Classes map to the existing layout `style`, with explicit styles taking precedence. The base entry has no Uniwind dependency at runtime. See [styling setup, themes, and limitations](styling.md).
+
 ## Integration and verification
 
 The kitchen sink's **Native UI** card exercises activation, disabled state, dynamic labels, remounting, text editing, and semantic selection. The Settings starter demonstrates the same imports across targets.

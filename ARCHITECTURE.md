@@ -164,7 +164,7 @@ Test-only packages must not ship in Go or distribution artifacts. Keep them in e
 
 ## Universal application target selection
 
-The [shared Settings starter](docs/universal-settings.md) owns one application source and manifest for five targets. It uses the existing desktop session/build pipeline and Expo's mobile/web pipeline. The starter has an ordinary Expo root entry; Runtimes and Router integration are not part of this slice.
+The [shared Settings starter](docs/universal-settings.md) owns one application source and manifest for five targets. It uses the existing desktop session/build pipeline and Expo's mobile/web pipeline. Styling remains an application concern: the starter wraps the existing Metro factory with Uniwind, owns its Tailwind theme tokens, and uses optional `@legend-apps/ui/uniwind` bindings for native control layout. The base UI contract stays `style` and does not import Uniwind. See [styling](docs/styling.md). The starter has an ordinary Expo root entry; Runtimes and Router integration are not part of this slice.
 
 `desktop.config.json.platforms` describes application support; `LEGEND_PLATFORM` selects one invocation. Shared `expo` configuration merges with `expoByPlatform[target]` without mutating either. A managed dynamic Expo config reads that selection. Root Metro and React Native configuration dispatch by target rather than being replaced when switching. Mobile autolinking excludes AppKit pods, and desktop configuration excludes the mobile-only Expo backends.
 
@@ -174,7 +174,7 @@ Windows adapters with explicit platform entry points can coexist in a universal 
 
 ## External libraries and background runtimes
 
-[`@legend-apps/ui`](docs/ui.md) uses the same contract/adapter boundary for native controls. Its initial controls are `Button`, uncontrolled `TextInput`, and value-based `Select`: AppKit Fabric components on macOS, Expo UI SwiftUI/Compose adapters on mobile, native HTML controls on web, and explicit Windows unavailability. The capability package is installed separately; it does not require consumers to adopt a framework layout or routing system.
+[`@legend-apps/ui`](docs/ui.md) uses the same contract/adapter boundary for native controls. Its initial controls are `Button`, uncontrolled `TextInput`, and value-based `Select`: AppKit Fabric components on macOS, Expo UI SwiftUI/Compose adapters on mobile, native HTML controls on web, and WinUI controls with visible unavailable-state fallbacks on Windows. The capability package is installed separately; it does not require consumers to adopt a framework layout or routing system.
 
 The framework owns a curated set of public capability contracts, with replaceable platform implementations. The [clipboard, secure-storage, and linking adapters](docs/expo-api-adapters.md) are implemented; they use existing native desktop backends and selected Expo backends on mobile/web, with explicit platform gaps. The [universal API plan](docs/universal-api-plan.md) retains the deferred broader UI and Router-based window proposals. The earlier [API structure review](docs/api-structure-review.md) is historical; its source inventory remains useful.
 

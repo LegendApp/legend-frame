@@ -1,6 +1,6 @@
 # Known Windows issues
 
-Updated 2026-09-13. Windows is an integrated target of the shared framework and Settings screen. Missing functionality is work to finish, not a reason to exclude the platform from shared application code.
+Updated 2026-09-14. Windows is an integrated target of the shared framework and Settings screen. Missing functionality is work to finish, not a reason to exclude the platform from shared application code.
 
 ## Handling incomplete implementations
 
@@ -22,6 +22,7 @@ Updated 2026-09-13. Windows is an integrated target of the shared framework and 
 | WIN-07 | Standalone release/preview builds, signing/packaging and updates are not implemented. Portable SDK/client transfer exists; Windows clean-machine runtime startup is unverified. | Define the Windows distribution contract, implement it, and verify installation/launch/update on a clean machine. This remains outside the current development slice. |
 | WIN-09 | Shared-host secondary React windows, title/show/hide/minimize/maximize, close/quit guards, focused shortcuts, basic menus, main-frame restoration, and single-instance file/URL forwarding now have native host source. AsyncStorage receives an unpackaged project-specific database path. | Compile on Windows; create/edit/close a secondary Notes window, verify failed saves cancel close, trigger Ctrl+N/S/O and menu actions, reopen into the same data/frame, and forward a file to the existing process. Advanced window styles, owned/modal windows, menu placement/targeting and OS association registration remain outside this implementation. |
 | WIN-10 | Music Lite has a native MediaPlayer implementation and system transport controls. | Compile and play/pause/seek/end/error-check local audio; verify media controls, queue restoration, and disposal. |
+| WIN-11 | Settings now bundles Uniwind's native runtime and shared responsive/theme classes. RNW 0.81.35 implements `Appearance.setColorScheme` as a no-op, so manual light/dark choices update app tokens but cannot be assumed to switch WinUI control chrome. | On Windows, verify resizing, system theme changes, manual light/dark/system selection, native control contrast, and unavailable-control frames; implement WinUI theme propagation for manual overrides. |
 | WIN-08 | Secondary Hermes runtimes are not supported by the Windows integration. | Prove upstream/backend support and integrate worker lifecycle, compatibility, and native dependency selection into the existing framework. |
 
 ## Current acceptance commands

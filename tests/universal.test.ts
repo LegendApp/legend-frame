@@ -53,3 +53,23 @@ test("Select keeps semantic values independent of backend indices", () => {
   expect(() => selectionIndex(options, "system")).toThrow("match");
   expect(() => selectionIndex([options[0]!, options[0]!], "light")).toThrow("unique");
 });
+
+test("desktop Metro selects native package exports while preserving application conditions", () => {
+  const root = mkdtempSync(path.join(os.tmpdir(), "legend-metro-conditions-"));
+  const previous = process.env.LEGEND_PLATFORM;
+  try {
+    process.env.LEGEND_PLATFORM = "windows";
+    writeFileSync(path.join(root, "desktop.config.json"), JSON.stringify(shared));
+    const { withDesktop } = require("../packages/cli/src/metro.cjs");
+    const conditions = { web: ["browser"], macos: ["custom"], windows: ["react-native", "custom"] };
+    const config = { projectRoot: root, resolver: { unstable_conditionsByPlatform: conditions } };
+    const result = withDesktop(config, { runtimes: false });
+    expect(result.resolver.unstable_conditionsByPlatform).toEqual({
+      web: ["browser"], macos: ["custom", "react-native"], windows: ["react-native", "custom"],
+    });
+    expect(conditions.macos).toEqual(["custom"]);
+  } finally {
+    if (previous === undefined) delete process.env.LEGEND_PLATFORM; else process.env.LEGEND_PLATFORM = previous;
+    rmSync(root, { recursive: true, force: true });
+  }
+});

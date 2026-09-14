@@ -11,7 +11,7 @@ const framework = path.resolve(import.meta.dir, "..");
 const root = path.resolve(process.argv[2] ?? `.legend/universal-tests/Settings${Date.now()}`);
 await run(framework, ["bun", "scripts/pack.ts"]);
 await create(root, path.join(framework, "artifacts/packages/manifest.json"), "macos", true);
-const shared = ["desktop.config.json", "package.json", "App.tsx", "index.ts", "metro.config.js", "react-native.config.js", "app.config.js"];
+const shared = ["desktop.config.json", "package.json", "App.tsx", "index.ts", "metro.config.js", "react-native.config.js", "app.config.js", "global.css", "uniwind-types.d.ts"];
 const originals = shared.map(file => readFileSync(path.join(root, file), "utf8"));
 const output = path.join(root, ".legend/universal-checks"); mkdirSync(output, { recursive: true });
 const native = ["ios", "android", "windows"];
@@ -43,6 +43,9 @@ for (const platform of ["ios", "android", "web", "windows", "macos"]) {
   const sourceMap = path.join(output, `${platform}.map`);
   await run(root, nodeCommand(root, "expo", "expo", ["export:embed", "--entry-file", "index.ts", "--platform", platform, "--dev", "true", "--max-workers", "2", "--bundle-output", path.join(output, `${platform}.js`), "--sourcemap-output", sourceMap]), { capture: true, env: { CI: "1", LEGEND_PLATFORM: platform } });
   const sources: string[] = readJson(sourceMap).sources;
+  if (!sources.some(source => source.includes(`@legend-apps/ui/uniwind${platform === "web" ? ".web.ts" : ".ts"}`))) throw new Error(`${platform} did not load optional UI bindings`);
+  const uniwindRuntime = platform === "web" ? "dist/module/core/config/config.js" : "src/core/config/config.native.ts";
+  if (!sources.some(source => source.includes(`uniwind/${uniwindRuntime}`))) throw new Error(`${platform} selected the wrong Uniwind runtime`);
   const adapter = platform === "macos" ? "index.tsx" : `index.${platform}.tsx`;
   if (!sources.some(source => source.includes(`@legend-apps/ui/src/${adapter}`))) throw new Error(`${platform} did not select its UI adapter`);
   if (!["macos", "windows"].includes(platform) && sources.some(source => /Legend(?:Button|TextInput|Select)NativeComponent|NativeDesktop/.test(source))) throw new Error(`${platform} loads an AppKit native binding`);

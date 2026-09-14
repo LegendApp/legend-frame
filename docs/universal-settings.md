@@ -40,12 +40,13 @@ Windows uses the existing [integrated Windows host and CLI](windows-slice.md). T
 
 ## What the screen demonstrates
 
-- Enter a display name and choose an appearance preference; React state updates the preview.
+- Enter a display name and choose light, dark, or system appearance; the screen applies the theme through Uniwind.
+- Resize the screen: app-owned Tailwind tokens style ordinary React Native content and optional bindings size the native controls. See [styling with Uniwind](styling.md).
 - Copy the preferences using the shared Clipboard contract.
 - Round-trip a disposable synthetic SecureStore value and delete it. Web reports that secure storage is unavailable.
 - Open the Legend website through the Linking adapter.
 
-Preferences are held in memory; this example does not yet persist them or apply an application-wide theme. There is no router or declarative window manager in this slice.
+Preferences and theme selection are held in memory; this example does not yet persist them. There is no router or declarative window manager in this slice.
 
 ## Configuration and target switching
 

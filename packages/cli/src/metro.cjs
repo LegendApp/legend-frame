@@ -16,6 +16,13 @@ function runtimePlan(root, env = process.env) {
     .map(e => e.name).concat(["src"]) };
 }
 function withDesktop(config, options = {}) {
+  // Expo 54 sets the react-native export condition only for iOS/Android.
+  // Desktop must also select native package exports (e.g. Uniwind's runtime).
+  const conditions = { ...config.resolver?.unstable_conditionsByPlatform };
+  for (const platform of ["macos", "windows"]) {
+    conditions[platform] = [...new Set([...(conditions[platform] || []), "react-native"])];
+  }
+  config = { ...config, resolver: { ...config.resolver, unstable_conditionsByPlatform: conditions } };
   const root = path.resolve(config.projectRoot || process.cwd());
   const { readConfig } = require("@legend-apps/desktop-config/config.cjs");
   const windows = readConfig(root).expo?.platforms?.join() === "windows";

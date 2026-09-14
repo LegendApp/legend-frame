@@ -65,7 +65,9 @@
     "@legend-apps/audio": "workspace:*",
     "@react-native-async-storage/async-storage": "2.2.0",
     "expo-audio": "1.1.1",
-    "diff": "8.0.2"
+    "diff": "8.0.2",
+    "uniwind": "1.6.3",
+    "tailwindcss": "4.2.4"
   },
   "overrides": {
     "react": "19.1.4",
