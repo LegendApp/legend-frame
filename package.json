@@ -30,6 +30,7 @@
     "test:api-platforms": "bun scripts/test-api-platforms.ts",
     "test:ui": "bun scripts/test-ui.ts",
     "test:universal": "bun scripts/test-universal.ts",
+    "test:universal:dev": "bun scripts/test-universal-dev.ts",
     "test:templates": "bun scripts/test-templates.ts",
     "test:add-desktop": "bun scripts/test-add-desktop.ts",
     "document-editor": "bun scripts/document-editor.ts",

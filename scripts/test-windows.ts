@@ -86,7 +86,7 @@ export default function App() {
 `);
     stage("Launch through legend dev and execute the native core with Hermes");
     mkdirSync(stateFile(root, "logs"), { recursive: true });
-    session = startSession(["--go", go.app]);
+    session = startSession(["--go-binary", go.app]);
     await wait(() => proof?.marker === "initial", "The native Go app did not report");
     if (!proof.hermes || proof.native.fingerprint !== go.runtime.fingerprint || proof.native.mode !== "go") throw new Error("Wrong Go runtime or JavaScript engine");
     pass(proof);

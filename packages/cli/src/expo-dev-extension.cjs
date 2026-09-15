@@ -48,4 +48,4 @@ if (process.send) {
   process.on('disconnect', () => process.exit());
 }
 
-module.exports = { commands, integrateCommands, handleKey, ready: port => process.send({ type: 'legend:ready', port }) };
+module.exports = { commands, integrateCommands, handleKey, ready: (port, options) => process.send({ type: 'legend:ready', port, options }) };

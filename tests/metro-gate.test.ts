@@ -11,6 +11,7 @@ test("the live gate blocks incompatible or incomplete state before serving appli
   const root = mkdtempSync(path.join(os.tmpdir(), "legend-gate-"));
   try {
     mkdirSync(path.join(root, ".legend"));
+    writeFileSync(path.join(root, "app.json"), JSON.stringify({ expo: { platforms: ["macos"] } }));
     const session = path.join(root, ".legend/session.json");
     let served = 0;
     const middleware = gate(root, () => served++);
@@ -34,4 +35,30 @@ test("the live gate blocks incompatible or incomplete state before serving appli
   } finally {
     rmSync(root, { recursive: true, force: true });
   }
+});
+
+
+test("desktop compatibility is isolated by request platform in one Metro session", () => {
+  const root = mkdtempSync(path.join(os.tmpdir(), "legend-gate-universal-"));
+  try {
+    writeFileSync(path.join(root, "desktop.config.json"), JSON.stringify({ platforms: ["ios", "android", "web", "macos", "windows"] }));
+    for (const platform of ["macos", "windows"]) {
+      mkdirSync(path.join(root, ".legend/platforms", platform), { recursive: true });
+      writeFileSync(path.join(root, ".legend/platforms", platform, "session.json"), JSON.stringify({ compatible: platform === "windows" }));
+    }
+    const served: string[] = [];
+    const middleware = gate(root, (req: any) => served.push(req.url));
+    for (const platform of ["ios", "android", "web", "windows", "macos"]) {
+      const response = { statusCode: 200, end(_body: string) {} };
+      middleware({ url: `/index.bundle?dev=true&platform=${platform}` }, response);
+      expect(response.statusCode).toBe(platform === "macos" ? 409 : 200);
+    }
+    expect(served).toHaveLength(4);
+    writeFileSync(path.join(root, ".legend/platforms/macos/session.json"), "{");
+    const response = { statusCode: 200, end(_body: string) {} };
+    middleware({ url: "/index.bundle?platform=ios" }, response);
+    expect(response.statusCode).toBe(200);
+    middleware({ url: "/index.delta?platform=macos" }, response);
+    expect(response.statusCode).toBe(503);
+  } finally { rmSync(root, { recursive: true, force: true }); }
 });

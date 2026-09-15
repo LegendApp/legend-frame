@@ -2,7 +2,7 @@ import { expect, test } from "bun:test";
 import { mkdtempSync, mkdirSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import os from "node:os";
 import path from "node:path";
-import { prepareConfig, readConfig, statePath, toExpo } from "@legend-apps/desktop-config/config.cjs";
+import { prepareConfig, readConfig, statePath, toExpo, expoConfig, developmentConfig } from "@legend-apps/desktop-config/config.cjs";
 import { selectionIndex } from "../packages/ui/src/select";
 
 const shared = {
@@ -70,6 +70,41 @@ test("desktop Metro selects native package exports while preserving application 
     expect(conditions.macos).toEqual(["custom"]);
   } finally {
     if (previous === undefined) delete process.env.LEGEND_PLATFORM; else process.env.LEGEND_PLATFORM = previous;
+    rmSync(root, { recursive: true, force: true });
+  }
+});
+
+
+test("one development config exposes all platforms without desktop native exclusions", () => {
+  const before = JSON.stringify(shared);
+  for (const target of shared.platforms) {
+    const config = developmentConfig(shared, target);
+    expect(config.platforms).toEqual(shared.platforms);
+    expect(config.autolinking?.exclude ?? []).not.toContain("@expo/ui");
+    expect(config.extra.application).toBe("preserved");
+    expect(config.ios.infoPlist).toEqual({ Existing: true });
+  }
+  expect(JSON.stringify(shared)).toBe(before);
+  const root = mkdtempSync(path.join(os.tmpdir(), "legend-session-config-"));
+  const previous = { target: process.env.LEGEND_PLATFORM, session: process.env.LEGEND_DEV_SESSION };
+  try {
+    process.env.LEGEND_PLATFORM = "macos";
+    process.env.LEGEND_DEV_SESSION = "1";
+    writeFileSync(path.join(root, "desktop.config.json"), JSON.stringify(shared));
+    mkdirSync(path.join(root, ".legend/platforms/macos"), { recursive: true });
+    writeFileSync(statePath(root, "native-selection.json"), JSON.stringify({ excluded: ["mobile-only-module"] }));
+    expect(expoConfig(root).platforms).toEqual(shared.platforms);
+    expect(expoConfig(root).autolinking).toBeUndefined();
+    // The supervisor's native compatibility reader keeps its target semantics.
+    expect(readConfig(root).expo.platforms).toEqual(["macos"]);
+    expect(readConfig(root).expo.autolinking.exclude).toContain("@expo/ui");
+    delete process.env.LEGEND_DEV_SESSION;
+    expect(expoConfig(root).platforms).toEqual(["macos"]);
+    expect(expoConfig(root).autolinking.exclude).toEqual(["@expo/ui", "mobile-only-module"]);
+  } finally {
+    for (const [key, value] of [["LEGEND_PLATFORM", previous.target], ["LEGEND_DEV_SESSION", previous.session]]) {
+      if (value === undefined) delete process.env[key!]; else process.env[key!] = value;
+    }
     rmSync(root, { recursive: true, force: true });
   }
 });

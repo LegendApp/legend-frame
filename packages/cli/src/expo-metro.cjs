@@ -1,12 +1,13 @@
 const { createRequire } = require('node:module');
 const path = require('node:path');
 const defaults = new Map();
+const desktopSession = () => process.env.LEGEND_DEV_SESSION === '1' || ['macos', 'windows'].includes(process.env.LEGEND_PLATFORM);
 
 // A drop-in getDefaultConfig import: let upstream supply each target's defaults
 // before the application's existing Metro customizations are applied.
 exports.getDefaultConfig = (root, ...options) => {
   const requireApp = createRequire(path.join(root, 'package.json'));
-  const config = ['macos', 'windows'].includes(process.env.LEGEND_PLATFORM)
+  const config = desktopSession()
     ? requireApp('expo-desktop-metro-config').makeMetroConfig(root, ...options)
     : requireApp('expo/metro-config').getDefaultConfig(root, ...options);
   defaults.set(path.resolve(root), { resolveRequest: config.resolver.resolveRequest, rewriteRequestUrl: config.server?.rewriteRequestUrl });
@@ -14,7 +15,7 @@ exports.getDefaultConfig = (root, ...options) => {
 };
 
 exports.withLegendMetro = config => {
-  if (!['macos', 'windows'].includes(process.env.LEGEND_PLATFORM)) return config;
+  if (!desktopSession()) return config;
   if (config && typeof config.then === 'function') return config.then(exports.withLegendMetro);
   if (!config || typeof config !== 'object') throw new Error('Legend needs an object or promise from metro.config');
   const upstream = defaults.get(path.resolve(config.projectRoot || process.cwd()));

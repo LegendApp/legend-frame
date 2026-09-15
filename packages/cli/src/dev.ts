@@ -7,7 +7,7 @@ import { run, cancelCommands } from "./commands.ts";
 import { build } from "./build.ts";
 import { createRequire } from "node:module";
 const { preparePatch } = createRequire(import.meta.url)("./expo-dev-patch.cjs");
-import { availablePort, findGo, readRuntime, registerRuntime } from "./local.ts";
+import { findGo, readRuntime, registerRuntime } from "./local.ts";
 import { sessionStatus } from "./session-status.ts";
 import {
   prepareConfig,
@@ -23,9 +23,12 @@ import {
   type Runtime,
 } from "./project.ts";
 
-export async function launch(root: string, app: string, port?: number) {
+type BundleOptions = { dev?: boolean; minify?: boolean; https?: boolean };
+
+export async function launch(root: string, app: string, port?: number, options: BundleOptions = {}) {
   if (readRuntime(app)?.platform === "windows") {
     if (process.platform !== "win32") throw new Error("Launch the Windows runtime on Windows.");
+    if (options.https || options.dev === false || options.minify) throw new Error("The Windows development host currently requires HTTP development bundles without minification. Restart dev without --https, --no-dev, or --minify to open Windows; mobile/web can use the current session.");
     return Bun.spawn([path.join(app, "MyApp.exe")], { cwd: app, env: { ...process.env, ...projectEnvironment(root), LEGEND_METRO_PORT: String(port ?? 8081) }, stdout: "inherit", stderr: "inherit" });
   }
   const info = await run(
@@ -40,8 +43,7 @@ export async function launch(root: string, app: string, port?: number) {
   );
   const executable = path.join(app, "Contents/MacOS", info.trim());
   const runtimeFile = path.join(app, "Contents/Resources/legend-runtime.json");
-  const developmentJS =
-    !existsSync(runtimeFile) || readJson(runtimeFile).mode !== "preview";
+  const developmentJS = options.dev ?? (!existsSync(runtimeFile) || readJson(runtimeFile).mode !== "preview");
   // Direct executable launch retains the exact product path and process ownership.
   // RN's native packager websocket reads RCT_jsLocation independently of the
   // JS bundle URL. The process argument domain avoids persistent preference edits.
@@ -54,7 +56,7 @@ export async function launch(root: string, app: string, port?: number) {
         ...projectEnvironment(root),
         ...(port
           ? {
-              LEGEND_BUNDLE_URL: `http://127.0.0.1:${port}/index.bundle?platform=macos&dev=${developmentJS}&minify=false`,
+              LEGEND_BUNDLE_URL: `${options.https ? "https" : "http"}://127.0.0.1:${port}/index.bundle?platform=macos&dev=${developmentJS}&minify=${options.minify ?? false}`,
             }
           : {}),
       },
@@ -66,12 +68,13 @@ export async function launch(root: string, app: string, port?: number) {
 export async function dev(
   root: string,
   goApp: string | undefined,
-  requestedPort?: number,
+  expoArgs: string[] = [],
   noOpen = false,
 ) {
   const platform = projectPlatform(root);
   preparePatch(root);
-  const port = await availablePort(requestedPort);
+  let port: number | undefined;
+  let bundleOptions: BundleOptions = {};
   let target: "go" | "dev" = "go";
   const settingsFile = stateFile(root, "settings.json");
   const settings = existsSync(settingsFile) ? readJson(settingsFile) : {};
@@ -103,20 +106,21 @@ export async function dev(
       previous.kill();
       await previous.exited;
     }
+    if (closing) return;
     let ready!: (port: number) => void;
     const started = new Promise<number>(resolve => { ready = resolve; });
     const [, expo, ...args] = nodeCommand(root, "expo", "expo", [
-      "start", "--localhost", "--port", String(port), "--max-workers", "2",
+      "start", root, ...(port ? ["--port", String(port)] : []), ...expoArgs,
     ]);
     // Expo owns stdin and the terminal. JSON IPC carries desktop actions only;
     // reload, debugger, mobile/web actions, prompts and shutdown remain Expo's.
     const child = Bun.spawn([
       "node", "--require", path.join(import.meta.dir, "expo-dev-preload.cjs"), expo!, ...args,
     ], {
-      cwd: root, env: { ...process.env, LEGEND_PLATFORM: platform },
+      cwd: root, env: { ...process.env, LEGEND_PLATFORM: platform, LEGEND_DEV_SESSION: "1" },
       stdin: "inherit", stdout: "inherit", stderr: "inherit", serialization: "json",
       ipc(message, sender) {
-        if (message?.type === "legend:ready") ready(message.port);
+        if (message?.type === "legend:ready") { bundleOptions = message.options ?? {}; ready(message.port); }
         if (message?.type === "legend:action") {
           void action(message.action).then(
             () => { if (sender.exitCode === null) sender.send({ type: "legend:result", id: message.id }); },
@@ -140,11 +144,28 @@ export async function dev(
         child.exited.then(code => { throw new Error(`Expo exited before starting (exit ${code}). See its output above.`); }),
         new Promise<never>((_, reject) => { timeout = setTimeout(() => reject(new Error("Expo did not become ready.")), 60_000); }),
       ]);
-      if (actualPort !== port) throw new Error(`Expo selected port ${actualPort}; expected ${port}. Restart dev with an available port.`);
+      if (!Number.isInteger(actualPort) || actualPort < 1) throw new Error("Expo did not provide its Metro port.");
+      port = actualPort;
+      await check();
       restartPending = false;
     } finally { clearTimeout(timeout); }
   }
   async function check() {
+    if (closing) return false;
+    try { return await inspectRuntime(); }
+    catch (error) {
+      current = undefined;
+      canBuild = false;
+      if (appProcess?.exitCode === null) { appProcess.kill(); await appProcess.exited; }
+      if (closing) return false;
+      const reason = String(error);
+      writeJson(stateFile(root, "session.json"), { compatible: false, reason, target, port, canBuild });
+      if (metro?.exitCode === null) metro.send({ type: "legend:state", state: { target, canBuild } });
+      if (status !== reason) { status = reason; console.error(`\n› Desktop: ${reason}`); }
+      return false;
+    }
+  }
+  async function inspectRuntime() {
     const native = nativePackages(root);
     current = undefined;
     if (target === "go") {
@@ -188,6 +209,7 @@ export async function dev(
       appProcess = undefined;
       reopenPending = true;
     }
+    if (closing) return false;
     canBuild = view.canBuild;
     const next = view.message;
     writeJson(stateFile(root, "session.json"), {
@@ -211,6 +233,9 @@ export async function dev(
     return view.compatible;
   }
   async function open() {
+    if (platform === "windows" ? process.platform !== "win32" : process.platform !== "darwin") {
+      throw new Error(`Open ${platform} on a matching desktop host. Mobile and web remain available.`);
+    }
     if ((await check()) && current) {
       if (restartPending) await startMetro();
       if (closing) return;
@@ -218,7 +243,7 @@ export async function dev(
         appProcess.kill();
         await appProcess.exited;
       }
-      appProcess = await launch(root, current.app, port);
+      appProcess = await launch(root, current.app, port, bundleOptions);
       if (closing) { appProcess.kill(); return; }
       launchedRuntime = { app: current.app, fingerprint: current.runtime.fingerprint };
       reopenPending = false;
@@ -267,7 +292,7 @@ export async function dev(
     cancelCommands(root);
     rmSync(stateFile(root, "session.json"), { force: true });
     if (process.stdin.isTTY) process.stdin.setRawMode(false);
-    finish();
+    void Promise.allSettled([metro?.exited, appProcess?.exited]).then(finish);
   }
   let debounce: ReturnType<typeof setTimeout> | undefined;
   // Suspend bundle requests promptly while a package manager changes the graph.
@@ -307,11 +332,11 @@ export async function dev(
         stamp = next;
       }
       const compatible = await check();
-      if (restartPending && compatible) {
+      if (restartPending) {
         const wasOpen = appProcess?.exitCode === null || reopenPending;
         await startMetro();
         // A new Metro dependency map needs a fresh app connection, not the old HMR graph.
-        if (wasOpen) await open();
+        if (wasOpen && compatible) await open();
       }
     } catch (error) {
       writeJson(stateFile(root, "session.json"), {
@@ -330,7 +355,7 @@ export async function dev(
     busy = true;
     await check();
     await startMetro();
-    if (!noOpen) await open();
+    if (!noOpen) await open().catch(error => console.error(String(error)));
   } catch (error) {
     close();
     process.off("SIGINT", close);

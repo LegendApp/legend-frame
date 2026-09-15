@@ -16,7 +16,7 @@ const patches = [
     `    const onPressAsync = async (key)=>{\n        try {\n            if (await require(${extension}).handleKey(key)) return;\n        } catch (error) {\n            _log.exception(error);\n            return;\n        }`],
   ['startAsync.js', '0e062078e63ad6264b1393d403ad56d65a38c6430d30fdac50cd656486cd418b',
     '    mcpServer == null ? void 0 : mcpServer.start();',
-    `    mcpServer == null ? void 0 : mcpServer.start();\n    require(${extension}).ready(devServerManager.getNativeDevServerPort());`],
+    `    mcpServer == null ? void 0 : mcpServer.start();\n    require(${extension}).ready(devServerManager.getNativeDevServerPort(), { dev: options.dev, minify: options.minify, https: options.https });`],
 ];
 
 function preparePatch(root) {

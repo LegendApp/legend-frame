@@ -8,3 +8,6 @@ export function isExpoProject(root: string): boolean;
 export function statePath(root: string, name: string, target?: string): string;
 export function selectTarget(platforms: string[], target?: string): string;
 export function expoConfig(root: string): any;
+
+export function supportedPlatforms(root: string): string[];
+export function developmentConfig(value: any, target?: string): any;

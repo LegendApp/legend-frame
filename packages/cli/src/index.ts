@@ -15,13 +15,15 @@ import { initializeUpdates } from "./updates.ts";
 import { packageApp } from "./package.ts";
 import { credentials } from "./credentials.ts";
 import { build, analyze } from "./build.ts";
-import { dev, launch } from "./dev.ts";
+import { launch } from "./dev.ts";
 import { doctor, run } from "./commands.ts";
 import { findFramework, findProject, legendHome, packageManifest, registerRuntime } from "./local.ts";
 import { readJson, stateFile, VERSION, writeJson } from "./project.ts";
+import { devCommand } from "./dev-command";
 
-try {
+async function main() {
   const argv = process.argv.slice(2);
+  if (argv[0] === "dev") return devCommand(argv.slice(1));
   const { positionals, values } = parseArgs({
     args: argv,
     allowPositionals: true,
@@ -34,7 +36,7 @@ try {
       platform: { type: "string" },
       packages: { type: "string" },
       port: { type: "string" },
-      go: { type: argv[0] === "dev" ? "string" : "boolean" },
+      go: { type: "boolean" },
       dev: { type: "boolean" },
       release: { type: "boolean" },
       preview: { type: "boolean" },
@@ -53,12 +55,12 @@ try {
   const port = values.port === undefined ? undefined : Number(values.port);
   if (port !== undefined && (!Number.isInteger(port) || port < 1 || port > 65535)) throw new Error("Port must be an integer between 1 and 65535.");
   const command = positionals[0];
-  if (!values.help && !values.platform && !(command === "open" && positionals[1]) && ["dev", "build", "prebuild", "analyze", "package", "open", "updates", "credentials"].includes(command ?? "") && isExpoProject(project())) {
+  if (!values.help && !values.platform && !(command === "open" && positionals[1]) && ["build", "prebuild", "analyze", "package", "open", "updates", "credentials"].includes(command ?? "") && isExpoProject(project())) {
     process.env.LEGEND_PLATFORM = readConfig(project()).expo.platforms[0];
   }
   if (values.example && (command !== "create" || !examples.includes(values.example as Example))) throw new Error(`Use create --example ${examples.join(" | ")}`);
   if (values.universal && command !== "create") throw new Error("--universal is a create option.");
-  if (!values.help && ["dev", "build", "prebuild"].includes(command ?? "")) {
+  if (!values.help && ["build", "prebuild"].includes(command ?? "")) {
     const root = project();
     const selected = readConfig(root).expo.platforms[0];
     if (["ios", "android", "web"].includes(selected)) {
@@ -66,13 +68,13 @@ try {
       if (command === "prebuild" && selected === "web") throw new Error("Web has no native project to prebuild.");
       if (values.go || values.release || values.preview || (command === "build" && !values.dev)) throw new Error("Mobile builds use --dev in this slice; Expo owns mobile distribution workflows.");
       prepareConfig(root);
-      const args = command === "dev" ? ["start", ...(selected === "web" ? [] : ["--dev-client"]), ...(values["no-open"] ? [] : [`--${selected}`]), ...(port ? ["--port", String(port)] : [])] : command === "prebuild" ? ["prebuild", "--platform", selected, "--no-install"] : [`run:${selected}`, ...(values.device ? ["--device", values.device] : []), ...(port ? ["--port", String(port)] : [])];
+      const args = command === "prebuild" ? ["prebuild", "--platform", selected, "--no-install"] : [`run:${selected}`, ...(values.device ? ["--device", values.device] : []), ...(port ? ["--port", String(port)] : [])];
       const manifest = readFileSync(path.join(root, "package.json"), "utf8");
       try {
         const child = Bun.spawn(nodeCommand(root, "expo", "expo", args), { cwd: root, env: process.env, stdin: "inherit", stdout: "inherit", stderr: "inherit" });
         process.exitCode = await child.exited;
       } finally {
-        if (command !== "dev") writeFileSync(path.join(root, "package.json"), manifest);
+        writeFileSync(path.join(root, "package.json"), manifest);
       }
       process.exit(process.exitCode);
     }
@@ -98,7 +100,7 @@ Windows: dev and build --dev; production builds are not yet supported.
 SDK transfer: sdk export <directory> [--runtime <Go directory>], sdk import <directory>
 SDK maintainers: sdk pack, sdk build-go [--platform windows], sdk register <runtime directory>
 Targets: dev/build/prebuild --platform macos|windows|ios|android|web
-Overrides: --project <directory>, --port <number>, dev --go <Go.app>, create --packages <manifest>`);
+Overrides: --project <directory>, --port <number>, dev --go-binary <Go.app>, create --packages <manifest>`);
   } else switch (command) {
     case "add": {
       if (positionals[1] !== "desktop") throw new Error("Usage: legend add desktop [--project <Expo app>]");
@@ -191,9 +193,6 @@ Overrides: --project <directory>, --port <number>, dev --go <Go.app>, create --p
       console.log(JSON.stringify({ included: result.included.map((p) => p.name), excluded: result.excluded.map((p) => p.name) }, null, 2));
       break;
     }
-    case "dev":
-      await dev(project(), values.go as string | undefined, port, !!values["no-open"]);
-      break;
     case "open": {
       // No path opens the project's last standalone build. In-session `o` opens the development runtime.
       const root = positionals[1] ? start : project();
@@ -207,6 +206,10 @@ Overrides: --project <directory>, --port <number>, dev --go <Go.app>, create --p
     }
     default: throw new Error(`Unknown command: ${command}. Run legend --help.`);
   }
+}
+
+try {
+  await main();
 } catch (error) {
   console.error(error instanceof Error ? error.message : String(error));
   process.exitCode = 1;

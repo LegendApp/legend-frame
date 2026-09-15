@@ -50,7 +50,22 @@ function readConfig(root, target = process.env.LEGEND_PLATFORM) {
   const result = toExpo(JSON.parse(fs.readFileSync(file, "utf8")), target);
   return result;
 }
+function supportedPlatforms(root) {
+  const file = path.join(root, filename);
+  if (fs.existsSync(file)) return JSON.parse(fs.readFileSync(file, "utf8")).platforms ?? ["macos"];
+  return readConfig(root).expo.platforms ?? ["ios", "android", "web"];
+}
+// A live server has no single build target. Platform build overlays (notably
+// native autolinking exclusions) must not leak into other platforms' JS graphs.
+function developmentConfig(value, target) {
+  const result = toExpo({ ...value, expoByPlatform: {} }, target).expo;
+  result.platforms = value.platforms ?? ["macos"];
+  return result;
+}
 function expoConfig(root) {
+  if (process.env.LEGEND_DEV_SESSION === "1") {
+    return developmentConfig(JSON.parse(fs.readFileSync(path.join(root, filename), "utf8")), process.env.LEGEND_PLATFORM);
+  }
   const result = readConfig(root);
   return applySelection(root, result.expo);
 }
@@ -143,4 +158,4 @@ function writeUpdates(root, updates) {
     fs.writeFileSync(temporary, JSON.stringify(value, null, 2) + "\n"); fs.renameSync(temporary, target);
   }
 }
-module.exports = { readConfig, toExpo, prepareConfig, writeUpdates, statePath, isUniversal, isExpoProject, selectTarget, expoConfig, applySelection };
+module.exports = { readConfig, toExpo, prepareConfig, writeUpdates, statePath, isUniversal, isExpoProject, selectTarget, expoConfig, applySelection, supportedPlatforms, developmentConfig };
