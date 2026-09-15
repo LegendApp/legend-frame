@@ -232,3 +232,25 @@ logic. The source and ABI header are in this repo; no upstream merge is required
 An RNW upgrade must review that adapter. Native acceptance still needs external
 Explorer/browser drops, outbound dragging, nested/clipped targets, scrolling,
 disabled targets, child-button input, cancellation and reload cleanup on Windows.
+
+## Notifications implementation (native acceptance pending)
+
+Windows uses inbox toast APIs and a project-scoped classic COM activator. The
+module registers a per-user Start menu shortcut and activation identity pointing
+to the current executable, including the prebuilt project's launch context. It
+supports immediate and scheduled notifications, pending/delivered enumeration,
+project-scoped cancellation and clearing, live dismissal, and warm/cold clicks.
+The shared response API subscribes before draining the host's bounded cold-launch
+queue and deduplicates responses. Registration needs to be refreshed after moving
+or rebuilding the executable.
+
+Windows notification permission is controlled in Settings; requestPermission
+reports that setting. Initial identity registration follows the Windows Community
+Toolkit's silent, immediately removed toast workaround for unpackaged scheduling.
+Windows does not activate a closed app on dismissal; dismiss responses are only
+available for immediate notifications while the module remains alive.
+
+Run “Check notifications” in platform acceptance. Also schedule a notification,
+exit the app, and click it after delivery with Metro running; check the original
+project, notification ID, and data. Repeat with the app already running and with
+notifications disabled in Settings. These checks have not run on Windows here.

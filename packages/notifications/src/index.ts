@@ -1,5 +1,6 @@
 import Native from "./NativeDesktopNotifications";
-import { onDesktopEvent } from "@legend-apps/desktop-app";
+import { Platform } from "react-native";
+import { onDesktopEvent, callApp } from "@legend-apps/desktop-app";
 
 export type NotificationPermission = "notDetermined" | "denied" | "authorized" | "provisional" | "unknown";
 export type DesktopNotification = {
@@ -46,7 +47,7 @@ export async function onNotificationResponse(listener: (response: NotificationRe
     listener(response);
   }
   const sub = onDesktopEvent(event => { if (event.type === "notificationResponse") receive(event as NotificationResponse); });
-  try { for (const response of await call<NotificationResponse[]>("responses")) receive(response); }
+  try { for (const response of (Platform.OS === "windows" ? await callApp<NotificationResponse[]>("notificationResponses") : await call<NotificationResponse[]>("responses"))) receive(response); }
   catch (error) { sub.remove(); throw error; }
   return { remove() { removed = true; sub.remove(); } };
 }

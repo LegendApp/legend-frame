@@ -46,8 +46,8 @@ export const catalog: CaseDefinition[] = [
   definition("desktop.processes", "Child process lifecycle", "api", desktop),
   definition("desktop.system", "System APIs", "api", desktop),
   definition("desktop.drag-drop", "Native drag and drop", "api", desktop),
+  definition("desktop.notifications", "Notification permission/delivery/actions", "api", desktop),
   ...[
-    ["notifications", "Notification permission/delivery/actions"],
     ["sqlite", "SQLite integration"], ["webview", "WebView integration"],
     ["nitro", "Nitro native module integration"], ["runtimes", "Secondary Hermes runtimes"],
   ].map(([id, title]) => definition(`desktop.${id}`, title!, "api", macOnly)),

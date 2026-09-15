@@ -21,6 +21,7 @@
         "@legend-apps/global-shortcuts": "workspace:*",
         "@legend-apps/message-dialog": "workspace:*",
         "@legend-apps/native-menu": "workspace:*",
+        "@legend-apps/notifications": "workspace:*",
         "@legend-apps/processes": "workspace:*",
         "@legend-apps/secure-storage": "workspace:*",
         "@legend-apps/settings": "workspace:*",

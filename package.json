@@ -82,7 +82,8 @@
     "@legend-apps/global-shortcuts": "workspace:*",
     "@legend-apps/processes": "workspace:*",
     "@legend-apps/system": "workspace:*",
-    "@legend-apps/drag-drop": "workspace:*"
+    "@legend-apps/drag-drop": "workspace:*",
+    "@legend-apps/notifications": "workspace:*"
   },
   "overrides": {
     "@expo/cli": "54.0.27",

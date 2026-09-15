@@ -4,6 +4,7 @@ import { Button } from "@legend-apps/ui";
 import { showMessage } from "@legend-apps/message-dialog";
 import { showContextMenu } from "@legend-apps/context-menu";
 import { DragDropView } from "@legend-apps/drag-drop";
+import * as notifications from "@legend-apps/notifications";
 import * as system from "@legend-apps/system";
 import { createTray } from "@legend-apps/tray";
 import { registerGlobalShortcut } from "@legend-apps/global-shortcuts";
@@ -111,6 +112,24 @@ export default function DesktopInteractionChecks({ check, onError, onBusy }: {
     } finally { sub.remove(); clearMenus("contract-binding"); clearMenus("contract-base"); }
     setInstruction("Menu accelerator, targeting, update, and payload assertions passed.");
   }
+  async function notificationChecks() {
+    const permission = await notifications.requestNotificationPermission();
+    assertContract(permission === "authorized" || permission === "provisional", `Notification permission: ${permission}. Enable notifications in system settings and retry.`);
+    const id = `contract-${Date.now()}`;
+    let received!: (value: notifications.NotificationResponse) => void;
+    const response = new Promise<notifications.NotificationResponse>(resolve => { received = resolve; });
+    const sub = await notifications.onNotificationResponse(value => { if (value.notificationId === id) received(value); });
+    try {
+      await notifications.showNotification({ id, title: "Scheduled acceptance", delay: 120 });
+      assertContract((await notifications.getPendingNotifications()).includes(id), "Scheduled notification is missing");
+      await notifications.cancelNotification(id);
+      assertContract(!(await notifications.getPendingNotifications()).includes(id), "Cancellation left a scheduled notification");
+      setInstruction("Click the Legend notification to continue within 45 seconds. If hidden, open Notification Center.");
+      await notifications.showNotification({ id, title: "Click to continue", body: "Legend notification acceptance", data: { token: id }, sound: false });
+      await within(response.then(value => { assertContract(value.action === "open" && value.data.token === id, "Notification response lost its action or data"); }), 45000);
+    } finally { sub.remove(); await notifications.cancelNotification(id); }
+    setInstruction("Scheduling, cancellation, and notification click passed. Cold launch and OS delivery after exit require the separate native lifecycle checks.");
+  }
   async function systemChecks() {
     const info = await system.getSystemInfo();
     assertContract(!!info.osVersion && !!info.locale && info.idleSeconds >= 0 && (info.batteryLevel === null || (info.batteryLevel >= 0 && info.batteryLevel <= 1)), "Invalid system information");
@@ -141,6 +160,7 @@ export default function DesktopInteractionChecks({ check, onError, onBusy }: {
       drag.current.dropped = event.text === "legend-drag-contract" && !!event.urls?.includes("https://example.com/contract") && event.x >= 0 && event.y >= 0;
       setDragFeedback(JSON.stringify(event));
     }} style={{ padding: 12, borderWidth: 1, minHeight: 70 }}><Text>Drop target</Text></DragDropView>
+    <Button disabled={busy} onPress={() => run("desktop.notifications", notificationChecks)}>Check notifications</Button>
     <Button disabled={busy} onPress={() => run("desktop.system", systemChecks)}>Check system and taskbar APIs</Button>
     <Button disabled={busy} onPress={() => run("desktop.modal-windows", modalWindows)}>Check modal window</Button>
     <Button disabled={busy} onPress={() => run("desktop.advanced-menus", advancedMenus)}>Check menu accelerators</Button>

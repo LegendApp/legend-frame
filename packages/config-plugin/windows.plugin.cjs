@@ -15,7 +15,7 @@ function patchHost(source, core, metadata, defaults = {}) {
   source = source.replace('LegendWin::Initialize(reactNativeWin32App);', 'appWindow.Resize({1000, 1000});');
   source = source.replace(/appWindow\.Resize\([^\n]+\);/, 'LegendWin::Initialize(reactNativeWin32App);');
   source = source.replace(/\n  \/\/ BEGIN LEGEND LAUNCH[\s\S]*?\/\/ END LEGEND LAUNCH\n/g, '');
-  source = source.replace('winrt::init_apartment(winrt::apartment_type::single_threaded);', 'winrt::init_apartment(winrt::apartment_type::single_threaded);\n  // BEGIN LEGEND LAUNCH\n  try { LegendInitializeEnvironment(); if (LegendWin::ForwardLaunch()) return 0; }\n  catch (winrt::hresult_error const &error) { MessageBoxW(nullptr, error.message().c_str(), L"Legend launch failed", MB_OK | MB_ICONERROR); return 1; }\n  // END LEGEND LAUNCH\n');
+  source = source.replace('winrt::init_apartment(winrt::apartment_type::single_threaded);', 'winrt::init_apartment(winrt::apartment_type::single_threaded);\n  // BEGIN LEGEND LAUNCH\n  try { LegendInitializeEnvironment(); if (LegendWin::ForwardLaunch()) return 0; LegendWin::InitializeToastActivation(); }\n  catch (winrt::hresult_error const &error) { MessageBoxW(nullptr, error.message().c_str(), L"Legend launch failed", MB_OK | MB_ICONERROR); return 1; }\n  // END LEGEND LAUNCH\n');
   source = source.replace(anchor, `${anchor}\n  // BEGIN LEGEND CONNECTION\n  settings.SourceBundleHost(L"127.0.0.1");\n  settings.SourceBundlePort(LegendMetroPort());\n  // END LEGEND CONNECTION\n`);
   // Only patch the upstream template. Embedded host source can contain the same
   // API calls and must never be matched by these template replacements.
@@ -32,7 +32,7 @@ module.exports = config => {
       LEGEND_PROJECT_VERSION: expo.version, LEGEND_WINDOW_CONFIG: JSON.stringify(expo.extra.legend.window ?? {}),
       LEGEND_SESSION_FILE: statePath(root, 'windows-connection.json', 'windows'),
     } : {};
-    mod.modResults.contents = patchHost(mod.modResults.contents, fs.readFileSync(require.resolve('@legend-apps/desktop-host/windows/runtime.inc'), 'utf8') + '\n' + fs.readFileSync(require.resolve('@legend-apps/desktop-host/windows/application.inc'), 'utf8'), metadata, defaults);
+    mod.modResults.contents = patchHost(mod.modResults.contents, fs.readFileSync(require.resolve('@legend-apps/desktop-host/windows/runtime.inc'), 'utf8') + '\n' + fs.readFileSync(require.resolve('@legend-apps/desktop-host/windows/application.inc'), 'utf8') + '\n' + fs.readFileSync(require.resolve('@legend-apps/desktop-host/windows/notifications.inc'), 'utf8'), metadata, defaults);
     return mod;
   });
   const { withMod } = require('@expo/config-plugins');

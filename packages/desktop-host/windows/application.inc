@@ -30,6 +30,11 @@ static std::map<std::string, Window> windows;
 static React::ReactNativeHost host{nullptr};
 static winrt::Microsoft::UI::Composition::Compositor compositor{nullptr};
 static React::ReactContext context;
+static void InitializeToastActivation();
+static void QueueNotificationResponse(std::string const &);
+static std::string NotificationResponses();
+static void EmitNotificationEvents();
+static void SetNotificationWindow(HWND);
 static bool quitGuard = false, quitPending = false;
 static uint64_t generation = 0, quitRequest = 0;
 static Json::JsonArray pendingURLs{nullptr};
@@ -198,7 +203,15 @@ static void RequestQuit() {
 static LRESULT CALLBACK WindowProc(HWND hwnd, UINT message, WPARAM wParam, LPARAM lParam, UINT_PTR, DWORD_PTR) {
   auto id = Id(hwnd);
   if (!id.empty()) {
-    if (message == WM_COPYDATA) { auto data = reinterpret_cast<COPYDATASTRUCT *>(lParam); if (data && data->dwData == 0x4C47 && data->cbData >= sizeof(wchar_t) && data->cbData <= 65536 && data->cbData % sizeof(wchar_t) == 0) { auto text = static_cast<wchar_t *>(data->lpData); if (text && text[data->cbData / sizeof(wchar_t) - 1] == 0) { QueueLaunch(text, false); ShowWindow(hwnd, IsIconic(hwnd) ? SW_RESTORE : SW_SHOW); SetForegroundWindow(hwnd); return TRUE; } } return FALSE; }
+    if (message == WM_APP + 19) { EmitNotificationEvents(); return 0; }
+    if (message == WM_COPYDATA) {
+      auto notification = reinterpret_cast<COPYDATASTRUCT *>(lParam);
+      if (notification && notification->dwData == 0x4C4E) {
+        if (!notification->lpData || notification->cbData < sizeof(wchar_t) || notification->cbData > 65536 || notification->cbData % sizeof(wchar_t)) return FALSE;
+        auto text = static_cast<wchar_t const *>(notification->lpData); if (text[notification->cbData / sizeof(wchar_t) - 1]) return FALSE;
+        try { QueueNotificationResponse(to_string(text)); return TRUE; } catch (...) { return FALSE; }
+      }
+ auto data = reinterpret_cast<COPYDATASTRUCT *>(lParam); if (data && data->dwData == 0x4C47 && data->cbData >= sizeof(wchar_t) && data->cbData <= 65536 && data->cbData % sizeof(wchar_t) == 0) { auto text = static_cast<wchar_t *>(data->lpData); if (text && text[data->cbData / sizeof(wchar_t) - 1] == 0) { QueueLaunch(text, false); ShowWindow(hwnd, IsIconic(hwnd) ? SW_RESTORE : SW_SHOW); SetForegroundWindow(hwnd); return TRUE; } } return FALSE; }
     if (message == WM_GETMINMAXINFO) {
       auto limits = reinterpret_cast<MINMAXINFO *>(lParam); auto const &window = windows.at(id);
       limits->ptMinTrackSize = {window.minWidth, window.minHeight}; limits->ptMaxTrackSize = {window.maxWidth, window.maxHeight}; return 0;
@@ -208,6 +221,7 @@ static LRESULT CALLBACK WindowProc(HWND hwnd, UINT message, WPARAM wParam, LPARA
     if (message == WM_EXITSIZEMOVE) SaveFrame(id, hwnd);
     if (message == WM_MOVE) Emit({{"type", "move"}, {"windowId", id}});
     if (message == WM_SIZE) Emit({{"type", "resize"}, {"windowId", id}});
+    if (message == WM_NCDESTROY && id == "main") SetNotificationWindow(nullptr);
     if (message == WM_NCDESTROY && currentMenu && GetMenu(hwnd) == currentMenu) { currentMenu = nullptr; menuActions.clear(); }
     if (message == WM_ACTIVATE && LOWORD(wParam) != WA_INACTIVE && currentMenu && GetMenu(hwnd) != currentMenu) {
       for (auto const &[name, other] : windows) { auto otherHwnd = Hwnd(other); if (GetMenu(otherHwnd) == currentMenu) { SetMenu(otherHwnd, nullptr); DrawMenuBar(otherHwnd); } }
@@ -225,6 +239,7 @@ static void Attach(std::string id, React::ReactNativeWindow view) {
   Window window; window.view = view; window.app = view.AppWindow(); window.normal = window.app.Presenter().as<UI::OverlappedPresenter>(); windows.emplace(id, window);
   SetPropW(Hwnd(window), (L"Legend.Window." + std::wstring(to_hstring(id))).c_str(), reinterpret_cast<HANDLE>(1));
   SetPropW(Hwnd(window), L"Legend.ReactWindow", reinterpret_cast<HANDLE>(1));
+  if (id == "main") SetNotificationWindow(Hwnd(window));
   auto app = window.app; SetWindowSubclass(Hwnd(window), WindowProc, 0x4C47, 0);
   app.Closing([id](auto const &, UI::AppWindowClosingEventArgs const &args) {
     auto found = windows.find(id); if (found == windows.end() || found->second.allow) return;
@@ -367,6 +382,7 @@ struct LegendDesktopApp {
       using namespace LegendWin;
       try {
         auto args = Json::JsonObject::Parse(to_hstring(encoded));
+        if (method == "notificationResponses") { promise.Resolve(NotificationResponses()); return; }
         if (method == "quitGuard") quitGuard = args.GetNamedBoolean(L"enabled");
         else if (method == "quit") RequestQuit();
         else if (method == "replyQuit") {
