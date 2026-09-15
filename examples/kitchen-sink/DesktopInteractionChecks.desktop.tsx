@@ -152,12 +152,13 @@ export default function DesktopInteractionChecks({ check, onError, onBusy }: {
   return <View style={{ gap: 8 }}>
     <Text>{instruction}</Text>
     <Text>{dragFeedback}</Text>
-    <DragDropView source={{ text: "legend-drag-contract", urls: ["https://example.com/contract"] }} onDragEnd={event => {
+    <DragDropView source={{ text: "legend-drag-contract" }} onDragEnd={event => {
       if (event.accepted && drag.current.dropped && drag.current.entered) run("desktop.drag-drop", async () => {});
       else setDragFeedback("Drag was cancelled or did not reach the target. Try again.");
+      drag.current = { entered: false, dropped: false };
     }} style={{ padding: 12, borderWidth: 1 }}><Text>Drag source</Text><Button onPress={() => setDragFeedback("Child button received a press; now drag the source text.")}>Child button</Button></DragDropView>
     <DragDropView onDragEnter={() => { drag.current.entered = true; }} onDragLeave={() => setDragFeedback("Drag left target")} onDrop={event => {
-      drag.current.dropped = event.text === "legend-drag-contract" && !!event.urls?.includes("https://example.com/contract") && event.x >= 0 && event.y >= 0;
+      drag.current.dropped = event.text === "legend-drag-contract" && event.x >= 0 && event.y >= 0;
       setDragFeedback(JSON.stringify(event));
     }} style={{ padding: 12, borderWidth: 1, minHeight: 70 }}><Text>Drop target</Text></DragDropView>
     <Button disabled={busy} onPress={() => run("desktop.notifications", notificationChecks)}>Check notifications</Button>

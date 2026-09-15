@@ -64,7 +64,7 @@ struct DragView : implements<DragView, Windows::Foundation::IInspectable> {
     auto keepAlive = get_strong();
     bool accepted = false;
     try {
-      if (!root || source.empty() || disabled) { dragging = false; co_return; }
+      if (!root || source.empty() || disabled) throw hresult_canceled();
       auto session = root;
       operation = Drag::DragOperation(); operation.AllowedOperations(Operation::Copy);
       auto data = operation.Data(); auto payload = Json::JsonObject::Parse(to_hstring(source));
@@ -136,7 +136,9 @@ struct DropTarget : implements<DropTarget, Drag::IDropOperationTarget> {
   IAsyncOperation<Operation> DropAsync(Drag::DragInfo info) {
     auto keepAlive = get_strong(); co_await root->ui;
     try {
-      auto target = root->Target(info.Position()); if (!target || (info.AllowedOperations() & Operation::Copy) == Operation::None) co_return Operation::None;
+      auto data = info.Data();
+      const bool supported = data.Contains(L"application/x-legend-drag") || data.Contains(Transfer::StandardDataFormats::Text()) || data.Contains(Transfer::StandardDataFormats::StorageItems()) || data.Contains(Transfer::StandardDataFormats::WebLink());
+      auto target = supported ? root->Target(info.Position()) : nullptr; if (!target || (info.AllowedOperations() & Operation::Copy) == Operation::None) co_return Operation::None;
       auto payload = co_await Payload(info, target->Local(info.Position()));
       if (!target->mounted || target->disabled) co_return Operation::None;
       target->Emit(L"drop", payload); current = {}; co_return Operation::Copy;
