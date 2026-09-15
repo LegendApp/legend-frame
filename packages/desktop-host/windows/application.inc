@@ -373,7 +373,7 @@ static void Initialize(React::ReactNativeWin32App const &app) {
 REACT_MODULE(LegendDesktopApp, L"NativeDesktopApp")
 struct LegendDesktopApp {
   REACT_INIT(Initialize)
-  void Initialize(winrt::Microsoft::ReactNative::ReactContext const &context) noexcept { LegendWin::context = context; LegendWin::quitGuard = false; LegendWin::quitPending = false; LegendWin::shortcuts.clear(); for (auto &[id, window] : LegendWin::windows) { window.guard = false; window.pending = false; } }
+  void Initialize(winrt::Microsoft::ReactNative::ReactContext const &context) noexcept { if (context.Properties().Get(winrt::Microsoft::ReactNative::ReactPropertyId<bool>{L"Legend", L"SecondaryRuntime"}).value_or(false)) return; LegendWin::context = context; LegendWin::quitGuard = false; LegendWin::quitPending = false; LegendWin::shortcuts.clear(); for (auto &[id, window] : LegendWin::windows) { window.guard = false; window.pending = false; } }
   REACT_METHOD(addListener) void addListener(std::string) noexcept {}
   REACT_METHOD(removeListeners) void removeListeners(double) noexcept {}
   REACT_METHOD(call)
@@ -401,7 +401,7 @@ struct LegendDesktopApp {
 };
 REACT_MODULE(LegendDesktopWindows, L"NativeDesktopWindowManager")
 struct LegendDesktopWindows {
-  REACT_INIT(Initialize) void Initialize(winrt::Microsoft::ReactNative::ReactContext const &context) noexcept { LegendWin::context = context; }
+  REACT_INIT(Initialize) void Initialize(winrt::Microsoft::ReactNative::ReactContext const &context) noexcept { if (context.Properties().Get(winrt::Microsoft::ReactNative::ReactPropertyId<bool>{L"Legend", L"SecondaryRuntime"}).value_or(false)) return; LegendWin::context = context; }
   REACT_METHOD(call)
   void call(std::string method, std::string encoded, winrt::Microsoft::ReactNative::ReactPromise<std::string> promise) noexcept {
     LegendWin::context.UIDispatcher().Post([method, encoded, promise]() {
@@ -475,7 +475,7 @@ struct LegendDesktopWindows {
 };
 REACT_MODULE(LegendDesktopShortcuts, L"NativeDesktopShortcuts")
 struct LegendDesktopShortcuts {
-  REACT_INIT(Initialize) void Initialize(winrt::Microsoft::ReactNative::ReactContext const &context) noexcept { LegendWin::context = context; }
+  REACT_INIT(Initialize) void Initialize(winrt::Microsoft::ReactNative::ReactContext const &context) noexcept { if (context.Properties().Get(winrt::Microsoft::ReactNative::ReactPropertyId<bool>{L"Legend", L"SecondaryRuntime"}).value_or(false)) return; LegendWin::context = context; }
   REACT_METHOD(addListener) void addListener(std::string) noexcept {}
   REACT_METHOD(removeListeners) void removeListeners(double) noexcept {}
   REACT_METHOD(call)
@@ -495,7 +495,7 @@ struct LegendDesktopShortcuts {
 };
 REACT_MODULE(LegendNativeMenu, L"NativeMenu")
 struct LegendNativeMenu {
-  REACT_INIT(Initialize) void Initialize(winrt::Microsoft::ReactNative::ReactContext const &context) noexcept { LegendWin::context = context; }
+  REACT_INIT(Initialize) void Initialize(winrt::Microsoft::ReactNative::ReactContext const &context) noexcept { if (context.Properties().Get(winrt::Microsoft::ReactNative::ReactPropertyId<bool>{L"Legend", L"SecondaryRuntime"}).value_or(false)) return; LegendWin::context = context; }
   REACT_METHOD(addListener) void addListener(std::string) noexcept {}
   REACT_METHOD(removeListeners) void removeListeners(double) noexcept {}
   REACT_METHOD(configureMenus) void configureMenus(std::string owner, std::string json) noexcept { LegendWin::context.UIDispatcher().Post([owner, json]() { LegendWin::menuOwner = owner; LegendWin::menus = LegendWin::Json::JsonArray::Parse(winrt::to_hstring(json)); LegendWin::RebuildMenus(); }); }
@@ -506,4 +506,14 @@ struct LegendNativeMenu {
     for (auto const &menu : LegendWin::menus) for (auto const &value : menu.GetObject().GetNamedArray(L"items")) for (auto const &patchValue : patches) { auto item = value.GetObject(), patch = patchValue.GetObject(); if (item.GetNamedString(L"id") == patch.GetNamedString(L"id")) for (auto const &pair : patch) item.SetNamedValue(pair.Key(), pair.Value()); }
     LegendWin::RebuildMenus();
   }); }
+};
+
+// Development clients never update themselves. Match the macOS development API
+// without implying Windows standalone distribution is implemented.
+REACT_MODULE(LegendDesktopUpdates, L"NativeDesktopUpdates")
+struct LegendDesktopUpdates {
+  REACT_METHOD(call) void call(std::string method, std::string, winrt::Microsoft::ReactNative::ReactPromise<std::string> promise) noexcept {
+    if (method == "status") promise.Resolve(std::string("{\"available\":false,\"started\":false,\"canCheck\":false,\"automaticallyChecks\":false,\"reason\":\"") + (LegendWindowsEnv(L"LEGEND_RUNTIME_MODE") == L"go" ? "go" : "development") + "\"}");
+    else promise.Reject(winrt::Microsoft::ReactNative::ReactError{"E_UPDATES_UNAVAILABLE", "Updates are unavailable in a development runtime"});
+  }
 };

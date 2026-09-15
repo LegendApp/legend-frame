@@ -6,6 +6,7 @@ function patchHost(source, core, metadata, defaults = {}) {
   source = source.replace(/\r\n/g, '\n').replace(/\n\/\/ BEGIN LEGEND CORE[\s\S]*?\/\/ END LEGEND CORE\n/g, '')
     .replace(/\n  \/\/ BEGIN LEGEND TITLE[\s\S]*?\/\/ END LEGEND TITLE\n/g, '')
     .replace(/\n  \/\/ BEGIN LEGEND CONNECTION[\s\S]*?\/\/ END LEGEND CONNECTION\n/g, '');
+  source = source.replace(/\n    \/\/ BEGIN LEGEND RUNTIMES[\s\S]*?\/\/ END LEGEND RUNTIMES\n/g, '');
   const include = '#include "NativeModules.h"';
   const launchAnchor = 'winrt::init_apartment(winrt::apartment_type::single_threaded);';
   const anchor = 'auto settings{reactNativeWin32App.ReactNativeHost().InstanceSettings()};';
@@ -17,6 +18,10 @@ function patchHost(source, core, metadata, defaults = {}) {
   source = source.replace(/\n  \/\/ BEGIN LEGEND LAUNCH[\s\S]*?\/\/ END LEGEND LAUNCH\n/g, '');
   source = source.replace('winrt::init_apartment(winrt::apartment_type::single_threaded);', 'winrt::init_apartment(winrt::apartment_type::single_threaded);\n  // BEGIN LEGEND LAUNCH\n  try { LegendInitializeEnvironment(); if (LegendWin::ForwardLaunch()) return 0; LegendWin::InitializeToastActivation(); }\n  catch (winrt::hresult_error const &error) { MessageBoxW(nullptr, error.message().c_str(), L"Legend launch failed", MB_OK | MB_ICONERROR); return 1; }\n  // END LEGEND LAUNCH\n');
   source = source.replace(anchor, `${anchor}\n  // BEGIN LEGEND CONNECTION\n  settings.SourceBundleHost(L"127.0.0.1");\n  settings.SourceBundlePort(LegendMetroPort());\n  // END LEGEND CONNECTION\n`);
+  if (core.includes('static void RegisterRuntimeSurface(')) {
+    if (!source.includes('AddAttributedModules(packageBuilder, true);')) throw new Error('The pinned Windows host template changed; cannot register runtime surfaces.');
+    source = source.replace('AddAttributedModules(packageBuilder, true);', 'AddAttributedModules(packageBuilder, true);\n    // BEGIN LEGEND RUNTIMES\n    LegendWin::RegisterRuntimeSurface(packageBuilder);\n    // END LEGEND RUNTIMES\n');
+  }
   // Only patch the upstream template. Embedded host source can contain the same
   // API calls and must never be matched by these template replacements.
   return source.replace(include, `${include}\n// BEGIN LEGEND CORE\n${core.replace('__LEGEND_METADATA__', JSON.stringify(metadata)).replace('__LEGEND_PROJECT_CONFIG__', JSON.stringify({ ...defaults, LEGEND_RUNTIME_MODE: metadata.mode }).replaceAll(')', '\\u0029').replace(/[^\x00-\x7F]/g, char => '\\u' + char.charCodeAt(0).toString(16).padStart(4, '0')))}\n// END LEGEND CORE\n`);
@@ -32,7 +37,7 @@ module.exports = config => {
       LEGEND_PROJECT_VERSION: expo.version, LEGEND_WINDOW_CONFIG: JSON.stringify(expo.extra.legend.window ?? {}),
       LEGEND_SESSION_FILE: statePath(root, 'windows-connection.json', 'windows'),
     } : {};
-    mod.modResults.contents = patchHost(mod.modResults.contents, fs.readFileSync(require.resolve('@legend-apps/desktop-host/windows/runtime.inc'), 'utf8') + '\n' + fs.readFileSync(require.resolve('@legend-apps/desktop-host/windows/application.inc'), 'utf8') + '\n' + fs.readFileSync(require.resolve('@legend-apps/desktop-host/windows/notifications.inc'), 'utf8'), metadata, defaults);
+    mod.modResults.contents = patchHost(mod.modResults.contents, fs.readFileSync(require.resolve('@legend-apps/desktop-host/windows/runtime.inc'), 'utf8') + '\n' + fs.readFileSync(require.resolve('@legend-apps/desktop-host/windows/application.inc'), 'utf8') + '\n' + fs.readFileSync(require.resolve('@legend-apps/desktop-host/windows/notifications.inc'), 'utf8') + (Object.hasOwn(metadata.modules ?? {}, '@react-native-runtimes/core') ? '\n' + fs.readFileSync(require.resolve('@legend-apps/desktop-host/windows/runtimes.inc'), 'utf8') : ''), metadata, defaults);
     return mod;
   });
   const { withMod } = require('@expo/config-plugins');

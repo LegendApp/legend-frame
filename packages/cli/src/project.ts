@@ -373,7 +373,7 @@ export function projectEnvironment(root: string): Record<string, string> {
 function windowsNativePackages(root: string, installed: Package[]): NativePackage[] {
   const direct = readJson(path.join(root, "package.json")).dependencies ?? {};
   const supported = (pkg: Package) => pkg.name !== "expo-desktop-template-bare-minimum" && (existsSync(path.join(pkg.root, "windows")) ||
-    ["react-native", "react-native-windows", "@legend-apps/desktop-host"].includes(pkg.name));
+    ["react-native", "react-native-windows", "@legend-apps/desktop-host", "@legend-apps/desktop-app", "@legend-apps/desktop-windows", "@legend-apps/desktop-shortcuts", "@legend-apps/native-menu", "@legend-apps/updates"].includes(pkg.name));
   const explicitlyExcluded = isUniversal(root) ? readAppConfig(root).expo?.autolinking?.exclude ?? [] : [];
   for (const pkg of installed) {
     const platformAdapter = isUniversal(root) && ["src/index.windows.ts", "src/index.windows.tsx"].some(file => existsSync(path.join(pkg.root, file)));

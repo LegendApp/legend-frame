@@ -1,4 +1,5 @@
-import { existsSync, mkdirSync, readFileSync, rmSync } from "node:fs";
+import { createRequire } from "node:module";
+import { existsSync, mkdirSync, readFileSync, rmSync, writeFileSync, cpSync } from "node:fs";
 import path from "node:path";
 import { run } from "../packages/cli/src/commands";
 import { digest, readJson, writeJson } from "../packages/cli/src/project";
@@ -12,15 +13,32 @@ export async function packRuntimes(root: string, output: string) {
   mkdirSync(cache, { recursive: true });
   if (!existsSync(source)) await run(root, ["git", "clone", "https://github.com/margelo/react-native-runtimes.git", source], { capture: true });
   const patches = ["react-native-runtimes-macos.patch", "react-native-runtimes-integration.patch"];
-  const hash = digest(readFileSync(import.meta.path, "utf8") + runtimesRevision + patches.map(file => readFileSync(path.join(root, "patches", file), "utf8")).join(""));
+  const surface = path.join(root, "patches/windows/runtimes/NativeThreadedRuntimeSurface.windows.tsx");
+  const hash = digest(readFileSync(surface, "utf8") + readFileSync(import.meta.path, "utf8") + runtimesRevision + patches.map(file => readFileSync(path.join(root, "patches", file), "utf8")).join(""));
   const stage = path.join(cache, "stage");
   rmSync(stage, { recursive: true, force: true }); mkdirSync(stage);
   const archive = path.join(cache, "source.tar");
   await run(source, ["git", "archive", "--format=tar", "--output", archive, runtimesRevision, "packages/core"], { capture: true });
   await run(stage, ["tar", "-xf", archive], { capture: true });
-  for (const patch of patches) await run(stage, ["patch", "--batch", "-p1", "-i", path.join(root, "patches", patch)], { capture: true });
+  // Apply unified diffs in JS: Windows developers do not need Unix patch.
+  const { parsePatch, applyPatch } = createRequire(import.meta.url)("diff");
+  for (const patch of patches) for (const file of parsePatch(readFileSync(path.join(root, "patches", patch), "utf8"))) {
+    const target = path.join(stage, file.newFileName.replace(/^b\//, ""));
+    const next = applyPatch(readFileSync(target, "utf8"), file);
+    if (next === false) throw new Error(`Could not apply ${patch} to ${target}`);
+    writeFileSync(target, next);
+  }
   const core = path.join(stage, "packages/core");
   const pkg = readJson(path.join(core, "package.json"));
+  // Native backend is compiled into Legend's host; retain the upstream API.
+  const api = path.join(core, "src/ThreadedRuntime.tsx");
+  writeFileSync(api, readFileSync(api, "utf8").replaceAll("['android', 'ios', 'macos']", "['android', 'ios', 'macos', 'windows']")
+    .replace('function getRuntimeFunctionsNitro() {', 'function getRuntimeFunctionsNitro() {\n  if (Platform.OS === "windows") return null; // RNW uses the upstream native-call transport.'));
+  cpSync(surface, path.join(core, "src/NativeThreadedRuntimeSurface.windows.tsx"));
+  mkdirSync(path.join(core, "windows"));
+  writeFileSync(path.join(core, "windows/README.md"), "Windows native implementation lives in @legend-apps/desktop-host/windows/runtimes.inc.\n");
+  writeFileSync(path.join(core, "react-native.config.js"), "module.exports = { dependency: { platforms: { windows: null } } };\n");
+  pkg.files = [...new Set([...(pkg.files ?? []), "windows", "react-native.config.js"])];
   pkg.main = pkg.types = "src/index.ts";
   pkg.legend = { sdk: true, upstreamRevision: runtimesRevision, patchHash: hash };
   // The Metro scanner's Babel dependencies must be declared, not accidentally hoisted.

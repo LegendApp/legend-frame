@@ -38,7 +38,7 @@ export async function create(root: string, archiveManifest: string, platform: Ap
     cpSync(source, temporary, { recursive: true });
     const pkg = readJson(path.join(temporary, "package.json"));
     const archives = readJson(archiveManifest);
-    if (pkg.dependencies["@react-native-runtimes/core"] && !archives["@react-native-runtimes/core"]) throw new Error("This SDK lacks the patched macOS Runtimes archive. Create a universal app or install a macOS SDK.");
+    if (pkg.dependencies["@react-native-runtimes/core"] && !archives["@react-native-runtimes/core"]) throw new Error("This SDK lacks the patched Runtimes archive. Repack or install the complete SDK.");
     for (const [name, file] of Object.entries(archives)) {
       const archive = path.resolve(path.dirname(archiveManifest), file as string);
       if (!existsSync(archive)) throw new Error(`Missing SDK archive: ${archive}`);

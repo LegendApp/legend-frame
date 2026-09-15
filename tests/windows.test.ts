@@ -43,6 +43,26 @@ test("Windows rejects direct native dependencies without Windows implementations
     expect(() => nativePackages(f.root)).toThrow("no Windows implementation");
   } finally { f.close(); }
 });
+test("Windows includes host-provided SDK modules without separate native projects", () => {
+  const f = fixture();
+  try {
+    const names = ["@legend-apps/desktop-app", "@legend-apps/desktop-windows", "@legend-apps/desktop-shortcuts", "@legend-apps/native-menu", "@legend-apps/updates"];
+    for (const name of names) writeJson(path.join(f.root, "node_modules", name, "package.json"), { name, version: "1", legend: { nativeModules: [name] } });
+    writeJson(path.join(f.root, "package.json"), { dependencies: Object.fromEntries(names.map(name => [name, "1"])) });
+    expect(nativePackages(f.root).map(pkg => pkg.name).sort()).toEqual(names.sort());
+  } finally { f.close(); }
+});
+test("runtime surface hooks are conditional, repeatable, and removable", () => {
+  const source = '#include "NativeModules.h"\nAddAttributedModules(packageBuilder, true);\nwinrt::init_apartment(winrt::apartment_type::single_threaded);\nauto settings{reactNativeWin32App.ReactNativeHost().InstanceSettings()};\nappWindow.Resize({1000, 1000});\n';
+  const core = readFileSync(new URL("../packages/desktop-host/windows/runtime.inc", import.meta.url), "utf8");
+  const worker = readFileSync(new URL("../packages/desktop-host/windows/runtimes.inc", import.meta.url), "utf8");
+  const metadata = { mode: "dev", fingerprint: "b".repeat(64) };
+  const first = patchHost(source, core + worker, metadata);
+  expect(patchHost(first, core + worker, metadata)).toBe(first);
+  expect(first.match(/LegendWin::RegisterRuntimeSurface\(packageBuilder\)/g)).toHaveLength(1);
+  expect(patchHost(first, core, metadata)).not.toContain("RegisterRuntimeSurface");
+  expect(() => patchHost(source.replace("AddAttributedModules(packageBuilder, true);", ""), core + worker, metadata)).toThrow("cannot register runtime surfaces");
+});
 test("the shared Go registry keeps Windows and macOS runtimes separate", () => {
   const f = fixture(), previous = process.env.LEGEND_HOME;
   process.env.LEGEND_HOME = path.join(f.root, "registry");

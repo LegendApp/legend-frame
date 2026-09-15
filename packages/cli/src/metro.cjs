@@ -25,14 +25,14 @@ function withDesktop(config, options = {}) {
   config = { ...config, resolver: { ...config.resolver, unstable_conditionsByPlatform: conditions } };
   const root = path.resolve(config.projectRoot || process.cwd());
   const { readConfig } = require("@legend-apps/desktop-config/config.cjs");
-  const windows = readConfig(root).expo?.platforms?.join() === "windows";
-  if (windows || options.runtimes === false) {
+  let core;
+  try { core = require.resolve("@react-native-runtimes/core/metro", { paths: [root] }); } catch {}
+  if (!core || options.runtimes === false) {
     const enhance = config.server?.enhanceMiddleware;
     return { ...config, server: { ...config.server, enhanceMiddleware(middleware, server) {
       return gate(root, enhance ? enhance(middleware, server) : middleware);
     } } };
   }
-  const core = require.resolve("@react-native-runtimes/core/metro", { paths: [root] });
   const { withThreadedRuntime, generateThreadedRuntimeEntry } = require(core);
   const plan = runtimePlan(root);
   const generatedEntry = path.join(root, ".threaded-runtime/entry.js");

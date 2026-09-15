@@ -6,7 +6,7 @@ import type { DesktopPlatform } from "./platform";
 export async function prepareGoProfile(root: string, manifest: string, platform: DesktopPlatform) {
   const pkg = readJson(path.join(root, "package.json"));
   const archives = readJson(manifest);
-  for (const suffix of ["ui", "clipboard", "secure-storage", "desktop-links", "file-dialog", "audio"]) {
+  for (const suffix of ["ui", "clipboard", "secure-storage", "desktop-links", "file-dialog", "audio", "desktop"]) {
     const name = `@legend-apps/${suffix}`;
     if (!archives[name]) throw new Error(`Prebuilt runtime profile requires ${name}`);
     pkg.dependencies[name] = path.resolve(path.dirname(manifest), archives[name]);

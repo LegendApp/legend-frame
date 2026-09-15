@@ -10,7 +10,7 @@ export async function packTemplates(root: string, output: string, packages: Reco
   for (const [variant, folder] of Object.entries({ macos: "blank-typescript", windows: "windows", universal: "universal" })) {
     const source = path.join(root, "packages/cli/templates", folder);
     const pkg = readJson(path.join(source, "package.json"));
-    // A Windows-only SDK pack may not include the patched macOS Runtimes archive.
+    // Every desktop SDK carries the pinned cross-platform Runtimes archive.
     if (pkg.dependencies["@react-native-runtimes/core"] && !local["@react-native-runtimes/core"]) continue;
     const temporary = mkdtempSync(path.join(os.tmpdir(), "legend-template-"));
     try {

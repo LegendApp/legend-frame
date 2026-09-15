@@ -7,6 +7,7 @@ import * as Linking from "@legend-apps/desktop-links";
 import { clipboardRead, clipboardRoundTrip, secureStorageLifecycle, linkingResolution, assertContract } from "./contract-cases";
 import { catalog, executeCase, initialResults, updateResult, summarize, type CaseResult, type TestPlatform } from "./contract-report";
 import { runDesktopContracts } from "./desktop-contracts";
+import DesktopLibraryChecks from "./DesktopLibraryChecks";
 import DesktopInteractionChecks from "./DesktopInteractionChecks";
 import { testConfig } from "./platform-test-config";
 const options = [{ label: "First", value: "first" }, { label: "Second", value: "second" }];
@@ -31,6 +32,7 @@ function MainChecks() {
   const started = useRef(false);
   const [visible, setVisible] = useState(results.current);
   const [running, setRunning] = useState(false);
+  const [libraryInteraction, setLibraryInteraction] = useState(false);
   const [nativeInteraction, setNativeInteraction] = useState(false);
   const [value, setValue] = useState("first");
   const [delivery, setDelivery] = useState("Waiting for test execution");
@@ -92,8 +94,9 @@ function MainChecks() {
         void check("clipboard.roundtrip", () => clipboardRoundTrip(Clipboard, testConfig.runId))
           .then(() => publish()).catch(error => setDelivery(String(error))).finally(() => setRunning(false));
       }}>Check clipboard</Button>}
+      <DesktopLibraryChecks check={check} onError={setDelivery} onBusy={setLibraryInteraction} />
       <DesktopInteractionChecks check={check} onError={setDelivery} onBusy={setNativeInteraction} />
-      <Button disabled={running || nativeInteraction} onPress={() => void publish(true).catch(error => setDelivery(String(error)))}>Finish run</Button>
+      <Button disabled={running || nativeInteraction || libraryInteraction} onPress={() => void publish(true).catch(error => setDelivery(String(error)))}>Finish run</Button>
     </View>
     <Text>{delivery}</Text>
     <Text>{Object.entries(summary.counts).map(([status, count]) => `${count} ${status}`).join(" · ")}</Text>

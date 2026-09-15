@@ -24,5 +24,5 @@ exports.metroConfig = root => {
     return require(require.resolve("expo/metro-config", { paths: [root] })).getDefaultConfig(root);
   }
   const config = require(require.resolve("expo-desktop-metro-config", { paths: [root] })).makeMetroConfig(root);
-  return require("./metro.cjs").withDesktop(config, { runtimes: false });
+  return require("./metro.cjs").withDesktop(config);
 };

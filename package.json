@@ -83,7 +83,11 @@
     "@legend-apps/processes": "workspace:*",
     "@legend-apps/system": "workspace:*",
     "@legend-apps/drag-drop": "workspace:*",
-    "@legend-apps/notifications": "workspace:*"
+    "@legend-apps/notifications": "workspace:*",
+    "@legend-apps/sqlite": "workspace:*",
+    "@legend-apps/webview": "workspace:*",
+    "react-native-nitro-modules": "0.35.7",
+    "@react-native-runtimes/core": "0.1.0-alpha.2"
   },
   "overrides": {
     "@expo/cli": "54.0.27",

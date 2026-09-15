@@ -88,11 +88,11 @@ try {
     }
     await run(framework, ["bun", "scripts/pack.ts", ...(platform === "windows" ? ["--platform=windows"] : [])], { capture: true });
     await create(root, path.join(framework, "artifacts/packages/manifest.json"), platform === "windows" ? "windows" : "macos", true);
-    for (const name of ["contract-cases.ts", "contract-report.ts", "PlatformChecks.tsx", "desktop-contract-cases.ts", "desktop-contracts.ts", "desktop-contracts.desktop.ts", "desktop-contracts.macos.ts", "desktop-contracts.windows.ts", "DesktopInteractionChecks.tsx", "DesktopInteractionChecks.desktop.tsx", "DesktopInteractionChecks.macos.tsx", "DesktopInteractionChecks.windows.tsx"]) cpSync(path.join(framework, "examples/kitchen-sink", name), path.join(root, name));
+    for (const name of ["contract-cases.ts", "contract-report.ts", "PlatformChecks.tsx", "desktop-contract-cases.ts", "desktop-contracts.ts", "desktop-contracts.desktop.ts", "desktop-contracts.macos.ts", "desktop-contracts.windows.ts", "DesktopInteractionChecks.tsx", "DesktopInteractionChecks.desktop.tsx", "DesktopInteractionChecks.macos.tsx", "DesktopInteractionChecks.windows.tsx", "DesktopLibraryChecks.tsx", "DesktopLibraryChecks.desktop.tsx", "DesktopLibraryChecks.macos.tsx", "DesktopLibraryChecks.windows.tsx", "platform-runtime-tasks.ts"]) cpSync(path.join(framework, "examples/kitchen-sink", name), path.join(root, name));
     writeFileSync(path.join(root, "App.tsx"), 'export { default } from "./PlatformChecks";\n');
     if (desktop) {
       const pkg = readJson(path.join(root, "package.json"));
-      for (const name of ["@legend-apps/file-system", "@legend-apps/settings", "@legend-apps/message-dialog", "@legend-apps/context-menu", "@legend-apps/tray", "@legend-apps/global-shortcuts", "@legend-apps/processes", "@legend-apps/system", "@legend-apps/notifications", "@legend-apps/drag-drop", "@legend-apps/native-menu", "@legend-apps/desktop-windows"]) pkg.dependencies[name] = pkg.overrides[name];
+      for (const name of ["@legend-apps/file-system", "@legend-apps/settings", "@legend-apps/message-dialog", "@legend-apps/context-menu", "@legend-apps/tray", "@legend-apps/global-shortcuts", "@legend-apps/processes", "@legend-apps/system", "@legend-apps/notifications", "@legend-apps/drag-drop", "@legend-apps/native-menu", "@legend-apps/desktop-windows", "@legend-apps/sqlite", "@legend-apps/webview", "react-native-nitro-modules", "@react-native-runtimes/core"]) pkg.dependencies[name] = pkg.overrides[name];
       writeJson(path.join(root, "package.json"), pkg); await run(root, ["bun", "install"], { capture: true });
     }
     // A unique application ID prevents this probe replacing another test or user app.
@@ -104,9 +104,10 @@ try {
     const applicationId = `so.legend.acceptance.p${report.runId.replaceAll("-", "")}`;
     config.expo = { ...config.expo, ios: { bundleIdentifier: applicationId }, android: { package: applicationId } };
     writeJson(path.join(root, "desktop.config.json"), config);
-    const appCases = new Set(["clipboard.read", "clipboard.roundtrip", "storage.lifecycle", "storage.unavailable", "links.resolution", "ui.button", "ui.input", "ui.select", "desktop.filesystem", "desktop.settings", "desktop.recent-documents", "desktop.rich-clipboard", "desktop.message-dialog", "desktop.context-menu", "desktop.tray", "desktop.global-shortcuts", "desktop.modal-windows", "desktop.advanced-menus", "desktop.processes", "desktop.system", "desktop.notifications", "desktop.drag-drop"]);
+    const appCases = new Set(["clipboard.read", "clipboard.roundtrip", "storage.lifecycle", "storage.unavailable", "links.resolution", "ui.button", "ui.input", "ui.select", "desktop.filesystem", "desktop.settings", "desktop.recent-documents", "desktop.rich-clipboard", "desktop.message-dialog", "desktop.context-menu", "desktop.tray", "desktop.global-shortcuts", "desktop.modal-windows", "desktop.advanced-menus", "desktop.processes", "desktop.system", "desktop.notifications", "desktop.sqlite", "desktop.nitro", "desktop.runtimes", "desktop.webview", "desktop.drag-drop"]);
     server = Bun.serve({ hostname: "127.0.0.1", port: 0, maxRequestBodySize: 128 * 1024, async fetch(request) {
       const headers = { "Access-Control-Allow-Origin": "*", "Access-Control-Allow-Headers": "Content-Type", "Access-Control-Allow-Methods": "POST, OPTIONS" };
+      if (request.method === "GET" && new URL(request.url).pathname === `/${report.runId}/webview`) return new Response('<html><body><p id="value">WebView URL acceptance</p></body></html>', { headers: { "Content-Type": "text/html; charset=utf-8" } });
       if (new URL(request.url).pathname !== `/${report.runId}`) return new Response("Not found", { status: 404, headers });
       if (request.method === "OPTIONS") return new Response(null, { status: 204, headers });
       if (request.method !== "POST" || completed) return new Response("Run not accepting results", { status: 409, headers });

@@ -1,0 +1,17 @@
+{
+  "react-native-nitro-modules": {
+    "version": "0.35.7",
+    "url": "https://registry.npmjs.org/react-native-nitro-modules/-/react-native-nitro-modules-0.35.7.tgz",
+    "integrity": "sha512-3EiU27EmnxTlD3pAXR2OBWeDg7+9tdjKrNQOPX08rFX5hJPNIT/h1i2PjvTUieOypCGTEi9nW/SNBtK3F+4HYg=="
+  },
+  "@op-engineering/op-sqlite": {
+    "version": "18.2.1",
+    "url": "https://registry.npmjs.org/@op-engineering/op-sqlite/-/op-sqlite-18.2.1.tgz",
+    "integrity": "sha512-atVOtXyFzO0e454eVS27AMwRs515URCKrkvLLG+mGKcyiF5UPfC53oukpNp2UmVzlLebyTEXNkTYs6n0dVGd0g=="
+  },
+  "react-native-webview": {
+    "version": "16.0.0",
+    "url": "https://registry.npmjs.org/react-native-webview/-/react-native-webview-16.0.0.tgz",
+    "integrity": "sha512-KIg5Yhy04lQfHdXC1JQPM+0kftMfPnH6AqDH7v6YskQ9kzfUacooofOFRmbaZHASq/0WY87Fx0peiFETFjOcCg=="
+  }
+}

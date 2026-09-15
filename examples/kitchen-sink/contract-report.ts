@@ -50,7 +50,7 @@ export const catalog: CaseDefinition[] = [
   ...[
     ["sqlite", "SQLite integration"], ["webview", "WebView integration"],
     ["nitro", "Nitro native module integration"], ["runtimes", "Secondary Hermes runtimes"],
-  ].map(([id, title]) => definition(`desktop.${id}`, title!, "api", macOnly)),
+  ].map(([id, title]) => definition(`desktop.${id}`, title!, "api", desktop)),
   definition("audio.playback", "Audio playback and transport controls", "api"),
   definition("distribution.standalone", "Installed app runs without Metro or developer tools", "distribution", macOnly),
   definition("distribution.updates", "Signed update and recovery", "distribution", macOnly),
