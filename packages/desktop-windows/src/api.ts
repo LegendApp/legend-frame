@@ -19,7 +19,7 @@ export function openWindow(options: WindowOptions) {
   const { id: _id, parentId, modal, props, ...style } = options;
   validateWindow(style);
   if (Platform.OS === "windows") {
-    validateWindowsWindowOptions({ ...style, ...(parentId !== undefined ? { parentId } : {}), ...(modal !== undefined ? { modal } : {}) });
+    validateWindowsWindowOptions(style);
   }
   if (parentId !== undefined) id(parentId);
   if (parentId === options.id || (modal && !parentId)) throw new Error("Modal windows need a distinct parent");

@@ -9,7 +9,7 @@ is performed on Windows; generation and bundling never imply runtime success.
 - [ ] 3. Drag/drop, recent documents, file/URL associations. Recent documents and associations implemented; native drag/drop remains.
 - [x] 4. Tray and global shortcuts (source implementation; native acceptance pending).
 - [ ] 5. Notifications and response lifecycle.
-- [ ] 6. Owned/modal windows and fuller menus.
+- [x] 6. Owned/modal windows and fuller menus (source implementation; native acceptance pending).
 - [ ] 7. Processes and system APIs.
 - [ ] 8. Nitro, SQLite, WebView, secondary Hermes runtimes.
 - [ ] 9. Rich clipboard and development connection/bundle options.

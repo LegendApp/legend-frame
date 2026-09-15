@@ -158,3 +158,20 @@ The shared Platform Checks screen tests a tray menu action and removal, plus a
 global shortcut while another application has focus, duplicate rejection, and
 re-registration after removal. Native execution and Explorer-restart recovery
 remain unverified; run these on Windows x64 and ARM64 before marking parity passed.
+
+
+## Owned/modal windows and menus
+
+Windows windows now accept `parentId` and `modal`. The native owner relationship
+controls stacking and lifetime; visible modal children disable their parent,
+and hiding or destroying the modal restores it. Another modal for the same
+parent is rejected with `E_BUSY`; a missing parent rejects with `E_NOT_FOUND`.
+
+Windows menus now merge contributions by title, support before/after placement,
+targeted bindings with restoration when their owner clears, patches, payloads,
+and native keyboard accelerators. Command modifiers map to Control. `systemMenu:
+"app"` creates a first application menu; it does not alter Windows' Alt+Space
+system menu. Target paths refer to existing menu entries; unmatched paths are
+skipped, matching the macOS contract. Platform Checks has interactive modal and
+menu accelerator cases. Native ownership/focus, close guards and menu actions
+still need Windows execution evidence.

@@ -1,6 +1,7 @@
 import { NativeEventEmitter, Platform } from "react-native";
 import { useEffect } from "react";
 import NativeMenu from "./NativeMenu";
+import { composeWindowsMenus, patchWindowsMenus } from "./windows-menus";
 
 export type NativeMenuShortcut = {
   key: string;
@@ -66,38 +67,24 @@ export type UseNativeMenuOptions = {
   ownerId: string;
 };
 
-function validateWindowsItems(items: NativeMenuItemPatch[]) {
-  if (Platform.OS !== "windows") return;
-  for (const item of items) {
-    if (item.targetTitle || item.targetTitles || item.targetPath || item.placement || item.shortcut || item.payload) throw Object.assign(new Error("Windows menus support plain items; targeting, placement, payloads and menu accelerators are not implemented. Register focused shortcuts separately."), { code: "E_UNAVAILABLE" });
-  }
-}
-
+const windowsOwners = new Map<string, NativeMenuConfig[]>();
+function publishWindowsMenus() { NativeMenu.configureMenus("legend.windows.menus", JSON.stringify(composeWindowsMenus(windowsOwners))); }
 export function configureMenus(ownerId: string, menus: NativeMenuConfig[]) {
-  if (Platform.OS === "windows" && menus.some(menu => menu.systemMenu || menu.placement)) throw Object.assign(new Error("Windows system-menu targeting and placement are not implemented"), { code: "E_UNAVAILABLE" });
-  for (const menu of menus) validateWindowsItems(menu.items);
-  if ((Platform.OS === "macos" || Platform.OS === "windows")) {
-    NativeMenu.configureMenus(ownerId, JSON.stringify(menus));
-  }
+  if (Platform.OS === "windows") { windowsOwners.set(ownerId, JSON.parse(JSON.stringify(menus))); publishWindowsMenus(); }
+  else if (Platform.OS === "macos") NativeMenu.configureMenus(ownerId, JSON.stringify(menus));
 }
-
 export function updateMenuItems(ownerId: string, patches: NativeMenuItemPatch[]) {
-  validateWindowsItems(patches);
-  if ((Platform.OS === "macos" || Platform.OS === "windows")) {
-    NativeMenu.updateMenuItems(ownerId, JSON.stringify(patches));
-  }
+  if (Platform.OS === "windows") {
+    const menus = windowsOwners.get(ownerId); if (menus) { windowsOwners.set(ownerId, patchWindowsMenus(menus, patches)); publishWindowsMenus(); }
+  } else if (Platform.OS === "macos") NativeMenu.updateMenuItems(ownerId, JSON.stringify(patches));
 }
-
 export function clearMenus(ownerId: string) {
-  if ((Platform.OS === "macos" || Platform.OS === "windows")) {
-    NativeMenu.clearMenus(ownerId);
-  }
+  if (Platform.OS === "windows") { windowsOwners.delete(ownerId); publishWindowsMenus(); }
+  else if (Platform.OS === "macos") NativeMenu.clearMenus(ownerId);
 }
-
 export function clearAllMenus() {
-  if ((Platform.OS === "macos" || Platform.OS === "windows")) {
-    NativeMenu.clearAllMenus();
-  }
+  if (Platform.OS === "windows") { windowsOwners.clear(); publishWindowsMenus(); }
+  else if (Platform.OS === "macos") NativeMenu.clearAllMenus();
 }
 
 export function addNativeMenuActionListener(listener: (action: NativeMenuAction) => void) {

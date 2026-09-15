@@ -5,7 +5,8 @@ import { showMessage } from "@legend-apps/message-dialog";
 import { showContextMenu } from "@legend-apps/context-menu";
 import { createTray } from "@legend-apps/tray";
 import { registerGlobalShortcut } from "@legend-apps/global-shortcuts";
-import { getWindow } from "@legend-apps/desktop-windows";
+import { configureMenus, clearMenus, addNativeMenuActionListener, updateMenuItems, commandModifier } from "@legend-apps/native-menu";
+import { getWindow, openWindow, closeWindow, onWindowEvent } from "@legend-apps/desktop-windows";
 import { assertContract } from "./contract-cases";
 
 async function requireError(action: () => Promise<unknown>, code: string) {
@@ -78,8 +79,38 @@ export default function DesktopInteractionChecks({ check, onError, onBusy }: {
     const replacement = await registerGlobalShortcut(accelerator, () => {}); await replacement.remove();
     setInstruction("Global shortcut, conflict rejection, removal, and re-registration passed.");
   }
+  async function modalWindows() {
+    setInstruction("A modal window will open. Verify the main window cannot receive input, then close the modal with its title-bar close button.");
+    await requireError(() => openWindow({ id: "missing-parent-check", parentId: "absent", modal: true }), "E_NOT_FOUND");
+    let closed!: () => void;
+    const action = new Promise<void>(resolve => { closed = resolve; });
+    const sub = onWindowEvent(event => { if (event.type === "closed" && event.windowId === "contract-modal") closed(); });
+    let opened = false;
+    try {
+      await openWindow({ id: "contract-modal", parentId: "main", modal: true, title: "Close this modal to continue", width: 500, height: 400 }); opened = true;
+      await within(action, 45000); opened = false;
+    } finally { sub.remove(); if (opened) await closeWindow("contract-modal"); }
+    setInstruction("Modal closed. Verify the main window accepts input again.");
+  }
+  async function advancedMenus() {
+    setInstruction("Use Command+Shift+Y (macOS) or Control+Shift+Y (Windows) to activate the Parity → Continue item.");
+    let selected!: (event: import("@legend-apps/native-menu").NativeMenuAction) => void;
+    const action = new Promise<import("@legend-apps/native-menu").NativeMenuAction>(resolve => { selected = resolve; });
+    const sub = addNativeMenuActionListener(event => { if (event.ownerId === "contract-binding") selected(event); });
+    configureMenus("contract-base", [{ id: "parity", title: "Parity", items: [{ id: "base", title: "Original" }, { id: "after", title: "After" }] }]);
+    configureMenus("contract-binding", [{ id: "bound", title: "Parity", items: [{ id: "continue", targetTitle: "Original", title: "Continue", placement: { after: "After" }, shortcut: { key: "y", modifiers: commandModifier | (1 << 17) }, payload: { token: "acceptance" } }] }]);
+    updateMenuItems("contract-binding", [{ id: "continue", checked: true }]);
+    try {
+      let received: import("@legend-apps/native-menu").NativeMenuAction | undefined;
+      await within(action.then(value => { received = value; }), 45000);
+      assertContract(received?.itemId === "continue" && received.menuId === "bound" && received.payload?.token === "acceptance", "Menu action lost semantic identity or payload");
+    } finally { sub.remove(); clearMenus("contract-binding"); clearMenus("contract-base"); }
+    setInstruction("Menu accelerator, targeting, update, and payload assertions passed.");
+  }
   return <View style={{ gap: 8 }}>
     <Text>{instruction}</Text>
+    <Button disabled={busy} onPress={() => run("desktop.modal-windows", modalWindows)}>Check modal window</Button>
+    <Button disabled={busy} onPress={() => run("desktop.advanced-menus", advancedMenus)}>Check menu accelerators</Button>
     <Button disabled={busy} onPress={() => run("desktop.tray", tray)}>Check tray</Button>
     <Button disabled={busy} onPress={() => run("desktop.global-shortcuts", globalShortcut)}>Check global shortcut</Button>
     <Button testID="legend-message-dialog" disabled={busy} onPress={() => run("desktop.message-dialog", dialogs)}>Check message dialogs</Button>

@@ -1,6 +1,7 @@
 // Application integration for the pinned RNW Composition host. UI-thread owned.
 #include <map>
 #include <set>
+#include <vector>
 #include <algorithm>
 #include <cmath>
 #include <exception>
@@ -24,7 +25,7 @@ namespace React = winrt::Microsoft::ReactNative;
 namespace Json = winrt::Windows::Data::Json;
 namespace UI = winrt::Microsoft::UI::Windowing;
 using winrt::to_hstring; using winrt::to_string;
-struct Window { React::ReactNativeWindow view{nullptr}; UI::AppWindow app{nullptr}; UI::OverlappedPresenter normal{nullptr}; int32_t minWidth = 100, minHeight = 100, maxWidth = 20000, maxHeight = 20000; bool guard = false; bool pending = false; bool allow = false; uint64_t request = 0; };
+struct Window { React::ReactNativeWindow view{nullptr}; UI::AppWindow app{nullptr}; UI::OverlappedPresenter normal{nullptr}; int32_t minWidth = 100, minHeight = 100, maxWidth = 20000, maxHeight = 20000; std::string parentId; bool modal = false; bool disabledByModal = false; bool enabledBeforeModal = false; bool guard = false; bool pending = false; bool allow = false; uint64_t request = 0; };
 static std::map<std::string, Window> windows;
 static React::ReactNativeHost host{nullptr};
 static winrt::Microsoft::UI::Composition::Compositor compositor{nullptr};
@@ -41,7 +42,16 @@ static std::map<UINT, React::JSValueObject> menuActions;
 static HMENU currentMenu = nullptr;
 static std::string menuOwner;
 static Json::JsonArray menus{nullptr};
+static HACCEL acceleratorTable = nullptr;
 static HWND Hwnd(Window const &window) { return winrt::Microsoft::UI::GetWindowFromWindowId(window.app.Id()); }
+static void UpdateModality() {
+  for (auto &[id, window] : windows) {
+    bool blocked = false;
+    for (auto const &[childId, child] : windows) if (child.modal && child.parentId == id && IsWindowVisible(Hwnd(child))) { blocked = true; break; }
+    if (blocked && !window.disabledByModal) { window.enabledBeforeModal = IsWindowEnabled(Hwnd(window)); window.disabledByModal = true; EnableWindow(Hwnd(window), FALSE); }
+    else if (!blocked && window.disabledByModal) { window.disabledByModal = false; if (window.enabledBeforeModal) EnableWindow(Hwnd(window), TRUE); }
+  }
+}
 static std::string Id(HWND hwnd) { auto root = GetAncestor(hwnd, GA_ROOT); for (auto const &[id, window] : windows) if (Hwnd(window) == root) return id; return ""; }
 static void Emit(React::JSValueObject value) { if (context) context.EmitJSEvent(L"RCTDeviceEventEmitter", L"desktop", std::move(value)); }
 static void WriteJson(React::IJSValueWriter const &writer, Json::IJsonValue const &value) {
@@ -187,6 +197,8 @@ static LRESULT CALLBACK WindowProc(HWND hwnd, UINT message, WPARAM wParam, LPARA
       auto limits = reinterpret_cast<MINMAXINFO *>(lParam); auto const &window = windows.at(id);
       limits->ptMinTrackSize = {window.minWidth, window.minHeight}; limits->ptMaxTrackSize = {window.maxWidth, window.maxHeight}; return 0;
     }
+    if (message == WM_SHOWWINDOW) PostMessageW(hwnd, WM_APP + 18, 0, 0);
+    if (message == WM_APP + 18) { UpdateModality(); return 0; }
     if (message == WM_EXITSIZEMOVE) SaveFrame(id, hwnd);
     if (message == WM_MOVE) Emit({{"type", "move"}, {"windowId", id}});
     if (message == WM_SIZE) Emit({{"type", "resize"}, {"windowId", id}});
@@ -196,7 +208,7 @@ static LRESULT CALLBACK WindowProc(HWND hwnd, UINT message, WPARAM wParam, LPARA
       SetMenu(hwnd, currentMenu); DrawMenuBar(hwnd);
     }
     if (message == WM_ACTIVATE) Emit({{"type", LOWORD(wParam) == WA_INACTIVE ? "blur" : "focus"}, {"windowId", id}});
-    if (message == WM_COMMAND && HIWORD(wParam) == 0) {
+    if (message == WM_COMMAND && (HIWORD(wParam) == 0 || HIWORD(wParam) == 1)) {
       auto found = menuActions.find(LOWORD(wParam)); if (found != menuActions.end() && context) { context.EmitJSEvent(L"RCTDeviceEventEmitter", L"NativeMenuAction", found->second.Copy()); return 0; }
     }
     if (message == WM_TIMER && wParam == 0x4C47) { if (id == "main") quitPending = false; windows.at(id).pending = false; KillTimer(hwnd, 0x4C47); return 0; }
@@ -227,13 +239,17 @@ static void Attach(std::string id, React::ReactNativeWindow view) {
         SetMenu(Hwnd(closing->second), nullptr);
         auto main = Hwnd(windows.at("main")); SetMenu(main, currentMenu); DrawMenuBar(main);
       }
-      windows.erase(id);
+      const auto parent = windows.at(id).parentId;
+      windows.erase(id); UpdateModality();
+      if (!parent.empty() && windows.count(parent) && IsWindowEnabled(Hwnd(windows.at(parent)))) SetForegroundWindow(Hwnd(windows.at(parent)));
     }
   });
 }
 static LRESULT CALLBACK Keyboard(int code, WPARAM remove, LPARAM param) {
   if (code >= 0 && remove == PM_REMOVE) {
     auto message = reinterpret_cast<MSG *>(param);
+    auto target = GetAncestor(message->hwnd, GA_ROOT);
+    if (acceleratorTable && !Id(target).empty() && IsWindowEnabled(target) && TranslateAcceleratorW(target, acceleratorTable, message)) { message->message = WM_NULL; return CallNextHookEx(keyboardHook, code, remove, param); }
     if (message->message == WM_KEYDOWN || message->message == WM_SYSKEYDOWN) {
       auto id = Id(message->hwnd); int modifiers = 0;
       if (GetKeyState(VK_CONTROL) < 0) modifiers |= 1 << 18;
@@ -248,22 +264,57 @@ static LRESULT CALLBACK Keyboard(int code, WPARAM remove, LPARAM param) {
   }
   return CallNextHookEx(keyboardHook, code, remove, param);
 }
+static React::JSValue Value(Json::IJsonValue const &value) {
+  switch (value.ValueType()) {
+    case Json::JsonValueType::Object: { React::JSValueObject result; for (auto const &entry : value.GetObject()) result.emplace(to_string(entry.Key()), Value(entry.Value())); return result; }
+    case Json::JsonValueType::Array: { React::JSValueArray result; for (auto const &entry : value.GetArray()) result.push_back(Value(entry)); return result; }
+    case Json::JsonValueType::String: return to_string(value.GetString());
+    case Json::JsonValueType::Number: return value.GetNumber();
+    case Json::JsonValueType::Boolean: return value.GetBoolean();
+    default: return nullptr;
+  }
+}
+static std::wstring MenuTitle(winrt::hstring const &title) {
+  std::wstring result; for (auto c : title) { result += c; if (c == L'&') result += c; } return result;
+}
 static void RebuildMenus() {
-  auto next = CreateMenu(); std::map<UINT, React::JSValueObject> actions; UINT command = 0x5000;
+  auto next = CreateMenu(); std::map<UINT, React::JSValueObject> actions; std::vector<ACCEL> accelerators; UINT command = 0x5000;
   for (auto const &value : menus) {
     auto menu = value.GetObject(); auto popup = CreatePopupMenu();
     for (auto const &entry : menu.GetNamedArray(L"items")) {
       auto item = entry.GetObject(); if (item.GetNamedBoolean(L"hidden", false)) continue;
       if (item.GetNamedBoolean(L"separator", false)) { AppendMenuW(popup, MF_SEPARATOR, 0, nullptr); continue; }
       auto flags = MF_STRING | (item.GetNamedBoolean(L"enabled", true) ? MF_ENABLED : MF_GRAYED) | (item.GetNamedBoolean(L"checked", false) ? MF_CHECKED : 0);
-      AppendMenuW(popup, flags, command, item.GetNamedString(L"title", L"").c_str());
-      actions.emplace(command++, React::JSValueObject{{"ownerId", menuOwner}, {"menuId", to_string(menu.GetNamedString(L"id"))}, {"itemId", to_string(item.GetNamedString(L"id"))}});
+      auto title = MenuTitle(item.GetNamedString(L"title", L""));
+      if (item.HasKey(L"shortcut") && item.GetNamedValue(L"shortcut").ValueType() == Json::JsonValueType::Object) {
+        auto shortcut = item.GetNamedObject(L"shortcut"); auto key = shortcut.GetNamedString(L"key", L"");
+        if (key.size() == 1 && command <= 0xffff) {
+          const auto bits = static_cast<int>(shortcut.GetNamedNumber(L"modifiers", 0));
+          BYTE modifiers = FVIRTKEY; if (bits & ((1 << 18) | (1 << 20))) modifiers |= FCONTROL;
+          if (bits & (1 << 19)) modifiers |= FALT; if (bits & (1 << 17)) modifiers |= FSHIFT;
+          wchar_t c = key[0]; WORD code = 0;
+          if (c >= 0xf704 && c <= 0xf717) code = VK_F1 + c - 0xf704;
+          else if (c == 0xf700) code = VK_UP; else if (c == 0xf701) code = VK_DOWN; else if (c == 0xf702) code = VK_LEFT; else if (c == 0xf703) code = VK_RIGHT;
+          else if (c == 0xf728) code = VK_DELETE; else if (c == 0x7f) code = VK_BACK;
+          else { auto scan = VkKeyScanW(c); if (scan != -1) { code = LOBYTE(scan); if (HIBYTE(scan) & 1) modifiers |= FSHIFT; if (HIBYTE(scan) & 2) modifiers |= FCONTROL; if (HIBYTE(scan) & 4) modifiers |= FALT; } }
+          if (code) {
+            if (item.GetNamedBoolean(L"enabled", true)) accelerators.push_back({modifiers, code, static_cast<WORD>(command)});
+            title += L"\t"; if (modifiers & FCONTROL) title += L"Ctrl+"; if (modifiers & FALT) title += L"Alt+"; if (modifiers & FSHIFT) title += L"Shift+";
+            wchar_t label[80]{}; auto scan = MapVirtualKeyW(code, MAPVK_VK_TO_VSC); if (code == VK_LEFT || code == VK_RIGHT || code == VK_UP || code == VK_DOWN || code == VK_DELETE) scan |= 0x100;
+            GetKeyNameTextW(static_cast<LONG>(scan << 16), label, 80); title += label;
+          }
+        }
+      }
+      AppendMenuW(popup, flags, command, title.c_str());
+      actions.emplace(command++, React::JSValueObject{{"ownerId", to_string(item.GetNamedString(L"_legendOwner", to_hstring(menuOwner)))}, {"menuId", to_string(item.GetNamedString(L"_legendMenu", menu.GetNamedString(L"id")))}, {"itemId", to_string(item.GetNamedString(L"id"))}, {"payload", Value(item.GetNamedObject(L"payload", Json::JsonObject()))}});
     }
-    AppendMenuW(next, MF_POPUP, reinterpret_cast<UINT_PTR>(popup), menu.GetNamedString(L"title").c_str());
+    AppendMenuW(next, MF_POPUP, reinterpret_cast<UINT_PTR>(popup), MenuTitle(menu.GetNamedString(L"title")).c_str());
   }
   for (auto const &[id, window] : windows) SetMenu(Hwnd(window), nullptr);
   auto target = GetForegroundWindow(); if (Id(target).empty()) target = Hwnd(windows.at("main")); SetMenu(target, next); DrawMenuBar(target);
   auto old = currentMenu; currentMenu = next; menuActions = std::move(actions); if (old) DestroyMenu(old);
+  if (acceleratorTable) DestroyAcceleratorTable(acceleratorTable);
+  acceleratorTable = accelerators.empty() ? nullptr : CreateAcceleratorTableW(accelerators.data(), static_cast<int>(accelerators.size()));
 }
 static void Initialize(React::ReactNativeWin32App const &app) {
   // WinRT activation must follow init_apartment, never static initialization.
@@ -337,7 +388,11 @@ struct LegendDesktopWindows {
         auto args = Json::JsonObject::Parse(to_hstring(encoded)); auto id = to_string(args.GetNamedString(L"id", L"main"));
         if (method == "open") {
           if (windows.count(id)) throw winrt::hresult_invalid_argument(L"Window already exists");
-          if (args.GetNamedBoolean(L"modal", false) || args.HasKey(L"parentId")) throw winrt::hresult_invalid_argument(L"Owned/modal windows are not implemented");
+          const auto parentId = to_string(args.GetNamedString(L"parentId", L""));
+          const bool modal = args.GetNamedBoolean(L"modal", false);
+          if ((modal && parentId.empty()) || parentId == id) throw winrt::hresult_invalid_argument(L"Modal windows need a distinct parent");
+          if (!parentId.empty() && !windows.count(parentId)) { promise.Reject(React::ReactError{"E_NOT_FOUND", "Parent window not found"}); return; }
+          if (modal) for (auto const &[childId, child] : windows) if (child.parentId == parentId && child.modal) { promise.Reject(React::ReactError{"E_BUSY", "Parent already has a modal window"}); return; }
           auto view = React::ReactNativeWindow::CreateFromCompositor(compositor); auto app = view.AppWindow();
           app.Title(args.GetNamedString(L"title", L"Window")); app.Resize({static_cast<int32_t>(args.GetNamedNumber(L"width", 800)), static_cast<int32_t>(args.GetNamedNumber(L"height", 600))});
           React::ReactViewOptions options; options.ComponentName(L"main");
@@ -347,12 +402,17 @@ struct LegendDesktopWindows {
           options.InitialProps([propsJson](React::IJSValueWriter const &writer) { WriteJson(writer, Json::JsonObject::Parse(to_hstring(propsJson))); });
           // Validate all options before attaching/showing a new React root.
           Json::JsonObject style;
-          for (auto const &pair : args) if (pair.Key() != L"id" && pair.Key() != L"props") style.SetNamedValue(pair.Key(), pair.Value());
+          for (auto const &pair : args) if (pair.Key() != L"id" && pair.Key() != L"props" && pair.Key() != L"parentId" && pair.Key() != L"modal") style.SetNamedValue(pair.Key(), pair.Value());
           Window pending; pending.view = view; pending.app = app; pending.normal = app.Presenter().as<UI::OverlappedPresenter>();
           try { ApplyOptions(pending, style); } catch (...) { app.Destroy(); throw; }
           Attach(id, view);
-          auto &attached = windows.at(id); attached.minWidth = pending.minWidth; attached.minHeight = pending.minHeight; attached.maxWidth = pending.maxWidth; attached.maxHeight = pending.maxHeight;
-          view.ReactNativeIsland().ReactViewHost(React::ReactCoreInjection::MakeViewHost(host, options)); app.Show();
+          auto &attached = windows.at(id); attached.parentId = parentId; attached.modal = modal;
+          if (!parentId.empty()) {
+            SetLastError(0); SetWindowLongPtrW(Hwnd(attached), GWLP_HWNDPARENT, reinterpret_cast<LONG_PTR>(Hwnd(windows.at(parentId))));
+            if (GetLastError()) { app.Destroy(); throw winrt::hresult_error(HRESULT_FROM_WIN32(GetLastError())); }
+          }
+          attached.minWidth = pending.minWidth; attached.minHeight = pending.minHeight; attached.maxWidth = pending.maxWidth; attached.maxHeight = pending.maxHeight;
+          view.ReactNativeIsland().ReactViewHost(React::ReactCoreInjection::MakeViewHost(host, options)); app.Show(); UpdateModality();
           promise.Resolve(to_string(Info(id).Stringify())); return;
         }
         if (method == "displays") { promise.Resolve(to_string(Displays().Stringify())); return; }
@@ -380,8 +440,8 @@ struct LegendDesktopWindows {
         else if (method == "replyClose") {
           if (window.pending && args.GetNamedNumber(L"requestId", 0) == window.request) { window.pending = false; KillTimer(hwnd, 0x4C47); if (args.GetNamedBoolean(L"allow")) { if (id == "main") RequestQuit(); else { window.allow = true; window.app.Destroy(); } } }
         } else if (method == "close") PostMessageW(hwnd, WM_CLOSE, 0, 0);
-        else if (method == "show") { window.app.Show(); SetForegroundWindow(hwnd); }
-        else if (method == "hide") window.app.Hide();
+        else if (method == "show") { window.app.Show(); UpdateModality(); SetForegroundWindow(hwnd); }
+        else if (method == "hide") { window.app.Hide(); UpdateModality(); }
         else if (method == "minimize") ShowWindow(hwnd, SW_MINIMIZE);
         else if (method == "maximize") ShowWindow(hwnd, SW_MAXIMIZE);
         else if (method == "unmaximize") ShowWindow(hwnd, SW_RESTORE);
