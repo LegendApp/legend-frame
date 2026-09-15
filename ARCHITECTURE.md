@@ -294,6 +294,33 @@ Update README for user-facing workflow/status changes, this document for archite
 
 [SDK export/import](docs/sdk-distribution.md) packages the CLI, module archives, and optional prebuilt runtimes into a transferable directory. The recipient installs it without this checkout; Expo Desktop beta still owns creation and desktop generation, and Legend retains native compatibility checks.
 
+## Kitchen sink development
+
+`bun run kitchen-sink` prepares a managed consumer only when its SDK content hash,
+dependency configuration, or installation changes, then delegates to the installed
+`legend dev` / Expo CLI. It never builds native code automatically. The registered
+prebuilt runtime supplies native modules and remains subject to normal compatibility
+checks; Metro supplies the example's JavaScript.
+
+The consumer preserves its identity, configuration, native projects, and runtime
+selection. Its `src` directory links to `examples/kitchen-sink` (a junction on
+Windows). Metro watches the real source and Uniwind CSS, while package imports from
+that source resolve against the consumer's installed dependencies to avoid workspace
+leaks and duplicate React. SDK edits refresh packaged dependencies on the next run;
+screen and style edits reach Metro immediately.
+
+`bun run kitchen-sink:prepare` and integration runners using `prepareKitchenSink`
+keep a separate copied consumer for distribution validation and test-driver edits.
+They reject the live-source consumer so tests cannot accidentally modify checkout
+source through its link. `--prepare-only` prepares the live development consumer
+without launching; `--refresh` forces repacking and installation.
+
+Validated on macOS on 2026-09-15: fresh and cached preparation, a separate packed
+consumer, the real Metro macOS graph resolving checkout source with one installed
+React copy, TypeScript and CSS edits delivered over HMR, and session shutdown.
+TypeScript and 172 tests passed. Native launch remains gated by the locally outdated
+prebuilt host; native execution and Windows junction behavior were not retested.
+
 ## Small application examples
 
 [Notes Lite, Music Lite, and Diff Lite](docs/example-apps.md) are standalone universal

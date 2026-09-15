@@ -13,6 +13,7 @@
     "pack:local": "bun scripts/pack.ts",
     "legend": "bun packages/cli/src/index.ts",
     "kitchen-sink": "bun scripts/kitchen-sink.ts",
+    "kitchen-sink:prepare": "bun scripts/kitchen-sink.ts .legend/examples/KitchenSinkPackaged --packaged",
     "settings": "bun scripts/settings.ts",
     "test:native": "bun scripts/test-native.ts",
     "test:all": "bun run typecheck && bun test tests && bun run test:sparkle && bun run test:updates && bun run test:integrations && bun run test:native && bun run test:expansion && bun run test:runtimes:all",

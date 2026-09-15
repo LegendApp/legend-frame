@@ -35,21 +35,30 @@ See [desktop integrations](desktop-integrations.md) for notification, tray, and 
 
 ## Run the kitchen sink
 
-From this checkout, with Bun and the native build prerequisites installed:
+From this checkout, with Bun and a compatible registered prebuilt runtime:
 
 ```sh
 bun install
 bun run kitchen-sink
-bun run legend sdk build-prebuilt
-cd .legend/examples/KitchenSink
-bun dev
 ```
 
-The kitchen-sink command packs and registers the local SDK, creates the example,
-and copies its source. Once a compatible prebuilt runtime is registered, running the
-example requires only JS tooling. `s` switches runtime target; `b` builds a
-custom runtime when needed. Native source and module changes require a rebuilt
-binary, and the CLI checks compatibility before serving JS.
+The first run packs and registers the local SDK and installs a managed consumer.
+Later runs reuse that setup until SDK inputs or installed dependency configuration
+change. Expo CLI/Metro launches automatically and reads `examples/kitchen-sink`
+directly, including Uniwind CSS, for Fast Refresh. `--refresh` forces setup;
+`--prepare-only` stops before Metro. Dev options such as `--port 8082` pass through.
+
+If no compatible runtime is available, prepare the app with
+`bun run kitchen-sink --prepare-only`, then run `bun run legend sdk build-prebuilt` with the native build
+prerequisites installed. This builds the reusable runtime. Ordinary app edits need
+no native rebuild. `g` switches the desktop runtime; `b` explicitly builds a custom
+runtime. Native source and checked host configuration changes require a rebuilt
+binary, and the CLI checks compatibility before serving desktop JS.
+
+For a copied consumer that validation scripts can modify independently, run
+`bun run kitchen-sink:prepare`. It always packs/installs and exits without Metro;
+its directory is `.legend/examples/KitchenSinkPackaged`. Integration runners retain
+that isolated preparation behavior through `prepareKitchenSink`.
 
 The example is in `examples/kitchen-sink`. It includes a small document editor,
 secondary windows, native menu actions, a persistent counter, clipboard controls,

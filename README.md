@@ -187,12 +187,15 @@ From the framework checkout:
 
 ```sh
 bun run kitchen-sink
-bun run legend sdk build-prebuilt
-cd .legend/examples/KitchenSink
-bun dev
 ```
 
-The preparation command packs the SDK and creates or refreshes the managed example. Its source lives in [examples/kitchen-sink](examples/kitchen-sink). It exercises desktop APIs with windows, an editor, menus, persistence, and an event log. Its actions use native buttons and show progress, results, and errors beneath the button; each demo also shows its recent callback events, and the event log retains detailed output. The header theme button cycles System → Light → Dark → System, starting with the system appearance; Uniwind tokens theme the screen and React Native Appearance updates native controls. Building/registering the prebuilt runtime is required before its first compatible runtime launch.
+This starts Expo CLI/Metro and opens a compatible registered prebuilt runtime. The first run packs the SDK and installs the managed consumer in `.legend/examples/KitchenSink`; subsequent runs skip setup until SDK inputs or the consumer dependency configuration change. Edit [examples/kitchen-sink](examples/kitchen-sink) directly: JavaScript and Uniwind CSS changes use Fast Refresh without copying files or rebuilding native code.
+
+Use `bun run kitchen-sink --refresh` to force SDK preparation, `--prepare-only` to stop before Metro, or pass dev options such as `--port 8082` and `--no-open`. `bun run kitchen-sink:prepare` retains the copied, packaged-consumer workflow for validation in a separate directory.
+
+A compatible prebuilt runtime must already be installed/registered. To build one locally, run `bun run legend sdk build-prebuilt` after SDK preparation; this compiles the reusable native runtime, not the kitchen sink. Rebuild it when native modules or checked host configuration change, not for ordinary screen edits. The kitchen sink command never compiles native code automatically.
+
+The example exercises desktop APIs with windows, an editor, menus, persistence, and an event log. Its actions use native buttons and show progress, results, and errors beneath the button; each demo also shows its recent callback events, and the event log retains detailed output. The header theme button cycles System → Light → Dark → System, starting with the system appearance; Uniwind tokens theme the screen and React Native Appearance updates native controls.
 
 ## Commands and tests
 
