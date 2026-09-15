@@ -16,9 +16,9 @@ const root = path.resolve(at < 0 ? `.legend/windows-features/WindowsFeatures${Da
 await run(framework, ["bun", "scripts/pack.ts", "--platform=windows"]);
 await create(root, path.join(framework, "artifacts/packages/manifest.json"), "windows", true);
 const pkg = readJson(path.join(root, "package.json"));
-for (const name of ["@legend-apps/file-dialog", "@legend-apps/desktop-windows"]) pkg.dependencies[name] = pkg.overrides[name];
+for (const name of ["@legend-apps/file-dialog", "@legend-apps/desktop-windows", "@legend-apps/file-system", "@legend-apps/settings"]) pkg.dependencies[name] = pkg.overrides[name];
 writeJson(path.join(root, "package.json"), pkg); await run(root, ["bun", "install"]);
-for (const file of ["contract-cases.ts", "contract-report.ts"]) cpSync(path.join(framework, "examples/kitchen-sink", file), path.join(root, file));
+for (const file of ["contract-cases.ts", "contract-report.ts", "desktop-contract-cases.ts"]) cpSync(path.join(framework, "examples/kitchen-sink", file), path.join(root, file));
 const coverage = createReport(framework, root, { platform: "windows", arch: architecture("windows"), device: "Windows desktop", mode: "dev" }, prepareOnly ? "prepare" : "runtime");
 const coverageFile = path.join(framework, ".legend/test-results", `${coverage.runId}.json`);
 coverage.versions = installedVersions(root);
@@ -44,6 +44,9 @@ import * as Clipboard from '@legend-apps/clipboard';
 import * as SecureStore from '@legend-apps/secure-storage';
 import * as Linking from '@legend-apps/desktop-links';
 import * as Files from '@legend-apps/file-dialog';
+import * as FileSystem from '@legend-apps/file-system';
+import { settings } from '@legend-apps/settings';
+import { filesystemLifecycle, settingsLifecycle } from './desktop-contract-cases';
 import * as Windows from '@legend-apps/desktop-windows';
 import { clipboardRead, clipboardRoundTrip, secureStorageLifecycle, linkingResolution, fileConflict } from './contract-cases';
 import { executeCase, type CaseResult } from './contract-report';
@@ -66,6 +69,15 @@ function Main() {
   await check('storage.lifecycle',()=>secureStorageLifecycle(SecureStore,'probe-${token}'));
   await check('links.resolution',()=>linkingResolution(Linking));
   await check('files.conflict',()=>fileConflict(Files,${JSON.stringify(sampleFile)}));
+  await check('desktop.filesystem',()=>filesystemLifecycle(FileSystem,'${token}'));
+  await check('desktop.settings',async()=>{
+   await settingsLifecycle(settings,'${token}');
+   const key='restart-${token}', previous=await settings.get(key);
+   if((await Linking.getInitialURL())==='legend-probe://recovered') {
+    if(previous!=='saved before termination') throw Error('Settings did not survive process restart');
+    await settings.remove(key);
+   } else { if(previous!==null) throw Error('Test settings key was not isolated'); await settings.set(key,'saved before termination'); }
+  });
   await check('windows.geometry',async()=>{
   const displays=await Windows.getDisplays();
   if(!displays.length||!displays.every(d=>d.scale>0&&d.frame.width>0&&d.workArea.height>0)) throw Error('Invalid displays');

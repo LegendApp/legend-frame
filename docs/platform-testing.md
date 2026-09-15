@@ -88,3 +88,10 @@ Web secure storage has its own unavailable-behavior test. Passing it does not cl
 5. Record results with source/platform/runtime evidence. Add failure-injection tests for the harness when changing result semantics.
 
 The current catalog covers build, API, UI, lifecycle, and distribution areas. Many broader desktop/module and lifecycle entries intentionally remain untested. Future work includes migrating remaining macOS suites, real mobile UI automation, restart/persistence and Fast Refresh assertions, device-only camera/audio/notification checks, and signed distribution tests on clean machines. Neither an empty case body nor an expected unsupported result counts as implementation coverage.
+
+The desktop shared screen also runs filesystem and settings acceptance against the
+same public APIs on macOS and Windows. Cases cover Unicode/file URLs, binary and
+empty files, error codes, copying/moving/deleting directories, atomic replacement
+watch notifications and unsubscribe, and serialized JSON settings updates. The
+Windows feature runner also verifies settings across process termination/relaunch.
+All filesystem cases use a disposable subdirectory of the app's temporary storage.

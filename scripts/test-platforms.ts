@@ -88,8 +88,13 @@ try {
     }
     await run(framework, ["bun", "scripts/pack.ts", ...(platform === "windows" ? ["--platform=windows"] : [])], { capture: true });
     await create(root, path.join(framework, "artifacts/packages/manifest.json"), platform === "windows" ? "windows" : "macos", true);
-    for (const name of ["contract-cases.ts", "contract-report.ts", "PlatformChecks.tsx"]) cpSync(path.join(framework, "examples/kitchen-sink", name), path.join(root, name));
+    for (const name of ["contract-cases.ts", "contract-report.ts", "PlatformChecks.tsx", "desktop-contract-cases.ts", "desktop-contracts.ts", "desktop-contracts.desktop.ts", "desktop-contracts.macos.ts", "desktop-contracts.windows.ts"]) cpSync(path.join(framework, "examples/kitchen-sink", name), path.join(root, name));
     writeFileSync(path.join(root, "App.tsx"), 'export { default } from "./PlatformChecks";\n');
+    if (desktop) {
+      const pkg = readJson(path.join(root, "package.json"));
+      for (const name of ["@legend-apps/file-system", "@legend-apps/settings"]) pkg.dependencies[name] = pkg.overrides[name];
+      writeJson(path.join(root, "package.json"), pkg); await run(root, ["bun", "install"], { capture: true });
+    }
     // A unique application ID prevents this probe replacing another test or user app.
     if (!prepareOnly && platform === "ios") {
       const listing = JSON.parse(await run(root, ["xcrun", "simctl", "list", "devices", "available", "--json"], { capture: true }));
@@ -99,7 +104,7 @@ try {
     const applicationId = `so.legend.acceptance.p${report.runId.replaceAll("-", "")}`;
     config.expo = { ...config.expo, ios: { bundleIdentifier: applicationId }, android: { package: applicationId } };
     writeJson(path.join(root, "desktop.config.json"), config);
-    const appCases = new Set(["clipboard.read", "clipboard.roundtrip", "storage.lifecycle", "storage.unavailable", "links.resolution", "ui.button", "ui.input", "ui.select"]);
+    const appCases = new Set(["clipboard.read", "clipboard.roundtrip", "storage.lifecycle", "storage.unavailable", "links.resolution", "ui.button", "ui.input", "ui.select", "desktop.filesystem", "desktop.settings"]);
     server = Bun.serve({ hostname: "127.0.0.1", port: 0, maxRequestBodySize: 128 * 1024, async fetch(request) {
       const headers = { "Access-Control-Allow-Origin": "*", "Access-Control-Allow-Headers": "Content-Type", "Access-Control-Allow-Methods": "POST, OPTIONS" };
       if (new URL(request.url).pathname !== `/${report.runId}`) return new Response("Not found", { status: 404, headers });

@@ -1,12 +1,12 @@
-import { NativeEventEmitter } from "react-native";
+import { NativeEventEmitter, Platform } from "react-native";
 import Native from "./NativeDesktopFileSystem";
+import { absolutePath } from "./path";
 export type FileStat = { type: "file" | "directory" | "symlink"; size: number; modifiedAt: number };
 async function call<T = void>(method: string, args: object): Promise<T> {
   return JSON.parse(await Native.call(method, JSON.stringify(args))) as T;
 }
 function absolute(path: string) {
-  if (!(path.startsWith("/") || path.startsWith("file://")) || path.includes("\0")) throw new Error("Expected an absolute path or file URL");
-  return path;
+  return absolutePath(path, Platform.OS);
 }
 export const getDirectory = (kind: "data" | "cache" | "temp") => call<string>("directory", { kind });
 export const readText = (path: string) => call<string>("readText", { path: absolute(path) });

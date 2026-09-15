@@ -74,7 +74,9 @@
     "uniwind": "1.6.3",
     "tailwindcss": "4.2.4",
     "@legend-apps/clipboard": "workspace:*",
-    "@legend-apps/secure-storage": "workspace:*"
+    "@legend-apps/secure-storage": "workspace:*",
+    "@legend-apps/file-system": "workspace:*",
+    "@legend-apps/settings": "workspace:*"
   },
   "overrides": {
     "@expo/cli": "54.0.27",

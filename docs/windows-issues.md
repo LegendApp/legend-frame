@@ -18,7 +18,7 @@ Updated 2026-09-15. Windows is an integrated target of the shared framework and 
 | WIN-03 | WinUI ComboBox implementation added with semantic value mapping and suppressed programmatic callbacks; native acceptance pending. | Native selection preserves semantic values across reordered options and delivers callbacks; keyboard and accessibility checks pass. |
 | WIN-04 | Text/HTML clipboard, project-scoped Credential Manager storage, URI launching/querying, and initial command-line URL implemented. Recent documents and rich clipboard parity remain open. Queued/warm activation source is now supplied by the host, pending native acceptance. Credential values are limited to 2560 UTF-16 bytes. | Implement the agreed shared contracts and run their behavior checks on Windows, including failure cases and URL lifecycle where applicable. |
 | WIN-05 | Integrated prebuilt/custom-build host has passed generation and bundle checks; Windows native acceptance is pending on x64 and ARM64. ARM64 detection, target selection, separate binaries, and runtime compatibility are implemented for Parallels. | `bun run test:windows --project C:\dev\LegendWindowsVerification` passes compilation, Hermes startup, Fast Refresh, native dependency incompatibility detection, and custom-build switching on both x64 and ARM64; Parallels requires the ARM64 compiler tools. |
-| WIN-06 | Broader desktop SDK parity is incomplete: broader dialogs/filesystem/settings, drag/drop, notifications/tray, processes/system, and external native integrations. | Port incrementally with an explicit per-feature acceptance record; split this inventory into individual issues as each area starts. Do not infer parity from the shared host. |
+| WIN-06 | Broader desktop SDK parity is incomplete: message dialogs/context menus, drag/drop, notifications/tray, processes/system, and external native integrations. | Port incrementally with an explicit per-feature acceptance record; split this inventory into individual issues as each area starts. Do not infer parity from the shared host. |
 | WIN-07 | Standalone release/preview builds, signing/packaging and updates are not implemented. Portable SDK/client transfer exists; Windows clean-machine runtime startup is unverified. | Define the Windows distribution contract, implement it, and verify installation/launch/update on a clean machine. This remains outside the current development slice. |
 | WIN-09 | Shared-host secondary React windows, title/show/hide/minimize/maximize, close/quit guards, focused shortcuts, basic menus, main-frame restoration, display enumeration, frame/center/fullscreen operations, basic sizing/presentation options, and single-instance file/URL forwarding now have native host source. A project-scoped named mutex covers simultaneous startup and abandoned-owner recovery; menus follow the focused React window. AsyncStorage receives an unpackaged project-specific database path. | Compile on Windows; create/edit/close a secondary Notes window, verify failed saves cancel close, trigger Ctrl+N/S/O and menu actions, reopen into the same data/frame, and forward a file to the existing process. Advanced window styles, owned/modal windows, menu placement/targeting and OS association registration remain outside this implementation. Verify concurrent launch forwarding, owner-termination recovery, display geometry/scales, constraints and fullscreen restoration. |
 | WIN-10 | Music Lite has a native MediaPlayer implementation and system transport controls. | Compile and play/pause/seek/end/error-check local audio; verify media controls, queue restoration, and disposal. |
@@ -40,7 +40,7 @@ The feature command generates a fresh universal app, compiles its native Windows
 
 On macOS, `bun run test:windows:features --prepare-only` performs generation and bundling only. It is not native acceptance. The new Windows C++ source has not yet been compiled or run on this development machine. WIN-01 through WIN-05 stay open until those checks pass.
 
-The [document editor](document-editor.md) uses the native Windows file dialogs and text I/O. It now uses the shared window/close/menu/shortcut integration. Those new host paths need Windows acceptance before relying on them for unsaved work. OS association registration, advanced menu/window parity, and broader filesystem operations remain open. Notes Lite adds autosave and snapshot recovery at the application layer. Unsupported secondary-window style options and menu targeting, placement, payloads, and menu accelerators report an error; focused keyboard shortcuts are registered separately. Launch forwarding acquires a named mutex before host construction. A concurrent process waits for the primary window, forwards its command line, and exits; a timeout reports failure instead of starting a second writer. The OS releases ownership after process termination. Native race/recovery acceptance remains pending.
+The [document editor](document-editor.md) uses the native Windows file dialogs and text I/O. It now uses the shared window/close/menu/shortcut integration. Those new host paths need Windows acceptance before relying on them for unsaved work. OS association registration, advanced menu/window parity, and filesystem native acceptance remains open. Notes Lite adds autosave and snapshot recovery at the application layer. Unsupported secondary-window style options and menu targeting, placement, payloads, and menu accelerators report an error; focused keyboard shortcuts are registered separately. Launch forwarding acquires a named mutex before host construction. A concurrent process waits for the primary window, forwards its command line, and exits; a timeout reports failure instead of starting a second writer. The OS releases ownership after process termination. Native race/recovery acceptance remains pending.
 
 The Settings screen now mounts the shared screen using real Windows backend bindings. If the UI module is absent or XAML initialization fails, controls display labeled, noninteractive placeholders; invalid Select options still fail contract validation. RNW 0.81.35's pinned Windows App SDK 1.8 includes XamlIsland; the backend connects it through RNW's ContentIslandComponentView. No dependency upgrade or upstream source patch was made.
 
@@ -77,3 +77,21 @@ Remaining feature work includes app-owned recent documents/rich clipboard, owned
 or modal windows and AppKit-specific presentation, broader menu features and OS
 associations, and WIN-06's unported modules. Production packaging/updates and
 secondary Hermes runtimes remain separate from this development foundation.
+
+## Filesystem and settings parity — 2026-09-15
+
+Windows now implements the complete existing filesystem surface: project-scoped
+app directories, UTF-8/base64 reads and atomic writes, metadata, sorted listings,
+directory creation, recursive removal/copy, moves, and nonrecursive watch
+invalidation. Drive-qualified paths, UNC paths, and local file URLs are accepted;
+relative paths and device namespaces are rejected. Watchers observe a file's
+parent and are disposed on unsubscribe/runtime teardown. Filesystem errors retain
+the shared `E_NOT_FOUND`, `E_PERMISSION`, `E_EXISTS`, `E_NOT_EMPTY`, and `E_IO` codes.
+The existing settings implementation uses this backend without a new API.
+
+`test:platform` now exercises the same filesystem/settings cases on macOS and
+Windows. `test:windows:features` additionally checks that a saved setting survives
+owner termination and relaunch. Native compilation/execution remains pending;
+verify permissions, UNC shares, symlinks, cross-volume moves, and watch teardown
+on Windows in addition to the automatic disposable-directory checks. Implemented
+catalog entries remain `not-tested` until executed successfully.

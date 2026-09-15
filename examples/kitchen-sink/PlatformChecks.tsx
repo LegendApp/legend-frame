@@ -6,6 +6,7 @@ import * as Storage from "@legend-apps/secure-storage";
 import * as Linking from "@legend-apps/desktop-links";
 import { clipboardRead, clipboardRoundTrip, secureStorageLifecycle, linkingResolution, assertContract } from "./contract-cases";
 import { catalog, executeCase, initialResults, updateResult, summarize, type CaseResult, type TestPlatform } from "./contract-report";
+import { runDesktopContracts } from "./desktop-contracts";
 import { testConfig } from "./platform-test-config";
 const options = [{ label: "First", value: "first" }, { label: "Second", value: "second" }];
 interface RuntimeModule extends TurboModule { call(method: string, args: string): Promise<string> }
@@ -57,6 +58,7 @@ export default function PlatformChecks() {
         await check("storage.lifecycle", () => secureStorageLifecycle(Storage, `contract-${testConfig.runId}`));
       }
       await check("links.resolution", () => linkingResolution(Linking));
+      await runDesktopContracts(check, testConfig.runId);
       await publish(testConfig.apiOnly);
     } finally { setRunning(false); }
   }, [check, publish, save]);

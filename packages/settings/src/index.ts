@@ -1,4 +1,5 @@
 import * as files from "@legend-apps/file-system";
+import { settingsFilename } from "./filename";
 import { createSettingsStore } from "./store";
 export { createSettingsStore, type Json, type SettingsStorage } from "./store";
 let directory: Promise<string> | undefined;
@@ -6,7 +7,7 @@ async function file(key: string) {
   directory ??= files.getDirectory("data").then(async root => {
     const dir = `${root}/settings`; await files.mkdir(dir); return dir;
   }).catch(error => { directory = undefined; throw error; });
-  return `${await directory}/${encodeURIComponent(key)}.json`;
+  return `${await directory}/${settingsFilename(key)}`;
 }
 export const settings = createSettingsStore({
   async read(key) {
