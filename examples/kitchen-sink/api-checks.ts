@@ -1,9 +1,10 @@
 import * as clipboard from "@legend-apps/desktop/clipboard";
 import * as secureStore from "@legend-apps/desktop/secure-storage";
 import * as links from "@legend-apps/desktop/links";
+import { clipboardRead, clipboardRoundTrip, secureStorageLifecycle, linkingResolution } from "./contract-cases";
 import type { TestDriver } from "./test-driver";
 
-type Check = (name: string, action: () => Promise<void>) => Promise<void>;
+type Check = (name: string, action: () => Promise<void>, contracts?: string[]) => Promise<void>;
 function assert(value: unknown, message: string): asserts value { if (!value) throw new Error(message); }
 const delay = (ms: number) => new Promise(resolve => setTimeout(resolve, ms));
 async function until(predicate: () => boolean) {
@@ -14,12 +15,12 @@ export async function runAPIChecks(check: Check, driver?: TestDriver, expectedIn
   const token = `api-test-${Date.now()}`;
   const native = async (method: string, args: object = {}) => JSON.parse(await driver!.call(method, JSON.stringify(args)));
   await check("Expo clipboard: string read and presence", async () => {
-    assert(typeof await clipboard.getStringAsync() === "string", "Expected string");
-    assert(typeof await clipboard.hasStringAsync() === "boolean", "Expected boolean");
-  });
+    await clipboardRead(clipboard);
+  }, ["clipboard.read"]);
   if (driver) await check("Expo clipboard: text, HTML, empty string, legacy interop and restoration", async () => {
     await native("saveClipboard");
     try {
+      await clipboardRoundTrip(clipboard, token);
       assert(await clipboard.setStringAsync(token) === true, "Write must resolve true");
       assert(await clipboard.getStringAsync() === token && await clipboard.hasStringAsync(), "Text roundtrip failed");
       assert(await clipboard.readClipboardText() === token, "Legacy read must see new write");
@@ -36,9 +37,9 @@ export async function runAPIChecks(check: Check, driver?: TestDriver, expectedIn
       await clipboard.clearClipboard();
       assert(!await clipboard.hasStringAsync(), "Empty clipboard reports text");
     } finally { await native("restoreClipboard"); }
-  });
+  }, ["clipboard.roundtrip"]);
   await check("Expo SecureStore: availability, missing, write, update, delete and legacy interop", async () => {
-    assert(await secureStore.isAvailableAsync(), "Native Keychain unavailable");
+    await secureStorageLifecycle(secureStore, token);
     try {
       await secureStore.deleteItemAsync(token);
       assert(await secureStore.getItemAsync(token) === null, "Missing key must be null");
@@ -51,7 +52,7 @@ export async function runAPIChecks(check: Check, driver?: TestDriver, expectedIn
       await secureStore.deleteItemAsync(token); await secureStore.deleteItemAsync(token);
       assert(await secureStore.getItemAsync(token) === null, "Delete failed");
     } finally { await secureStore.deleteItemAsync(token); }
-  });
+  }, ["storage.lifecycle"]);
   await check("Expo SecureStore: unsupported options never silently weaken a request", async () => {
     let rejected = false;
     try { await secureStore.setItemAsync(token, "unused", { requireAuthentication: true } as never); }
@@ -60,12 +61,13 @@ export async function runAPIChecks(check: Check, driver?: TestDriver, expectedIn
     assert(await secureStore.getItemAsync(token) === null, "Rejected request wrote data");
   });
   await check("Expo Linking: initial URL and scheme resolution", async () => {
+    await linkingResolution(links);
     const initial = await links.getInitialURL();
     if (expectedInitial !== undefined) assert(initial === expectedInitial, `Initial URL mismatch: ${initial}`);
     assert(await links.getInitialURL() === initial, "Initial URL changed between reads");
     assert(await links.canOpenURL("https://example.com"), "HTTPS handler missing");
     assert(!await links.canOpenURL("legend-api-unknown://missing"), "Unknown scheme resolved");
-  });
+  }, ["links.resolution"]);
   if (driver) await check("Expo Linking: live URL events, file separation, removal and stable initial URL", async () => {
     const initial = await links.getInitialURL();
     const received: string[] = [], legacyFiles: string[] = [];

@@ -7,6 +7,8 @@ import { binary, run } from "../packages/cli/src/commands";
 import { availablePort } from "../packages/cli/src/local";
 import { readJson, writeJson, prepareConfig } from "../packages/cli/src/project";
 
+import { createReport, record, saveReport, installedVersions } from "./testing/report";
+
 // Focused checks run the actual kitchen-sink screen with a test-only native driver.
 const root = path.resolve(process.argv[2] ?? ".legend/api-tests/KitchenSink");
 await prepareKitchenSink(root);
@@ -36,8 +38,16 @@ async function waitFor<T>(read: () => Promise<T | undefined>, description: strin
   while (Date.now() < deadline) { const value = await read(); if (value !== undefined) return value; await Bun.sleep(200); }
   throw new Error(`Timed out waiting for ${description}; see ${directory}`);
 }
+const coverage = createReport(path.resolve(import.meta.dir, ".."), root, { platform: "macos", arch: "arm64", device: "macOS desktop", mode: "dev" }, "runtime");
+const coverageFile = path.resolve(".legend/test-results", `${coverage.runId}.json`);
+coverage.versions = installedVersions(root);
+let coverageStage = "build.native";
+saveReport(coverageFile, coverage);
 try {
   const product = await build(root, "dev");
+  coverage.runtime = product.runtime;
+  record(coverage, { id: "build.native", status: "passed" });
+  coverageStage = "runtime.launch";
   const executableName = (await run(root, ["/usr/libexec/PlistBuddy", "-c", "Print :CFBundleExecutable", path.join(product.app, "Contents/Info.plist")], { capture: true })).trim();
   // LaunchServices excludes apps in /tmp from URL-handler lookup, even after registration.
   // A temporary user Applications copy exercises the same installed-app behavior as a consumer.
@@ -70,7 +80,12 @@ try {
     }
     const outcome = await waitFor(async () => existsSync(report) ? readJson(report) : undefined, phase);
     for (const check of outcome.results ?? []) console.log(`${check.passed ? "PASS" : "FAIL"} [${phase}] ${check.name}${check.error ? `: ${check.error}` : ""}`);
+    for (const check of outcome.results ?? []) for (const id of check.contracts ?? []) {
+      if (coverage.results.find(result => result.id === id)?.status !== "failed") record(coverage, { id, status: check.passed ? "passed" : "failed", detail: check.error, durationMs: check.duration, evidence: report });
+    }
+    saveReport(coverageFile, coverage);
     if (!outcome.passed || !outcome.nativeDriver || outcome.results.length !== 6) throw new Error(`Kitchen-sink API checks failed: ${report}`);
+    record(coverage, { id: "runtime.launch", status: "passed", evidence: report });
     summary[phase] = { report, ...outcome };
     if (directApp) { await directApp.exited; directApp = undefined; }
     if (launchedPID) {
@@ -81,7 +96,14 @@ try {
   }
   writeJson(path.join(directory, "summary.json"), { passed: true, ...summary });
   console.log(`Kitchen-sink API validation passed: ${directory}`);
+} catch (error) {
+  coverage.execution = "failed"; coverage.error = String(error);
+  record(coverage, { id: coverageStage, status: "failed", detail: String(error) });
+  throw error;
 } finally {
+  if (coverage.execution === "running") coverage.execution = "completed";
+  coverage.finishedAt = new Date().toISOString(); saveReport(coverageFile, coverage);
+  console.log(`Platform coverage: ${coverageFile}`);
   if (directApp && directApp.exitCode === null) { directApp.kill(); await directApp.exited; }
   if (launchedPID) { try { process.kill(launchedPID, "SIGTERM"); } catch {} }
   if (metro) { metro.kill(); await metro.exited; }

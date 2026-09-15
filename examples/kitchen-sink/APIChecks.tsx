@@ -8,11 +8,11 @@ import { testDriver } from "./test-driver";
 import type { Check } from "./checks";
 
 async function execute(onResult: (check: Check) => void, expectedInitial?: string | null) {
-  const results: Check[] = [];
-  await runAPIChecks(async (name, action) => {
+  const results: (Check & { contracts?: string[] })[] = [];
+  await runAPIChecks(async (name, action, contracts) => {
     const start = Date.now(); let error: string | undefined;
     try { await action(); } catch (cause) { error = String(cause); }
-    const result = { name, passed: error === undefined, error, duration: Date.now() - start };
+    const result = { name, contracts, passed: error === undefined, error, duration: Date.now() - start };
     results.push(result); onResult(result);
   }, testDriver, expectedInitial);
   return { passed: results.every(check => check.passed), results, nativeDriver: !!testDriver };

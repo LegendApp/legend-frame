@@ -25,6 +25,10 @@ Updated 2026-09-15. Windows is an integrated target of the shared framework and 
 | WIN-11 | Settings now bundles Uniwind's native runtime and shared responsive/theme classes. The UI package now supplies an Appearance TurboModule overriding RNW 0.81.35's no-op setter. It propagates light/dark/system changes to existing and new WinUI control islands through native notifications, without remounting controls or adding framework-specific React props. Native acceptance is pending. | On Windows, verify resizing, system theme changes, manual light/dark/system selection, native control contrast, and unavailable-control frames; verify WinUI theme propagation, focus/text preservation, and system changes after resetting the override. This does not promise manual theme overrides for OS dialogs/title bars or every RNW PlatformColor resource. |
 | WIN-08 | Secondary Hermes runtimes are not supported by the Windows integration. | Prove upstream/backend support and integrate worker lifecycle, compatibility, and native dependency selection into the existing framework. |
 
+## Shared platform coverage
+
+The [platform test system](platform-testing.md) separates actual execution from generation/bundling and keeps missing Windows implementations visible. `test:windows:features` now emits the common JSON report and reuses the clipboard/storage/link/file assertions with macOS. The generic `test:platform --platform windows` runs the universal test screen on the selected x64/ARM64 target. Neither runner's prepare-only results close native acceptance issues.
+
 ## Current acceptance commands
 
 ```sh

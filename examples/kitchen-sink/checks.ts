@@ -1,3 +1,4 @@
+import { fileConflict } from "./contract-cases";
 import { runAPIChecks } from "./api-checks";
 import { runIntegrationChecks } from "./integration-checks";
 import * as app from "@legend-apps/desktop/app";
@@ -97,11 +98,7 @@ export async function runChecks(onResult: (result: Check) => void | Promise<void
       if (isolation.cleanup) { await files.remove(file); await settings.remove(key); await secureStore.deleteItemAsync(key); }
     });
     await check("dialogs: file IO and optimistic save conflicts", async () => {
-      const path = `${root}/document.txt`; await writeTextFile(path, "initial");
-      assert(await readTextFile(path) === "initial", "Dialog IO read");
-      assert(!await writeTextFileIfUnchanged(path, "stale", "overwrite"), "Stale overwrite accepted");
-      assert(await writeTextFileIfUnchanged(path, "initial", "saved"), "Matching save refused");
-      assert(await readTextFile(path) === "saved", "Save did not persist");
+      await fileConflict({ readTextFile, writeTextFile, writeTextFileIfUnchanged }, `${root}/document.txt`);
     });
     await check("windows: root creation, props, frame, visibility, title and close guard", async () => {
       const events: string[] = []; const sub = windows.onWindowEvent(event => { if (event.windowId === token) events.push(event.type); });

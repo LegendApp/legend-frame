@@ -36,7 +36,9 @@
     "test:add-desktop": "bun scripts/test-add-desktop.ts",
     "document-editor": "bun scripts/document-editor.ts",
     "test:windows:features": "bun scripts/test-windows-features.ts",
-    "test:examples": "bun run pack:local && bun scripts/test-examples.ts"
+    "test:examples": "bun run pack:local && bun scripts/test-examples.ts",
+    "test:platform": "bun scripts/test-platforms.ts",
+    "test:report": "bun scripts/test-report.ts"
   },
   "devDependencies": {
     "@types/bun": "1.3.14",
@@ -70,7 +72,9 @@
     "diff": "8.0.2",
     "base64-js": "1.5.1",
     "uniwind": "1.6.3",
-    "tailwindcss": "4.2.4"
+    "tailwindcss": "4.2.4",
+    "@legend-apps/clipboard": "workspace:*",
+    "@legend-apps/secure-storage": "workspace:*"
   },
   "overrides": {
     "@expo/cli": "54.0.27",
