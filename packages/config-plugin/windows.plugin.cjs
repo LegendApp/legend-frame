@@ -7,16 +7,19 @@ function patchHost(source, core, metadata) {
     .replace(/\n  \/\/ BEGIN LEGEND TITLE[\s\S]*?\/\/ END LEGEND TITLE\n/g, '')
     .replace(/\n  \/\/ BEGIN LEGEND CONNECTION[\s\S]*?\/\/ END LEGEND CONNECTION\n/g, '');
   const include = '#include "NativeModules.h"';
+  const launchAnchor = 'winrt::init_apartment(winrt::apartment_type::single_threaded);';
   const anchor = 'auto settings{reactNativeWin32App.ReactNativeHost().InstanceSettings()};';
-  if (!source.includes(include) || !source.includes(anchor)) throw new Error('The pinned Windows host template changed; cannot install the Legend host hooks.');
+  if (!source.includes(include) || !source.includes(anchor) || !source.includes(launchAnchor) || (!source.includes("LegendWin::Initialize(reactNativeWin32App);") && !/appWindow\.Resize\([^\n]+\);/.test(source))) throw new Error('The pinned Windows host template changed; cannot install the Legend host hooks.');
   if (!['go', 'dev'].includes(metadata.mode) || !/^[a-f0-9]{64}$/.test(metadata.fingerprint)) throw new Error('Invalid Windows runtime build metadata');
-  source = source.replace(include, `${include}\n// BEGIN LEGEND CORE\n${core.replace('__LEGEND_METADATA__', JSON.stringify(metadata))}\n// END LEGEND CORE\n`);
   source = source.replace(/appWindow\.Title\([^\n]+\);/, title => `${title}\n  // BEGIN LEGEND TITLE\n  const auto legendTitle = LegendWindowsEnv(L"LEGEND_PROJECT_NAME");\n  if (!legendTitle.empty()) appWindow.Title(legendTitle);\n  // END LEGEND TITLE\n`);
   source = source.replace('LegendWin::Initialize(reactNativeWin32App);', 'appWindow.Resize({1000, 1000});');
   source = source.replace(/appWindow\.Resize\([^\n]+\);/, 'LegendWin::Initialize(reactNativeWin32App);');
   source = source.replace(/\n  \/\/ BEGIN LEGEND LAUNCH[\s\S]*?\/\/ END LEGEND LAUNCH\n/g, '');
-  source = source.replace('winrt::init_apartment(winrt::apartment_type::single_threaded);', 'winrt::init_apartment(winrt::apartment_type::single_threaded);\n  // BEGIN LEGEND LAUNCH\n  if (LegendWin::ForwardLaunch()) return 0;\n  // END LEGEND LAUNCH\n');
-  return source.replace(anchor, `${anchor}\n  // BEGIN LEGEND CONNECTION\n  settings.SourceBundleHost(L"127.0.0.1");\n  settings.SourceBundlePort(LegendMetroPort());\n  // END LEGEND CONNECTION\n`);
+  source = source.replace('winrt::init_apartment(winrt::apartment_type::single_threaded);', 'winrt::init_apartment(winrt::apartment_type::single_threaded);\n  // BEGIN LEGEND LAUNCH\n  try { if (LegendWin::ForwardLaunch()) return 0; }\n  catch (winrt::hresult_error const &error) { MessageBoxW(nullptr, error.message().c_str(), L"Legend launch failed", MB_OK | MB_ICONERROR); return 1; }\n  // END LEGEND LAUNCH\n');
+  source = source.replace(anchor, `${anchor}\n  // BEGIN LEGEND CONNECTION\n  settings.SourceBundleHost(L"127.0.0.1");\n  settings.SourceBundlePort(LegendMetroPort());\n  // END LEGEND CONNECTION\n`);
+  // Only patch the upstream template. Embedded host source can contain the same
+  // API calls and must never be matched by these template replacements.
+  return source.replace(include, `${include}\n// BEGIN LEGEND CORE\n${core.replace('__LEGEND_METADATA__', JSON.stringify(metadata))}\n// END LEGEND CORE\n`);
 }
 module.exports = config => {
   const { withAppCpp } = require('expo-desktop-config-plugins');

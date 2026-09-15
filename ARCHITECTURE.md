@@ -288,6 +288,34 @@ Keep these invariants intact:
 
 Update README for user-facing workflow/status changes, this document for architecture/invariant changes, and feature guides for API details. Record verification with its date, target, and limits. Do not turn a plan, an implementation, or a mocked test into a claim of completed native acceptance.
 
+## Windows foundation additions
+
+The Windows host takes a per-project, per-session named mutex before constructing
+its React host. A competing launch waits for the primary's published window,
+forwards activation, and exits. Hung/slow startup reports an error rather than
+starting a second process; an abandoned mutex permits recovery after termination.
+The mutex and window property use the same hashed project identity.
+
+Window operations now enumerate monitors (physical virtual-screen coordinates and
+per-monitor scale), move/resize/center, preserve the overlapped presenter across
+fullscreen, and apply size constraints, resizability, minimization and topmost state.
+Native menus move to the focused React window. Unsupported presentation options
+remain explicit errors. Windows frame coordinates use pixels and a top-left origin;
+macOS retains screen points and its bottom-left origin.
+
+The UI package supplies an Appearance TurboModule through RNW's package builder,
+which permits replacing built-ins. This keeps ordinary React Native and Uniwind
+calls intact despite the pinned RNW setter being a no-op. A per-host property stores
+the preference; native notifications update each WinUI control's RequestedTheme on
+the UI thread. System changes are observed, subscriptions are removed on control
+teardown, and controls retain their text/focus. This does not replace RNW's entire
+PlatformColor resource system or OS-managed dialog/title-bar theming.
+
+The extended Windows feature runner covers concurrent launch forwarding, recovery,
+window operations, Appearance state/events, and the existing native controls/APIs.
+Generation/bundling on macOS is separate from Windows compilation and native
+acceptance; all open native checks remain in [Windows issues](docs/windows-issues.md).
+
 ## Shared application and SDK transfer
 
 `legend create MyEditor --example document-editor` creates a [shared document editor](docs/document-editor.md) using Expo adapters on mobile, browser file operations on web, and native desktop dialogs. The macOS example exercises windows, menus, shortcuts, file-open events, and unsaved-change guards. Windows includes native control/API/file-dialog implementations, with remaining native acceptance and lifecycle gaps listed in [known Windows issues](docs/windows-issues.md).

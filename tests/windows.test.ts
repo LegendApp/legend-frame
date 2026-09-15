@@ -59,11 +59,16 @@ test("the shared Go registry keeps Windows and macOS runtimes separate", () => {
   } finally { if (previous === undefined) delete process.env.LEGEND_HOME; else process.env.LEGEND_HOME = previous; f.close(); }
 });
 test("the config plugin embeds the shared runtime and keeps repeatable host hooks", () => {
-  const source = '#include "NativeModules.h"\nvoid main() {\n  auto settings{reactNativeWin32App.ReactNativeHost().InstanceSettings()};\n  appWindow.Title(L"Go");\n}\n';
+  const source = '#include "NativeModules.h"\nint main() {\n  winrt::init_apartment(winrt::apartment_type::single_threaded);\n  auto settings{reactNativeWin32App.ReactNativeHost().InstanceSettings()};\n  appWindow.Title(L"Go");\n  appWindow.Resize({1000, 1000});\n}\n';
   const core = readFileSync(new URL("../packages/desktop-host/windows/runtime.inc", import.meta.url), "utf8");
   const metadata = { mode: "dev", fingerprint: "a".repeat(64), platform: "windows", arch: "x64" };
-  const first = patchHost(source, core, metadata);
-  expect(patchHost(first, core, metadata)).toBe(first);
+  const embedded = core + '\nvoid helper() { appWindow.Resize({400, 300}); }\n';
+  const first = patchHost(source, embedded, metadata);
+  expect(patchHost(first, embedded, metadata)).toBe(first);
+  expect(first).toContain("void helper() { appWindow.Resize({400, 300}); }");
+  expect(first.match(/LegendWin::ForwardLaunch\(\)/g)).toHaveLength(1);
+  expect(first.indexOf("LegendWin::ForwardLaunch()")).toBeLessThan(first.indexOf("auto settings{"));
+  expect(() => patchHost(source.replace("winrt::init_apartment(winrt::apartment_type::single_threaded);", ""), core, metadata)).toThrow("template changed");
   expect(first).toContain('"mode":"dev"'); expect(first).toContain("NativeLegendRuntime");
   expect(() => patchHost("wrong template", core, metadata)).toThrow("template changed");
   const globals: any[] = [];
@@ -85,4 +90,14 @@ test("Windows canonical config does not require a macOS bundle identity", () => 
   expect(config.expo.macos).toBeUndefined();
   expect(config.expo.windows.displayName).toBe("Windows");
   expect(() => toExpo({ name: "Mac", version: "1.0.0", projectId: "test-mac" })).toThrow("bundleIdentifier");
+});
+
+
+test("Windows accepts implemented window options and rejects unsupported presentation", () => {
+  const { validateWindowsWindowOptions } = require("../packages/desktop-windows/src/windows-options");
+  expect(() => validateWindowsWindowOptions({ title: "Editor", minWidth: 300, maxHeight: 900, resizable: false, minimizable: true, alwaysOnTop: true })).not.toThrow();
+  for (const options of [{ material: "sidebar" }, { parentId: "main", modal: true }, { titleBarStyle: "overlay" }]) {
+    try { validateWindowsWindowOptions(options); throw new Error("Expected unsupported options to fail"); }
+    catch (error) { expect((error as { code?: string }).code).toBe("E_UNAVAILABLE"); }
+  }
 });

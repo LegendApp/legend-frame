@@ -1,6 +1,10 @@
 // Application integration for the pinned RNW Composition host. UI-thread owned.
 #include <map>
 #include <set>
+#include <algorithm>
+#include <cmath>
+#include <exception>
+#include <shellscalingapi.h>
 #include <fstream>
 #include <shlwapi.h>
 #include <filesystem>
@@ -13,19 +17,20 @@
 #pragma comment(lib, "Comctl32.lib")
 #pragma comment(lib, "Shell32.lib")
 #pragma comment(lib, "Shlwapi.lib")
+#pragma comment(lib, "Shcore.lib")
 namespace LegendWin {
 namespace React = winrt::Microsoft::ReactNative;
 namespace Json = winrt::Windows::Data::Json;
 namespace UI = winrt::Microsoft::UI::Windowing;
 using winrt::to_hstring; using winrt::to_string;
-struct Window { React::ReactNativeWindow view{nullptr}; UI::AppWindow app{nullptr}; bool guard = false; bool pending = false; bool allow = false; uint64_t request = 0; };
+struct Window { React::ReactNativeWindow view{nullptr}; UI::AppWindow app{nullptr}; UI::OverlappedPresenter normal{nullptr}; int32_t minWidth = 100, minHeight = 100, maxWidth = 20000, maxHeight = 20000; bool guard = false; bool pending = false; bool allow = false; uint64_t request = 0; };
 static std::map<std::string, Window> windows;
 static React::ReactNativeHost host{nullptr};
 static winrt::Microsoft::UI::Composition::Compositor compositor{nullptr};
 static React::ReactContext context;
 static bool quitGuard = false, quitPending = false;
 static uint64_t generation = 0, quitRequest = 0;
-static Json::JsonArray pendingURLs;
+static Json::JsonArray pendingURLs{nullptr};
 static std::string initialURL;
 static std::filesystem::path dataDirectory;
 struct Shortcut { std::string id, windowId; UINT key; int modifiers; bool repeat; };
@@ -34,7 +39,7 @@ static HHOOK keyboardHook = nullptr;
 static std::map<UINT, React::JSValueObject> menuActions;
 static HMENU currentMenu = nullptr;
 static std::string menuOwner;
-static Json::JsonArray menus;
+static Json::JsonArray menus{nullptr};
 static HWND Hwnd(Window const &window) { return winrt::Microsoft::UI::GetWindowFromWindowId(window.app.Id()); }
 static std::string Id(HWND hwnd) { auto root = GetAncestor(hwnd, GA_ROOT); for (auto const &[id, window] : windows) if (Hwnd(window) == root) return id; return ""; }
 static void Emit(React::JSValueObject value) { if (context) context.EmitJSEvent(L"RCTDeviceEventEmitter", L"desktop", std::move(value)); }
@@ -57,8 +62,59 @@ static Json::JsonObject Info(std::string const &id) {
   result.SetNamedValue(L"resizable", Json::JsonValue::CreateBooleanValue((GetWindowLongPtrW(hwnd, GWL_STYLE) & WS_THICKFRAME) != 0));
   result.SetNamedValue(L"alwaysOnTop", Json::JsonValue::CreateBooleanValue((GetWindowLongPtrW(hwnd, GWL_EXSTYLE) & WS_EX_TOPMOST) != 0));
   result.SetNamedValue(L"fullscreen", Json::JsonValue::CreateBooleanValue(window.app.Presenter().Kind() == UI::AppWindowPresenterKind::FullScreen));
-  result.SetNamedValue(L"minWidth", Json::JsonValue::CreateNumberValue(GetSystemMetrics(SM_CXMINTRACK))); result.SetNamedValue(L"maxWidth", Json::JsonValue::CreateNumberValue(GetSystemMetrics(SM_CXMAXTRACK)));
+  result.SetNamedValue(L"minWidth", Json::JsonValue::CreateNumberValue(window.minWidth)); result.SetNamedValue(L"maxWidth", Json::JsonValue::CreateNumberValue(window.maxWidth));
   rect.SetNamedValue(L"x", Json::JsonValue::CreateNumberValue(frame.left)); rect.SetNamedValue(L"y", Json::JsonValue::CreateNumberValue(frame.top)); rect.SetNamedValue(L"width", Json::JsonValue::CreateNumberValue(frame.right-frame.left)); rect.SetNamedValue(L"height", Json::JsonValue::CreateNumberValue(frame.bottom-frame.top)); result.SetNamedValue(L"frame", rect); return result;
+}
+static Json::JsonObject Rect(RECT const &frame) {
+  Json::JsonObject result;
+  result.SetNamedValue(L"x", Json::JsonValue::CreateNumberValue(frame.left));
+  result.SetNamedValue(L"y", Json::JsonValue::CreateNumberValue(frame.top));
+  result.SetNamedValue(L"width", Json::JsonValue::CreateNumberValue(frame.right - frame.left));
+  result.SetNamedValue(L"height", Json::JsonValue::CreateNumberValue(frame.bottom - frame.top));
+  return result;
+}
+static Json::JsonArray Displays() {
+  struct State { Json::JsonArray result; std::exception_ptr error; } state;
+  const auto enumerated = EnumDisplayMonitors(nullptr, nullptr, [](HMONITOR monitor, HDC, LPRECT, LPARAM param) -> BOOL {
+    auto &state = *reinterpret_cast<State *>(param);
+    try {
+      MONITORINFOEXW info{}; info.cbSize = sizeof(info);
+      if (!GetMonitorInfoW(monitor, reinterpret_cast<MONITORINFO *>(&info))) winrt::throw_last_error();
+      UINT dpiX = 96, dpiY = 96; winrt::check_hresult(GetDpiForMonitor(monitor, MDT_EFFECTIVE_DPI, &dpiX, &dpiY));
+      DISPLAY_DEVICEW device{}; device.cb = sizeof(device); EnumDisplayDevicesW(info.szDevice, 0, &device, 0);
+      Json::JsonObject display;
+      display.SetNamedValue(L"id", Json::JsonValue::CreateStringValue(info.szDevice));
+      display.SetNamedValue(L"name", Json::JsonValue::CreateStringValue(device.DeviceString[0] ? device.DeviceString : info.szDevice));
+      display.SetNamedValue(L"frame", Rect(info.rcMonitor)); display.SetNamedValue(L"workArea", Rect(info.rcWork));
+      display.SetNamedValue(L"scale", Json::JsonValue::CreateNumberValue(dpiX / 96.0)); state.result.Append(display);
+      return TRUE;
+    } catch (...) { state.error = std::current_exception(); return FALSE; }
+  }, reinterpret_cast<LPARAM>(&state));
+  if (state.error) std::rethrow_exception(state.error);
+  if (!enumerated) winrt::throw_last_error();
+  return state.result;
+}
+static int32_t Dimension(Json::JsonObject const &args, wchar_t const *key, int32_t fallback) {
+  const auto value = args.GetNamedNumber(key, fallback);
+  if (!std::isfinite(value) || value < 100 || value > 20000) throw winrt::hresult_invalid_argument(L"Invalid window dimension");
+  return static_cast<int32_t>(value);
+}
+static void ApplyOptions(Window &window, Json::JsonObject const &options) {
+  static const std::set<std::wstring> supported{L"title", L"width", L"height", L"minWidth", L"minHeight", L"maxWidth", L"maxHeight", L"resizable", L"minimizable", L"alwaysOnTop"};
+  for (auto const &pair : options) if (!supported.count(std::wstring(pair.Key()))) throw winrt::hresult_invalid_argument(L"Unsupported Windows window option");
+  const auto minWidth = Dimension(options, L"minWidth", window.minWidth), minHeight = Dimension(options, L"minHeight", window.minHeight);
+  const auto maxWidth = Dimension(options, L"maxWidth", window.maxWidth), maxHeight = Dimension(options, L"maxHeight", window.maxHeight);
+  if (minWidth > maxWidth || minHeight > maxHeight) throw winrt::hresult_invalid_argument(L"Invalid window constraints");
+  auto size = window.app.Size();
+  const auto width = Dimension(options, L"width", std::clamp(size.Width, minWidth, maxWidth));
+  const auto height = Dimension(options, L"height", std::clamp(size.Height, minHeight, maxHeight));
+  if (width < minWidth || width > maxWidth || height < minHeight || height > maxHeight) throw winrt::hresult_invalid_argument(L"Window size is outside its constraints");
+  window.minWidth = minWidth; window.minHeight = minHeight; window.maxWidth = maxWidth; window.maxHeight = maxHeight;
+  if (options.HasKey(L"title")) window.app.Title(options.GetNamedString(L"title"));
+  if (options.HasKey(L"resizable")) { window.normal.IsResizable(options.GetNamedBoolean(L"resizable")); window.normal.IsMaximizable(options.GetNamedBoolean(L"resizable")); }
+  if (options.HasKey(L"minimizable")) window.normal.IsMinimizable(options.GetNamedBoolean(L"minimizable"));
+  if (options.HasKey(L"alwaysOnTop")) window.normal.IsAlwaysOnTop(options.GetNamedBoolean(L"alwaysOnTop"));
+  if (window.app.Presenter().Kind() != UI::AppWindowPresenterKind::FullScreen) window.app.Resize({width, height});
 }
 static void QueueLaunch(std::wstring const &commandLine, bool initial) {
   int count = 0; auto argv = CommandLineToArgvW(commandLine.c_str(), &count);
@@ -75,14 +131,39 @@ static void QueueLaunch(std::wstring const &commandLine, bool initial) {
   }
   LocalFree(argv);
 }
+// Retained for the process lifetime. An abandoned owner can be replaced after a
+// crash; a slow/hung owner must never cause us to start a second notebook writer.
+static winrt::handle instanceMutex;
+static std::wstring ProjectKey() {
+  auto identity = LegendWindowsEnv(L"LEGEND_PROJECT_ID");
+  if (identity.empty()) throw winrt::hresult_invalid_argument(L"Missing Legend project identity");
+  auto algorithm = winrt::Windows::Security::Cryptography::Core::HashAlgorithmProvider::OpenAlgorithm(winrt::Windows::Security::Cryptography::Core::HashAlgorithmNames::Sha256());
+  auto bytes = winrt::Windows::Security::Cryptography::CryptographicBuffer::ConvertStringToBinary(identity, winrt::Windows::Security::Cryptography::BinaryStringEncoding::Utf8);
+  return std::wstring(winrt::Windows::Security::Cryptography::CryptographicBuffer::EncodeToHexString(algorithm.HashData(bytes)));
+}
 static bool ForwardLaunch() {
-  auto key = L"Legend.Project." + LegendWindowsEnv(L"LEGEND_PROJECT_ID");
-  struct Search { std::wstring key; HWND target = nullptr; } search{key};
-  EnumWindows([](HWND hwnd, LPARAM param) -> BOOL { auto data = reinterpret_cast<Search *>(param); if (GetPropW(hwnd, data->key.c_str())) { data->target = hwnd; return FALSE; } return TRUE; }, reinterpret_cast<LPARAM>(&search));
-  if (!search.target) return false;
-  auto text = GetCommandLineW(); COPYDATASTRUCT data{0x4C47, static_cast<DWORD>((wcslen(text) + 1) * sizeof(wchar_t)), text}; DWORD_PTR result = 0;
-  if (!SendMessageTimeoutW(search.target, WM_COPYDATA, 0, reinterpret_cast<LPARAM>(&data), SMTO_ABORTIFHUNG, 2000, &result) || !result) return false;
-  ShowWindow(search.target, SW_RESTORE); SetForegroundWindow(search.target); return true;
+  auto key = L"Legend.Project." + ProjectKey();
+  instanceMutex.attach(CreateMutexW(nullptr, FALSE, (L"Local\\" + key).c_str()));
+  if (!instanceMutex) winrt::throw_last_error();
+  const auto deadline = GetTickCount64() + 60000;
+  for (;;) {
+    const auto wait = WaitForSingleObject(instanceMutex.get(), 0);
+    if (wait == WAIT_OBJECT_0 || wait == WAIT_ABANDONED) return false;
+    if (wait == WAIT_FAILED) winrt::throw_last_error();
+    struct Search { std::wstring key; HWND target = nullptr; } search{key};
+    EnumWindows([](HWND hwnd, LPARAM param) -> BOOL { auto data = reinterpret_cast<Search *>(param); if (GetPropW(hwnd, data->key.c_str())) { data->target = hwnd; return FALSE; } return TRUE; }, reinterpret_cast<LPARAM>(&search));
+    if (search.target) {
+      DWORD process = 0; GetWindowThreadProcessId(search.target, &process); AllowSetForegroundWindow(process);
+      auto text = GetCommandLineW(); COPYDATASTRUCT data{0x4C47, static_cast<DWORD>((wcslen(text) + 1) * sizeof(wchar_t)), text}; DWORD_PTR result = 0;
+      if (!SendMessageTimeoutW(search.target, WM_COPYDATA, 0, reinterpret_cast<LPARAM>(&data), SMTO_ABORTIFHUNG | SMTO_BLOCK, 5000, &result) || !result)
+        throw winrt::hresult_error(HRESULT_FROM_WIN32(ERROR_TIMEOUT), L"The existing Legend app did not accept this launch. Close it before retrying.");
+      return true;
+    }
+    if (GetTickCount64() >= deadline)
+      throw winrt::hresult_error(HRESULT_FROM_WIN32(ERROR_TIMEOUT), L"The existing Legend app is still starting. A second instance was not opened.");
+    // Waiting for the main window also covers simultaneous first launches.
+    Sleep(50);
+  }
 }
 static void SaveFrame(std::string const &id, HWND hwnd) {
   if (id != "main" || dataDirectory.empty() || IsIconic(hwnd) || IsZoomed(hwnd)) return;
@@ -100,9 +181,19 @@ static void RequestQuit() {
 static LRESULT CALLBACK WindowProc(HWND hwnd, UINT message, WPARAM wParam, LPARAM lParam, UINT_PTR, DWORD_PTR) {
   auto id = Id(hwnd);
   if (!id.empty()) {
-    if (message == WM_COPYDATA) { auto data = reinterpret_cast<COPYDATASTRUCT *>(lParam); if (data && data->dwData == 0x4C47 && data->cbData >= sizeof(wchar_t) && data->cbData <= 65536 && data->cbData % sizeof(wchar_t) == 0) { auto text = static_cast<wchar_t *>(data->lpData); if (text && text[data->cbData / sizeof(wchar_t) - 1] == 0) { QueueLaunch(text, false); return TRUE; } } return FALSE; }
+    if (message == WM_COPYDATA) { auto data = reinterpret_cast<COPYDATASTRUCT *>(lParam); if (data && data->dwData == 0x4C47 && data->cbData >= sizeof(wchar_t) && data->cbData <= 65536 && data->cbData % sizeof(wchar_t) == 0) { auto text = static_cast<wchar_t *>(data->lpData); if (text && text[data->cbData / sizeof(wchar_t) - 1] == 0) { QueueLaunch(text, false); ShowWindow(hwnd, IsIconic(hwnd) ? SW_RESTORE : SW_SHOW); SetForegroundWindow(hwnd); return TRUE; } } return FALSE; }
+    if (message == WM_GETMINMAXINFO) {
+      auto limits = reinterpret_cast<MINMAXINFO *>(lParam); auto const &window = windows.at(id);
+      limits->ptMinTrackSize = {window.minWidth, window.minHeight}; limits->ptMaxTrackSize = {window.maxWidth, window.maxHeight}; return 0;
+    }
     if (message == WM_EXITSIZEMOVE) SaveFrame(id, hwnd);
-    if (message == WM_NCDESTROY && GetMenu(hwnd) == currentMenu) { currentMenu = nullptr; menuActions.clear(); }
+    if (message == WM_MOVE) Emit({{"type", "move"}, {"windowId", id}});
+    if (message == WM_SIZE) Emit({{"type", "resize"}, {"windowId", id}});
+    if (message == WM_NCDESTROY && currentMenu && GetMenu(hwnd) == currentMenu) { currentMenu = nullptr; menuActions.clear(); }
+    if (message == WM_ACTIVATE && LOWORD(wParam) != WA_INACTIVE && currentMenu && GetMenu(hwnd) != currentMenu) {
+      for (auto const &[name, other] : windows) { auto otherHwnd = Hwnd(other); if (GetMenu(otherHwnd) == currentMenu) { SetMenu(otherHwnd, nullptr); DrawMenuBar(otherHwnd); } }
+      SetMenu(hwnd, currentMenu); DrawMenuBar(hwnd);
+    }
     if (message == WM_ACTIVATE) Emit({{"type", LOWORD(wParam) == WA_INACTIVE ? "blur" : "focus"}, {"windowId", id}});
     if (message == WM_COMMAND && HIWORD(wParam) == 0) {
       auto found = menuActions.find(LOWORD(wParam)); if (found != menuActions.end() && context) { context.EmitJSEvent(L"RCTDeviceEventEmitter", L"NativeMenuAction", found->second.Copy()); return 0; }
@@ -112,7 +203,7 @@ static LRESULT CALLBACK WindowProc(HWND hwnd, UINT message, WPARAM wParam, LPARA
   return DefSubclassProc(hwnd, message, wParam, lParam);
 }
 static void Attach(std::string id, React::ReactNativeWindow view) {
-  Window window; window.view = view; window.app = view.AppWindow(); windows.emplace(id, window);
+  Window window; window.view = view; window.app = view.AppWindow(); window.normal = window.app.Presenter().as<UI::OverlappedPresenter>(); windows.emplace(id, window);
   auto app = window.app; SetWindowSubclass(Hwnd(window), WindowProc, 0x4C47, 0);
   app.Closing([id](auto const &, UI::AppWindowClosingEventArgs const &args) {
     auto found = windows.find(id); if (found == windows.end() || found->second.allow) return;
@@ -126,7 +217,15 @@ static void Attach(std::string id, React::ReactNativeWindow view) {
   });
   app.Destroying([id](auto const &, auto const &) {
     Emit({{"type", "closed"}, {"windowId", id}});
-    if (id != "main") windows.erase(id);
+    if (id != "main") {
+      // A menu attached to a destroyed HWND is otherwise destroyed by Windows.
+      auto closing = windows.find(id);
+      if (currentMenu && closing != windows.end() && GetMenu(Hwnd(closing->second)) == currentMenu) {
+        SetMenu(Hwnd(closing->second), nullptr);
+        auto main = Hwnd(windows.at("main")); SetMenu(main, currentMenu); DrawMenuBar(main);
+      }
+      windows.erase(id);
+    }
   });
 }
 static LRESULT CALLBACK Keyboard(int code, WPARAM remove, LPARAM param) {
@@ -164,6 +263,8 @@ static void RebuildMenus() {
   auto old = currentMenu; currentMenu = next; menuActions = std::move(actions); if (old) DestroyMenu(old);
 }
 static void Initialize(React::ReactNativeWin32App const &app) {
+  // WinRT activation must follow init_apartment, never static initialization.
+  pendingURLs = Json::JsonArray(); menus = Json::JsonArray();
   host = app.ReactNativeHost(); compositor = app.ReactNativeWindow().ReactNativeIsland().Compositor(); Attach("main", app.ReactNativeWindow());
   keyboardHook = SetWindowsHookExW(WH_GETMESSAGE, Keyboard, nullptr, GetCurrentThreadId());
   // AsyncStorage's documented override supports unpackaged Win32 applications.
@@ -174,10 +275,16 @@ static void Initialize(React::ReactNativeWin32App const &app) {
   auto bytes = winrt::Windows::Security::Cryptography::CryptographicBuffer::ConvertStringToBinary(identity, winrt::Windows::Security::Cryptography::BinaryStringEncoding::Utf8);
   auto safe = winrt::Windows::Security::Cryptography::CryptographicBuffer::EncodeToHexString(algorithm.HashData(bytes));
   directory /= L"Legend"; directory /= std::wstring(safe); std::filesystem::create_directories(directory); dataDirectory = directory;
-  SetPropW(Hwnd(windows.at("main")), (L"Legend.Project." + identity).c_str(), reinterpret_cast<HANDLE>(1));
+  SetPropW(Hwnd(windows.at("main")), (L"Legend.Project." + ProjectKey()).c_str(), reinterpret_cast<HANDLE>(1));
   QueueLaunch(GetCommandLineW(), true);
   auto config = Json::JsonObject::Parse(winrt::hstring(LegendWindowsEnv(L"LEGEND_WINDOW_CONFIG").empty() ? L"{}" : LegendWindowsEnv(L"LEGEND_WINDOW_CONFIG")));
-  auto appWindow = windows.at("main").app; appWindow.Resize({static_cast<int32_t>(config.GetNamedNumber(L"width", 1000)), static_cast<int32_t>(config.GetNamedNumber(L"height", 700))});
+  auto appWindow = windows.at("main").app;
+  Json::JsonObject style;
+  style.SetNamedValue(L"width", Json::JsonValue::CreateNumberValue(config.GetNamedNumber(L"width", 1000)));
+  style.SetNamedValue(L"height", Json::JsonValue::CreateNumberValue(config.GetNamedNumber(L"height", 700)));
+  for (auto key : {L"minWidth", L"minHeight", L"maxWidth", L"maxHeight", L"resizable", L"minimizable", L"alwaysOnTop"})
+    if (config.HasKey(key)) style.SetNamedValue(key, config.GetNamedValue(key));
+  ApplyOptions(windows.at("main"), style);
   if (config.GetNamedBoolean(L"restoreFrame", false)) try {
     std::ifstream stream(directory / L"window.json"); std::string text((std::istreambuf_iterator<char>(stream)), std::istreambuf_iterator<char>());
     auto frame = Json::JsonObject::Parse(to_hstring(text)); RECT rect{static_cast<LONG>(frame.GetNamedNumber(L"x")), static_cast<LONG>(frame.GetNamedNumber(L"y")), 0, 0}; rect.right = rect.left + static_cast<LONG>(frame.GetNamedNumber(L"width")); rect.bottom = rect.top + static_cast<LONG>(frame.GetNamedNumber(L"height"));
@@ -234,14 +341,37 @@ struct LegendDesktopWindows {
           // Write JSON props through the public JSValue writer contract.
           auto propsJson = to_string(props.Stringify());
           options.InitialProps([propsJson](React::IJSValueWriter const &writer) { WriteJson(writer, Json::JsonObject::Parse(to_hstring(propsJson))); });
-          Attach(id, view); view.ReactNativeIsland().ReactViewHost(React::ReactCoreInjection::MakeViewHost(host, options)); app.Show();
+          // Validate all options before attaching/showing a new React root.
+          Json::JsonObject style;
+          for (auto const &pair : args) if (pair.Key() != L"id" && pair.Key() != L"props") style.SetNamedValue(pair.Key(), pair.Value());
+          Window pending; pending.view = view; pending.app = app; pending.normal = app.Presenter().as<UI::OverlappedPresenter>();
+          try { ApplyOptions(pending, style); } catch (...) { app.Destroy(); throw; }
+          Attach(id, view);
+          auto &attached = windows.at(id); attached.minWidth = pending.minWidth; attached.minHeight = pending.minHeight; attached.maxWidth = pending.maxWidth; attached.maxHeight = pending.maxHeight;
+          view.ReactNativeIsland().ReactViewHost(React::ReactCoreInjection::MakeViewHost(host, options)); app.Show();
           promise.Resolve(to_string(Info(id).Stringify())); return;
         }
+        if (method == "displays") { promise.Resolve(to_string(Displays().Stringify())); return; }
         if (method == "list") { Json::JsonArray result; for (auto const &[name, window] : windows) result.Append(Info(name)); promise.Resolve(to_string(result.Stringify())); return; }
         auto found = windows.find(id); if (found == windows.end()) { promise.Reject(React::ReactError{"E_NOT_FOUND", "Window not found"}); return; }
         auto &window = found->second; auto hwnd = Hwnd(window);
         if (method == "info") { promise.Resolve(to_string(Info(id).Stringify())); return; }
-        if (method == "title") window.app.Title(args.GetNamedString(L"title"));
+        if (method == "options") ApplyOptions(window, args.GetNamedObject(L"options"));
+        else if (method == "center") {
+          MONITORINFO monitor{}; monitor.cbSize = sizeof(monitor);
+          if (!GetMonitorInfoW(MonitorFromWindow(hwnd, MONITOR_DEFAULTTONEAREST), &monitor)) winrt::throw_last_error();
+          auto size = window.app.Size();
+          window.app.Move({monitor.rcWork.left + (monitor.rcWork.right - monitor.rcWork.left - size.Width) / 2, monitor.rcWork.top + (monitor.rcWork.bottom - monitor.rcWork.top - size.Height) / 2});
+        } else if (method == "frame") {
+          auto frame = args.GetNamedObject(L"frame"); const auto x = frame.GetNamedNumber(L"x"), y = frame.GetNamedNumber(L"y");
+          if (!std::isfinite(x) || !std::isfinite(y) || x < INT32_MIN || x > INT32_MAX || y < INT32_MIN || y > INT32_MAX) throw winrt::hresult_invalid_argument(L"Invalid frame origin");
+          auto width = Dimension(frame, L"width", window.app.Size().Width), height = Dimension(frame, L"height", window.app.Size().Height);
+          if (width < window.minWidth || width > window.maxWidth || height < window.minHeight || height > window.maxHeight) throw winrt::hresult_invalid_argument(L"Frame is outside window constraints");
+          window.app.MoveAndResize({static_cast<int32_t>(x), static_cast<int32_t>(y), width, height});
+        } else if (method == "fullscreen") {
+          if (args.GetNamedBoolean(L"enabled")) window.app.SetPresenter(UI::AppWindowPresenterKind::FullScreen);
+          else window.app.SetPresenter(window.normal);
+        } else if (method == "title") window.app.Title(args.GetNamedString(L"title"));
         else if (method == "closeGuard") window.guard = args.GetNamedBoolean(L"enabled");
         else if (method == "replyClose") {
           if (window.pending && args.GetNamedNumber(L"requestId", 0) == window.request) { window.pending = false; KillTimer(hwnd, 0x4C47); if (args.GetNamedBoolean(L"allow")) { if (id == "main") RequestQuit(); else { window.allow = true; window.app.Destroy(); } } }

@@ -2,6 +2,7 @@ import { validateWindow, type WindowStyle } from "@legend-apps/window-options";
 export type { WindowStyle } from "@legend-apps/window-options";
 import Native from "./NativeDesktopWindowManager";
 import { Platform } from "react-native";
+import { validateWindowsWindowOptions } from "./windows-options";
 import { onDesktopEvent } from "@legend-apps/desktop-app";
 export type Frame = { x: number; y: number; width: number; height: number };
 export type WindowInfo = { id: string; title: string; visible: boolean; focused: boolean; resizable: boolean; alwaysOnTop: boolean; minWidth: number; maxWidth: number; minimized: boolean; fullscreen: boolean; frame: Frame };
@@ -18,15 +19,16 @@ export function openWindow(options: WindowOptions) {
   const { id: _id, parentId, modal, props, ...style } = options;
   validateWindow(style);
   if (Platform.OS === "windows") {
-    const unsupported = Object.keys(options).filter(key => !["id", "title", "width", "height", "props"].includes(key));
-    if (unsupported.length) throw Object.assign(new Error(`Windows does not yet support window options: ${unsupported.join(", ")}`), { code: "E_UNAVAILABLE" });
+    validateWindowsWindowOptions({ ...style, ...(parentId !== undefined ? { parentId } : {}), ...(modal !== undefined ? { modal } : {}) });
   }
   if (parentId !== undefined) id(parentId);
   if (parentId === options.id || (modal && !parentId)) throw new Error("Modal windows need a distinct parent");
   return call<WindowInfo>("open", options);
 }
 export function setWindowOptions(windowId: string, options: WindowStyle) {
-  validateWindow(options); return call("options", { id: id(windowId), options });
+  validateWindow(options);
+  if (Platform.OS === "windows") validateWindowsWindowOptions(options);
+  return call("options", { id: id(windowId), options });
 }
 export const maximizeWindow = (windowId = "main") => call("maximize", { id: id(windowId) });
 export const unmaximizeWindow = (windowId = "main") => call("unmaximize", { id: id(windowId) });
@@ -40,7 +42,7 @@ export const hideWindow = (windowId = "main") => call("hide", { id: id(windowId)
 export const minimizeWindow = (windowId = "main") => call("minimize", { id: id(windowId) });
 export const setFullscreen = (windowId: string, enabled: boolean) => call("fullscreen", { id: id(windowId), enabled });
 export const setWindowTitle = (windowId: string, title: string) => call("title", { id: id(windowId), title });
-/** Frame coordinates are macOS screen points, with a bottom-left origin. */
+/** macOS uses screen points with a bottom-left origin; Windows uses virtual-screen pixels with a top-left origin. */
 export function setWindowFrame(windowId: string, frame: Frame) {
   dimension(frame.width); dimension(frame.height);
   if (!Number.isFinite(frame.x) || !Number.isFinite(frame.y)) throw new Error("Frame origin must be finite");

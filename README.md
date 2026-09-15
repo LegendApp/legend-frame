@@ -119,6 +119,8 @@ bun run test:windows --project C:\dev\LegendWindowsVerification
 
 The verifier uses the real CLI and existing native-greeting fixture, and saves `.legend/windows-verification.json` plus `.legend/logs`. On macOS, `bun run test:windows:prepare --project /tmp/LegendWindowsCheck` checks generation and both development bundles without executing a native binary.
 
+Windows host source now includes display enumeration, window frame/centering/fullscreen operations, size constraints and basic presentation options, menu following between React windows, and an atomic single-instance guard. The native UI package implements React Native Appearance overrides for WinUI controls. Run `bun run test:windows:features` on Windows to compile and exercise these additions, including simultaneous launches and owner-termination recovery.
+
 **Native Windows verification is still pending.** Local generation/bundle checks do not prove compilation, autolinking, Hermes startup, or Fast Refresh on Windows. Windows production builds, preview builds, signing/MSIX, clean-machine runtime distribution, the full desktop SDK, and secondary JavaScript runtimes are outside this development slice. See the [Windows guide](docs/windows-slice.md) for the full setup, test, and diagnostic workflow.
 
 ## What the SDK provides
