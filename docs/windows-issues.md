@@ -122,3 +122,24 @@ secondary-window ownership, app/parent modality, disabled/checked menu items,
 menu placement at mixed DPI, and reload/close while native UI is open. These
 system dialogs/menus follow Windows styling; the framework's manual theme override
 still applies to its WinUI controls rather than promising OS-dialog recoloring.
+
+
+## Recent documents and shell associations
+
+Recent document history now uses project-scoped persistent storage on Windows.
+Development builds also publish recent files to their own Windows AppUserModelID;
+clearing history never clears another application's list. The prebuilt runtime
+keeps its history within the project and does not register shell recent files.
+
+Custom development builds register `scheme` and `documentTypes` per user. Known
+UTIs map to extensions; custom types need an `extensions: ["myext"]` entry next
+to `contentTypes`. File handlers appear under Open With; the CLI does not change
+the user's default app. Existing protocols owned by another app are rejected.
+Changed declarations remove stale entries owned by this project. Registry entries
+point to the cached development executable. Metro must be running for a cold
+shell launch to load development JavaScript; embedded project configuration and
+the project's session file supply identity and port outside CLI launches.
+
+Pending native acceptance: register and activate a custom URI and a file from
+Explorer with the app both running and closed; verify one owner receives each
+launch, and verify recent history across a process restart and a second project.

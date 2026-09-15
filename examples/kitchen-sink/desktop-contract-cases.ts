@@ -86,3 +86,23 @@ export async function settingsLifecycle(store: typeof settings, token: string) {
     assertContract(await store.get(key) === null, "Settings deletion failed");
   } finally { await store.remove(key); await store.remove(reserved); await store.remove(escaped); }
 }
+
+export async function recentDocumentsLifecycle(files: typeof FileSystem, links: typeof import("@legend-apps/desktop-links"), token: string) {
+  // The platform runner uses a disposable project identity. Kitchen Sink runs explicitly.
+  const original = await links.getRecentDocuments();
+  const file = `${await files.getDirectory("temp")}/legend-recent-${token}.txt`;
+  const normalized = file.replaceAll("\\", "/");
+  const url = `file://${normalized.startsWith("/") ? "" : "/"}${normalized.split("/").map((part, i) => i === 0 && /^[a-z]:$/i.test(part) ? part : encodeURIComponent(part)).join("/")}`;
+  try {
+    await files.writeText(file, "recent contract");
+    await links.noteRecentDocument(url); await links.noteRecentDocument(url);
+    const recent = await links.getRecentDocuments();
+    assertContract(recent[0] === url && recent.filter(value => value === url).length === 1, "Recent document order/deduplication failed");
+    await links.clearRecentDocuments();
+    assertContract((await links.getRecentDocuments()).length === 0, "Recent document clear failed");
+  } finally {
+    await links.clearRecentDocuments();
+    for (const value of original.reverse()) await links.noteRecentDocument(value);
+    await files.remove(file);
+  }
+}

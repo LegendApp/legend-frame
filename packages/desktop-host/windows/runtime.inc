@@ -3,6 +3,9 @@
 #include <cstdlib>
 #include <cstdint>
 #include <cwchar>
+#include <fstream>
+#include <filesystem>
+#include <winrt/Windows.Data.Json.h>
 
 static std::wstring LegendWindowsEnv(const wchar_t *name) {
   const DWORD size = GetEnvironmentVariableW(name, nullptr, 0);
@@ -13,8 +16,19 @@ static std::wstring LegendWindowsEnv(const wchar_t *name) {
   value.resize(written);
   return value;
 }
+static void LegendInitializeEnvironment() {
+  const auto defaults = winrt::Windows::Data::Json::JsonObject::Parse(LR"legend(__LEGEND_PROJECT_CONFIG__)legend");
+  for (auto const &item : defaults) if (LegendWindowsEnv(item.Key().c_str()).empty()) SetEnvironmentVariableW(item.Key().c_str(), item.Value().GetString().c_str());
+}
 static uint16_t LegendMetroPort() {
   auto value = LegendWindowsEnv(L"LEGEND_METRO_PORT");
+  if (value.empty()) {
+    std::ifstream file(std::filesystem::path(LegendWindowsEnv(L"LEGEND_SESSION_FILE")), std::ios::binary);
+    if (file) try {
+      auto state = winrt::Windows::Data::Json::JsonObject::Parse(winrt::to_hstring(std::string(std::istreambuf_iterator<char>(file), std::istreambuf_iterator<char>())));
+      value = std::to_wstring(static_cast<int>(state.GetNamedNumber(L"port", 8081)));
+    } catch (...) {}
+  }
   wchar_t *end = nullptr;
   const auto port = wcstoul(value.c_str(), &end, 10);
   return !value.empty() && end && *end == 0 && port > 0 && port <= 65535

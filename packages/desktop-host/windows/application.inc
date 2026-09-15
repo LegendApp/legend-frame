@@ -279,6 +279,7 @@ static void Initialize(React::ReactNativeWin32App const &app) {
   auto safe = winrt::Windows::Security::Cryptography::CryptographicBuffer::EncodeToHexString(algorithm.HashData(bytes));
   directory /= L"Legend"; directory /= std::wstring(safe); std::filesystem::create_directories(directory); dataDirectory = directory;
   SetPropW(Hwnd(windows.at("main")), (L"Legend.Project." + ProjectKey()).c_str(), reinterpret_cast<HANDLE>(1));
+  winrt::check_hresult(SetCurrentProcessExplicitAppUserModelID((L"Legend." + ProjectKey()).c_str()));
   QueueLaunch(GetCommandLineW(), true);
   auto config = Json::JsonObject::Parse(winrt::hstring(LegendWindowsEnv(L"LEGEND_WINDOW_CONFIG").empty() ? L"{}" : LegendWindowsEnv(L"LEGEND_WINDOW_CONFIG")));
   auto appWindow = windows.at("main").app;

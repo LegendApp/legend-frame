@@ -104,7 +104,7 @@ try {
     const applicationId = `so.legend.acceptance.p${report.runId.replaceAll("-", "")}`;
     config.expo = { ...config.expo, ios: { bundleIdentifier: applicationId }, android: { package: applicationId } };
     writeJson(path.join(root, "desktop.config.json"), config);
-    const appCases = new Set(["clipboard.read", "clipboard.roundtrip", "storage.lifecycle", "storage.unavailable", "links.resolution", "ui.button", "ui.input", "ui.select", "desktop.filesystem", "desktop.settings", "desktop.message-dialog", "desktop.context-menu"]);
+    const appCases = new Set(["clipboard.read", "clipboard.roundtrip", "storage.lifecycle", "storage.unavailable", "links.resolution", "ui.button", "ui.input", "ui.select", "desktop.filesystem", "desktop.settings", "desktop.recent-documents", "desktop.message-dialog", "desktop.context-menu"]);
     server = Bun.serve({ hostname: "127.0.0.1", port: 0, maxRequestBodySize: 128 * 1024, async fetch(request) {
       const headers = { "Access-Control-Allow-Origin": "*", "Access-Control-Allow-Headers": "Content-Type", "Access-Control-Allow-Methods": "POST, OPTIONS" };
       if (new URL(request.url).pathname !== `/${report.runId}`) return new Response("Not found", { status: 404, headers });

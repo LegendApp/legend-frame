@@ -1,3 +1,4 @@
+import { registerWindowsAssociations } from "./windows-associations";
 import { checkExpoDesktopNode } from "./expo-node";
 import { cpSync, existsSync, mkdirSync, readdirSync, rmSync, readFileSync, writeFileSync } from "node:fs";
 import path from "node:path";
@@ -41,7 +42,7 @@ export async function buildWindows(root: string, mode: string, force: boolean): 
   const record = stateFile(root, `${mode}-build.json`);
   if (!force && existsSync(record)) {
     const old = readJson(record);
-    if (old.runtime.arch === expected.arch && old.runtime.fingerprint === expected.fingerprint && existsSync(path.join(old.app, "MyApp.exe"))) return old;
+    if (old.runtime.arch === expected.arch && old.runtime.fingerprint === expected.fingerprint && existsSync(path.join(old.app, "MyApp.exe"))) { if (mode === "dev") await registerWindowsAssociations(root, old.app); return old; }
   }
   const runtime = await prepareWindows(root, mode);
   const target = runtime.arch === "arm64" ? "ARM64" : "x64";
@@ -67,6 +68,7 @@ export async function buildWindows(root: string, mode: string, force: boolean): 
   const { renameSync } = await import("node:fs"); renameSync(pending, app);
   const result = { app, runtime };
   writeJson(record, result);
+  if (mode === "dev") await registerWindowsAssociations(root, app);
   console.log(`Built ${app}`);
   return result;
 }

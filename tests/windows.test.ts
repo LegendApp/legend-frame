@@ -157,3 +157,26 @@ test("Windows output discovery selects Debug executables for the requested archi
   expect(isWindowsDebugProduct("ARM64/Debug/MyApp/Other.exe", "arm64")).toBe(false);
   expect(isWindowsDebugProduct("Debug/MyApp.exe", "arm64")).toBe(false);
 });
+
+
+test("Windows associations preserve project identity and validate shell inputs", async () => {
+  const { associationPlan } = await import("../packages/cli/src/windows-associations");
+  const expo = { name: "Editor", scheme: ["legend-editor", "legend-editor"], extra: { legend: { projectId: "editor", documentTypes: [{ name: "Text", contentTypes: ["public.plain-text"] }, { name: "Custom", extensions: ["CUSTOM"] }] } } };
+  const plan = associationPlan(expo, String.raw`C:\Program Files\Editor\MyApp.exe`);
+  expect(plan.protocols).toEqual(["legend-editor"]);
+  expect(plan.extensions).toEqual(["txt", "custom"]);
+  expect(plan.appId).toMatch(/^Legend\.[a-f0-9]{64}$/);
+  expect(associationPlan({ ...expo, name: "Renamed" }, plan.executable).appId).toBe(plan.appId);
+  expect(() => associationPlan({ ...expo, scheme: "bad/path" }, plan.executable)).toThrow();
+  expect(() => associationPlan(expo, 'C:\\app.exe" evil')).toThrow();
+  expect(() => associationPlan({ ...expo, extra: { legend: { projectId: "x", documentTypes: [{ name: "Unknown", contentTypes: ["custom.unknown"] }] } } }, plan.executable)).toThrow("Add extensions");
+});
+
+test("Windows cold-launch defaults cannot terminate the embedded C++ string", () => {
+  const source = '#include "NativeModules.h"\nwinrt::init_apartment(winrt::apartment_type::single_threaded);\nappWindow.Resize({1000, 1000});\nauto settings{reactNativeWin32App.ReactNativeHost().InstanceSettings()};';
+  const runtime = readFileSync(new URL("../packages/desktop-host/windows/runtime.inc", import.meta.url), "utf8");
+  const output = patchHost(source, runtime, { mode: "dev", fingerprint: "a".repeat(64) }, { LEGEND_PROJECT_NAME: ')legend"; malicious();' });
+  expect(output).not.toContain(')legend"; malicious');
+  expect(output).toContain('\\u0029legend');
+  expect(output).toContain('LegendInitializeEnvironment();');
+});
