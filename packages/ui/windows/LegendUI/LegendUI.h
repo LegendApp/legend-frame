@@ -1,5 +1,6 @@
 #pragma once
 #include "NativeModules.h"
+#include "LegendAppearance.h"
 #include <algorithm>
 #include <vector>
 #include <winrt/Microsoft.ReactNative.Composition.h>
@@ -36,6 +37,15 @@ struct Control : implements<Control, Windows::Foundation::IInspectable> {
   Xaml::XamlIsland island{nullptr};
   Xaml::Controls::Control control{nullptr};
   React::EventEmitter emitter{nullptr};
+  React::ReactContext context;
+  React::ReactNotificationSubscription themeSubscription;
+  Windows::UI::ViewManagement::UISettings systemSettings;
+  Windows::UI::ViewManagement::UISettings::ColorValuesChanged_revoker systemChanged;
+  void ApplyTheme() {
+    if (!control || !failure.empty()) return;
+    try { control.RequestedTheme(EffectiveTheme(context) ? Xaml::ElementTheme::Dark : Xaml::ElementTheme::Light); }
+    catch (hresult_error const &error) { failure = to_string(error.message()); Emit(L"unavailable", "message", failure); }
+  }
   std::string kind, failure, items;
   std::vector<std::string> values;
   bool initialized = false, updating = false;
@@ -75,6 +85,15 @@ struct Control : implements<Control, Windows::Foundation::IInspectable> {
       }
       control.HorizontalAlignment(Xaml::HorizontalAlignment::Stretch);
       control.VerticalAlignment(Xaml::VerticalAlignment::Stretch);
+      context = React::ReactContext(view.ReactContext());
+      ApplyTheme();
+      themeSubscription = context.Notifications().Subscribe(ThemeChanged(), context.UIDispatcher(), [weak](auto const &, auto const &) {
+        if (auto self = weak.get()) self->ApplyTheme();
+      });
+      // Controls also follow the OS when no JS code has requested Appearance yet.
+      systemChanged = systemSettings.ColorValuesChanged(auto_revoke, [weak, dispatcher = context.UIDispatcher()](auto const &, auto const &) {
+        dispatcher.Post([weak]() { if (auto self = weak.get()) self->ApplyTheme(); });
+      });
       island.Content(control);
       view.Connect(island.ContentIsland());
     } catch (hresult_error const &error) { failure = to_string(error.message()); }
@@ -111,6 +130,7 @@ struct Control : implements<Control, Windows::Foundation::IInspectable> {
     } catch (hresult_error const &error) { updating = false; failure = to_string(error.message()); Emit(L"unavailable", "message", failure); }
   }
   void Close() noexcept {
+    themeSubscription.Unsubscribe(); systemChanged.revoke();
     try { if (island) island.Close(); } catch (...) {}
     island = nullptr; control = nullptr; emitter = nullptr;
   }

@@ -79,3 +79,10 @@ Use standard spacing, size, and responsive utilities for static layout. The Sett
 - macOS native compilation and runtime smoke checks passed: Settings mounted, responsive classes resolved to a 224-point button width, and light/dark/system changes updated tokens and native Appearance. Visual/pointer acceptance was blocked by the locked Mac desktop. Android and Windows native execution remain pending; Windows manual native appearance propagation is tracked as WIN-11.
 
 Checks ran from the synchronized temporary checkout because Bun stalls under Documents on this machine. Generated consumers and evidence remain outside source control.
+
+The Windows UI package now overrides that native Appearance module to implement
+manual Light/Dark and reset-to-System for its WinUI controls. Uniwind requires no
+Windows-specific theme call. The implementation preserves existing controls and
+text; visual/native Windows acceptance remains pending in
+[WIN-11](windows-issues.md). OS dialog/title-bar theming and arbitrary RNW
+PlatformColor resources are not covered by this change.

@@ -32,6 +32,17 @@ All controls accept `style` for React Native layout and `testID`. Layout styles 
 
 Native bridge types, Expo modifier arrays, and backend-specific props are private implementation details. A future upstream implementation can replace a backend when it satisfies these contracts and their behavior checks without changing application imports. This package does not require a framework layout or routing system.
 
+## Windows appearance
+
+On Windows, this package supplies the standard React Native `Appearance` native
+module with a working `setColorScheme` implementation. Use
+`Appearance.setColorScheme("dark")`, `"light"`, or `null` to return to System;
+Uniwind's theme selection uses the same path. Each mounted WinUI control receives
+native theme notifications, and newly mounted controls read the current preference.
+Theme changes do not recreate editors or add theme/state props to the public controls.
+OS changes apply while System is selected. Native acceptance is still pending;
+see [Windows issues](windows-issues.md#foundation-work--2026-09-15).
+
 ## Optional Uniwind bindings
 
 Import the same three controls from `@legend-apps/ui/uniwind` to add `className` through upstream `withUniwind` on native platforms and `useResolveClassNames` on web. Classes map to the existing layout `style`, with explicit styles taking precedence. The base entry has no Uniwind dependency at runtime. See [styling setup, themes, and limitations](styling.md).
