@@ -36,7 +36,8 @@ async function main() {
       platform: { type: "string" },
       packages: { type: "string" },
       port: { type: "string" },
-      go: { type: "boolean" },
+      prebuilt: { type: "boolean" },
+      go: { type: "boolean" }, // Legacy desktop build alias; dev --go belongs to Expo.
       dev: { type: "boolean" },
       release: { type: "boolean" },
       preview: { type: "boolean" },
@@ -66,7 +67,7 @@ async function main() {
     if (["ios", "android", "web"].includes(selected)) {
       if (command === "build" && selected === "web") throw new Error("Use expo export --platform web for web production output.");
       if (command === "prebuild" && selected === "web") throw new Error("Web has no native project to prebuild.");
-      if (values.go || values.release || values.preview || (command === "build" && !values.dev)) throw new Error("Mobile builds use --dev in this slice; Expo owns mobile distribution workflows.");
+      if (values.prebuilt || values.go || values.release || values.preview || (command === "build" && !values.dev)) throw new Error("Mobile builds use --dev in this slice; Expo owns mobile distribution workflows.");
       prepareConfig(root);
       const args = command === "prebuild" ? ["prebuild", "--platform", selected, "--no-install"] : [`run:${selected}`, ...(values.device ? ["--device", values.device] : []), ...(port ? ["--port", String(port)] : [])];
       const manifest = readFileSync(path.join(root, "package.json"), "utf8");
@@ -97,10 +98,10 @@ Inside an app: bun dev, bun run build, bun run package
 
 Advanced: updates init <feedURL>, credentials, doctor, analyze, open [app], build --dev, build --preview
 Windows: dev and build --dev; production builds are not yet supported.
-SDK transfer: sdk export <directory> [--runtime <Go directory>], sdk import <directory>
-SDK maintainers: sdk pack, sdk build-go [--platform windows], sdk register <runtime directory>
+SDK transfer: sdk export <directory> [--runtime <prebuilt runtime directory>], sdk import <directory>
+SDK maintainers: sdk pack, sdk build-prebuilt [--platform windows], sdk register <runtime directory>
 Targets: dev/build/prebuild --platform macos|windows|ios|android|web
-Overrides: --project <directory>, --port <number>, dev --go-binary <Go.app>, create --packages <manifest>`);
+Overrides: --project <directory>, --port <number>, dev --prebuilt-binary <runtime path>, create --packages <manifest>`);
   } else switch (command) {
     case "add": {
       if (positionals[1] !== "desktop") throw new Error("Usage: legend add desktop [--project <Expo app>]");
@@ -117,7 +118,7 @@ Overrides: --project <directory>, --port <number>, dev --go-binary <Go.app>, cre
       if (!["macos", "windows"].includes(platform)) throw new Error("SDK commands require a desktop target");
       switch (positionals[1]) {
         case "export": {
-          if (!positionals[2]) throw new Error("Usage: legend sdk export <directory> [--runtime <Go client directory>]");
+          if (!positionals[2]) throw new Error("Usage: legend sdk export <directory> [--runtime <prebuilt runtime directory>]");
           console.log(`Exported SDK to ${exportSDK(packageManifest(values.packages as string | undefined), positionals[2], values.runtime)}. Transfer the directory and run bun install.ts there.`);
           break;
         }
@@ -135,10 +136,11 @@ Overrides: --project <directory>, --port <number>, dev --go-binary <Go.app>, cre
         case "register": {
           if (!positionals[2]) throw new Error("Usage: legend sdk register <runtime directory>");
           const result = registerRuntime(positionals[2]);
-          console.log(`Registered Legend Go for SDK ${result.runtime.framework}. Apps will discover it automatically.`);
+          console.log(`Registered prebuilt runtime for SDK ${result.runtime.framework}. Apps will discover it automatically.`);
           break;
         }
-        case "build-go": {
+        case "build-go": // Legacy alias; persisted runtime metadata still uses "go".
+        case "build-prebuilt": {
           let root: string;
           if (projectOption) root = project();
           else {
@@ -151,7 +153,7 @@ Overrides: --project <directory>, --port <number>, dev --go-binary <Go.app>, cre
           await build(root, "go", !!values.force);
           break;
         }
-        default: throw new Error("SDK commands: legend sdk pack, legend sdk build-go, legend sdk register <runtime directory>");
+        default: throw new Error("SDK commands: legend sdk pack, legend sdk build-prebuilt, legend sdk register <runtime directory>");
       }
       break;
     }

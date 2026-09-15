@@ -13,7 +13,7 @@ Legend delegates project creation and native generation to the tested Expo Deskt
 | Development terminal, Metro lifecycle, reload/debugger, mobile/web actions | Installed Expo CLI; process-local Legend desktop-key patch |
 | Mobile prebuild/build/run and web development | Installed Expo CLI |
 | Standard desktop Metro configuration | Expo Desktop Metro, extended for Legend sessions/runtimes |
-| Native SDK module selection, compatibility checks, runtime registration, Go switching | Legend |
+| Native SDK module selection, compatibility checks, runtime registration, prebuilt switching | Legend |
 | Desktop build/launch orchestration | Legend while the pinned beta has no desktop `run` command |
 
 The native bare-minimum template remains upstream-owned. Legend config plugins add the host and selected capabilities. The small `/ui` and capability adapters are independent of the creation mechanism.
@@ -38,19 +38,23 @@ For direct template creation, use npm 11 on PATH. The installed CLI's `src/npm-b
 
 **Prebuild dependency preservation.** The pinned beta accepts `skipDependencyUpdate`, but its dependency update implementation does not use it. Its bare-minimum template can add dependencies for other platforms even with `--no-install`. Legend therefore retains manifest restoration around native generation. On macOS it runs CocoaPods after restoring the intended graph and clearing stale generated bindings. Native generation/build commands against one checkout must remain sequential.
 
-**Desktop run/launch.** The pinned CLI exposes `create-app` and `prebuild`; it does not expose `run macos --binary`. Legend retains direct desktop compilation and process ownership while preserving its module selection, build records, and Go compatibility checks. Mobile/web already delegate to Expo's supported commands.
+**Desktop run/launch.** The pinned CLI exposes `create-app` and `prebuild`; it does not expose `run macos --binary`. Legend retains direct desktop compilation and process ownership while preserving its module selection, build records, and prebuilt compatibility checks. Mobile/web already delegate to Expo's supported commands.
 
 ## Expo development terminal patch
 
 `legend dev` launches the app's installed `expo start` under Node, inheriting stdin/stdout/stderr. Its Bun supervisor retains desktop runtime discovery, compatibility enforcement, native builds and owned app processes. It has no keyboard interface. Desktop actions and results travel over a private JSON IPC channel; no HTTP command endpoint is exposed.
 
+Legend consumes its own `--project`, `--platform`, `--prebuilt-binary`, and `--no-open` options and forwards the remaining arguments to Expo. Expo retains `--go`/`--dev-client`, networking, cache clearing, validation, and port selection. Its readiness message supplies the actual port and bundle options.
+
+The shared development config advertises all declared platforms and omits native build overlays. Expo Desktop supplies multi-platform Metro defaults; the desktop runtime gate is selected per request and does not block mobile/web. `desktop.config.json` remains separate. Native builds keep target-specific config and state.
+
 `src/expo-dev-patch.cjs` pins `@expo/cli@54.0.27` and verifies SHA-256 hashes for three upstream modules before loading replacements in memory:
 
 - `commandsTable.js`: place desktop runtime switching after Expo's runtime switch, and desktop opening/building after its platform launch actions, in both compact and expanded help.
 - `startInterface.js`: dispatch `d`, `g`, and `b` through the desktop extension; log action failures without ending the session. Existing keys remain Expo's.
-- `startAsync.js`: notify the supervisor of the actual native server port after startup, including noninteractive sessions.
+- `startAsync.js`: notify the supervisor of the actual native server port and bundle options after startup, including noninteractive sessions.
 
-`expo-dev-preload.cjs` changes module loading only inside this Expo process and restores the loader after the three modules load. Installed files are never rewritten. Forked Metro workers inherit Node's preload arguments but skip the extension. Templates pin the CLI version; an unexpected version or modified source produces an explicit startup error rather than silently losing desktop controls. Mobile/web-only Legend commands and direct `expo start` do not load the patch.
+`expo-dev-preload.cjs` changes module loading only inside this Expo process and restores the loader after the three modules load. Installed files are never rewritten. Forked Metro workers inherit Node's preload arguments but skip the extension. Templates pin the CLI version; an unexpected version or modified source produces an explicit startup error rather than silently losing desktop controls. Projects declaring no desktop platforms and direct `expo start` do not load the patch. Selecting `dev --platform ios`, Android, or web in a desktop-capable project keeps the patch and host desktop keys.
 
 On upgrade, review upstream changes, update the three source hashes and insertion points, and run `bun test tests/expo-dev.test.ts` plus a real packed-consumer session. Verify opening/switching, build failures, reload/debugger, Fast Refresh, compatibility invalidation, restart and Ctrl+C. Windows native actions additionally need a Windows host.
 
@@ -60,9 +64,9 @@ Noninteractive sessions still start Expo and can auto-open a compatible runtime,
 
 - Accept npm 12's record-shaped metadata for local template paths.
 - Honor dependency-preservation options during prebuild, including template-only additions, so Legend can remove manifest restoration and delegate installation more fully.
-- Replace the temporary Expo CLI patch with supported desktop development-session actions and lifecycle hooks. Expo CLI owns the terminal; Expo Desktop could register desktop targets and Legend could provide the Go launcher.
+- Replace the temporary Expo CLI patch with supported desktop development-session actions and lifecycle hooks. Expo CLI owns the terminal; Expo Desktop could register desktop targets and Legend could provide the prebuilt launcher.
 - Define a generic prebuilt-binary launch contract, such as the proposed `expo-desktop run macos --binary <app>`, with explicit Metro ownership/port, launch arguments/environment, failure reporting, and process termination.
-- Verify a Go launch from a JavaScript-only directory without Xcode, CocoaPods, codegen, or implicit prebuild. Exercise reload, Fast Refresh, custom-build switching, and two apps sharing a runtime at different ports.
+- Verify a prebuilt launch from a JavaScript-only directory without Xcode, CocoaPods, codegen, or implicit prebuild. Exercise reload, Fast Refresh, custom-build switching, and two apps sharing a runtime at different ports.
 
 Legend should retain runtime selection and compatibility policy while handing standard operations to upstream as those contracts become available. No upstream changes are required for the template creation path implemented here.
 
@@ -72,6 +76,11 @@ Legend should retain runtime selection and compatibility policy while handing st
 
 `bun run test:universal` checks real mobile/Windows generation, all five shared-screen bundles, and preservation across target switching. `bun run test:windows:prepare` checks the Windows starter, native fixture addition, and runtime compatibility metadata without claiming Windows native execution.
 
-Validated on macOS on 2026-09-13: 131 unit tests (564 assertions), workspace TypeScript, all three template consumers including direct upstream creation, iOS/Android/Windows native generation, and all five universal Settings bundles. The Windows preparation check also passed for both the starter and the added native-greeting module, including Go incompatibility detection. Windows native compilation and execution still require a Windows machine.
+Validated on macOS on 2026-09-13: 131 unit tests (564 assertions), workspace TypeScript, all three template consumers including direct upstream creation, iOS/Android/Windows native generation, and all five universal Settings bundles. The Windows preparation check also passed for both the starter and the added native-greeting module, including prebuilt incompatibility detection. Windows native compilation and execution still require a Windows machine.
 
-Validated the Expo terminal patch on macOS on 2026-09-14: workspace TypeScript and 163 unit tests passed. A packed kitchen-sink consumer started the real Expo terminal, opened Legend Go, switched to the missing-development-build state and back without compiling, reloaded through Expo, and launched DevTools. Native configuration invalidation blocked bundles with HTTP 409 and disconnected the owned Hermes runtime; restoring configuration restarted Expo. Fast Refresh delivered source edits, with zero idle updates over 12 seconds. Ctrl+C closed the session. Tests cover simulated Windows key selection, IPC dispatch, build-error recovery, version/source mismatch rejection, and worker preload isolation; native Windows launch and an actual build through the new key remain unverified.
+Validated the Expo terminal patch on macOS on 2026-09-14: workspace TypeScript and 163 unit tests passed. A packed kitchen-sink consumer started the real Expo terminal, opened prebuilt runtime, switched to the missing-development-build state and back without compiling, reloaded through Expo, and launched DevTools. Native configuration invalidation blocked bundles with HTTP 409 and disconnected the owned Hermes runtime; restoring configuration restarted Expo. Fast Refresh delivered source edits, with zero idle updates over 12 seconds. Ctrl+C closed the session. Tests cover simulated Windows key selection, IPC dispatch, build-error recovery, version/source mismatch rejection, and worker preload isolation; native Windows launch and an actual build through the new key remain unverified.
+
+
+Validated shared development sessions on macOS on 2026-09-14: TypeScript and 168 unit tests (750 assertions) passed. `test:universal:dev` served all five Settings graphs from one Expo process, preserved the platform UI/Uniwind backends, blocked only the incompatible host desktop's bundle, delivered one source edit to iOS and web HMR clients, restarted with desktop still incompatible, and removed the session/server on shutdown. Expo `--clear`, `--offline`, `--go`, and `-p` were exercised. `test:add-desktop` also passed; an additional live shared session preserved the adopted app's original entry, custom Metro resolver, plugin output, and all-platform manifest. These checks do not claim native app execution.
+
+Configuration bridge code participates in Legend's conservative native signatures. Rebuild/re-register prebuilt against the repacked SDK when updating existing consumers to this change; the compatibility gate will reject an older host signature.

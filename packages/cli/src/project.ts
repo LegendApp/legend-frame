@@ -348,7 +348,7 @@ export function goConfigurationIssues(config: any): string[] {
 
 export function validateBuildModules(mode: string, packages: NativePackage[]) {
   if (mode === "go" && packages.some(pkg => pkg.name === "@legend-apps/native-greeting" || pkg.json.legend?.testOnly))
-    throw new Error("Build Go from the clean SDK starter, not a custom-module test fixture.");
+    throw new Error("Build the prebuilt runtime from the clean SDK starter, not a custom-module test fixture.");
   if (mode === "release" && packages.some(pkg => pkg.json.legend?.testOnly))
     throw new Error("Test-only native modules cannot be included in distribution builds.");
 }
@@ -360,7 +360,7 @@ export function projectEnvironment(root: string): Record<string, string> {
   const config = readAppConfig(root).expo ?? {};
   const projectId = config.extra?.legend?.projectId ?? config.macos?.bundleIdentifier;
   if (typeof projectId !== "string" || !projectId.length || projectId.length > 200)
-    throw new Error("Set extra.legend.projectId to a stable project identifier before launching Go.");
+    throw new Error("Set extra.legend.projectId to a stable project identifier before launching the prebuilt runtime.");
   return {
     LEGEND_WINDOW_CONFIG: JSON.stringify(config.extra?.legend?.window ?? {}),
     LEGEND_PROJECT_ID: projectId,

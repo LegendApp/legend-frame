@@ -2,7 +2,7 @@
 
 ## Create and develop an app
 
-With the local SDK packed and a Go runtime registered, run from the framework checkout:
+With the local SDK packed and a prebuilt runtime registered, run from the framework checkout:
 
 ```sh
 bun run legend create /tmp/MyLegendApp
@@ -12,21 +12,25 @@ bun run macos
 
 `bun run macos`, `bun start`, and `bun dev` run Expo CLI's development terminal with Legend desktop actions. Existing apps can use `"macos": "legend dev"` and `"start": "legend dev"`; the small Legend supervisor starts the installed `expo start` with inherited terminal input/output. Expo owns Metro, prompts, reload, debugging, logs, and its mobile/web keys.
 
-`create` delegates template extraction, identity assignment, and installation to Expo Desktop beta. `dev` discovers a compatible registered Go runtime, chooses an available localhost port, and opens the app after Expo is ready. Running compatible Go invokes no native build tools. Use `--no-open` to wait for a desktop launch key instead.
+`create` delegates template extraction, identity assignment, and installation to Expo Desktop beta. `dev` discovers a compatible registered prebuilt runtime, uses Expo's host and port selection, and opens the app after Expo is ready. Running a compatible prebuilt runtime invokes no native build tools. Use `--no-open` to wait for a desktop launch key instead.
 
 Expo's command table adds:
 
 ```text
-› Press d │ open macOS (Legend Go)
+› Press d │ open macOS (prebuilt runtime)
 › Press g │ switch desktop to development build
 › Press b │ build and open macOS development build
 ```
 
-On Windows, the actions target Windows. They are disabled when the target cannot run on the host. `g` switches between Legend Go and a custom development build; it never compiles automatically. `b` becomes available when a custom build is required. Switching binaries can reset React state. Selection is remembered in `.legend/settings.json`.
+On Windows, the actions target Windows. They are disabled when the target cannot run on the host. `g` switches between the prebuilt runtime and a custom development build; it never compiles automatically. `b` becomes available when a custom build is required. Switching binaries can reset React state. Selection is remembered in `.legend/settings.json`.
 
 Expo retains `r` for reload, `j` for debugging, `m` for the dev menu, `w` for web, `o` for your editor, and `s` for the **mobile** Expo Go/development-client switch. `?` shows the current command table. **Ctrl+C** exits Expo and closes the native app owned by this session. Metro output appears directly in the terminal; native build logs remain in `.legend/logs/`.
 
 The extension uses a process-local patch to `@expo/cli@54.0.27`, verified against the exact upstream source before startup. It does not modify installed Expo files or affect ordinary `expo start` calls. See [Expo Desktop integration](expo-desktop-integration.md#expo-development-terminal-patch) for patch maintenance.
+
+A universal project's single dev session serves iOS, Android, web, macOS, and Windows. Use Expo's `i`, `a`, and `w` keys alongside Legend's `d`. `--platform ios` requests an initial iOS launch while keeping the host desktop keys. LAN is Expo's default, so a phone and the local desktop app can use the same server. The declared `platforms` list controls availability; dev does not add platform support to a desktop-only application.
+
+Native signatures and prebuilt compatibility remain desktop-specific. A missing or stale desktop runtime blocks only that desktop's bundle requests; mobile and web continue serving and receiving Fast Refresh. Native build/prebuild commands still select one target and preserve the other generated projects. A config/dependency change can restart the shared server even while desktop is incompatible.
 
 The normal production command is:
 
@@ -45,12 +49,12 @@ This setup is done once per local SDK, rather than for every app:
 ```sh
 bun install
 bun run legend sdk pack
-bun run legend sdk build-go
+bun run legend sdk build-prebuilt
 ```
 
-`pack` produces local package archives and registers their manifest. `build-go` creates a managed SDK starter, installs the packed SDK, builds Go, and registers the result automatically. Repeating it refreshes local packages before checking whether the binary needs rebuilding. To build from an existing SDK starter, pass `--project /path/to/starter`.
+`pack` produces local package archives and registers their manifest. `build-prebuilt` creates a managed SDK starter, installs the packed SDK, builds the prebuilt runtime, and registers the result automatically. Repeating it refreshes local packages before checking whether the binary needs rebuilding. To build from an existing SDK starter, pass `--project /path/to/starter`.
 
-An existing Go binary can be registered without rebuilding:
+An existing prebuilt binary can be registered without rebuilding:
 
 ```sh
 bun run legend sdk register /path/to/LegendGo.app
@@ -58,22 +62,27 @@ bun run legend sdk register /path/to/LegendGo.app
 
 Packing also discovers the saved prototype binary at `artifacts/runtimes/LegendGo.app`, if present. Registration stores local paths under `~/.legend/`; it does not duplicate the binaries. Keep the registered binaries in place. Set `LEGEND_HOME` to isolate local registry state for testing.
 
-Runtime selection checks SDK version, platform, architecture, and native signatures. Missing/deleted runtimes are skipped. A missing Go installation produces installation guidance, while additional native modules or native app configuration produce a custom-build prompt. Runtime downloads are not implemented in this local prototype.
+Runtime selection checks SDK version, platform, architecture, and native signatures. Missing/deleted runtimes are skipped. A missing prebuilt installation produces installation guidance, while additional native modules or native app configuration produce a custom-build prompt. Runtime downloads are not implemented in this local prototype.
 
 ## Advanced overrides
 
 Normal app development needs no flags. These remain available for automation and diagnosis:
 
 - `create --packages <manifest>`: use an explicit local SDK archive manifest.
-- `dev --go <Go.app>`: register and use a particular Go runtime.
+- `dev --prebuilt-binary <runtime path>`: register and use a particular prebuilt runtime.
 - `--project <directory>`: choose another application directory.
-- `--port <number>`: require a specific port; otherwise the CLI selects a free port starting at 19120.
-- `dev --no-open`: start the server without launching the app.
+- `dev --port <number>` (or `-p`): Expo chooses the port, defaulting to 8081, and handles occupied-port prompts. Desktop launches use the port Expo reports.
+- `dev --no-open`: start the server without an automatic launch. Explicit Expo flags such as `--web` still open their targets.
+- `dev --platform ios|android|web|macos|windows`: choose the initial launch target; all declared platforms stay available.
+- `dev --clear`, `--offline`, `--lan`, `--localhost`, `--tunnel`, `--max-workers`, and other Expo start options pass through unchanged. `dev --help` includes Expo’s help.
+- `dev --go` / `--dev-client`: choose the **mobile** Expo runtime; these do not select the prebuilt runtime.
 - `build --dev`: build a custom Debug runtime and remember it for the next `dev` session.
 - `build --preview`: build the production native selection in Debug.
 - `build --force`: force native regeneration and compilation for the selected mode.
 
-The legacy `build --go` and `build --release` forms remain available, but bare `build` now means a standalone release.
+For SDK maintainers, `sdk build-prebuilt` builds and registers the shared runtime; `build --prebuilt` builds one from the current generic SDK project. The old `sdk build-go`, `build --go`, and `dev --go-binary` spellings remain compatibility aliases. Expo's `dev --go` still means Expo Go.
+
+The persisted runtime mode (`"go"`), registry entries, saved settings, and existing `LegendGo`/`products/go` paths remain unchanged so registered binaries keep working. This terminology change itself does not require a native rebuild. Older validation reports retain the original name. Bare `build` still means a standalone release; `--preview` is unchanged.
 
 ## Add native code
 
@@ -83,7 +92,7 @@ The local fixture is distributed in `artifacts/packages/` after packing. Use its
 bun add /absolute/path/to/legend-framework/artifacts/packages/legend-apps-native-greeting-0.1.0-prototype.0.tgz
 ```
 
-Import `getGreeting` from `@legend-apps/native-greeting` and render its returned string. The running CLI detects that Go lacks the native module and offers a custom build. Press `b` to build and switch. Future JavaScript edits Fast Refresh; native source/configuration changes need another build.
+Import `getGreeting` from `@legend-apps/native-greeting` and render its returned string. The running CLI detects that the prebuilt runtime lacks the native module and offers a custom build. Press `b` to build and switch. Future JavaScript edits Fast Refresh; native source/configuration changes need another build.
 
 If the current custom binary is stale, press `b` to rebuild it, or run `legend build --dev` followed by `bun dev`. `legend build --dev --force` forces native regeneration and compilation for a custom development build. Generated native directories are disposable: author native changes in packages/config plugins.
 
@@ -108,13 +117,13 @@ Use Node **24.19.0**, pinned in the checkout's `.nvmrc` (`nvm install && nvm use
 
 `legend doctor` checks Apple Silicon macOS, Node, Bun, CocoaPods, Xcode, and the macOS SDK. Install full Xcode, complete its first-launch/license setup, and select it with the normal Xcode command-line tools settings. Command Line Tools alone cannot build the generated macOS application. Install CocoaPods in a supported Ruby environment and ensure `pod` is on PATH.
 
-The CLI diagnoses missing tooling; it does not silently install Xcode or accept licenses. Re-run the build or switch after completing setup. No native prerequisites are invoked for a compatible prebuilt Go launch.
+The CLI diagnoses missing tooling; it does not silently install Xcode or accept licenses. Re-run the build or switch after completing setup. No native prerequisites are invoked for a compatible prebuilt runtime launch.
 
 ## Local package iteration
 
 Repack after source changes. The archive manifest maps package names to local tarballs; starters use overrides so transitive framework packages also resolve locally. The archive manifest uses content-hashed filenames to avoid stale package-manager caches. Run `bun scripts/refresh-consumer.ts /path/to/app` from the framework repository to update an existing test consumer. Public package versions will be immutable.
 
-Do not use workspace symlinks as the sole distribution test. The Go builder and consumer should install real tarballs outside both source repositories.
+Do not use workspace symlinks as the sole distribution test. The prebuilt builder and consumer should install real tarballs outside both source repositories.
 
 ## Logs and generated outputs
 

@@ -1,6 +1,6 @@
 # Background JavaScript on macOS
 
-[Margelo Runtimes](https://github.com/margelo/react-native-runtimes) is an external library integrated into the SDK, available in Go and custom development builds. Its API is imported directly from `@react-native-runtimes/core`; the framework handles native setup, Metro and production selection. New projects declare the library as a dependency automatically. It runs JavaScript on independent Hermes runtimes inside the app process. No Node runtime is packaged. A worker can continue while the app is hidden or its windows are closed; it ends when the app quits. This is not an OS service that runs after termination or through system sleep.
+[Margelo Runtimes](https://github.com/margelo/react-native-runtimes) is an external library integrated into the SDK, available in prebuilt and custom development builds. Its API is imported directly from `@react-native-runtimes/core`; the framework handles native setup, Metro and production selection. New projects declare the library as a dependency automatically. It runs JavaScript on independent Hermes runtimes inside the app process. No Node runtime is packaged. A worker can continue while the app is hidden or its windows are closed; it ends when the app quits. This is not an OS service that runs after termination or through system sleep.
 
 ## Usage
 
@@ -38,7 +38,7 @@ Arguments/results use JSON serialization in this pinned version. Use plain seria
 
 New projects have the required Metro wrapper and worker-aware entry. No app config flag, config plugin or manual native-module manifest entry is needed.
 
-- Go and custom dev builds include the SDK's patched Runtimes and Nitro native code. Workers start lazily.
+- prebuilt and custom dev builds include the SDK's patched Runtimes and Nitro native code. Workers start lazily.
 - `legend build` / `legend package` first bundle the actual application with worker registrations suppressed. They then generate registrations from reachable source files, rebundle, and select native modules from that graph.
 - If the app does not import Runtimes, production excludes its JS, native pod and native startup hook. Nitro is also excluded unless another retained native package requires it.
 - Files left in `src/` or `tasks.ts`, installed SDK packages and development-generated registrations do not by themselves retain Runtimes in production. Imports used only inside reachable worker functions retain their native dependencies.
@@ -69,7 +69,7 @@ if (!(globalThis as any).__THREADED_RUNTIME_ENV__) {
 }
 ```
 
-Ignore `.threaded-runtime/` in Git. Remove the prototype's `runtimes.plugin.cjs` from the config plugins list. Rebuild Go or your custom dev binary after updating the SDK; reloading Metro cannot add native code to an older binary.
+Ignore `.threaded-runtime/` in Git. Remove the prototype's `runtimes.plugin.cjs` from the config plugins list. Rebuild the prebuilt runtime or your custom dev binary after updating the SDK; reloading Metro cannot add native code to an older binary.
 
 ## Pinned source and local distribution
 
@@ -79,15 +79,15 @@ The SDK pack step fetches Margelo's repository at `58710c25c6e505dcc1292ee54d855
 
 ```sh
 bun run pack:local
-bun run legend sdk build-go
-bun run test:runtimes /tmp/LegendRuntimesProbe --go
+bun run legend sdk build-prebuilt
+bun run test:runtimes /tmp/LegendRuntimesProbe --prebuilt
 bun run test:runtimes /tmp/LegendRuntimesProbe
 bun run test:runtimes /tmp/LegendRuntimesProbe --release
 bun run test:runtimes:pruning /tmp/LegendRuntimesProbe
 ```
 
-`bun run test:runtimes:all` prepares Go and runs the complete matrix; it is also included in `test:all`.
+`bun run test:runtimes:all` prepares the prebuilt runtime and runs the complete matrix; it is also included in `test:all`.
 
-The native test app measures worker isolation, imported CPU work while the main JS timer ticks, async results, errors, filesystem access, runtime destruction after completed calls and fresh recreation. Dev/Go additionally perform an actual app reload. The pruning test retains task source files and dependencies, removes their imports, verifies the native selection and linked symbols, and launches the resulting standalone Release app. Local Xcode is required for these native builds.
+The native test app measures worker isolation, imported CPU work while the main JS timer ticks, async results, errors, filesystem access, runtime destruction after completed calls and fresh recreation. Dev/prebuilt additionally perform an actual app reload. The pruning test retains task source files and dependencies, removes their imports, verifies the native selection and linked symbols, and launches the resulting standalone Release app. Local Xcode is required for these native builds.
 
 Recorded results: [integrated Runtimes validation](runtimes-validation.md).

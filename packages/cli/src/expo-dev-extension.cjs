@@ -7,8 +7,8 @@ function commands(platform = process.env.LEGEND_PLATFORM, host = process.platfor
   if (!name) return [];
   const disabled = platform === 'macos' ? host !== 'darwin' : host !== 'win32';
   return [
-    { key: 'd', msg: `open ${name} (${current.target === 'go' ? 'Legend Go' : 'development build'})`, disabled },
-    { key: 'g', msg: `switch desktop to ${current.target === 'go' ? 'development build' : 'Legend Go'}`, disabled },
+    { key: 'd', msg: `open ${name} (${current.target === 'go' ? 'prebuilt runtime' : 'development build'})`, disabled },
+    { key: 'g', msg: `switch desktop to ${current.target === 'go' ? 'development build' : 'prebuilt runtime'}`, disabled },
     { key: 'b', msg: `build and open ${name} development build`, disabled: disabled || !current.canBuild },
   ];
 }

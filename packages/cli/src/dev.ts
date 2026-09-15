@@ -192,8 +192,8 @@ export async function dev(
         const name = issues[i]!;
         if (native.some((pkg) => pkg.name === name)) {
           issues[i] = current?.runtime.modules[name]
-            ? `${name} has changed since this Go runtime was built.`
-            : `${name} isn’t included in Legend Go.`;
+            ? `${name} has changed since this prebuilt runtime was built.`
+            : `${name} isn’t included in the prebuilt runtime.`;
         }
       }
       issues.push(...goConfigurationIssues(readAppConfig(root)));

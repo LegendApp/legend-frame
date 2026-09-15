@@ -42,7 +42,7 @@ export function Integrations({ report }: { report: (value: unknown) => void }) {
   }
   return <View style={{ gap: 18 }}>
     <Text style={{ fontSize: 18, fontWeight: "600" }} className="text-foreground">Notifications</Text>
-    <Text className="text-muted">Permission: {permission}. Go shares its host’s notification permission.</Text>
+    <Text className="text-muted">Permission: {permission}. The prebuilt runtime shares its host’s notification permission.</Text>
     <View style={{ flexDirection: "row", flexWrap: "wrap", gap: 12 }}>
       <ActionButton onPress={() => act(async () => setPermission(await notifications.requestNotificationPermission()))}>Enable notifications</ActionButton>
       <ActionButton onPress={() => act(async () => { await notifications.showNotification({ id: "kitchen-demo", title: "Hello from the kitchen sink", body: "Click to exercise notification responses.", data: { screen: "kitchen" } }); reportNotification("Notification submitted; waiting for a response."); return "Notification submitted."; })}>Send test notification</ActionButton>

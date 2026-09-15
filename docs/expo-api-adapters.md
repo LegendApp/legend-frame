@@ -49,7 +49,7 @@ Package entry points intentionally omit the `.ts` suffix so Metro selects `.ios`
 
 **Linking:** `openURL`, `canOpenURL`, `getInitialURL`, and `addEventListener('url', listener)`. Successful `openURL` now resolves `true`; invalid/open failures reject. On macOS, `getInitialURL` returns the first non-file URL delivered before application launch completes, or `null`. It stays stable across subsequent URLs and JavaScript reloads within that process. Live listeners return a synchronous removable subscription, omit launch events and file-open events, and do not replay history. Subscribe before awaiting the initial URL. The existing asynchronous `onOpen` remains the queued, deduplicated desktop URL/file API; recent documents are unchanged. The smaller interface does not implement all of [Expo Linking](https://docs.expo.dev/versions/v54.0.0/sdk/linking/).
 
-A rebuilt desktop runtime is required: clipboard native operations and initial-URL host tracking changed. The existing runtime compatibility signatures detect these changes. URL scheme associations require a configured custom application; the generic Go binary does not acquire every project's scheme.
+A rebuilt desktop runtime is required: clipboard native operations and initial-URL host tracking changed. The existing runtime compatibility signatures detect these changes. URL scheme associations require a configured custom application; the generic prebuilt binary does not acquire every project's scheme.
 
 ## Kitchen-sink validation
 
@@ -60,7 +60,7 @@ bun run test:api-adapters
 bun run test:api-platforms
 ```
 
-`test:api-adapters` prepares a packed kitchen-sink consumer and builds a custom macOS runtime with the test-only driver. It temporarily stages the test app under `~/Applications` because LaunchServices excludes `/tmp` apps from URL-handler lookup, and unregisters/removes that copy afterward. It executes six checks on a normal launch and again on a real LaunchServices URL launch. Coverage includes text/HTML/empty clipboard values, legacy interoperation, temporary Keychain values and cleanup, unsupported options, initial URLs, URL opening, live events, file separation, and listener removal. Test reports live in the consumer's `.legend/api-results` directory. The driver remains excluded from Go and production builds by the existing validation rules.
+`test:api-adapters` prepares a packed kitchen-sink consumer and builds a custom macOS runtime with the test-only driver. It temporarily stages the test app under `~/Applications` because LaunchServices excludes `/tmp` apps from URL-handler lookup, and unregisters/removes that copy afterward. It executes six checks on a normal launch and again on a real LaunchServices URL launch. Coverage includes text/HTML/empty clipboard values, legacy interoperation, temporary Keychain values and cleanup, unsupported options, initial URLs, URL opening, live events, file separation, and listener removal. Test reports live in the consumer's `.legend/api-results` directory. The driver remains excluded from prebuilt and production builds by the existing validation rules.
 
 `test:api-platforms` installs a minimal packed consumer, bundles the actual iOS/Android/web entry points, rejects any desktop-native import in their source maps, and verifies that mobile autolinking excludes AppKit pods. It does not claim mobile device execution. Windows operations remain unimplemented.
 

@@ -1,10 +1,10 @@
 # Legend Framework
 
-Legend Framework is an experimental framework for building native desktop applications with React Native and Expo Desktop. It combines desktop APIs with an Expo-style development workflow: start in a supplied **Legend Go** runtime, switch to a custom development build when you need additional native code, and build a standalone application containing the native modules it needs.
+Legend Framework is an experimental framework for building native desktop applications with React Native and Expo Desktop. It combines desktop APIs with an Expo-style development workflow: start in a supplied **prebuilt runtime**, switch to a custom development build when you need additional native code, and build a standalone application containing the native modules it needs.
 
 Application JavaScript runs in **Hermes**. Node and Bun are development tools; neither is embedded as the application's JavaScript runtime. The UI uses React Native's native renderer.
 
-**Current scope:** macOS 14+ on Apple Silicon. The packages, CLI, and native runtime are prototypes. A [transferable SDK with optional prebuilt Go clients](docs/sdk-distribution.md) works outside the checkout; public npm packages and hosted Go releases are not available. Windows x64 Go and custom development builds are integrated, with native verification still pending; see the [Windows development guide](docs/windows-slice.md). Mobile/web development delegates to Expo. Intel macOS, Linux, and Mac App Store distribution are not supported by this framework's current workflow.
+**Current scope:** macOS 14+ on Apple Silicon. The packages, CLI, and native runtime are prototypes. A [transferable SDK with optional prebuilt runtimes](docs/sdk-distribution.md) works outside the checkout; public npm packages and hosted prebuilt releases are not available. Windows x64 prebuilt and custom development builds are integrated, with native verification still pending; see the [Windows development guide](docs/windows-slice.md). Mobile/web development delegates to Expo. Intel macOS, Linux, and Mac App Store distribution are not supported by this framework's current workflow.
 
 ## Start here
 
@@ -20,7 +20,7 @@ Application JavaScript runs in **Hermes**. Node and Bun are development tools; n
 
 | Target | Native contents | JavaScript | When to use it |
 | --- | --- | --- | --- |
-| Legend Go | The supported SDK and its required native dependencies | Served by Metro | Start developing without compiling a native app |
+| Prebuilt runtime | The supported SDK and its required native dependencies | Served by Metro | Start developing without compiling a native app |
 | Custom development build | The SDK plus the app's additional native dependencies and configuration | Served by Metro | Add a native library or an app-specific native capability |
 | Standalone application | The production-selected native module set | Embedded in the application | Run without Metro; prepare a distribution build |
 
@@ -43,12 +43,12 @@ bun install
 bun run typecheck
 bun test tests
 bun run legend sdk pack
-bun run legend sdk build-go
+bun run legend sdk build-prebuilt
 ```
 
 Use Node 24.19.0 (`nvm install && nvm use` in this checkout). Older Node 24 releases can fail on Expo Desktop beta's CommonJS imports; see [native prerequisites](docs/development.md#native-prerequisites).
 
-`pack` creates SDK package archives and Expo Desktop-compatible application templates, then registers their manifest. `build-go` creates or refreshes the SDK's managed build project, compiles the generic native runtime, and registers it for app development.
+`pack` creates SDK package archives and Expo Desktop-compatible application templates, then registers their manifest. `build-prebuilt` creates or refreshes the SDK's managed build project, compiles the generic native runtime, and registers it for app development.
 
 If you already have a compatible runtime, register it instead of building it:
 
@@ -56,7 +56,7 @@ If you already have a compatible runtime, register it instead of building it:
 bun run legend sdk register /absolute/path/to/LegendGo.app
 ```
 
-Registration records the path; keep the binary at that location. A compatible prebuilt Go runtime can be launched without invoking Xcode, CocoaPods, or codegen. Native build tools are needed when creating or rebuilding a binary.
+Registration records the path; keep the binary at that location. A compatible prebuilt runtime can be launched without invoking Xcode, CocoaPods, or codegen. Native build tools are needed when creating or rebuilding a binary.
 
 ### 2. Create and run an app
 
@@ -70,7 +70,7 @@ bun run macos
 
 `bun run macos`, `bun start`, and `bun dev` all run the same managed development session. The CLI discovers the registered runtime and chooses an available Metro port. The terminal provides actions to open, reload, debug, change runtime, build when required, and quit.
 
-Edit `App.tsx` to change the application. The development terminal is Expo CLI with desktop actions: `d` opens macOS or Windows, `g` switches Legend Go/development build, `b` builds when required, and Ctrl+C exits. Expo retains its normal reload, debugger, mobile, and web keys. See the [development guide](docs/development.md) for flags, logs, debugger behavior, and adding native dependencies.
+Edit `App.tsx` to change the application. The development terminal is Expo CLI with desktop actions: `d` opens macOS or Windows, `g` switches prebuilt runtime/development build, `b` builds when required, and Ctrl+C exits. Expo retains its normal reload, debugger, mobile, and web keys. See the [development guide](docs/development.md) for flags, logs, debugger behavior, and adding native dependencies.
 
 ### 3. Build a standalone app
 
@@ -96,22 +96,22 @@ Packaging requires signing credentials and a notarization profile. It signs a st
 
 ## Windows development
 
-Windows uses the same CLI, starter, Go registry, native compatibility checks, and managed Metro session. The current Windows starter includes the native host; the desktop SDK feature set is being ported separately. There is no separate source kit to install.
+Windows uses the same CLI, starter, prebuilt registry, native compatibility checks, and managed Metro session. The current Windows starter includes the native host; the desktop SDK feature set is being ported separately. There is no separate source kit to install.
 
 On Windows 11 x64, install the prerequisites in the [Windows guide](docs/windows-slice.md), including Visual Studio 2026 / MSVC v145 for the pinned RNW 0.81.35 template. Then run from the framework checkout:
 
 ```powershell
 bun install
 bun run legend sdk pack --platform windows
-bun run legend sdk build-go --platform windows
+bun run legend sdk build-prebuilt --platform windows
 bun run legend create C:\dev\MyLegendApp --platform windows
 cd C:\dev\MyLegendApp
 bun run windows
 ```
 
-Creation defaults to Windows on a Windows machine. `bun run windows`, `bun dev`, and `bun start` enter the normal `legend dev` session. Additional Windows native dependencies use the normal custom-build path: the session detects incompatible Go code and offers `b`, or you can run `bunx --no-install legend build --dev` explicitly. Runtime registration distinguishes Windows/x64 from macOS/arm64.
+Creation defaults to Windows on a Windows machine. `bun run windows`, `bun dev`, and `bun start` enter the normal `legend dev` session. Additional Windows native dependencies use the normal custom-build path: the session detects incompatible prebuilt code and offers `b`, or you can run `bunx --no-install legend build --dev` explicitly. Runtime registration distinguishes Windows/x64 from macOS/arm64.
 
-For the automated Go → Fast Refresh → added native module → custom-build check, run from the framework checkout with a fresh destination:
+For the automated prebuilt → Fast Refresh → added native module → custom-build check, run from the framework checkout with a fresh destination:
 
 ```powershell
 bun run test:windows --project C:\dev\LegendWindowsVerification
@@ -177,7 +177,7 @@ A typical generated configuration looks like this; retain the `projectId` assign
 }
 ```
 
-The stable project ID scopes storage and runtime identity across renames and builds. Window settings can be supplied to Go. Registering URL/document associations, configuring a menu-bar-only app or update feed, and embedding helper executables require a custom binary. The CLI also checks additional config plugins and native settings.
+The stable project ID scopes storage and runtime identity across renames and builds. Window settings can be supplied to the prebuilt runtime. Registering URL/document associations, configuring a menu-bar-only app or update feed, and embedding helper executables require a custom binary. The CLI also checks additional config plugins and native settings.
 
 See [desktop configuration](docs/desktop-api-expansion.md#configuration) for fields and [architecture](ARCHITECTURE.md#configuration-and-identity) for ownership rules. Dynamic application config and unrelated JavaScript entry bundles are outside the current supported model.
 
@@ -187,12 +187,12 @@ From the framework checkout:
 
 ```sh
 bun run kitchen-sink
-bun run legend sdk build-go
+bun run legend sdk build-prebuilt
 cd .legend/examples/KitchenSink
 bun dev
 ```
 
-The preparation command packs the SDK and creates or refreshes the managed example. Its source lives in [examples/kitchen-sink](examples/kitchen-sink). It exercises desktop APIs with windows, an editor, menus, persistence, and an event log. Its actions use native buttons and show progress, results, and errors beneath the button; each demo also shows its recent callback events, and the event log retains detailed output. The header theme button cycles System → Light → Dark → System, starting with the system appearance; Uniwind tokens theme the screen and React Native Appearance updates native controls. Building/registering Go is required before its first compatible runtime launch.
+The preparation command packs the SDK and creates or refreshes the managed example. Its source lives in [examples/kitchen-sink](examples/kitchen-sink). It exercises desktop APIs with windows, an editor, menus, persistence, and an event log. Its actions use native buttons and show progress, results, and errors beneath the button; each demo also shows its recent callback events, and the event log retains detailed output. The header theme button cycles System → Light → Dark → System, starting with the system appearance; Uniwind tokens theme the screen and React Native Appearance updates native controls. Building/registering the prebuilt runtime is required before its first compatible runtime launch.
 
 ## Commands and tests
 
@@ -201,7 +201,7 @@ Run framework commands from this repository; run app commands from a generated a
 | Location | Command | Purpose |
 | --- | --- | --- |
 | Framework | `bun run legend sdk pack` | Pack and register local SDK archives |
-| Framework | `bun run legend sdk build-go` | Build/register the generic runtime |
+| Framework | `bun run legend sdk build-prebuilt` | Build/register the generic runtime |
 | Framework | `bun run legend create <directory>` | Create a consumer from the packaged starter |
 | App | `bun run macos` / `bun run windows` / `bun dev` / `bun start` | Managed development session for the project target |
 | App | `bunx --no-install legend build --dev` | Build an app-specific development runtime |
@@ -233,7 +233,7 @@ bun run test:all
 
 ## Validation and limitations
 
-The macOS Go → custom runtime → reduced standalone workflow has recorded native validation. Desktop API expansion and integrated background runtimes have their own dated reports. Test counts and feature coverage change; consult the specific report rather than treating an old count as the current suite size.
+The macOS prebuilt → custom runtime → reduced standalone workflow has recorded native validation. Desktop API expansion and integrated background runtimes have their own dated reports. Test counts and feature coverage change; consult the specific report rather than treating an old count as the current suite size.
 
 | Evidence | What it covers |
 | --- | --- |
@@ -245,7 +245,7 @@ The macOS Go → custom runtime → reduced standalone workflow has recorded nat
 | [Windows development](docs/windows-slice.md) | Integrated CLI, generation and bundle checks; native acceptance pending |
 | [Packaging status](docs/packaging.md#validation-status) | Simulated notarization pipeline versus real distribution acceptance |
 
-Public SDK/Go distribution, real Developer ID/notarization acceptance, production update installation/relaunch, and broader platform support remain separate release gates. Some OS interaction cases also remain outstanding in their feature reports. No current test result establishes full Windows support.
+Public SDK/prebuilt distribution, real Developer ID/notarization acceptance, production update installation/relaunch, and broader platform support remain separate release gates. Some OS interaction cases also remain outstanding in their feature reports. No current test result establishes full Windows support.
 
 ## Repository and documentation
 
@@ -263,7 +263,7 @@ Use the [implementation plan](docs/implementation-plan.md) for original decision
 
 `legend create MyEditor --example document-editor` creates a [shared document editor](docs/document-editor.md) using Expo adapters on mobile, browser file operations on web, and native desktop dialogs. The macOS example exercises windows, menus, shortcuts, file-open events, and unsaved-change guards. Windows includes native control/API/file-dialog implementations, with remaining native acceptance and lifecycle gaps listed in [known Windows issues](docs/windows-issues.md).
 
-[SDK export/import](docs/sdk-distribution.md) packages the CLI, module archives, and optional prebuilt Go clients into a transferable directory. The recipient installs it without this checkout; Expo Desktop beta still owns creation and desktop generation, and Legend retains native compatibility checks.
+[SDK export/import](docs/sdk-distribution.md) packages the CLI, module archives, and optional prebuilt runtimes into a transferable directory. The recipient installs it without this checkout; Expo Desktop beta still owns creation and desktop generation, and Legend retains native compatibility checks.
 
 ## Small application examples
 
@@ -277,7 +277,7 @@ The examples use upstream AsyncStorage with project-scoped keys and recoverable
 snapshots. The unpackaged Windows host configures its supported database-path
 override. The small [audio contract](docs/audio.md) delegates to Expo Audio on
 mobile, AVPlayer on macOS, MediaPlayer on Windows, and HTML audio on web. Queue and
-note models remain application-owned. The maintained Go profile now includes audio
+note models remain application-owned. The maintained prebuilt profile now includes audio
 and AsyncStorage; existing clients require a rebuild for those native additions.
 
 Windows host source also supplies window roots sharing the host's React runtime,

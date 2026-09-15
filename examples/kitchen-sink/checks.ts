@@ -82,7 +82,7 @@ export async function runChecks(onResult: (result: Check) => void | Promise<void
         assert((await settings.get<{ text: string; enabled: boolean }>(token))?.text === "hello", "Object roundtrip");
       } finally { await settings.remove(token); }
     });
-    if (isolation) await check("Go isolation: persisted files, settings and Keychain", async () => {
+    if (isolation) await check("Prebuilt runtime isolation: persisted files, settings and Keychain", async () => {
       const key = "sdk-isolation";
       const file = `${await files.getDirectory("data")}/${key}.txt`;
       const context = await app.getAppContext();

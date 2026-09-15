@@ -1,6 +1,6 @@
 # Integrated external libraries
 
-The framework owns public contracts for capabilities it makes work across platforms. Their implementations can be framework modules, Expo modules, or community libraries. Library-specific APIs retain upstream ownership: prefer imports from the original package and use its documentation. Native setup, version pinning, Go support and production pruning do not by themselves require a new JavaScript API.
+The framework owns public contracts for capabilities it makes work across platforms. Their implementations can be framework modules, Expo modules, or community libraries. Library-specific APIs retain upstream ownership: prefer imports from the original package and use its documentation. Native setup, version pinning, prebuilt support and production pruning do not by themselves require a new JavaScript API.
 
 The [clipboard, secure-storage, and linking adapters](expo-api-adapters.md) implement the first small shared contracts. The larger [universal API plan](universal-api-plan.md) remains deferred. Neither direction implies reexporting every dependency.
 
@@ -34,10 +34,10 @@ Our documentation provides a shared place to discover integrations, with attribu
 
 | Library | Upstream import | Desktop integration |
 | --- | --- | --- |
-| [Margelo Runtimes](https://github.com/margelo/react-native-runtimes) | `@react-native-runtimes/core` | Independent Hermes workers; SDK pins and macOS patches; automatic Metro/host setup; Go inclusion and production pruning. See [Runtimes](runtimes.md). |
+| [Margelo Runtimes](https://github.com/margelo/react-native-runtimes) | `@react-native-runtimes/core` | Independent Hermes workers; SDK pins and macOS patches; automatic Metro/host setup; prebuilt inclusion and production pruning. See [Runtimes](runtimes.md). |
 | [React Native WebView](https://github.com/react-native-webview/react-native-webview) | `react-native-webview` | macOS WebKit view; tested version supplied with the SDK. See [WebView integration](desktop-api-expansion.md#webview-and-sqlite). |
 | [OP-SQLite](https://github.com/OP-Engineering/op-sqlite) | `@op-engineering/op-sqlite` | Native SQLite; tested version and production selection. See [SQLite integration](desktop-api-expansion.md#webview-and-sqlite). |
 
 The existing `desktop/webview` export is a passthrough compatibility API. Prefer the upstream import for new code. The existing `desktop/sqlite` adapter adds `openDatabase(name)` for framework project-scoped storage; upstream database operations and types remain OP-SQLite's API. Neither adapter is a template for wrapping new libraries automatically.
 
-Applications should declare libraries they import directly as dependencies and retain the SDK's tested version overrides. New starters already declare Runtimes. Installed native code is available in Go/dev builds; production selection follows reachable imports and required native dependencies. Check each integration page for its validated platforms and limitations.
+Applications should declare libraries they import directly as dependencies and retain the SDK's tested version overrides. New starters already declare Runtimes. Installed native code is available in prebuilt/dev builds; production selection follows reachable imports and required native dependencies. Check each integration page for its validated platforms and limitations.

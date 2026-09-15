@@ -38,7 +38,7 @@ export async function runIntegrationChecks(check: (name: string, action: () => P
       } finally { await tray.remove(); }
       await (await createTray({ id: token, symbol: "star" })).remove();
     });
-    await check("updates: Go/development runtimes refuse self-update without starting Sparkle", async () => {
+    await check("updates: Prebuilt/development runtimes refuse self-update without starting Sparkle", async () => {
       const status = await updates.getUpdateStatus();
       assert(!status.available && !status.started, "Development updater was enabled");
       await rejects(updates.checkForUpdates, "E_UPDATES_UNAVAILABLE");

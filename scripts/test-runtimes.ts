@@ -25,10 +25,11 @@ if (config.expo?.plugins) config.expo.plugins = config.expo.plugins.filter((p: s
 writeJson(path.join(root, "desktop.config.json"), config); prepareConfig(root);
 writeJson(path.join(root, "tsconfig.json"), { extends: "expo/tsconfig.base", compilerOptions: { strict: true, skipLibCheck: true }, include: ["App.tsx", "tasks.ts", "index.ts", "KitchenSink.tsx", "*.tsx", "*.ts"], exclude: ["node_modules"] });
 if (prepareOnly) { console.log(`Prepared ${root}`); process.exit(0); }
-const result = process.argv.includes("--go") ? findGo(nativePackages(root)) : await build(root, mode, process.argv.includes("--force"));
-if (!result || (process.argv.includes("--go") && incompatible(result.runtime, nativePackages(root)).length)) throw new Error("Build a compatible Go runtime with legend sdk build-go first.");
+const prebuilt = process.argv.includes("--prebuilt") || process.argv.includes("--go");
+const result = prebuilt ? findGo(nativePackages(root)) : await build(root, mode, process.argv.includes("--force"));
+if (!result || (prebuilt && incompatible(result.runtime, nativePackages(root)).length)) throw new Error("Build a compatible prebuilt runtime with legend sdk build-prebuilt first.");
 const port = await availablePort();
-const report = path.join(directory, `${process.argv.includes("--go") ? "go" : mode}.json`); rmSync(report, { force: true });
+const report = path.join(directory, `${prebuilt ? "go" : mode}.json`); rmSync(report, { force: true });
 rmSync(`${report}.before-reload`, { force: true });
 let metro: ReturnType<typeof Bun.spawn> | undefined;
 let app: ReturnType<typeof Bun.spawn> | undefined;

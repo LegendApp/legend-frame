@@ -14,11 +14,11 @@ test("desktop keys follow host/target and leave Expo's existing shortcuts availa
   for (const [target, host, label] of [["macos", "darwin", "macOS"], ["windows", "win32", "Windows"]]) {
     const go = commands(target, host, { target: "go", canBuild: false });
     expect(go.map((item: any) => item.key)).toEqual(["d", "g", "b"]);
-    expect(go[0].msg).toBe(`open ${label} (Legend Go)`);
+    expect(go[0].msg).toBe(`open ${label} (prebuilt runtime)`);
     expect(go[0].disabled).toBe(false);
     expect(go[2].disabled).toBe(true);
     const dev = commands(target, host, { target: "dev", canBuild: true });
-    expect(dev[1].msg).toContain("Legend Go");
+    expect(dev[1].msg).toContain("prebuilt runtime");
     expect(dev[2].disabled).toBe(false);
   }
   expect(commands("windows", "darwin").every((item: any) => item.disabled)).toBe(true);
@@ -70,7 +70,7 @@ test("Expo's real key handler routes desktop actions over IPC and retains reload
   try {
     const [out, err, code] = await Promise.all([new Response(child.stdout).text(), new Response(child.stderr).text(), child.exited]);
     expect(code, err).toBe(0);
-    expect(out).toContain("open macOS (Legend Go)");
+    expect(out).toContain("open macOS (prebuilt runtime)");
     const [compact, rest] = out.split("VERBOSE_COMMANDS");
     const verbose = rest!.split("END_COMMANDS")[0]!;
     for (const table of [compact!, verbose]) {

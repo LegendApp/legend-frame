@@ -143,7 +143,7 @@ export async function build(
     const result = await buildUnlocked(root, mode, force);
     if (mode === "go") {
       registerRuntime(result.app);
-      console.log("Legend Go registered. Apps will discover it automatically.");
+      console.log("Prebuilt runtime registered. Apps will discover it automatically.");
     }
     return result;
   } finally {
@@ -160,7 +160,7 @@ async function buildUnlocked(
   prepareConfig(root);
   if (mode === "go") {
     const issues = goConfigurationIssues(readAppConfig(root));
-    if (issues.length) throw new Error(`Build Go from a generic SDK starter: ${issues.join("; ")}`);
+    if (issues.length) throw new Error(`Build the prebuilt runtime from a generic SDK starter: ${issues.join("; ")}`);
   }
   await doctor(root);
   const all = nativePackages(root);
@@ -277,7 +277,7 @@ async function buildUnlocked(
   const name = workspace.slice(0, -".xcworkspace".length);
   const configuration = mode === "release" ? "Release" : "Debug";
   const derived = stateFile(root, "DerivedData");
-  console.log(`Building ${mode} runtime (${configuration}, arm64)…`);
+  console.log(`Building ${mode === "go" ? "prebuilt" : mode} runtime (${configuration}, arm64)…`);
   // Export once for analysis; native build performs the normal production bundle step.
   await run(
     root,

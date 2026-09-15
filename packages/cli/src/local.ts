@@ -43,7 +43,7 @@ export function readRuntime(app: string): Runtime | undefined {
 export function registerRuntime(app: string) {
   app = path.resolve(app);
   const runtime = readRuntime(app);
-  if (!runtime || runtime.mode !== "go") throw new Error(`Not a compatible Legend Go runtime: ${app}`);
+  if (!runtime || runtime.mode !== "go") throw new Error(`Not a compatible prebuilt runtime: ${app}`);
   // One record per path preserves multiple local builds of the same SDK.
   writeJson(path.join(legendHome(), "runtimes", `${digest(app)}.json`), { app });
   return { app, runtime };

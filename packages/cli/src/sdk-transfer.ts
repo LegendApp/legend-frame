@@ -31,7 +31,7 @@ export function verifySDK(root: string) {
     if (typeof file !== "string" || path.basename(file) !== file || !actual[`packages/${file}`]) throw new Error("Invalid SDK archive manifest");
   }
   for (const relative of metadata.runtimes) {
-    if (typeof relative !== "string" || !relative.startsWith("runtimes/") || relative.includes("..") || !readRuntime(path.join(root, relative))) throw new Error("Invalid bundled Go runtime");
+    if (typeof relative !== "string" || !relative.startsWith("runtimes/") || relative.includes("..") || !readRuntime(path.join(root, relative))) throw new Error("Invalid bundled prebuilt runtime");
   }
   return metadata;
 }
@@ -59,9 +59,9 @@ export function exportSDK(manifest: string, destination: string, runtimes: strin
     const clients: string[] = [];
     for (const app of runtimes) {
       const runtime = readRuntime(app);
-      if (!runtime || runtime.mode !== "go") throw new Error(`Not a compatible Go client: ${app}`);
+      if (!runtime || runtime.mode !== "go") throw new Error(`Not a compatible prebuilt runtime: ${app}`);
       const relative = `runtimes/${runtime.platform}-${runtime.arch}/${path.basename(app)}`;
-      if (clients.includes(relative)) throw new Error("Duplicate Go client target");
+      if (clients.includes(relative)) throw new Error("Duplicate prebuilt runtime target");
       cpSync(app, path.join(pending, relative), { recursive: true, verbatimSymlinks: true });
       clients.push(relative);
     }
@@ -71,9 +71,9 @@ export function exportSDK(manifest: string, destination: string, runtimes: strin
 
 Requires Bun 1.3.14+ and Node. Run \`bun install.ts\` in this directory. The installer prints the CLI command to create an app; add \`--universal\` for Settings or \`--example document-editor\` for the editor.
 
-Keep this directory in place after installing. Its package archives and optional Go clients are registered by path. Transfer before installing, preserving executable permissions and symlinks. Third-party npm dependencies still require internet access.
+Keep this directory in place after installing. Its package archives and optional prebuilt runtimes are registered by path. Transfer before installing, preserving executable permissions and symlinks. Third-party npm dependencies still require internet access.
 
-Included clients: ${clients.length ? clients.join(", ") : "none (install a matching Go client or build a development client)"}. Compatibility checks reject mismatched native modules. Native Windows compilation and clean-machine acceptance require Windows; public hosting and production signing are separate workflows.
+Included runtimes: ${clients.length ? clients.join(", ") : "none (install a matching prebuilt runtime or build a development client)"}. Compatibility checks reject mismatched native modules. Native Windows compilation and clean-machine acceptance require Windows; public hosting and production signing are separate workflows.
 `);
     verifySDK(pending);
     renameSync(pending, destination);

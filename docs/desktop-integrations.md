@@ -1,6 +1,6 @@
 # Notifications, menu bar and updates
 
-These modules target macOS 14+ on Apple Silicon and are included in the SDK/Go
+These modules target macOS 14+ on Apple Silicon and are included in the SDK/prebuilt
 runtime. Import them through separate desktop subpaths; production pruning removes
 unused native modules and removes Sparkle when updates are unused.
 
@@ -42,7 +42,7 @@ copies. Data values must be strings.
 The native delegate installs before launch finishes and retains the latest 100
 responses for late JS subscribers. Subscriptions deduplicate queued/live overlap.
 Foreground notifications can show banners, subject to macOS notification settings
-and Focus modes. Go shares its host's permission, icon and notification identity;
+and Focus modes. The prebuilt runtime shares its host's permission, icon and notification identity;
 it can handle responses for its running project, but does not cold-launch the
 correct development project from a notification. Test cold launches in a custom
 standalone app. No remote push/APNs service is included.
@@ -126,7 +126,7 @@ await setAutomaticUpdateChecks(true);
 events.remove();
 ```
 
-`getUpdateStatus()` does not start Sparkle. Go and Debug/custom-development builds
+`getUpdateStatus()` does not start Sparkle. Prebuilt runtimes and Debug/custom-development builds
 report why updating is unavailable; attempts to start/check reject with
 `E_UPDATES_UNAVAILABLE`. A configured Release app starts the updater idempotently.
 Checks initially default off. Explicitly enabling automatic checks preserves the
@@ -166,7 +166,7 @@ archives, custom channels, or Mac App Store distribution.
 bun run typecheck
 bun test tests
 bun run test:sparkle       # Real tools, ephemeral test keys; no Keychain mutation
-bun run test:integrations  # Go and custom native APIs; no permission prompt
+bun run test:integrations  # prebuilt and custom native APIs; no permission prompt
 bun run test:updates       # Standalone Release startup and menu-bar-only CNG
 bun run test:all           # Also includes the complete SDK/XCTest acceptance suite
 ```
@@ -176,7 +176,7 @@ verification, successive releases, retry behavior and conflicting build numbers.
 `test:integrations` checks notifications according to current permission: schedules
 and cancels a delayed notification when authorized, otherwise verifies refusal to
 post; it never prompts or intentionally displays a banner. It also exercises tray
-lifecycle/conflicts and the Go/development updater guard. `test:updates` verifies
+lifecycle/conflicts and the prebuilt/development updater guard. `test:updates` verifies
 Sparkle startup from a standalone Release with Metro stopped; it does not install
 an update or contact the example feed.
 

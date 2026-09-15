@@ -59,8 +59,8 @@ try {
     if (runtimeFor(root, nativePackages(root), "go").fingerprint !== baseline.fingerprint) throw new Error("Native fingerprint changed during prebuild");
     pass();
   } else {
-    stage("Build and register Go with legend sdk build-go");
-    await run(root, ["bun", cli, "sdk", "build-go", "--project", root]);
+    stage("Build and register the prebuilt runtime with legend sdk build-prebuilt");
+    await run(root, ["bun", cli, "sdk", "build-prebuilt", "--project", root]);
     go = readJson(stateFile(root, "go-build.json"));
     goHash = digest(readFileSync(path.join(go.app, "MyApp.exe")).toString("base64"));
     pass({ app: go.app });
@@ -86,15 +86,15 @@ export default function App() {
 `);
     stage("Launch through legend dev and execute the native core with Hermes");
     mkdirSync(stateFile(root, "logs"), { recursive: true });
-    session = startSession(["--go-binary", go.app]);
-    await wait(() => proof?.marker === "initial", "The native Go app did not report");
-    if (!proof.hermes || proof.native.fingerprint !== go.runtime.fingerprint || proof.native.mode !== "go") throw new Error("Wrong Go runtime or JavaScript engine");
+    session = startSession(["--prebuilt-binary", go.app]);
+    await wait(() => proof?.marker === "initial", "The native prebuilt app did not report");
+    if (!proof.hermes || proof.native.fingerprint !== go.runtime.fingerprint || proof.native.mode !== "go") throw new Error("Wrong prebuilt runtime or JavaScript engine");
     pass(proof);
-    stage("Fast Refresh in the same Go session");
+    stage("Fast Refresh in the same prebuilt session");
     writeFileSync(path.join(root, "Marker.ts"), 'export default "refreshed";\n');
     await wait(() => proof?.marker === "refreshed", "Fast Refresh did not reach the native app"); pass(proof);
   }
-  stage("Install the existing native-greeting fixture and invalidate Go");
+  stage("Install the existing native-greeting fixture and invalidate prebuilt");
   const archive = path.resolve(path.dirname(manifest), readJson(manifest)["@legend-apps/native-greeting"]);
   await run(root, ["bun", "add", archive]);
   const issues = incompatible(baseline, nativePackages(root), "windows");
@@ -107,7 +107,7 @@ export default function App() {
   } else {
     await wait(() => {
       try { const s = readJson(stateFile(root, "session.json")); return s.target === "go" && !s.compatible && s.reason.includes("native-greeting"); } catch { return false; }
-    }, "legend dev did not reject the incompatible Go runtime");
+    }, "legend dev did not reject the incompatible prebuilt runtime");
     pass(issues);
     writeFileSync(path.join(root, "WindowsExtra.ts"), 'import { getGreeting } from "@legend-apps/native-greeting";\nexport const greeting = getGreeting;\n');
     stage("Build explicitly and reopen through Expo's noninteractive development session");
@@ -119,11 +119,11 @@ export default function App() {
     await wait(() => proof?.native.mode === "dev" && proof.greeting === "Hello from the custom native module", "The custom runtime did not report", 20 * 60 * 1000);
     const custom = readJson(stateFile(root, "dev-build.json"));
     if (!proof.hermes || proof.native.fingerprint !== custom.runtime.fingerprint) throw new Error("Custom native runtime identity did not match the build");
-    if (digest(readFileSync(path.join(go.app, "MyApp.exe")).toString("base64")) !== goHash) throw new Error("The saved Go executable changed");
+    if (digest(readFileSync(path.join(go.app, "MyApp.exe")).toString("base64")) !== goHash) throw new Error("The saved prebuilt executable changed");
     pass(proof);
   }
   report.passed = true;
-  console.log(prepareOnly ? "PASS: integrated generation, compatibility and Windows bundles. Native execution NOT verified." : "PASS: integrated Windows Go, Hermes, Fast Refresh and custom native module.");
+  console.log(prepareOnly ? "PASS: integrated generation, compatibility and Windows bundles. Native execution NOT verified." : "PASS: integrated Windows prebuilt, Hermes, Fast Refresh and custom native module.");
 } catch (error) {
   report.error = String(error); process.exitCode = 1; console.error(error);
 } finally {

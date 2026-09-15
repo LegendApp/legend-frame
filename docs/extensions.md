@@ -19,7 +19,7 @@ not forward every feature of every backend.
 4. Run the selected target. A missing or changed native module requires a custom
    development build (`legend build --dev --platform macos`, or `windows`). The
    development session checks native signatures before loading JS. Do not disable
-   the compatibility gate to make a library appear to work in an older Go client.
+   the compatibility gate to make a library appear to work in an older prebuilt runtime.
 
 See `@legend-apps/audio` for a real adapter with mobile Expo delegation, HTML on
 web, and native desktop backends. See AsyncStorage in the examples for a library
@@ -53,7 +53,7 @@ resolution cycle. Import type-only contracts without loading a backend.
 Keep the public types and observable behavior stable, replace the platform entry's
 backend, and update native dependency/config selection. Check cancellation, error
 codes, units, callbacks, cleanup, and data compatibility against the same consumer.
-Remove the old native dependency when it is no longer used. Rebuild the Go profile
+Remove the old native dependency when it is no longer used. Rebuild the prebuilt profile
 if the curated native graph changed; existing clients must fail compatibility checks
 rather than loading the new code against stale native bindings.
 

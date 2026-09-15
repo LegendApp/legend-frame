@@ -12,8 +12,8 @@ legend create MyDiff --example diff-lite
 
 Inside each project, run `bun run web`, `bun run ios`, `bun run android`,
 `bun run macos`, or `bun run windows`. Mobile native development clients need a
-first build. Desktop selects a compatible Go client or requests a custom build
-when a native dependency is missing. Rebuild an older Go client for the new audio,
+first build. Desktop selects a compatible prebuilt runtime or requests a custom build
+when a native dependency is missing. Rebuild an older prebuilt runtime for the new audio,
 AsyncStorage, or Windows host implementations; JavaScript reload cannot add them.
 
 ## Notes Lite
@@ -63,7 +63,7 @@ Git authentication, conflict resolution, or embedded shell.
 
 `shared/records.ts` is an example-owned snapshot store, backed by upstream
 AsyncStorage 2.2.0. Keys include the generated stable project identity, including
-inside Go. Windows supplies AsyncStorage's database-path override for our
+inside prebuilt. Windows supplies AsyncStorage's database-path override for our
 unpackaged host. Two alternating checksummed records retain the previous completed
 snapshot if a write is damaged. This checksum detects corruption, not tampering.
 

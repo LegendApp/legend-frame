@@ -19,7 +19,7 @@ media readiness with a 15-second timeout. Web metadata may load after creation;
 seeking waits for metadata with the same timeout. Inspect status for later failures.
 
 Use Expo Audio 1.1.1 and its background-playback plugin in a mobile consumer. The
-native desktop implementations require a rebuilt client. The maintained Go profile
+native desktop implementations require a rebuilt client. The maintained prebuilt profile
 includes audio; custom projects include it by adding the package. Windows source
 is present but native acceptance remains open.
 

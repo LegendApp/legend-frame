@@ -18,7 +18,7 @@ export async function prepareWindows(root: string, mode: "go" | "dev") {
   validateBuildModules(mode, packages);
   if (mode === "go") {
     const issues = goConfigurationIssues(readAppConfig(root));
-    if (issues.length) throw new Error(`Build Go from a generic SDK starter: ${issues.join("; ")}`);
+    if (issues.length) throw new Error(`Build the prebuilt runtime from a generic SDK starter: ${issues.join("; ")}`);
   }
   const runtime = runtimeFor(root, packages, mode);
   writeJson(stateFile(root, "windows-build-input.json"), runtime);
@@ -33,7 +33,7 @@ export async function prepareWindows(root: string, mode: "go" | "dev") {
   return runtime;
 }
 export async function buildWindows(root: string, mode: string, force: boolean): Promise<{ app: string; runtime: Runtime }> {
-  if (mode !== "go" && mode !== "dev") throw new Error("Windows currently supports Go and development builds. Use legend build --dev; production builds and packaging are not implemented.");
+  if (mode !== "go" && mode !== "dev") throw new Error("Windows currently supports prebuilt runtimes and development builds. Use legend build --dev; production builds and packaging are not implemented.");
   if (process.platform !== "win32" || process.arch !== "x64") throw new Error("Windows native builds require a Windows x64 machine. Project generation and Metro bundle checks can run on macOS.");
   for (const tool of ["node", "bun", "pwsh.exe", "dotnet.exe"]) if (!Bun.which(tool)) throw new Error(`Missing ${tool}. See docs/windows-slice.md for the Windows native prerequisites.`);
   const expected = runtimeFor(root, nativePackages(root), mode);

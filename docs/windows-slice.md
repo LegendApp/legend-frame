@@ -2,7 +2,7 @@
 
 Windows development is integrated into the Legend CLI, starter, config plugin, host package, runtime registry, native compatibility checks, and Metro session. There is no separate client toolkit or source ZIP to install.
 
-The current scope is Go and custom development builds on Windows x64. The Windows starter exercises the native host without installing the macOS SDK feature set. The existing `@legend-apps/native-greeting` fixture has a Windows implementation for testing the transition to a custom build. Production builds, packaging, the full desktop SDK, and secondary JavaScript runtimes remain outside this slice.
+The current scope is prebuilt and custom development builds on Windows x64. The Windows starter exercises the native host without installing the macOS SDK feature set. The existing `@legend-apps/native-greeting` fixture has a Windows implementation for testing the transition to a custom build. Production builds, packaging, the full desktop SDK, and secondary JavaScript runtimes remain outside this slice.
 
 **Validation:** typechecking, repository tests, packed Windows starter creation, repeated prebuild, development bundles, and native graph invalidation have passed on macOS. Windows native compilation, autolinking, launch, Hermes execution, and Fast Refresh still need a Windows run. A successful JavaScript bundle does not establish native support.
 
@@ -36,15 +36,15 @@ It checks by default; `-Install` installs missing prerequisites from an elevated
 Inside the generated app:
 
 ```powershell
-bunx --bun legend sdk build-go --project .
+bunx --bun legend sdk build-prebuilt --project .
 bun run windows
 ```
 
-`windows`, `dev`, and `start` use the same `legend dev` implementation. Go is saved under `.legend/products/go`, with `.legend/go-build.json`, and registered in the normal Legend runtime registry. Registry discovery checks the platform and architecture so a macOS runtime cannot be selected for Windows.
+`windows`, `dev`, and `start` use the same `legend dev` implementation. The prebuilt runtime is saved under `.legend/products/go`, with `.legend/go-build.json`, and registered in the normal Legend runtime registry. Registry discovery checks the platform and architecture so a macOS runtime cannot be selected for Windows.
 
-Edit `App.tsx` to test Fast Refresh. Click the counter first and confirm it retains its value after a text edit. The native window title uses the current project's launch identity even when Go was built from another starter. Other desktop window options and SDK features have not been ported by this slice.
+Edit `App.tsx` to test Fast Refresh. Click the counter first and confirm it retains its value after a text edit. The native window title uses the current project's launch identity even when the prebuilt runtime was built from another starter. Other desktop window options and SDK features have not been ported by this slice.
 
-The session uses Expo CLI with desktop keys: `d` opens Windows, `g` switches between Legend Go and a custom development build, and `b` builds when required. Expo owns `r` for reload, `j` for debugging when supported by RNW/Expo, and Ctrl+C to exit. Its `w` still opens web and `s` still switches the mobile runtime. Adding a supported native dependency or changing its native source invalidates an incompatible runtime; the session stops its owned app and offers a development build.
+The session uses Expo CLI with desktop keys: `d` opens Windows, `g` switches between the prebuilt runtime and a custom development build, and `b` builds when required. Expo owns `r` for reload, `j` for debugging when supported by RNW/Expo, and Ctrl+C to exit. Its `w` still opens web and `s` still switches the mobile runtime. Adding a supported native dependency or changing its native source invalidates an incompatible runtime; the session stops its owned app and offers a development build.
 
 A direct custom build uses the same command as macOS:
 
@@ -55,10 +55,10 @@ bun run dev
 
 Windows `legend build` without `--dev`, preview builds, and distribution packaging are intentionally unsupported. Native compilation must run on Windows x64. The selected target is stored in `desktop.config.json` as `"platforms": ["windows"]`; subsequent commands read that configuration. This version supports one desktop target per generated project.
 
-For a reusable generic SDK Go runtime, run from the framework checkout:
+For a reusable generic SDK prebuilt runtime, run from the framework checkout:
 
 ```powershell
-bun run legend sdk build-go --platform windows
+bun run legend sdk build-prebuilt --platform windows
 ```
 
 This uses the platform-specific SDK build directory and the same runtime registry. Apps created against the matching packed SDK discover it automatically.
@@ -71,7 +71,7 @@ From the framework checkout, after packing the SDK and installing native prerequ
 bun run test:windows --project C:\dev\LegendWindowsVerification
 ```
 
-Choose a fresh destination. The verifier calls the real starter, builds Go through `legend sdk build-go`, and launches the installed CLI's `legend dev` session. It checks the compiled native host identity and Hermes, edits a file to test Fast Refresh, installs the existing `native-greeting` fixture, waits for the shared session to reject Go, then sends the normal `b` command and checks the custom native greeting. It also checks that building custom did not change the saved Go executable.
+Choose a fresh destination. The verifier calls the real starter, builds the prebuilt runtime through `legend sdk build-prebuilt`, and launches the installed CLI's `legend dev` session. It checks the compiled native host identity and Hermes, edits a file to test Fast Refresh, installs the existing `native-greeting` fixture, waits for the shared session to reject the prebuilt runtime, then sends the normal `b` command and checks the custom native greeting. It also checks that building custom did not change the saved prebuilt executable.
 
 Keep the desktop session unlocked. Native compilation and initial NuGet downloads can take several minutes. The verifier exits nonzero on failure. It installs a native fixture, so use a new destination for a complete second run.
 
@@ -116,6 +116,6 @@ adds MediaPlayer playback. These are source implementations pending a Windows
 build and interaction check; see WIN-09 and WIN-10.
 
 The examples retain Expo Desktop beta generation. No separate Windows source kit
-is required. After updating SDK archives, rebuild the Windows Go/custom client:
+is required. After updating SDK archives, rebuild the Windows prebuilt/custom client:
 old binaries cannot expose the new host hooks or audio module. Native package
 sources ship in their SDK archives.

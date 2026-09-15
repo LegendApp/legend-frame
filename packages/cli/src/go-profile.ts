@@ -8,7 +8,7 @@ export async function prepareGoProfile(root: string, manifest: string, platform:
   const archives = readJson(manifest);
   for (const suffix of ["ui", "clipboard", "secure-storage", "desktop-links", "file-dialog", "audio"]) {
     const name = `@legend-apps/${suffix}`;
-    if (!archives[name]) throw new Error(`Go profile requires ${name}`);
+    if (!archives[name]) throw new Error(`Prebuilt runtime profile requires ${name}`);
     pkg.dependencies[name] = path.resolve(path.dirname(manifest), archives[name]);
   }
   pkg.dependencies["@react-native-async-storage/async-storage"] = "2.2.0";

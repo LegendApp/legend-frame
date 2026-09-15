@@ -22,7 +22,7 @@
     "test:expansion": "bun scripts/test-expansion.ts",
     "test:runtimes": "bun scripts/test-runtimes.ts",
     "test:runtimes:pruning": "bun scripts/test-runtimes-pruning.ts",
-    "test:runtimes:all": "bun run pack:local && bun run legend sdk build-go && bun run test:runtimes .legend/runtimes-probe/LegendRuntimesProbe --go && bun run test:runtimes .legend/runtimes-probe/LegendRuntimesProbe && bun run test:runtimes .legend/runtimes-probe/LegendRuntimesProbe --release && bun run test:runtimes:pruning .legend/runtimes-probe/LegendRuntimesProbe",
+    "test:runtimes:all": "bun run pack:local && bun run legend sdk build-prebuilt && bun run test:runtimes .legend/runtimes-probe/LegendRuntimesProbe --prebuilt && bun run test:runtimes .legend/runtimes-probe/LegendRuntimesProbe && bun run test:runtimes .legend/runtimes-probe/LegendRuntimesProbe --release && bun run test:runtimes:pruning .legend/runtimes-probe/LegendRuntimesProbe",
     "test:camera": "bun scripts/test-camera.ts",
     "test:windows": "bun scripts/test-windows.ts",
     "test:windows:prepare": "bun scripts/test-windows.ts --prepare-only",

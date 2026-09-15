@@ -40,13 +40,13 @@ From this checkout, with Bun and the native build prerequisites installed:
 ```sh
 bun install
 bun run kitchen-sink
-bun run legend sdk build-go
+bun run legend sdk build-prebuilt
 cd .legend/examples/KitchenSink
 bun dev
 ```
 
 The kitchen-sink command packs and registers the local SDK, creates the example,
-and copies its source. Once a compatible Go runtime is registered, running the
+and copies its source. Once a compatible prebuilt runtime is registered, running the
 example requires only JS tooling. `s` switches runtime target; `b` builds a
 custom runtime when needed. Native source and module changes require a rebuilt
 binary, and the CLI checks compatibility before serving JS.
@@ -64,11 +64,11 @@ an unsaved editor buffer. Demo secrets are never printed in the event log.
 renames, builds and transfers of the same app. Give independently cloned apps a
 new ID. Older projects fall back to `expo.macos.bundleIdentifier`.
 
-Go receives the project ID and display name from the CLI. Custom and distribution
-apps embed the ID through CNG and ignore Go's environment overrides. The native
+The prebuilt runtime receives the project ID and display name from the CLI. Custom and distribution
+apps embed the ID through CNG and ignore the prebuilt runtime's environment overrides. The native
 host hashes it for application data directories, settings, recent documents,
 window restoration, single-instance locks, and Keychain service names. Thus two
-Go projects do not accidentally share these values. This is namespacing, not an
+projects using the prebuilt runtime do not accidentally share these values. This is namespacing, not an
 OS security sandbox: JS can still access explicitly supplied filesystem paths.
 Keychain values use the normal macOS access policy; changing the app's signing
 identity can cause a Keychain access prompt.
@@ -134,7 +134,7 @@ bottom-left origin. Closing all windows does not automatically quit the app.
 
 The host permits one running instance per project ID. A second launch forwards
 its arguments through the `secondInstance` app event, activates the existing app,
-and exits. Different Go projects remain independent processes.
+and exits. Different projects using the prebuilt runtime remain independent processes.
 
 ## Menus and shortcuts
 
@@ -163,7 +163,7 @@ rejects with `E_BUSY`. Menu and dialog APIs stay asynchronous to JS.
 Subscribe with `await onOpen(listener)`. Subscription installation happens before
 reading queued launch events, and IDs deduplicate live/queued overlap. The last
 100 launch events are retained for a late subscriber. The return value has a
-`remove()` method. Go can test handling through the test fixture, but registering
+`remove()` method. The prebuilt runtime can test handling through the test fixture, but registering
 OS URL schemes or document types requires a custom build.
 
 Declare existing UTIs and URL schemes in `app.json`:
@@ -187,7 +187,7 @@ Declare existing UTIs and URL schemes in `app.json`:
 CNG creates `CFBundleURLTypes` and `CFBundleDocumentTypes`. `role` may be `Editor`
 or `Viewer`. Custom UTIs can be declared through `macos.infoPlist` or a config
 plugin; both correctly require a custom build. Incoming file events provide file
-URLs. `noteRecentDocument` also takes a file URL. Go keeps its recent-document
+URLs. `noteRecentDocument` also takes a file URL. The prebuilt runtime keeps its recent-document
 list scoped to the project; standalone apps additionally notify the native
 `NSDocumentController`.
 
@@ -213,7 +213,7 @@ A path argument selects a separate scratch directory, for example:
 bun run test:native /tmp/DesktopSDKTests
 ```
 
-The runner tests three Go launches (A, B, A), proving file/settings/Keychain
+The runner tests three prebuilt launches (A, B, A), proving file/settings/Keychain
 isolation and persistence, verifies a reduced production graph, then installs a test-only native module and builds a
 custom runtime. That driver exercises native key events, menu actions, real
 open/save panels, incoming URL/file delegates, second-instance delivery and quit
@@ -221,7 +221,7 @@ cancellation. A separate XCTest driver waits for the successful-save case,
 presses the system panel’s Save button, checks the native report, and verifies
 that approving quit terminates the app. Its screenshots and results are saved
 in an `.xcresult` bundle. It snapshots and restores all current clipboard formats before
-clipboard mutation. The test-only module is rejected from Go and distribution.
+clipboard mutation. The test-only module is rejected from prebuilt and distribution.
 The small production-graph Debug build removes unused pods and executes
 the retained APIs. This validates pruning without a release compile or signing
 credentials. Signing/notarization retain the existing mocked pipeline tests;

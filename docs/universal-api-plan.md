@@ -74,7 +74,7 @@ Favor exact Expo names, signatures, and result behavior for the supported shared
 - Add a universal starter/sample mode with one `app/` route tree, shared app identity and shared dependency declarations. Start with the platform set proven in Phase 0; record Windows gaps explicitly.
 - Separate supported platforms from the selected run target. Keep generated native projects, compatibility signatures, build metadata, and runtime selection target-specific so one target cannot overwrite another's artifacts or claim another's compatibility.
 - Use standard Expo workflows for mobile/web and the existing Legend orchestration for desktop. Compose configuration rather than replacing mobile/web Expo configuration with a desktop-only generated transport config.
-- Integrate Router startup with the current desktop runtime initialization. Maintain Go/custom selection and keep worker entry behavior separate.
+- Integrate Router startup with the current desktop runtime initialization. Maintain prebuilt/custom selection and keep worker entry behavior separate.
 - Introduce the public package boundaries and safe platform resolution with one capability adapter: clipboard text. Delegate mobile/web behavior to the selected Expo Clipboard version; reuse current desktop clipboard code behind the equivalent contract.
 - Establish typed unsupported/missing-module failures and resource cleanup internally. Preserve documented Expo result and error behavior where promised; do not silently report a failed operation as success or cancellation.
 
@@ -155,7 +155,7 @@ Windows work can begin once Phase 0 fixes the host contract; this phase is its c
 
 For each migration, record the chosen upstream version/API, supported subset, desktop extensions, dependency cost, and what permits replacing our implementation later. Verify behavior at the contract boundary so upstream swaps can reuse the same acceptance cases.
 
-Migrate examples before deprecating old exports. Retain narrow compatibility adapters where semantics match. Revisit Go inclusion, app installation dependencies, and production selection independently; a shared facade does not require every backend to be installed or linked on every platform.
+Migrate examples before deprecating old exports. Retain narrow compatibility adapters where semantics match. Revisit prebuilt inclusion, app installation dependencies, and production selection independently; a shared facade does not require every backend to be installed or linked on every platform.
 
 ## Review decisions and scope
 

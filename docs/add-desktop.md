@@ -33,7 +33,9 @@ bunx --no-install legend build --dev --platform windows
 bun run windows
 ```
 
-If a `macos` or `windows` script already exists, it is preserved and the added script is named `legend:macos` or `legend:windows`. Direct Legend commands can also select the target with `--platform`. A compatible registered Go client can be used through the existing development session; the initial native build is only necessary when no compatible binary is available.
+If a `macos` or `windows` script already exists, it is preserved and the added script is named `legend:macos` or `legend:windows`. Direct Legend commands can also select the target with `--platform`. A compatible registered prebuilt runtime can be used through the existing development session; the initial native build is only necessary when no compatible binary is available.
+
+For one shared session, run `bunx --no-install legend dev --no-open`, then use `i`, `a`, `w`, and `d`. The existing Expo scripts stay unchanged; they remain available for standalone Expo workflows. Standard Expo start options pass through Legend.
 
 ## Configuration composition
 
@@ -41,7 +43,7 @@ The integration adds `desktop.config.json` with `"extends": "expo"`, stable proj
 
 The command composes the existing `app.config.js` or `app.config.ts` export with `withLegendExpo` from `@legend-apps/desktop-config/expo.cjs`. For a static `app.json`, it adds a small `app.config.js` that extends Expo's supplied config. It keeps the original configuration code in the same file and directory, preserving relative imports and environment logic.
 
-Ordinary Expo commands, including commands without `LEGEND_PLATFORM`, retain their original configuration. Only `LEGEND_PLATFORM=macos` or `windows` applies desktop options and the Legend config plugin. Legend commands supply that environment automatically. For direct Expo Desktop commands, set it explicitly:
+Ordinary Expo commands, including commands without `LEGEND_PLATFORM`, retain their original configuration. For native builds, `LEGEND_PLATFORM=macos` or `windows` applies desktop options and the Legend config plugin. A `legend dev` session instead exposes all declared platforms, preserves the original shared Expo config and plugins, and omits desktop build overlays. Legend commands supply that environment automatically. For direct Expo Desktop commands, set it explicitly:
 
 ```sh
 LEGEND_PLATFORM=macos bunx expo config
@@ -51,7 +53,7 @@ PowerShell uses `$env:LEGEND_PLATFORM="windows"`. Keep desktop-specific exclusio
 
 ## Metro and native configuration
 
-The existing Metro config gets its defaults through `@legend-apps/cli/src/expo-metro.cjs`. That helper delegates to Expo for mobile/web and Expo Desktop for desktop. Application customizations continue to run after those defaults. Custom resolver fallbacks retain upstream desktop module resolution, and Legend adds its development compatibility gate.
+The existing Metro config gets its defaults through `@legend-apps/cli/src/expo-metro.cjs`. That helper delegates to Expo for standalone mobile/web commands and Expo Desktop for desktop or shared Legend dev sessions. Application customizations continue to run after those defaults. Custom resolver fallbacks retain upstream desktop module resolution, and Legend adds its development compatibility gate.
 
 Desktop hosts request `index.bundle` or `index.windows.bundle`. The composed Metro config routes those requests through Expo's virtual entry resolver, which reads the original `package.json` main. There is no generated replacement application entry. Apps must register the normal Expo `main` component through their existing entry.
 
