@@ -45,9 +45,9 @@ export const catalog: CaseDefinition[] = [
   definition("desktop.rich-clipboard", "Rich clipboard formats", "api", desktop),
   definition("desktop.processes", "Child process lifecycle", "api", desktop),
   definition("desktop.system", "System APIs", "api", desktop),
+  definition("desktop.drag-drop", "Native drag and drop", "api", desktop),
   ...[
     ["notifications", "Notification permission/delivery/actions"],
-    ["drag-drop", "Native drag and drop"],
     ["sqlite", "SQLite integration"], ["webview", "WebView integration"],
     ["nitro", "Nitro native module integration"], ["runtimes", "Secondary Hermes runtimes"],
   ].map(([id, title]) => definition(`desktop.${id}`, title!, "api", macOnly)),

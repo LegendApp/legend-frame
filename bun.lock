@@ -15,6 +15,7 @@
         "@legend-apps/desktop-links": "workspace:*",
         "@legend-apps/desktop-shortcuts": "workspace:*",
         "@legend-apps/desktop-windows": "workspace:*",
+        "@legend-apps/drag-drop": "workspace:*",
         "@legend-apps/file-dialog": "workspace:*",
         "@legend-apps/file-system": "workspace:*",
         "@legend-apps/global-shortcuts": "workspace:*",

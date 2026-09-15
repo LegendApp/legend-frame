@@ -216,3 +216,19 @@ a crash can leave stale shell entries until they are replaced. Development
 login status remains `unavailable`, matching the macOS restriction to standalone
 apps. Native execution remains pending, including job cleanup, lock/wake events,
 badges, Jump List forwarding and x64/ARM64 behavior.
+
+
+## Drag and drop
+
+`DragDropView` now has a Windows Fabric implementation using the Windows App SDK
+DragDropManager. It supports text, URLs, files, enter/leave/drop/end callbacks,
+disabled targets, and normal React children. An unavailable backend renders a
+visible placeholder. Platform Checks provides a native source/target exercise.
+
+RNW 0.81.35 does not expose its hit-test and geometry methods to component DLLs.
+The CLI applies a version-checked private COM interface patch, exposing the
+existing native calculations without replacing RNW's pointer, scroll or clipping
+logic. The source and ABI header are in this repo; no upstream merge is required.
+An RNW upgrade must review that adapter. Native acceptance still needs external
+Explorer/browser drops, outbound dragging, nested/clipped targets, scrolling,
+disabled targets, child-button input, cancellation and reload cleanup on Windows.

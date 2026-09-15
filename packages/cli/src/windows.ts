@@ -1,3 +1,4 @@
+import { prepareWindowsGeometry } from "./windows-geometry";
 import { copyHelpers } from "./helpers";
 import { registerWindowsAssociations } from "./windows-associations";
 import { checkExpoDesktopNode } from "./expo-node";
@@ -17,6 +18,7 @@ export function nodeCommand(root: string, name: string, bin: string, args: strin
 export async function prepareWindows(root: string, mode: "go" | "dev") {
   await checkExpoDesktopNode(root);
   prepareConfig(root);
+  prepareWindowsGeometry(root);
   const packages = nativePackages(root);
   validateBuildModules(mode, packages);
   if (mode === "go") {

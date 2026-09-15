@@ -7,7 +7,9 @@
   "files": [
     "src",
     "macos",
-    "*.podspec"
+    "*.podspec",
+    "windows",
+    "react-native.config.js"
   ],
   "peerDependencies": {
     "react": "19.1.4",
@@ -28,7 +30,8 @@
     "nativeModules": [],
     "pod": "RNDesktopDrag",
     "platforms": [
-      "macos"
+      "macos",
+      "windows"
     ],
     "requires": [
       "@legend-apps/desktop-app"

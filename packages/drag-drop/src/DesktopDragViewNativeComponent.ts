@@ -5,6 +5,7 @@ type Payload = Readonly<{ json: string }>;
 export interface NativeProps extends ViewProps {
   sourceJson?: string;
   disabled?: WithDefault<boolean, false>;
+  onUnavailable?: DirectEventHandler<Payload>;
   onDrop?: DirectEventHandler<Payload>;
   onDragEnter?: DirectEventHandler<Payload>;
   onDragLeave?: DirectEventHandler<Payload>;
