@@ -133,7 +133,8 @@ struct LegendThreadedRuntime {
   ~LegendThreadedRuntime() { if (owner) context.UIDispatcher().Post([token = owner]() { if (LegendWin::runtimeOwner == token) { LegendWin::StopWorkers(); LegendWin::runtimeOwner.reset(); } }); }
   template<typename F> void UI(F action, Promise promise) { context.UIDispatcher().Post([action, promise]() { try { action(); promise.Resolve(); } catch (winrt::hresult_error const &error) { promise.Reject(winrt::Microsoft::ReactNative::ReactError{"E_RUNTIME", winrt::to_string(error.message())}); } catch (std::exception const &error) { promise.Reject(error.what()); } }); }
   REACT_METHOD(prewarmRuntime) void prewarmRuntime(std::string name, Promise promise) noexcept { prewarmRuntimeWithOptions(name, "threaded-runtime", false, promise); }
-  REACT_METHOD(prewarmRuntimeWithOptions) void prewarmRuntimeWithOptions(std::string name, std::string kind, bool, Promise promise) noexcept {
+  REACT_METHOD(prewarmRuntimeWithOptions) void prewarmRuntimeWithOptions(std::string name, std::string kind, bool useMainNativeModules, Promise promise) noexcept {
+    if (useMainNativeModules) { promise.Reject(winrt::Microsoft::ReactNative::ReactError{"E_RUNTIME_OPTIONS", "Windows workers own independent native module instances; useMainNativeModules is not supported"}); return; }
     context.UIDispatcher().Post([name, kind, promise]() { try { auto worker = LegendWin::GetWorker(name, kind); LegendWin::WhenReady(worker, [promise](std::string const &error) { if (error.empty()) promise.Resolve(); else promise.Reject(error.c_str()); }); } catch (winrt::hresult_error const &error) { promise.Reject(winrt::to_string(error.message()).c_str()); } });
   }
   REACT_METHOD(notifyRuntimeReady) void notifyRuntimeReady(std::string, Promise promise) noexcept { promise.Resolve(); /* InstanceLoaded gates calls after the complete worker bundle. */ }
