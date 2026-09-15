@@ -34,7 +34,7 @@ export function readRuntime(app: string): Runtime | undefined {
   try {
     const windows = existsSync(path.join(app, "legend-runtime.json"));
     const runtime = readJson(path.join(app, windows ? "legend-runtime.json" : "Contents/Resources/legend-runtime.json"));
-    if (runtime.schema !== 1 || runtime.framework !== VERSION || !["macos", "windows"].includes(runtime.platform) || runtime.arch !== architecture(runtime.platform) || !runtime.modules || typeof runtime.modules !== "object" || typeof runtime.fingerprint !== "string") return undefined;
+    if (runtime.schema !== 1 || runtime.framework !== VERSION || !["macos", "windows"].includes(runtime.platform) || !(runtime.platform === "windows" ? ["arm64", "x64"] : ["arm64"]).includes(runtime.arch) || !runtime.modules || typeof runtime.modules !== "object" || typeof runtime.fingerprint !== "string") return undefined;
     if (!existsSync(path.join(app, windows ? "MyApp.exe" : "Contents/MacOS")) || windows !== (runtime.platform === "windows")) return undefined;
     return runtime;
   } catch { return undefined; }
@@ -87,7 +87,7 @@ export function findGo(required: NativePackage[], preferred?: string, platform: 
   }
   const candidates = [...new Set(apps)].flatMap((app) => {
     const runtime = readRuntime(app);
-    return runtime?.mode === "go" && runtime.platform === platform ? [{ app, runtime }] : [];
+    return runtime?.mode === "go" && runtime.platform === platform && runtime.arch === architecture(platform) ? [{ app, runtime }] : [];
   });
   return candidates.find(({ runtime }) => incompatible(runtime, required, platform).length === 0) ?? candidates[0];
 }

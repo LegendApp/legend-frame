@@ -2,7 +2,7 @@
 
 This document explains the current Legend Framework source, its ownership boundaries, and the constraints that changes must preserve. Start with [README.md](README.md) for setup and application usage. Feature guides under [docs](docs) contain API details and dated validation evidence.
 
-The implementation is a local macOS 14+ / Apple Silicon prototype with an integrated Windows x64 development adapter. Windows prebuilt and custom builds use the shared framework flow, but native Windows acceptance remains pending. Production Windows builds and SDK parity are not implemented. Treat original plans and older prototype reports as historical context when a newer implementation or validation report supersedes them.
+The implementation is a local macOS 14+ / Apple Silicon prototype with an integrated Windows x64/ARM64 development adapter. Windows prebuilt and custom builds use the shared framework flow, but native Windows acceptance remains pending. Production Windows builds and SDK parity are not implemented. Treat original plans and older prototype reports as historical context when a newer implementation or validation report supersedes them.
 
 ## Purpose and system boundaries
 
@@ -25,7 +25,7 @@ flowchart TD
   Check --> prebuilt[Registered prebuilt runtime]
   Check --> Build[Expo Desktop prebuild]
   Build --> Mac[CocoaPods and Xcode: macOS arm64]
-  Build --> Win[RNW autolinking and MSBuild: Windows x64]
+  Build --> Win[RNW autolinking and MSBuild: Windows x64 or ARM64]
   Mac --> Dev[Custom development app]
   Win --> Dev
   Mac --> Release[Standalone app with embedded JavaScript]
@@ -109,7 +109,7 @@ App/window close guards, incoming launch events, and single-instance forwarding 
 
 The public shared-client name is **prebuilt runtime**. Legacy `build-go`/`--go-binary` commands alias the new `build-prebuilt`/`--prebuilt-binary` spellings. Persisted `"go"` mode values and existing build/registry paths remain stable; this is a terminology change, not a runtime schema migration.
 
-Each binary embeds `legend-runtime.json`. The current schema contains the framework version, platform, architecture, mode, native package signatures, and a build fingerprint. Runtime discovery also validates the expected application layout. The supported layouts are macOS/arm64 (`Contents/Resources/legend-runtime.json` inside a `.app`) and Windows/x64 (`legend-runtime.json` alongside `MyApp.exe` and its DLLs). Prebuilt runtime discovery filters by platform before checking module signatures; it must never select a macOS binary for a Windows project.
+Each binary embeds `legend-runtime.json`. The current schema contains the framework version, platform, architecture, mode, native package signatures, and a build fingerprint. Runtime discovery also validates the expected application layout. The supported layouts are macOS/arm64 (`Contents/Resources/legend-runtime.json` inside a `.app`) and Windows/x64 or Windows/arm64 (`legend-runtime.json` alongside `MyApp.exe` and its DLLs). Prebuilt runtime discovery filters by platform and target architecture before checking module signatures; it must never select a macOS binary for a Windows project.
 
 Native signatures include package metadata, native sources/specs, relevant configuration, and host integration. The build fingerprint additionally includes pinned framework/runtime versions, app configuration, and helper inputs. Matching a semver range is not sufficient proof of native compatibility.
 
@@ -227,7 +227,7 @@ For a missing runtime, inspect SDK registration and binary metadata. For an inco
 
 Windows support is part of the existing framework. `legend create --platform windows`, `legend sdk build-prebuilt --platform windows`, `legend dev`, and `legend build --dev` share project discovery, runtime metadata, registry, compatibility policy, Metro gating, terminal actions, and build records with macOS. There is no second session implementation or external source kit. See the [Windows guide](docs/windows-slice.md) for commands and prerequisites.
 
-The initial target is Windows 11 x64, RNW 0.81.35, New Architecture/Hermes, and the pinned Expo Desktop template. That RNW template uses MSVC v145 / Visual Studio 2026. The starter provides the native host rather than implying that the complete macOS SDK is available on Windows. One desktop target is selected per generated project.
+The development targets are Windows 11 x64 and ARM64, RNW 0.81.35, New Architecture/Hermes, and the pinned Expo Desktop template. That RNW template uses MSVC v145 / Visual Studio 2026. The starter provides the native host rather than implying that the complete macOS SDK is available on Windows. One desktop target is selected per generated project. Windows architecture defaults to the OS CPU (including ARM64 when the CLI is emulated) and can be overridden with `LEGEND_WINDOWS_ARCH=x64|arm64`. It participates in the native fingerprint and product path. Build records retain the latest build per mode; registered binaries for the other architecture remain intact. Expo Desktop beta owns generation and RNW receives the corresponding `--arch x64` or `--arch ARM64`.
 
 Windows signatures include Windows native sources/project files and host/config integration; generated build outputs and NuGet lockfiles do not invalidate the source signature. Framework/runtime version changes participate in the mandatory host signature. Directly installed native packages without a Windows implementation fail clearly. This remains a constrained development graph, not acceptance of every third-party dependency arrangement or custom native project modification.
 
@@ -250,7 +250,7 @@ Remaining work includes:
 | Runtime distribution | Dependency-complete downloadable clients and clean-machine launch without a compiler/IDE |
 | Production | Windows Metro reachability, reduced native graphs, embedded bundles, and standalone launch without Metro |
 | Packaging | Installer/MSIX choice, signing, runtime deployment, updates, uninstall, and data preservation |
-| Coverage | Windows CI and interactive tests, DPI/multiple monitors, accessibility/input, and a separate ARM64 matrix |
+| Coverage | Windows CI and interactive tests, DPI/multiple monitors, accessibility/input, and native acceptance on both x64 and ARM64 |
 
 Production analysis must use `platform=windows`; macOS reachability cannot justify Windows pruning. Application APIs also need explicit Windows semantics for menus, shortcuts, window coordinates, last-window closure, and unsupported macOS-only options.
 
@@ -270,7 +270,7 @@ Useful starting points:
 | Production size or native dependencies | `analyze`, `selection`, build exclusions | Selection report, generated projects/bindings, linked binary, retained API execution |
 | Runtimes integration | Metro wrapper, worker entry, source recipe/patches | prebuilt/dev/release execution, reload cleanup, worker-only dependencies, unused-runtime pruning |
 | Packaging/updater | Packaging state machine, signing/config modules | Mocked failure/retry tests and the explicitly scoped real release acceptance |
-| Windows development | `platform.ts`, `windows.ts`, Windows config/host hooks, native-greeting fixture | `test:windows:prepare` locally; `test:windows` on Windows x64 |
+| Windows development | `platform.ts`, `windows.ts`, Windows config/host hooks, native-greeting fixture | `test:windows:prepare` locally; `test:windows` on Windows x64/ARM64 |
 | Production on a new platform | Remaining platform work above and upstream template | Native production build, clean-machine launch, reduced standalone artifact |
 
 Begin with `bun run typecheck` and `bun test tests` where appropriate. Native tests need the platform toolchain and sometimes an interactive desktop. `bun run test:all` includes costly native builds; inspect its current definition before running it. A locked GUI or unavailable UI driver is a validation limitation, not a passing interactive test.

@@ -4,8 +4,8 @@ import os from "node:os";
 import path from "node:path";
 import { nativePackages, runtimeFor, incompatible, writeJson, VERSION } from "../packages/cli/src/project.ts";
 import { readRuntime, findGo, registerRuntime } from "../packages/cli/src/local.ts";
-import { projectPlatform } from "../packages/cli/src/platform.ts";
-import { buildWindows } from "../packages/cli/src/windows.ts";
+import { architecture, projectPlatform, windowsArchitecture } from "../packages/cli/src/platform.ts";
+import { buildWindows, isWindowsDebugProduct } from "../packages/cli/src/windows.ts";
 const { patchHost, withoutPackaging, unpackagedApp } = require("../packages/config-plugin/windows.plugin.cjs");
 function fixture() {
   const root = mkdtempSync(path.join(os.tmpdir(), "legend-windows-test-"));
@@ -18,7 +18,7 @@ test("Windows uses the shared graph and runtime identity, including native sourc
   try {
     const baseline = runtimeFor(f.root, nativePackages(f.root), "go");
     expect(projectPlatform(f.root)).toBe("windows");
-    expect(baseline.platform).toBe("windows"); expect(baseline.arch).toBe("x64");
+    expect(baseline.platform).toBe("windows"); expect(baseline.arch).toBe(architecture("windows"));
     writeFileSync(path.join(f.root, "App.tsx"), "export default 1");
     expect(runtimeFor(f.root, nativePackages(f.root), "go").fingerprint).toBe(baseline.fingerprint);
     writeJson(path.join(f.root, "node_modules/probe/package.json"), { name: "probe", version: "1" });
@@ -48,7 +48,7 @@ test("the shared Go registry keeps Windows and macOS runtimes separate", () => {
   process.env.LEGEND_HOME = path.join(f.root, "registry");
   try {
     const win = path.join(f.root, "windows-runtime"), mac = path.join(f.root, "mac-runtime.app");
-    writeJson(path.join(win, "legend-runtime.json"), { schema: 1, framework: VERSION, platform: "windows", arch: "x64", mode: "go", modules: {}, fingerprint: "win" });
+    writeJson(path.join(win, "legend-runtime.json"), { schema: 1, framework: VERSION, platform: "windows", arch: architecture("windows"), mode: "go", modules: {}, fingerprint: "win" });
     writeFileSync(path.join(win, "MyApp.exe"), "fixture, not executable");
     writeJson(path.join(mac, "Contents/Resources/legend-runtime.json"), { schema: 1, framework: VERSION, platform: "macos", arch: "arm64", mode: "go", modules: {}, fingerprint: "mac" });
     mkdirSync(path.join(mac, "Contents/MacOS"));
@@ -100,4 +100,60 @@ test("Windows accepts implemented window options and rejects unsupported present
     try { validateWindowsWindowOptions(options); throw new Error("Expected unsupported options to fail"); }
     catch (error) { expect((error as { code?: string }).code).toBe("E_UNAVAILABLE"); }
   }
+});
+
+
+test("Windows architecture follows the native CPU, including emulated CLI processes", () => {
+  expect(windowsArchitecture("win32", "arm64", {})).toBe("arm64");
+  expect(windowsArchitecture("win32", "arm64", { PROCESSOR_ARCHITECTURE: "AMD64" })).toBe("arm64");
+  expect(windowsArchitecture("win32", "x86_64", {})).toBe("x64");
+  expect(windowsArchitecture("win32", "x64", { PROCESSOR_ARCHITECTURE: "ARM64" })).toBe("arm64");
+  expect(windowsArchitecture("win32", "x64", { PROCESSOR_ARCHITECTURE: "AMD64", PROCESSOR_ARCHITEW6432: "ARM64" })).toBe("arm64");
+  expect(windowsArchitecture("win32", "x64", { PROCESSOR_ARCHITECTURE: "AMD64" })).toBe("x64");
+  expect(windowsArchitecture("darwin", "arm64", {})).toBe("x64");
+  expect(windowsArchitecture("darwin", "arm64", { LEGEND_WINDOWS_ARCH: "ARM64" })).toBe("arm64");
+  expect(windowsArchitecture("win32", "arm64", { LEGEND_WINDOWS_ARCH: "x64" })).toBe("x64");
+  expect(() => windowsArchitecture("win32", "x64", { LEGEND_WINDOWS_ARCH: "x86" })).toThrow("LEGEND_WINDOWS_ARCH");
+  expect(() => windowsArchitecture("win32", "ia32", {})).toThrow("Unsupported Windows architecture");
+});
+
+test("Windows runtime fingerprints and registry selection distinguish both architectures", () => {
+  const f = fixture(), previousHome = process.env.LEGEND_HOME, previousArch = process.env.LEGEND_WINDOWS_ARCH;
+  process.env.LEGEND_HOME = path.join(f.root, "registry");
+  try {
+    process.env.LEGEND_WINDOWS_ARCH = "x64";
+    const x64 = runtimeFor(f.root, [], "go");
+    const x64App = path.join(f.root, "x64-runtime");
+    writeJson(path.join(x64App, "legend-runtime.json"), x64);
+    writeFileSync(path.join(x64App, "MyApp.exe"), "fixture");
+    registerRuntime(x64App);
+    process.env.LEGEND_WINDOWS_ARCH = "arm64";
+    const arm64 = runtimeFor(f.root, [], "go");
+    expect(arm64.arch).toBe("arm64");
+    expect(arm64.fingerprint).not.toBe(x64.fingerprint);
+    expect(readRuntime(x64App)?.arch).toBe("x64");
+    expect(incompatible(x64, [], "windows")).not.toEqual([]);
+    expect(findGo([], x64App, "windows")).toBeUndefined();
+    const arm64App = path.join(f.root, "arm64-runtime");
+    writeJson(path.join(arm64App, "legend-runtime.json"), arm64);
+    writeFileSync(path.join(arm64App, "MyApp.exe"), "fixture");
+    registerRuntime(arm64App);
+    expect(findGo([], x64App, "windows")?.app).toBe(arm64App);
+    process.env.LEGEND_WINDOWS_ARCH = "x64";
+    expect(readRuntime(arm64App)?.arch).toBe("arm64");
+    expect(findGo([], arm64App, "windows")?.app).toBe(x64App);
+  } finally {
+    if (previousHome === undefined) delete process.env.LEGEND_HOME; else process.env.LEGEND_HOME = previousHome;
+    if (previousArch === undefined) delete process.env.LEGEND_WINDOWS_ARCH; else process.env.LEGEND_WINDOWS_ARCH = previousArch;
+    f.close();
+  }
+});
+
+test("Windows output discovery selects Debug executables for the requested architecture", () => {
+  expect(isWindowsDebugProduct("ARM64/Debug/MyApp/MyApp.exe", "arm64")).toBe(true);
+  expect(isWindowsDebugProduct(String.raw`x64\Debug\MyApp\MyApp.exe`, "x64")).toBe(true);
+  expect(isWindowsDebugProduct("x64/Debug/MyApp/MyApp.exe", "arm64")).toBe(false);
+  expect(isWindowsDebugProduct("ARM64/Release/MyApp/MyApp.exe", "arm64")).toBe(false);
+  expect(isWindowsDebugProduct("ARM64/Debug/MyApp/Other.exe", "arm64")).toBe(false);
+  expect(isWindowsDebugProduct("Debug/MyApp.exe", "arm64")).toBe(false);
 });

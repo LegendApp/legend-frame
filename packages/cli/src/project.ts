@@ -282,6 +282,7 @@ export function runtimeFor(
     modules,
     fingerprint: digest(
       JSON.stringify({
+        ...(platform === "windows" ? { arch: architecture(platform) } : {}),
         modules,
         pins,
         config: readAppConfig(root),

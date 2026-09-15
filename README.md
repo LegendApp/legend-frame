@@ -4,7 +4,7 @@ Legend Framework is an experimental framework for building native desktop applic
 
 Application JavaScript runs in **Hermes**. Node and Bun are development tools; neither is embedded as the application's JavaScript runtime. The UI uses React Native's native renderer.
 
-**Current scope:** macOS 14+ on Apple Silicon. The packages, CLI, and native runtime are prototypes. A [transferable SDK with optional prebuilt runtimes](docs/sdk-distribution.md) works outside the checkout; public npm packages and hosted prebuilt releases are not available. Windows x64 prebuilt and custom development builds are integrated, with native verification still pending; see the [Windows development guide](docs/windows-slice.md). Mobile/web development delegates to Expo. Intel macOS, Linux, and Mac App Store distribution are not supported by this framework's current workflow.
+**Current scope:** macOS 14+ on Apple Silicon. The packages, CLI, and native runtime are prototypes. A [transferable SDK with optional prebuilt runtimes](docs/sdk-distribution.md) works outside the checkout; public npm packages and hosted prebuilt releases are not available. Windows x64/ARM64 prebuilt and custom development builds are integrated, with native verification still pending; see the [Windows development guide](docs/windows-slice.md). Mobile/web development delegates to Expo. Intel macOS, Linux, and Mac App Store distribution are not supported by this framework's current workflow.
 
 ## Start here
 
@@ -98,7 +98,7 @@ Packaging requires signing credentials and a notarization profile. It signs a st
 
 Windows uses the same CLI, starter, prebuilt registry, native compatibility checks, and managed Metro session. The current Windows starter includes the native host; the desktop SDK feature set is being ported separately. There is no separate source kit to install.
 
-On Windows 11 x64, install the prerequisites in the [Windows guide](docs/windows-slice.md), including Visual Studio 2026 / MSVC v145 for the pinned RNW 0.81.35 template. Then run from the framework checkout:
+On Windows 11 x64 or ARM64 (including Parallels), install the prerequisites in the [Windows guide](docs/windows-slice.md), including Visual Studio 2026 / MSVC v145 for the pinned RNW 0.81.35 template. Then run from the framework checkout:
 
 ```powershell
 bun install
@@ -109,7 +109,7 @@ cd C:\dev\MyLegendApp
 bun run windows
 ```
 
-Creation defaults to Windows on a Windows machine. `bun run windows`, `bun dev`, and `bun start` enter the normal `legend dev` session. Additional Windows native dependencies use the normal custom-build path: the session detects incompatible prebuilt code and offers `b`, or you can run `bunx --no-install legend build --dev` explicitly. Runtime registration distinguishes Windows/x64 from macOS/arm64.
+Creation defaults to Windows on a Windows machine. `bun run windows`, `bun dev`, and `bun start` enter the normal `legend dev` session. Additional Windows native dependencies use the normal custom-build path: the session detects incompatible prebuilt code and offers `b`, or you can run `bunx --no-install legend build --dev` explicitly. Windows builds default to the native CPU architecture, including ARM64 on Apple Silicon Parallels; runtime registration distinguishes Windows/x64, Windows/arm64, and macOS/arm64. See the Windows guide for the ARM64 compiler tools and `LEGEND_WINDOWS_ARCH` override.
 
 For the automated prebuilt → Fast Refresh → added native module → custom-build check, run from the framework checkout with a fresh destination:
 

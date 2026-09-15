@@ -6,15 +6,16 @@ import { packageManifest } from "../packages/cli/src/local.ts";
 import { nativePackages, runtimeFor, incompatible, stateFile, writeJson, readJson, digest } from "../packages/cli/src/project.ts";
 import { nodeCommand, prepareWindows } from "../packages/cli/src/windows.ts";
 import { run } from "../packages/cli/src/commands.ts";
+import { architecture } from "../packages/cli/src/platform.ts";
 
 const { values } = parseArgs({ args: process.argv.slice(2), options: { project: { type: "string" }, "prepare-only": { type: "boolean" } } });
 const root = path.resolve(values.project ?? ".legend/windows-probe/WindowsProbe");
 const cli = path.join(root, "node_modules/@legend-apps/cli/src/index.ts");
 const prepareOnly = !!values["prepare-only"];
-if (!prepareOnly && (process.platform !== "win32" || process.arch !== "x64")) throw new Error("Run the native verifier on Windows x64, or pass --prepare-only to check generation and bundles here.");
+if (!prepareOnly && process.platform !== "win32") throw new Error("Run the native verifier on Windows x64 or ARM64, or pass --prepare-only to check generation and bundles here.");
 if (existsSync(path.join(root, "package.json"))) throw new Error("Choose a fresh --project directory; this test installs a native fixture.");
 const manifest = packageManifest();
-const report: any = { host: process.platform, native: !prepareOnly, passed: false, stages: [] };
+const report: any = { host: process.platform, arch: architecture("windows"), native: !prepareOnly, passed: false, stages: [] };
 let session: Bun.Subprocess<"pipe", "pipe", "pipe"> | undefined;
 let server: ReturnType<typeof Bun.serve> | undefined;
 let originalApp: string | undefined;
