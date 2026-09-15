@@ -15,6 +15,7 @@
 #include <winrt/Windows.Security.Cryptography.h>
 #include <winrt/Windows.Security.Cryptography.Core.h>
 #pragma comment(lib, "Comctl32.lib")
+#pragma comment(linker, "/manifestdependency:\"type='win32' name='Microsoft.Windows.Common-Controls' version='6.0.0.0' processorArchitecture='*' publicKeyToken='6595b64144ccf1df' language='*'\"")
 #pragma comment(lib, "Shell32.lib")
 #pragma comment(lib, "Shlwapi.lib")
 #pragma comment(lib, "Shcore.lib")
@@ -204,6 +205,8 @@ static LRESULT CALLBACK WindowProc(HWND hwnd, UINT message, WPARAM wParam, LPARA
 }
 static void Attach(std::string id, React::ReactNativeWindow view) {
   Window window; window.view = view; window.app = view.AppWindow(); window.normal = window.app.Presenter().as<UI::OverlappedPresenter>(); windows.emplace(id, window);
+  SetPropW(Hwnd(window), (L"Legend.Window." + std::wstring(to_hstring(id))).c_str(), reinterpret_cast<HANDLE>(1));
+  SetPropW(Hwnd(window), L"Legend.ReactWindow", reinterpret_cast<HANDLE>(1));
   auto app = window.app; SetWindowSubclass(Hwnd(window), WindowProc, 0x4C47, 0);
   app.Closing([id](auto const &, UI::AppWindowClosingEventArgs const &args) {
     auto found = windows.find(id); if (found == windows.end() || found->second.allow) return;

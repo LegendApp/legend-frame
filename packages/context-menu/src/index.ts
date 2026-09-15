@@ -15,7 +15,7 @@ export type ContextMenuLocation = {
 };
 
 export async function showContextMenu(items: ContextMenuItem[], location: ContextMenuLocation) {
-  if (Platform.OS !== "macos") {
+  if (Platform.OS !== "macos" && Platform.OS !== "windows") {
     return null;
   }
 

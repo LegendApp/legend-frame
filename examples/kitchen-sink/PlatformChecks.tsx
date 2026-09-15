@@ -7,6 +7,7 @@ import * as Linking from "@legend-apps/desktop-links";
 import { clipboardRead, clipboardRoundTrip, secureStorageLifecycle, linkingResolution, assertContract } from "./contract-cases";
 import { catalog, executeCase, initialResults, updateResult, summarize, type CaseResult, type TestPlatform } from "./contract-report";
 import { runDesktopContracts } from "./desktop-contracts";
+import DesktopInteractionChecks from "./DesktopInteractionChecks";
 import { testConfig } from "./platform-test-config";
 const options = [{ label: "First", value: "first" }, { label: "Second", value: "second" }];
 interface RuntimeModule extends TurboModule { call(method: string, args: string): Promise<string> }
@@ -23,6 +24,7 @@ export default function PlatformChecks() {
   const started = useRef(false);
   const [visible, setVisible] = useState(results.current);
   const [running, setRunning] = useState(false);
+  const [nativeInteraction, setNativeInteraction] = useState(false);
   const [value, setValue] = useState("first");
   const [delivery, setDelivery] = useState("Waiting for test execution");
   const publish = useCallback(async (complete = false) => {
@@ -83,7 +85,8 @@ export default function PlatformChecks() {
         void check("clipboard.roundtrip", () => clipboardRoundTrip(Clipboard, testConfig.runId))
           .then(() => publish()).catch(error => setDelivery(String(error))).finally(() => setRunning(false));
       }}>Check clipboard</Button>}
-      <Button disabled={running} onPress={() => void publish(true).catch(error => setDelivery(String(error)))}>Finish run</Button>
+      <DesktopInteractionChecks check={check} onError={setDelivery} onBusy={setNativeInteraction} />
+      <Button disabled={running || nativeInteraction} onPress={() => void publish(true).catch(error => setDelivery(String(error)))}>Finish run</Button>
     </View>
     <Text>{delivery}</Text>
     <Text>{Object.entries(summary.counts).map(([status, count]) => `${count} ${status}`).join(" · ")}</Text>

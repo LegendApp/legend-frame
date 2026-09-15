@@ -1,0 +1,1 @@
+export default function DesktopInteractionChecks(_props: { check: (id: string, action: () => Promise<void>) => Promise<void>; onError: (message: string) => void; onBusy: (busy: boolean) => void }) { return null; }

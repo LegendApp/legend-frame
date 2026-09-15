@@ -76,7 +76,8 @@
     "@legend-apps/clipboard": "workspace:*",
     "@legend-apps/secure-storage": "workspace:*",
     "@legend-apps/file-system": "workspace:*",
-    "@legend-apps/settings": "workspace:*"
+    "@legend-apps/settings": "workspace:*",
+    "@legend-apps/context-menu": "workspace:*"
   },
   "overrides": {
     "@expo/cli": "54.0.27",

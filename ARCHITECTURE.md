@@ -376,3 +376,12 @@ replacing a backend while preserving a framework contract.
 `examples/kitchen-sink/contract-cases.ts` owns portable assertions against public API bindings. The kitchen-sink API checks and Windows feature verifier reuse those functions; `PlatformChecks.tsx` exercises the shared adapters and native/browser controls in a fresh universal consumer through `scripts/test-platforms.ts`. Expo Desktop beta generates desktop projects, Legend builds desktop binaries, and Expo builds/launches mobile targets. Browser and mobile execution are distinct from bundle checks.
 
 `contract-report.ts` declares stable case IDs and intended platform support. `scripts/testing/report.ts` records execution scope, source-content fingerprint, target architecture/device, installed versions, runtime identity, and per-case evidence. Missing implementations and unexecuted cases cannot become passes merely because preparation succeeded. A failure remains visible across phases. `scripts/test-report.ts` produces a matrix without merging different source trees or collapsing retries into best-case results. Existing runners without an explicit case mapping do not contribute coverage. See [platform testing](docs/platform-testing.md) for the commands and remaining automation work.
+
+Windows filesystem, message-dialog, and context-menu backends are independent RNW
+library projects, discovered through ordinary native autolinking and included in
+runtime fingerprints. The filesystem serializes I/O off the UI thread and owns
+watch cleanup; settings reuses the shared storage logic. Native dialogs and popup
+menus run from the Win32 message loop so modal tracking does not hold an RN
+dispatcher callback. The host tags its windows for module parent lookup and enables
+Common Controls v6; public API shapes remain the same as macOS. Platform acceptance
+records implementation availability separately from verified native behavior.

@@ -8,6 +8,7 @@
         "@expo/ui": "0.2.0-beta.9",
         "@legend-apps/audio": "workspace:*",
         "@legend-apps/clipboard": "workspace:*",
+        "@legend-apps/context-menu": "workspace:*",
         "@legend-apps/desktop": "workspace:*",
         "@legend-apps/desktop-app": "workspace:*",
         "@legend-apps/desktop-config": "workspace:*",

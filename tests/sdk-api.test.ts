@@ -19,8 +19,9 @@ function module(name: string) {
 function emit(name: string, event: string, value: unknown) {
   for (const listener of subscriptions.get(`${name}.${event}`) ?? []) listener(value);
 }
+const platform = { OS: "macos" };
 mock.module("react-native", () => ({
-  Platform: { OS: "macos" },
+  Platform: platform,
   TurboModuleRegistry: { getEnforcing: module },
   NativeEventEmitter: class {
     constructor(private native: { name: string }) {}
@@ -45,7 +46,7 @@ const shortcuts = await import("../packages/desktop-shortcuts/src/index");
 const menus = await import("../packages/native-menu/src/index");
 const context = await import("../packages/context-menu/src/index");
 const dialogs = await import("../packages/file-dialog/src/index");
-beforeEach(() => { calls.length = 0; handlers.clear(); subscriptions.clear(); });
+beforeEach(() => { platform.OS = "macos"; calls.length = 0; handlers.clear(); subscriptions.clear(); });
 const tick = () => Bun.sleep(1);
 function nativeError(code: string) { return Object.assign(new Error(code), { code }); }
 
@@ -381,4 +382,27 @@ test("Windows shared adapters dispatch to native backends and reject unsupported
   handlers.set("NativeDesktopLinks.canOpen", () => true);
   expect(await linking.canOpenURL("https://example.com")).toBe(true);
   expect(() => linking.canOpenURL("invalid")).toThrow("scheme");
+});
+
+test("Windows context menus reach native selection and cancellation with item semantics intact", async () => {
+  platform.OS = "windows";
+  const items = [{ id: "checked", title: "Checked", checked: true }, { id: "disabled", title: "Disabled", enabled: false }, { id: "sep", title: "", separator: true }];
+  handlers.set("NativeContextMenu.showMenu", args => {
+    expect(JSON.parse(args[0])).toEqual(items); expect(JSON.parse(args[1])).toEqual({ x: 12.5, y: 40 }); return "checked";
+  });
+  expect(await context.showContextMenu(items, { x: 12.5, y: 40 })).toBe("checked");
+  handlers.set("NativeContextMenu.showMenu", () => "");
+  expect(await context.showContextMenu(items, { x: 0, y: 0 })).toBeNull();
+  handlers.set("NativeContextMenu.showMenu", () => { throw nativeError("E_BUSY"); });
+  await expect(context.showContextMenu(items, { x: 0, y: 0 })).rejects.toMatchObject({ code: "E_BUSY" });
+});
+test("Windows dialogs retain four-button indices, parent selection and checkbox results", async () => {
+  platform.OS = "windows";
+  const options = { title: "Save", windowId: "child", buttons: ["Cancel", "Ignore", "Save", "Other"], defaultButton: 2, cancelButton: 0, checkbox: { label: "Remember", checked: true } };
+  handlers.set("NativeDesktopMessageDialog.show", args => { expect(args).toEqual(options); return { button: 2, checked: false }; });
+  expect(await messages.showMessage(options)).toEqual({ button: 2, checked: false });
+  for (const code of ["E_BUSY", "E_NOT_FOUND"]) {
+    handlers.set("NativeDesktopMessageDialog.show", () => { throw nativeError(code); });
+    await expect(messages.showMessage(options)).rejects.toMatchObject({ code });
+  }
 });

@@ -95,3 +95,12 @@ empty files, error codes, copying/moving/deleting directories, atomic replacemen
 watch notifications and unsubscribe, and serialized JSON settings updates. The
 Windows feature runner also verifies settings across process termination/relaunch.
 All filesystem cases use a disposable subdirectory of the app's temporary storage.
+
+On desktop, use **Check message dialogs** and **Check context menus** before
+finishing. The dialog check verifies missing-parent/busy errors, a four-button
+result with a changed checkbox, and configured cancellation with a prechecked
+checkbox. The menu check verifies semantic selection, busy rejection, and `null`
+on dismissal. Follow the onscreen instructions; these are interactive native
+checks, and `--api-only` leaves them untested. Use `--timeout 600` for manual runs.
+Checked/disabled appearance, mixed-DPI placement, secondary-parent modality, and
+runtime teardown while UI is open also need visual/manual acceptance.
