@@ -42,12 +42,12 @@ export const catalog: CaseDefinition[] = [
   definition("desktop.global-shortcuts", "Shortcuts while another app has focus", "api", desktop),
   definition("desktop.modal-windows", "Owned and modal windows", "api", desktop),
   definition("desktop.advanced-menus", "Menu targeting and accelerators", "api", desktop),
+  definition("desktop.rich-clipboard", "Rich clipboard formats", "api", desktop),
   ...[
     ["notifications", "Notification permission/delivery/actions"],
     ["drag-drop", "Native drag and drop"],
     ["processes", "Child process lifecycle"],
     ["system", "System APIs"],
-    ["rich-clipboard", "Rich clipboard formats"],
     ["sqlite", "SQLite integration"], ["webview", "WebView integration"],
     ["nitro", "Nitro native module integration"], ["runtimes", "Secondary Hermes runtimes"],
   ].map(([id, title]) => definition(`desktop.${id}`, title!, "api", macOnly)),

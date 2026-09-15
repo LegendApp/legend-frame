@@ -12,7 +12,7 @@ is performed on Windows; generation and bundling never imply runtime success.
 - [x] 6. Owned/modal windows and fuller menus (source implementation; native acceptance pending).
 - [ ] 7. Processes and system APIs.
 - [ ] 8. Nitro, SQLite, WebView, secondary Hermes runtimes.
-- [ ] 9. Rich clipboard and development connection/bundle options.
+- [x] 9. Rich clipboard and development connection/bundle options (source implementation; native acceptance pending).
 
 Standalone distribution was deferred for the internal development slice; the
 current task asks whether to include it. Track actual native limitations in

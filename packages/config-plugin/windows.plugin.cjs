@@ -30,7 +30,7 @@ module.exports = config => {
     const defaults = metadata.mode === 'dev' ? {
       LEGEND_PROJECT_ID: expo.extra.legend.projectId, LEGEND_PROJECT_NAME: expo.name,
       LEGEND_PROJECT_VERSION: expo.version, LEGEND_WINDOW_CONFIG: JSON.stringify(expo.extra.legend.window ?? {}),
-      LEGEND_SESSION_FILE: statePath(root, 'session.json', 'windows'),
+      LEGEND_SESSION_FILE: statePath(root, 'windows-connection.json', 'windows'),
     } : {};
     mod.modResults.contents = patchHost(mod.modResults.contents, fs.readFileSync(require.resolve('@legend-apps/desktop-host/windows/runtime.inc'), 'utf8') + '\n' + fs.readFileSync(require.resolve('@legend-apps/desktop-host/windows/application.inc'), 'utf8'), metadata, defaults);
     return mod;

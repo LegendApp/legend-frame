@@ -175,3 +175,21 @@ system menu. Target paths refer to existing menu entries; unmatched paths are
 skipped, matching the macOS contract. Platform Checks has interactive modal and
 menu accelerator cases. Native ownership/focus, close guards and menu actions
 still need Windows execution evidence.
+
+
+## Rich clipboard and Expo bundle options
+
+Windows now reads/writes HTML, RTF, PNG images and file lists, lists OS clipboard
+formats, and clears the clipboard. PNG writes are validated before replacing
+existing content, and bitmap reads are encoded as PNG. Plain string reads can
+fall back to rich text; HTML string writes provide a plain-text representation.
+Platform Checks exercises combined formats, PNG conversion, file lists and clear.
+
+Windows can now open Expo sessions with `--https`, `--no-dev`, and `--minify`.
+For these options, a loopback adapter forwards RNW's HTTP/WebSocket transport to
+Expo Metro, preserving endpoints and overriding bundle/map flags. The Expo CLI
+still owns the server. TLS validation stays enabled; for a private development
+certificate, export Expo's `SSL_CRT_FILE` in the invoking shell or trust its CA.
+The adapter lives until the dev session ends, including native app restarts.
+Local HTTP/WebSocket forwarding tests pass; native bundle/refresh/debugger checks
+with these options remain pending on Windows.

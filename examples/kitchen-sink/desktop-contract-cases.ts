@@ -106,3 +106,23 @@ export async function recentDocumentsLifecycle(files: typeof FileSystem, links: 
     await files.remove(file);
   }
 }
+
+export async function richClipboardLifecycle(files: typeof FileSystem, clipboard: typeof import("@legend-apps/clipboard/src/desktop"), token: string) {
+  const original = await clipboard.readClipboard();
+  const file = `${await files.getDirectory("temp")}/clipboard-${token}.txt`;
+  try {
+    await clipboard.writeClipboard({ text: "plain ü", html: "<b>rich ü</b>", rtf: "{\\rtf1\\ansi rich}" });
+    const content = await clipboard.readClipboard();
+    assertContract(content.text === "plain ü" && content.html?.includes("<b>rich ü</b>") && content.rtf?.includes("rtf"), "Rich text formats did not roundtrip together");
+    assertContract((await clipboard.getClipboardFormats()).length >= 3, "Rich clipboard formats are missing");
+    await clipboard.writeClipboard({ imagePNG: "iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR4nGP4z8DwHwAFAAH/iZk9HQAAAABJRU5ErkJggg==" });
+    assertContract((await clipboard.readClipboard()).imagePNG?.startsWith("iVBOR"), "Clipboard bitmap was not returned as PNG");
+    await files.writeText(file, "clipboard file"); await clipboard.writeClipboard({ files: [file] });
+    assertContract((await clipboard.readClipboard()).files?.[0]?.replaceAll("\\", "/") === file.replaceAll("\\", "/"), "Clipboard file list did not roundtrip");
+    await clipboard.clearClipboard();
+    assertContract(Object.keys(await clipboard.readClipboard()).length === 0, "Clear left clipboard formats behind");
+  } finally {
+    await clipboard.writeClipboard(original.files?.length ? { files: original.files } : original);
+    await files.remove(file);
+  }
+}

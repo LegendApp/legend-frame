@@ -1,3 +1,4 @@
+import { windowsMetroPort, stopWindowsMetro } from "./windows-metro";
 import { projectPlatform } from "./platform.ts";
 import { nodeCommand } from "./windows.ts";
 import { readAppConfig } from "./project.ts";
@@ -28,8 +29,9 @@ type BundleOptions = { dev?: boolean; minify?: boolean; https?: boolean };
 export async function launch(root: string, app: string, port?: number, options: BundleOptions = {}) {
   if (readRuntime(app)?.platform === "windows") {
     if (process.platform !== "win32") throw new Error("Launch the Windows runtime on Windows.");
-    if (options.https || options.dev === false || options.minify) throw new Error("The Windows development host currently requires HTTP development bundles without minification. Restart dev without --https, --no-dev, or --minify to open Windows; mobile/web can use the current session.");
-    return Bun.spawn([path.join(app, "MyApp.exe")], { cwd: app, env: { ...process.env, ...projectEnvironment(root), LEGEND_METRO_PORT: String(port ?? 8081) }, stdout: "inherit", stderr: "inherit" });
+    const nativePort = windowsMetroPort(root, port ?? 8081, options);
+    writeJson(stateFile(root, "windows-connection.json"), { port: nativePort, dev: options.dev ?? true });
+    return Bun.spawn([path.join(app, "MyApp.exe")], { cwd: app, env: { ...process.env, ...projectEnvironment(root), LEGEND_METRO_PORT: String(nativePort), LEGEND_BUNDLE_DEV: String(options.dev ?? true) }, stdout: "inherit", stderr: "inherit" });
   }
   const info = await run(
     root,
@@ -291,6 +293,7 @@ export async function dev(
     metro?.kill();
     cancelCommands(root);
     rmSync(stateFile(root, "session.json"), { force: true });
+    stopWindowsMetro(root); rmSync(stateFile(root, "windows-connection.json"), { force: true });
     if (process.stdin.isTTY) process.stdin.setRawMode(false);
     void Promise.allSettled([metro?.exited, appProcess?.exited]).then(finish);
   }

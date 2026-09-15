@@ -369,19 +369,25 @@ test("mobile adapters delegate the shared subset to Expo without native dispatch
   expect(calls).toHaveLength(0);
 });
 
-test("Windows shared adapters dispatch to native backends and reject unsupported rich data", async () => {
+test("Windows shared adapters dispatch rich formats to native backends", async () => {
+  platform.OS = "windows";
   const win = await import("../packages/clipboard/src/index.windows");
   const store = await import("../packages/secure-storage/src/index.windows");
   const linking = await import("../packages/desktop-links/src/index.windows");
   handlers.set("NativeDesktopClipboard.getString", () => "Windows text");
   expect(await win.getStringAsync()).toBe("Windows text");
   expect(await win.setStringAsync("hello")).toBe(true);
-  await expect(win.writeClipboard({ imagePNG: "data" })).rejects.toThrow("text only");
+  await win.writeClipboard({ html: "<b>rich</b>", rtf: "{\\rtf1 rich}", imagePNG: "data" });
+  expect(calls.at(-1)).toMatchObject({ native: "NativeDesktopClipboard", method: "write", args: { html: "<b>rich</b>", imagePNG: "data" } });
+  await win.writeClipboard({ files: [String.raw`C:\Users\test\file.txt`, String.raw`\\server\share\file.txt`] });
+  await expect(win.writeClipboard({ files: ["relative.txt"] })).rejects.toThrow("absolute paths");
+  handlers.set("NativeDesktopClipboard.write", () => { throw nativeError("E_CLIPBOARD"); });
+  await expect(win.writeClipboard({ imagePNG: "invalid" })).rejects.toMatchObject({ code: "E_CLIPBOARD" });
   await store.setItemAsync("sample", "value");
   expect(calls.at(-1)?.native).toBe("NativeDesktopSecureStorage");
   handlers.set("NativeDesktopLinks.canOpen", () => true);
   expect(await linking.canOpenURL("https://example.com")).toBe(true);
-  expect(() => linking.canOpenURL("invalid")).toThrow("scheme");
+  await expect(linking.canOpenURL("invalid")).rejects.toThrow("scheme");
 });
 
 test("Windows context menus reach native selection and cancellation with item semantics intact", async () => {
