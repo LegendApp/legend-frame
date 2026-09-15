@@ -1,256 +1,118 @@
-# Known Windows issues
+# Windows implementation and acceptance
 
-Updated 2026-09-15. Windows is an integrated target of the shared framework and Settings screen. Missing functionality is work to finish, not a reason to exclude the platform from shared application code.
+Updated 2026-09-15. Windows is an integrated framework target. The development
+feature groups now have source implementations. **Native compilation and runtime
+acceptance are still unverified on both Windows x64 and ARM64.** Generation,
+JavaScript bundling, and unit tests never count as native acceptance.
 
-## Handling incomplete implementations
+## What remains
 
-- Fix the implementation when possible. Until a native UI backend exists, render a visible, noninteractive placeholder in its place. Preserve labels, layout, and test IDs without importing an unavailable native binding.
-- Do not invoke callbacks or report successful operations from placeholders. Non-UI operations with missing backends continue to report `E_UNAVAILABLE`; availability checks reflect the installed backend.
-- Do not broadly catch rendering errors to hide programming mistakes. For example, invalid Select options still fail contract validation.
-- Keep each issue open until its acceptance checks pass on Windows. Generation, bundling, and mocked rendering are useful checks, but do not prove native execution.
+1. Run native compilation and the shared acceptance suite on Windows; fix any
+   compiler, ABI, OS interaction, or lifecycle failures it exposes.
+2. Complete the manual OS checks below on x64 and ARM64, including Parallels,
+   mixed-DPI displays, application reload, and another project using the prebuilt
+   executable. Keep failed and unexecuted cases visible in exported reports.
+3. Standalone production builds, installation/signing, and updates are still
+   unimplemented. They were deferred from this internal development scope.
 
-## Open work
+A source implementation is not a claim of complete behavioral parity. The
+platform differences and upstream limits below remain part of the API contract.
 
-| ID | Issue and current behavior | Completion criteria |
+## Implemented source and required Windows checks
+
+| Area | Windows implementation | Native acceptance still required |
 | --- | --- | --- |
-| WIN-01 | WinUI Button implementation added through RNW ContentIsland; native compilation and acceptance pending. Initialization failure renders a labeled placeholder. | Real native button; click and keyboard activation, disabled behavior, labels, and React callbacks work in the shared screen. |
-| WIN-02 | WinUI TextBox implementation added, preserving the uncontrolled default-value contract; native acceptance pending. | Native editing, initial text, change callbacks, accessibility, and documented reset behavior work without losing focus unexpectedly. |
-| WIN-03 | WinUI ComboBox implementation added with semantic value mapping and suppressed programmatic callbacks; native acceptance pending. | Native selection preserves semantic values across reordered options and delivers callbacks; keyboard and accessibility checks pass. |
-| WIN-04 | Text/HTML clipboard, project-scoped Credential Manager storage, URI launching/querying, and initial command-line URL implemented. Recent documents and rich clipboard parity remain open. Queued/warm activation source is now supplied by the host, pending native acceptance. Credential values are limited to 2560 UTF-16 bytes. | Implement the agreed shared contracts and run their behavior checks on Windows, including failure cases and URL lifecycle where applicable. |
-| WIN-05 | Integrated prebuilt/custom-build host has passed generation and bundle checks; Windows native acceptance is pending on x64 and ARM64. ARM64 detection, target selection, separate binaries, and runtime compatibility are implemented for Parallels. | `bun run test:windows --project C:\dev\LegendWindowsVerification` passes compilation, Hermes startup, Fast Refresh, native dependency incompatibility detection, and custom-build switching on both x64 and ARM64; Parallels requires the ARM64 compiler tools. |
-| WIN-06 | Broader desktop SDK parity is incomplete: drag/drop, notifications/tray, processes/system, and external native integrations. | Port incrementally with an explicit per-feature acceptance record; split this inventory into individual issues as each area starts. Do not infer parity from the shared host. |
-| WIN-07 | Standalone release/preview builds, signing/packaging and updates are not implemented. Portable SDK/client transfer exists; Windows clean-machine runtime startup is unverified. | Define the Windows distribution contract, implement it, and verify installation/launch/update on a clean machine. This remains outside the current development slice. |
-| WIN-09 | Shared-host secondary React windows, title/show/hide/minimize/maximize, close/quit guards, focused shortcuts, basic menus, main-frame restoration, display enumeration, frame/center/fullscreen operations, basic sizing/presentation options, and single-instance file/URL forwarding now have native host source. A project-scoped named mutex covers simultaneous startup and abandoned-owner recovery; menus follow the focused React window. AsyncStorage receives an unpackaged project-specific database path. | Compile on Windows; create/edit/close a secondary Notes window, verify failed saves cancel close, trigger Ctrl+N/S/O and menu actions, reopen into the same data/frame, and forward a file to the existing process. Advanced window styles, owned/modal windows, menu placement/targeting and OS association registration remain outside this implementation. Verify concurrent launch forwarding, owner-termination recovery, display geometry/scales, constraints and fullscreen restoration. |
-| WIN-10 | Music Lite has a native MediaPlayer implementation and system transport controls. | Compile and play/pause/seek/end/error-check local audio; verify media controls, queue restoration, and disposal. |
-| WIN-11 | Settings now bundles Uniwind's native runtime and shared responsive/theme classes. The UI package now supplies an Appearance TurboModule overriding RNW 0.81.35's no-op setter. It propagates light/dark/system changes to existing and new WinUI control islands through native notifications, without remounting controls or adding framework-specific React props. Native acceptance is pending. | On Windows, verify resizing, system theme changes, manual light/dark/system selection, native control contrast, and unavailable-control frames; verify WinUI theme propagation, focus/text preservation, and system changes after resetting the override. This does not promise manual theme overrides for OS dialogs/title bars or every RNW PlatformColor resource. |
-| WIN-08 | Secondary Hermes runtimes are not supported by the Windows integration. | Prove upstream/backend support and integrate worker lifecycle, compatibility, and native dependency selection into the existing framework. |
+| UI and theme | WinUI Button, TextBox, ComboBox in RNW ContentIslands; light/dark/system override | Mouse/keyboard, accessibility, semantic selection, high contrast, theme changes without losing focus/text, and initialization-failure placeholders |
+| Files and settings | Scoped directories, text/base64 I/O, atomic writes, metadata, copy/move/remove, watch invalidation; persistent settings | Shared lifecycle assertions, restart persistence, permissions, UNC paths, symlinks, cross-volume moves, watcher disposal |
+| Dialogs/context menus | Win32 TaskDialog and popup menus; buttons, checkbox, cancellation, ownership, IDs and state | Keyboard default/cancel, busy rejection, parent modality, mixed-DPI placement, reload while open |
+| Drag/drop | Fabric drag source/target, text/files/URLs, geometry-based hit testing, lifecycle events | Enter/leave/drop coordinates, scrolling/clipping, child controls, cancellation, reload and external drags |
+| Recent files/associations | Project history; development-only shell recent files and per-user file/protocol registration | Explorer activation both warm/cold, history persistence/isolation, changed declarations, and conflict rejection |
+| Tray/global shortcuts | Shell notification icon with nested menus; RegisterHotKey and conflict detection | Actions, update/remove, other-app focus, reload cleanup, Explorer restart recovery |
+| Notifications | Project-scoped toast identity, classic COM activation, scheduling/history/cancellation, response queue | Permission disabled/enabled, visible delivery, live click/dismiss, delayed delivery after exit, cold click into the correct project |
+| Windows/menus | Shared React windows, owned/modal windows, close/quit guards, constraints/fullscreen, menu placement/targeting/payload/accelerators | Modality and owner destruction, focus, close guards, layout/DPI, menu restoration, accelerators and callbacks |
+| Processes | CreateProcessW, explicit inherited handles, stdin/stdout/stderr, Job Object cleanup, timeout/termination | PowerShell contract checks, binary output, large streams, descendants, failed spawn, reload during execution |
+| System/audio | Info, power/session/theme events, sleep prevention, attention, taskbar badge/Jump List; MediaPlayer and transport controls | Lifecycle and task actions, OS lock/sleep/wake/theme events, playback/seek/end/error/disposal |
+| Clipboard/storage/links | Text/HTML/RTF/PNG/files; scoped Credential Manager; URI handling and launch queue | Rich-format round trips, malformed content, credential lifecycle, cold/warm activation |
+| Nitro | Pinned upstream C++ core, RNW JSI installation, dispatcher, exported C++ registry | Native buffers, HybridObject identity/boxing, async callbacks and reload, a consumer native module |
+| SQLite | Pinned OP-SQLite C++/JS plus bundled SQLite; Windows build/lifecycle/path glue | Parameters, blobs, sync/async calls, transactions, persistence, reload, and concurrent worker/main databases |
+| WebView | Pinned upstream Fabric WebView2, with startup/navigation/messaging/error fixes | HTML and URL loads, injection/messages, errors, unmount input recovery, resize/clipping and missing WebView2 runtime |
+| Secondary runtimes | Real RNW hosts and Hermes heaps using Margelo's native-call transport; native threaded surfaces | Identity/isolation/timers/errors, create/destroy/recreate, native filesystem, reload with work pending, threaded surface input/teardown |
+| Development connection | Expo CLI/Metro with a local Windows relay for HTTPS and dev/minify flags | HTTP/HTTPS, certificate trust, source maps, refresh/WebSocket disconnect/reconnect |
 
-## Shared platform coverage
+## Run and report
 
-The [platform test system](platform-testing.md) separates actual execution from generation/bundling and keeps missing Windows implementations visible. `test:windows:features` now emits the common JSON report and reuses the clipboard/storage/link/file assertions with macOS. The generic `test:platform --platform windows` runs the universal test screen on the selected x64/ARM64 target. Neither runner's prepare-only results close native acceptance issues.
-
-## Current acceptance commands
-
-```sh
+```powershell
+bun install
+bun run test:platform --platform windows --timeout 600
 bun run test:windows:features --project C:\dev\LegendWindowsFeatures
 bun run test:windows --project C:\dev\LegendWindowsVerification
 ```
 
-The feature command generates a fresh universal app, compiles its native Windows client, then uses Windows UI Automation to invoke the WinUI Button, edit the TextBox, and select the ComboBox option. It checks their React callbacks plus clipboard round trips, credential write/read/delete, HTTPS-handler availability, text-file writing/reading, conflicting saves, display/window operations, and React Native Appearance overrides/events. It starts two clients simultaneously and checks that one survives and receives both launch URLs, then terminates that owner and verifies a new launch recovers. Run in an interactive Windows desktop session. It temporarily replaces clipboard text and restores that text afterward; use a disposable test session if the clipboard contains rich data.
+Use a fresh directory for each explicit `--project`. Run in an interactive desktop
+session. The shared platform screen runs API checks and provides native interaction
+checks for dialogs, menus, tray, shortcuts, notifications, drag/drop, modal windows,
+system/taskbar APIs and WebView. Choose **Finish run** afterward. `--api-only`
+leaves interactive cases untested. Reports live in `.legend/test-results`;
+`bun run test:report` summarizes them. See [platform-testing.md](platform-testing.md).
+Clipboard checks temporarily replace content; use a disposable test session.
 
-On macOS, `bun run test:windows:features --prepare-only` performs generation and bundling only. It is not native acceptance. The new Windows C++ source has not yet been compiled or run on this development machine. WIN-01 through WIN-05 stay open until those checks pass.
+`test:windows:features` additionally uses UI Automation for controls and tests
+concurrent launch forwarding, abandoned-owner recovery, appearance and restart
+persistence. A shared project mutex prevents simultaneous clients writing the same
+project state. A forwarding timeout reports failure rather than starting a second
+owner. The platform runner's prepare-only mode is available on macOS, including
+`LEGEND_WINDOWS_ARCH=arm64`, and never marks native checks passed.
 
-The [document editor](document-editor.md) uses the native Windows file dialogs and text I/O. It now uses the shared window/close/menu/shortcut integration. Those new host paths need Windows acceptance before relying on them for unsaved work. OS association registration, advanced menu/window parity, and filesystem native acceptance remain open. Notes Lite adds autosave and snapshot recovery at the application layer. Unsupported secondary-window style options and menu targeting, placement, payloads, and menu accelerators report an error; focused keyboard shortcuts are registered separately. Launch forwarding acquires a named mutex before host construction. A concurrent process waits for the primary window, forwards its command line, and exits; a timeout reports failure instead of starting a second writer. The OS releases ownership after process termination. Native race/recovery acceptance remains pending.
+## Platform differences and limits
 
-The Settings screen now mounts the shared screen using real Windows backend bindings. If the UI module is absent or XAML initialization fails, controls display labeled, noninteractive placeholders; invalid Select options still fail contract validation. RNW 0.81.35's pinned Windows App SDK 1.8 includes XamlIsland; the backend connects it through RNW's ContentIslandComponentView. No dependency upgrade or upstream source patch was made.
+- Windows controls render labeled, noninteractive placeholders if their native
+  backend cannot initialize. Drag targets and threaded surfaces also expose
+  initialization failure. Placeholders preserve layout/labels and never fabricate
+  callbacks. Operational failures reject; invalid input remains an error.
+- Credential Manager limits a credential blob to 2560 bytes. Rich clipboard data
+  is separate from the common text-only restoration performed by the test runner.
+- OS dialogs, title bars, tray and Jump Lists use Windows styling. AppKit materials,
+  titlebar effects, SF Symbols and window-specific macOS styles are not portable;
+  unsupported window options still reject. Windows tray items use the executable
+  icon/tooltip. Disabled Jump List tasks are omitted, checked tasks use a checkmark
+  in the title. Login startup remains unavailable in development, as on macOS.
+- Association registration changes only this project's per-user entries; it does
+  not change the default file application or overwrite another app's protocol.
+  Custom document UTIs need explicit `extensions`. Shell registration points to
+  the cached executable; refresh registration after moving/rebuilding it.
+- Toast registration creates a project-specific Start menu shortcut and COM
+  activation entry. Windows permission is controlled in Settings; requestPermission
+  reports that setting. Unpackaged scheduling uses the Community Toolkit's silent,
+  immediately removed first-toast identity registration workaround. Windows does
+  not launch a closed app on dismissal: dismiss events are available for immediate
+  notifications while their module remains alive. Clicks preserve notification ID
+  and data through a bounded, deduplicated host response queue. Cold development
+  activation needs Metro and the project's saved connection settings.
+- The SDK packages integrity-checked Nitro 0.35.7, OP-SQLite 18.2.1 and WebView
+  16.0.0 with their Windows glue. Consumers do not manually patch node_modules.
+  SQLite uses its bundled engine; optional SQLCipher/libSQL/Turso/vector builds are
+  not enabled. WebView delegates to upstream's Windows prop coverage; WKWebView-only
+  options are not implied. WebView2 must be installed on the testing machine.
+- Nitro's C++ DLL exports and include tree support C++ HybridObjects; installing a
+  library that only ships Swift/Kotlin does not create a Windows implementation.
+  Such libraries still need their own Windows native project and registration.
+- Workers use the existing `@react-native-runtimes/core` API and Metro discovery.
+  They have separate heaps and reuse registered native package providers. Keep
+  UI/window/menu ownership in the main runtime, as in the macOS guidance.
+  Shared main-native-module mode (`useMainNativeModules` / `prewarmBusinessRuntime`)
+  and routing worker functions back to the main heap are not implemented; unsupported
+  requests reject. These optional upstream runtime modes remain integration work. Calls
+  fail on destruction/load failure or after 120 seconds, rather than hanging.
+  The current macOS guide does not claim validated threaded UI; Windows threaded
+  surfaces likewise require explicit visual, input and lifecycle acceptance.
+- The pinned RNW 0.81.35 geometry adapter exposes hit testing/client bounds for
+  drag/drop without changing existing interface IDs. It fails explicitly if the
+  pinned source changes. Native geometry, clipping and scrolling need Windows
+  checks. Expo Desktop beta still owns project generation.
+- Jump List entries can outlive a crashed process until replaced. HTTPS uses the
+  configured trusted CA (`SSL_CRT_FILE` when needed), never disabled verification.
+  The relay lives with the CLI session, so cold development launches require it.
 
-Use the [Windows development guide](windows-slice.md) for machine setup. Record native build/runtime failures here with reproductions and acceptance checks. See [SDK distribution](sdk-distribution.md) for transferring an entire prebuilt Windows client once it has been built on Windows.
-
-
-### Expo development options
-
-The shared `legend dev` server accepts Expo start options and serves all declared platforms. The current Windows native host uses HTTP development bundles without minification; opening it with `--https`, `--no-dev`, or `--minify` reports the limitation. Implement those connection/bundle settings in the RNW host before claiming native support for them. Mobile/web can use these Expo options in the shared server.
-
-Expo Desktop's RNX platform discovery can print missing `dotnet.exe`/`pwsh.exe` diagnostics when inspecting RNW on macOS. The shared server and Windows bundle generation continue; eliminating that unnecessary toolchain probe is an upstream integration follow-up.
-
-## Foundation work — 2026-09-15
-
-Implemented WIN-09/WIN-11 source changes remain pending Windows acceptance. The
-Windows feature verifier generates and bundles successfully on macOS; TypeScript
-and 173 unit tests pass. The verifier now
-includes the window package explicitly in its consumer. The package-builder
-Appearance override uses RNW's supported TurboModule replacement mechanism rather
-than modifying installed RNW source. `RequestedTheme` is applied to individual
-WinUI controls; native failure still reports through the existing placeholder path.
-WinRT activation of host JSON arrays now occurs after COM initialization. Template
-hook replacement happens before embedding host source, preventing an identical
-API call inside the embedded code from being rewritten accidentally.
-
-For manual acceptance, toggle Light → Dark → System in Settings with text entered
-and the editor focused, open a new window under each theme, change the OS theme
-while System is selected, and check control/flyout contrast and preserved edits.
-Check high-contrast mode separately. Use mixed-DPI monitors for display scales,
-centering and frame operations. Run the automated commands above in a fresh
-project directory; their native checks have not been executed on this macOS host.
-
-Remaining feature work includes app-owned recent documents/rich clipboard, owned
-or modal windows and AppKit-specific presentation, broader menu features and OS
-associations, and WIN-06's unported modules. Production packaging/updates and
-secondary Hermes runtimes remain separate from this development foundation.
-
-## Filesystem and settings parity — 2026-09-15
-
-Windows now implements the complete existing filesystem surface: project-scoped
-app directories, UTF-8/base64 reads and atomic writes, metadata, sorted listings,
-directory creation, recursive removal/copy, moves, and nonrecursive watch
-invalidation. Drive-qualified paths, UNC paths, and local file URLs are accepted;
-relative paths and device namespaces are rejected. Watchers observe a file's
-parent and are disposed on unsubscribe/runtime teardown. Filesystem errors retain
-the shared `E_NOT_FOUND`, `E_PERMISSION`, `E_EXISTS`, `E_NOT_EMPTY`, and `E_IO` codes.
-The existing settings implementation uses this backend without a new API.
-
-`test:platform` now exercises the same filesystem/settings cases on macOS and
-Windows. `test:windows:features` additionally checks that a saved setting survives
-owner termination and relaunch. Native compilation/execution remains pending;
-verify permissions, UNC shares, symlinks, cross-volume moves, and watch teardown
-on Windows in addition to the automatic disposable-directory checks. Implemented
-catalog entries remain `not-tested` until executed successfully.
-
-## Message dialogs and context menus — 2026-09-15
-
-Windows now has separate RNW modules for the existing `showMessage`/`confirm`
-and `showContextMenu` APIs. Message dialogs use Win32 TaskDialog with 1–4 custom
-buttons, default/cancel indices, severity icons, a checkbox, and optional framework
-window ownership. A missing named parent returns `E_NOT_FOUND`; concurrent dialogs
-and disabled/modal parents return `E_BUSY`. Without an explicit parent, other
-framework windows are disabled for the application-modal interaction. Teardown
-dismisses a pending dialog without reporting a successful choice.
-
-Context menus preserve item IDs, checked/disabled states, separators, selection,
-and `null` on dismissal. Locations use React Native window coordinates (DIPs),
-converted to screen pixels with the owning window's DPI. Menu tracking runs on the
-UI message loop outside the RN dispatcher callback; concurrent calls reject
-`E_BUSY`, and runtime teardown cancels tracking. The host publishes window identity
-properties for lookup by these modules and requests Common Controls v6 for dialogs.
-
-Run `bun run test:platform --platform windows --timeout 600`, then use **Check
-message dialogs** and **Check context menus** before **Finish run**. The same screen
-and assertions run on macOS. API-only runs intentionally leave these UI cases
-untested. Native compilation and interaction acceptance remain pending. Verify
-keyboard default/cancel behavior, checkbox changes, all four labels, explicit
-secondary-window ownership, app/parent modality, disabled/checked menu items,
-menu placement at mixed DPI, and reload/close while native UI is open. These
-system dialogs/menus follow Windows styling; the framework's manual theme override
-still applies to its WinUI controls rather than promising OS-dialog recoloring.
-
-
-## Recent documents and shell associations
-
-Recent document history now uses project-scoped persistent storage on Windows.
-Development builds also publish recent files to their own Windows AppUserModelID;
-clearing history never clears another application's list. The prebuilt runtime
-keeps its history within the project and does not register shell recent files.
-
-Custom development builds register `scheme` and `documentTypes` per user. Known
-UTIs map to extensions; custom types need an `extensions: ["myext"]` entry next
-to `contentTypes`. File handlers appear under Open With; the CLI does not change
-the user's default app. Existing protocols owned by another app are rejected.
-Changed declarations remove stale entries owned by this project. Registry entries
-point to the cached development executable. Metro must be running for a cold
-shell launch to load development JavaScript; embedded project configuration and
-the project's session file supply identity and port outside CLI launches.
-
-Pending native acceptance: register and activate a custom URI and a file from
-Explorer with the app both running and closed; verify one owner receives each
-launch, and verify recent history across a process restart and a second project.
-
-
-## Tray and global shortcuts
-
-Windows backends now provide tray create/update/remove, nested menus with semantic
-action IDs, disabled/checked entries, Explorer restart recovery, and global
-hotkeys with conflict rejection and reload cleanup. `CommandOrControl` selects
-Control on Windows; explicit Meta uses the Windows key, subject to OS-reserved
-combinations. Windows tray entries use the executable's icon and their title as
-the default tooltip, since the shell has no text labels or SF Symbols.
-
-The shared Platform Checks screen tests a tray menu action and removal, plus a
-global shortcut while another application has focus, duplicate rejection, and
-re-registration after removal. Native execution and Explorer-restart recovery
-remain unverified; run these on Windows x64 and ARM64 before marking parity passed.
-
-
-## Owned/modal windows and menus
-
-Windows windows now accept `parentId` and `modal`. The native owner relationship
-controls stacking and lifetime; visible modal children disable their parent,
-and hiding or destroying the modal restores it. Another modal for the same
-parent is rejected with `E_BUSY`; a missing parent rejects with `E_NOT_FOUND`.
-
-Windows menus now merge contributions by title, support before/after placement,
-targeted bindings with restoration when their owner clears, patches, payloads,
-and native keyboard accelerators. Command modifiers map to Control. `systemMenu:
-"app"` creates a first application menu; it does not alter Windows' Alt+Space
-system menu. Target paths refer to existing menu entries; unmatched paths are
-skipped, matching the macOS contract. Platform Checks has interactive modal and
-menu accelerator cases. Native ownership/focus, close guards and menu actions
-still need Windows execution evidence.
-
-
-## Rich clipboard and Expo bundle options
-
-Windows now reads/writes HTML, RTF, PNG images and file lists, lists OS clipboard
-formats, and clears the clipboard. PNG writes are validated before replacing
-existing content, and bitmap reads are encoded as PNG. Plain string reads can
-fall back to rich text; HTML string writes provide a plain-text representation.
-Platform Checks exercises combined formats, PNG conversion, file lists and clear.
-
-Windows can now open Expo sessions with `--https`, `--no-dev`, and `--minify`.
-For these options, a loopback adapter forwards RNW's HTTP/WebSocket transport to
-Expo Metro, preserving endpoints and overriding bundle/map flags. The Expo CLI
-still owns the server. TLS validation stays enabled; for a private development
-certificate, export Expo's `SSL_CRT_FILE` in the invoking shell or trust its CA.
-The adapter lives until the dev session ends, including native app restarts.
-Local HTTP/WebSocket forwarding tests pass; native bundle/refresh/debugger checks
-with these options remain pending on Windows.
-
-
-## Processes and system APIs
-
-Windows child processes now support direct executable/helper launch, argument
-quoting, environment overrides, working directories, stdin writes/EOF, separate
-streaming stdout/stderr, binary results, exit status, timeout and termination.
-Captured output is capped at 8 MiB per stream, while pipes continue draining.
-Job objects terminate remaining descendants on parent exit or runtime teardown.
-Configured helpers are copied to `Helpers/<name>.exe` in the Windows product.
-The isolated platform runner discovers PowerShell and exercises arguments,
-environment, streams, binary output, timeout and termination.
-
-System APIs now expose Windows version/architecture/locale, power/idle/theme,
-sleep assertions, taskbar badges and attention, and OS power/session/theme/display
-events. Dock menus map to project-scoped taskbar Jump List tasks. Windows omits
-disabled tasks and prefixes checked tasks with a checkmark. Actions carry their
-project context when launching the shared prebuilt executable and are forwarded
-to the running owner. These tasks should be treated as runtime-lived controls;
-a crash can leave stale shell entries until they are replaced. Development
-login status remains `unavailable`, matching the macOS restriction to standalone
-apps. Native execution remains pending, including job cleanup, lock/wake events,
-badges, Jump List forwarding and x64/ARM64 behavior.
-
-
-## Drag and drop
-
-`DragDropView` now has a Windows Fabric implementation using the Windows App SDK
-DragDropManager. It supports text, URLs, files, enter/leave/drop/end callbacks,
-disabled targets, and normal React children. An unavailable backend renders a
-visible placeholder. Platform Checks provides a native source/target exercise.
-
-RNW 0.81.35 does not expose its hit-test and geometry methods to component DLLs.
-The CLI applies a version-checked private COM interface patch, exposing the
-existing native calculations without replacing RNW's pointer, scroll or clipping
-logic. The source and ABI header are in this repo; no upstream merge is required.
-An RNW upgrade must review that adapter. Native acceptance still needs external
-Explorer/browser drops, outbound dragging, nested/clipped targets, scrolling,
-disabled targets, child-button input, cancellation and reload cleanup on Windows.
-
-## Notifications implementation (native acceptance pending)
-
-Windows uses inbox toast APIs and a project-scoped classic COM activator. The
-module registers a per-user Start menu shortcut and activation identity pointing
-to the current executable, including the prebuilt project's launch context. It
-supports immediate and scheduled notifications, pending/delivered enumeration,
-project-scoped cancellation and clearing, live dismissal, and warm/cold clicks.
-The shared response API subscribes before draining the host's bounded cold-launch
-queue and deduplicates responses. Registration needs to be refreshed after moving
-or rebuilding the executable.
-
-Windows notification permission is controlled in Settings; requestPermission
-reports that setting. Initial identity registration follows the Windows Community
-Toolkit's silent, immediately removed toast workaround for unpackaged scheduling.
-Windows does not activate a closed app on dismissal; dismiss responses are only
-available for immediate notifications while the module remains alive.
-
-Run “Check notifications” in platform acceptance. Also schedule a notification,
-exit the app, and click it after delivery with Metro running; check the original
-project, notification ID, and data. Repeat with the app already running and with
-notifications disabled in Settings. These checks have not run on Windows here.
+For machine setup use [windows-slice.md](windows-slice.md). For moving a built
+client/SDK use [sdk-distribution.md](sdk-distribution.md). Record actual Windows
+failures here with reproduction steps and evidence before closing acceptance work.

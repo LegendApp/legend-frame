@@ -61,7 +61,7 @@ For these native controls, classes allocate the **layout frame**. Use their docu
 
 ## Appearance and responsive layout
 
-Settings defines application-owned background, surface, foreground, muted, and border colors under Uniwind's light/dark variants. Its preference selector calls `Uniwind.setTheme('light' | 'dark' | 'system')`. Uniwind updates its style subscribers and calls React Native Appearance for native chrome; the pinned Windows implementation does not apply manual appearance overrides yet (WIN-11 in [known Windows issues](windows-issues.md)). Browser CSS `color-scheme` keeps HTML controls consistent. Preferences are currently in memory.
+Settings defines application-owned background, surface, foreground, muted, and border colors under Uniwind's light/dark variants. Its preference selector calls `Uniwind.setTheme('light' | 'dark' | 'system')`. Uniwind updates its style subscribers and calls React Native Appearance for native chrome; the Windows UI adapter applies manual appearance overrides to its WinUI controls, with native acceptance pending (see [known Windows issues](windows-issues.md)). Browser CSS `color-scheme` keeps HTML controls consistent. Preferences are currently in memory.
 
 Use standard spacing, size, and responsive utilities for static layout. The Settings panel has a maximum width, reduced padding on narrow viewports, and buttons that stack at small widths. Keep dynamic/measured styles in `style`; there is no framework theme provider or parallel token system.
 
@@ -76,7 +76,7 @@ Use standard spacing, size, and responsive utilities for static layout. The Sett
 - A fresh packed consumer generated iOS, Android, and Windows projects and bundled Settings for all five targets. Shared CSS, manifests, Metro configuration, and prior generated projects were preserved. Desktop bundles select Uniwind's native runtime.
 - The iOS simulator app built and ran. Native text entry, light/dark/system menu selection, copying preferences, and the themed native controls were checked interactively.
 - Browser input and theme change events passed. At 1100 pixels wide, button frames were 224 pixels; at 500 pixels, they stacked at 434 pixels with no horizontal overflow. Browser controls retain native chrome because the starter omits Tailwind Preflight.
-- macOS native compilation and runtime smoke checks passed: Settings mounted, responsive classes resolved to a 224-point button width, and light/dark/system changes updated tokens and native Appearance. Visual/pointer acceptance was blocked by the locked Mac desktop. Android and Windows native execution remain pending; Windows manual native appearance propagation is tracked as WIN-11.
+- macOS native compilation and runtime smoke checks passed: Settings mounted, responsive classes resolved to a 224-point button width, and light/dark/system changes updated tokens and native Appearance. Visual/pointer acceptance was blocked by the locked Mac desktop. Android and Windows native execution remain pending; Windows manual native appearance propagation is tracked in [Windows acceptance](windows-issues.md).
 
 Checks ran from the synchronized temporary checkout because Bun stalls under Documents on this machine. Generated consumers and evidence remain outside source control.
 
@@ -84,5 +84,5 @@ The Windows UI package now overrides that native Appearance module to implement
 manual Light/Dark and reset-to-System for its WinUI controls. Uniwind requires no
 Windows-specific theme call. The implementation preserves existing controls and
 text; visual/native Windows acceptance remains pending in
-[WIN-11](windows-issues.md). OS dialog/title-bar theming and arbitrary RNW
+[Windows appearance acceptance](windows-issues.md). OS dialog/title-bar theming and arbitrary RNW
 PlatformColor resources are not covered by this change.

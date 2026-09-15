@@ -34,10 +34,23 @@ Our documentation provides a shared place to discover integrations, with attribu
 
 | Library | Upstream import | Desktop integration |
 | --- | --- | --- |
-| [Margelo Runtimes](https://github.com/margelo/react-native-runtimes) | `@react-native-runtimes/core` | Independent Hermes workers; SDK pins and macOS patches; automatic Metro/host setup; prebuilt inclusion and production pruning. See [Runtimes](runtimes.md). |
-| [React Native WebView](https://github.com/react-native-webview/react-native-webview) | `react-native-webview` | macOS WebKit view; tested version supplied with the SDK. See [WebView integration](desktop-api-expansion.md#webview-and-sqlite). |
-| [OP-SQLite](https://github.com/OP-Engineering/op-sqlite) | `@op-engineering/op-sqlite` | Native SQLite; tested version and production selection. See [SQLite integration](desktop-api-expansion.md#webview-and-sqlite). |
+| [Margelo Runtimes](https://github.com/margelo/react-native-runtimes) | `@react-native-runtimes/core` | Independent Hermes workers; SDK pins and macOS/Windows adapters; automatic Metro/host setup; prebuilt inclusion and production pruning. See [Runtimes](runtimes.md). |
+| [React Native WebView](https://github.com/react-native-webview/react-native-webview) | `react-native-webview` | macOS WebKit and upstream Windows Fabric WebView2; pinned SDK version with explicit Windows fixes. See [WebView integration](desktop-api-expansion.md#webview-and-sqlite). |
+| [OP-SQLite](https://github.com/OP-Engineering/op-sqlite) | `@op-engineering/op-sqlite` | Native SQLite; Windows RNW JSI adapter with Unicode paths and per-runtime installation state; macOS production selection. See [SQLite integration](desktop-api-expansion.md#webview-and-sqlite). |
 
 The existing `desktop/webview` export is a passthrough compatibility API. Prefer the upstream import for new code. The existing `desktop/sqlite` adapter adds `openDatabase(name)` for framework project-scoped storage; upstream database operations and types remain OP-SQLite's API. Neither adapter is a template for wrapping new libraries automatically.
 
-Applications should declare libraries they import directly as dependencies and retain the SDK's tested version overrides. New starters already declare Runtimes. Installed native code is available in prebuilt/dev builds; production selection follows reachable imports and required native dependencies. Check each integration page for its validated platforms and limitations.
+Applications should declare libraries they import directly as dependencies and retain the SDK's tested version overrides. The SDK prebuilt profile declares Runtimes; the minimal Windows starter does not require optional libraries. Installed native code is available in prebuilt/dev builds; production selection follows reachable imports and required native dependencies. Check each integration page for its validated platforms and limitations.
+
+Windows also supplies an adapter for `react-native-nitro-modules` 0.35.7. It installs
+the portable Nitro C++ runtime and registry through RNW JSI. A library with only
+Swift/Kotlin implementations still needs a Windows implementation and native project;
+Nitro support does not automatically port every Nitro library.
+
+Windows external-library integrations are implemented in source, with native build
+and runtime acceptance pending on x64 and ARM64. The platform runner covers Nitro
+object identity and buffers, SQLite persistence and transactions, WebView HTML/URL
+loading and messaging, and independent Hermes runtime state, errors, and destruction.
+See [known Windows limits](windows-issues.md). Optional OP-SQLite SQLCipher, libSQL,
+Turso, and vector builds are not enabled. WebView follows upstream Windows prop
+coverage and does not promise macOS-only WebKit features.

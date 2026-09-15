@@ -91,3 +91,31 @@ bun run test:runtimes:pruning /tmp/LegendRuntimesProbe
 The native test app measures worker isolation, imported CPU work while the main JS timer ticks, async results, errors, filesystem access, runtime destruction after completed calls and fresh recreation. Dev/prebuilt additionally perform an actual app reload. The pruning test retains task source files and dependencies, removes their imports, verifies the native selection and linked symbols, and launches the resulting standalone Release app. Local Xcode is required for these native builds.
 
 Recorded results: [integrated Runtimes validation](runtimes-validation.md).
+
+## Windows development backend
+
+Windows now has a source implementation behind the same Margelo API. The framework
+creates a React Native Windows host and Hermes runtime per name, installs runtime
+identity before bundle evaluation, and loads the generated Metro worker entry.
+Calls queue until the complete bundle loads; destruction/load failure rejects
+pending calls, and calls have a 120-second timeout. Reload of the owning main
+runtime unloads its workers. The native-call transport carries JSON results and
+errors; it does not execute worker functions on the main heap. Threaded surfaces
+use nested RNW ContentIslands with visible initialization errors.
+
+The SDK's prebuilt profile includes the backend. A custom Windows development
+build includes it when `@react-native-runtimes/core` is installed. `withDesktop`
+enables the existing upstream scanner when the package is present, including
+universal desktop projects. Build inputs include the host and patched package
+source, so an older prebuilt executable cannot silently satisfy the new API.
+
+This is source integration, not native Windows verification. Run the shared
+platform checks for heap isolation, identity, async timers, errors and recreation;
+then test native filesystem access, reload during work, and threaded UI separately.
+As on macOS, OS UI modules have main-window ownership. Standalone Windows
+production bundling/pruning is part of the deferred distribution work.
+
+Windows workers own their native module instances. `useMainNativeModules: true`
+(and `prewarmBusinessRuntime`, which requests it) rejects explicitly. The Windows
+backend supports named secondary runtimes; it does not route worker calls back to
+the main heap. These optional upstream modes need separate integration work.

@@ -36,7 +36,7 @@ This is a **local SDK workflow**. Run the following from a clone of this reposit
 
 ### 1. Prepare the SDK
 
-You need Bun 1.3.14 or newer and Node compatible with the pinned Expo/React Native toolchain. Building native binaries also requires an Apple Silicon Mac, full Xcode with first-launch setup completed, and CocoaPods. The SDK pack step uses Git, tar, and patch, and fetches pinned upstream Runtimes source on its first run.
+You need Bun 1.3.14 or newer and Node compatible with the pinned Expo/React Native toolchain. Building native binaries also requires an Apple Silicon Mac, full Xcode with first-launch setup completed, and CocoaPods. The SDK pack step uses Git and tar, and fetches pinned upstream Runtimes source and library archives on its first run. Patches are applied in JavaScript.
 
 ```sh
 bun install
@@ -96,7 +96,7 @@ Packaging requires signing credentials and a notarization profile. It signs a st
 
 ## Windows development
 
-Windows uses the same CLI, starter, prebuilt registry, native compatibility checks, and managed Metro session. The current Windows starter includes the native host; the desktop SDK feature set is being ported separately. There is no separate source kit to install.
+Windows uses the same CLI, starter, prebuilt registry, native compatibility checks, and managed Metro session. The Windows starter includes the native host; the SDK prebuilt profile includes the desktop modules and external integrations. Their Windows source implementations are ready for native acceptance. There is no separate source kit to install.
 
 On Windows 11 x64 or ARM64 (including Parallels), install the prerequisites in the [Windows guide](docs/windows-slice.md), including Visual Studio 2026 / MSVC v145 for the pinned RNW 0.81.35 template. Then run from the framework checkout:
 
@@ -121,7 +121,7 @@ The verifier uses the real CLI and existing native-greeting fixture, and saves `
 
 Windows host source now includes display enumeration, window frame/centering/fullscreen operations, size constraints and basic presentation options, menu following between React windows, and an atomic single-instance guard. The native UI package implements React Native Appearance overrides for WinUI controls. Run `bun run test:windows:features` on Windows to compile and exercise these additions, including simultaneous launches and owner-termination recovery.
 
-**Native Windows verification is still pending.** Local generation/bundle checks do not prove compilation, autolinking, Hermes startup, or Fast Refresh on Windows. Windows production builds, preview builds, signing/MSIX, clean-machine runtime distribution, the full desktop SDK, and secondary JavaScript runtimes are outside this development slice. See the [Windows guide](docs/windows-slice.md) for the full setup, test, and diagnostic workflow.
+**Native Windows verification is still pending.** Local generation/bundle checks do not prove compilation, autolinking, Hermes startup, or Fast Refresh on Windows. Windows production builds, preview builds, signing/MSIX, and clean-machine runtime distribution are outside this development scope. Desktop modules, Nitro, SQLite, WebView2, and secondary Hermes runtimes now have Windows integrations; run `bun run test:platform --platform windows` to exercise their shared contracts. See the [Windows guide](docs/windows-slice.md) for the full setup, test, and diagnostic workflow.
 
 ## What the SDK provides
 

@@ -53,6 +53,6 @@ Windows native compilation and behavior remain open in [Windows issues](windows-
 especially secondary windows, guards, activation forwarding, WinUI controls,
 AsyncStorage's unpackaged path, and audio transport controls. Android and mobile
 Music background/lock-screen behavior have bundle coverage, not runtime acceptance
-in this session. OS file-association registration on Windows is not implemented.
+in this session. OS file-association registration on Windows is now implemented in source; native acceptance remains pending. See [Windows acceptance](windows-issues.md).
 
 No cloud services or sibling Legend application repositories are required.

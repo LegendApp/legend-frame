@@ -104,3 +104,22 @@ on dismissal. Follow the onscreen instructions; these are interactive native
 checks, and `--api-only` leaves them untested. Use `--timeout 600` for manual runs.
 Checked/disabled appearance, mixed-DPI placement, secondary-parent modality, and
 runtime teardown while UI is open also need visual/manual acceptance.
+
+### Remaining Windows feature acceptance
+
+`bun run test:platform --platform windows --timeout 600` now packages all desktop
+ports, Nitro, OP-SQLite, WebView, and the patched Margelo Runtimes library. API
+checks include SQLite rollback/blob persistence, native Nitro identity/buffers,
+and independent Hermes heaps with timers, exceptions and destruction/recreation.
+The screen adds WebView messaging plus notification, modal/menu, tray/shortcut,
+system/taskbar, and drag/drop interactions. Run these before **Finish run**.
+
+A passing notification click does not prove cold activation or delayed delivery
+while closed. A passing process test does not prove every descendant-cleanup race.
+A successful worker function does not prove threaded surface input or native
+module safety in every worker. Complete the explicit native checks in
+[windows-issues.md](windows-issues.md); unexecuted cases stay untested.
+
+Source SDK packing on Windows now also includes the pinned Runtimes source. It
+uses Git and tar, with patch application in JavaScript; Unix `patch` is not needed.
+Installed SDK consumers receive ordinary package archives and need no source checkout.

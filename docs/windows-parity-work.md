@@ -11,10 +11,34 @@ is performed on Windows; generation and bundling never imply runtime success.
 - [x] 5. Notifications and response lifecycle (source implementation; native acceptance pending).
 - [x] 6. Owned/modal windows and fuller menus (source implementation; native acceptance pending).
 - [x] 7. Processes and system APIs (source implementation; native acceptance pending).
-- [ ] 8. Nitro, SQLite, WebView, secondary Hermes runtimes.
+- [x] 8. Nitro, SQLite, WebView, secondary Hermes runtimes (source integration; native acceptance pending; optional shared-main-module mode remains unsupported).
 - [x] 9. Rich clipboard and development connection/bundle options (source implementation; native acceptance pending).
 
 Standalone distribution was deferred for the internal development slice; the
-current task asks whether to include it. Track actual native limitations in
+current task continues the development feature priorities. Track actual native limitations in
 [windows-issues.md](windows-issues.md), with shared acceptance evidence in
 [platform-testing.md](platform-testing.md).
+
+All groups now have source implementations for the development contracts; optional upstream-library modes and platform-specific limits remain explicit in the issues document. Windows native builds and interactive
+acceptance remain unverified. The test catalog marks only standalone distribution
+and updates as missing; implementation status is not a test pass.
+
+## Commits and local validation
+
+| Group | Implementation commits |
+| --- | --- |
+| Recent documents and associations | `f1669c6` |
+| Drag/drop | `7aa133b`, `8bdf21d` |
+| Tray and global shortcuts | `32e6669` |
+| Notifications | `7bc183a` |
+| Modal windows and menus | `bf9a515` |
+| Processes and system | `1b5d5fb` |
+| Nitro, SQLite, WebView and Hermes | `ae5e951`, `9ac6570` |
+| Rich clipboard and Metro flags | `67e1fb1` |
+
+Local validation on macOS: 202 repository tests, typechecking, SDK packing, fresh
+Windows ARM64 and macOS generation/main bundles, a separate Windows worker bundle,
+and the full 30-package Windows prebuilt dependency profile/prebuild passed.
+The prepare reports have no runtime passes: Windows records 38 untested cases and
+two deferred distribution implementations; macOS records 40 untested cases.
+Reports are generated under `.legend/test-results` and are not committed.

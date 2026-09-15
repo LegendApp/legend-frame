@@ -2,7 +2,7 @@
 
 This document explains the current Legend Framework source, its ownership boundaries, and the constraints that changes must preserve. Start with [README.md](README.md) for setup and application usage. Feature guides under [docs](docs) contain API details and dated validation evidence.
 
-The implementation is a local macOS 14+ / Apple Silicon prototype with an integrated Windows x64/ARM64 development adapter. Windows prebuilt and custom builds use the shared framework flow, but native Windows acceptance remains pending. Production Windows builds and SDK parity are not implemented. Treat original plans and older prototype reports as historical context when a newer implementation or validation report supersedes them.
+The implementation is a local macOS 14+ / Apple Silicon prototype with an integrated Windows x64/ARM64 development adapter. Windows prebuilt and custom builds use the shared framework flow, but native Windows acceptance remains pending. Production Windows builds are not implemented. Windows SDK ports are implemented in source and await native compilation and acceptance. Treat original plans and older prototype reports as historical context when a newer implementation or validation report supersedes them.
 
 ## Purpose and system boundaries
 
@@ -68,7 +68,7 @@ The current distribution mechanism is local tarballs. `scripts/pack.ts` writes c
 
 The template manifests and `scripts/prepare-runtimes.ts` are the authoritative pins. We remain on Expo Desktop `1.0.0-beta.5` and native template `54.81.1-beta.5`, with Expo 54.0.37, React Native 0.81.6, React Native macOS 0.81.7, and React Native Windows 0.81.35. Creation uses a subprocess-scoped npm 11 executable because beta.5 misreads npm 12's local-tarball metadata. Bun still installs dependencies. This compatibility adapter does not patch upstream or change the host npm installation.
 
-Windows uses its own complete application template, with no runtime removal/replacement of macOS source files. Windows SDK packing does not prepare the macOS Runtimes patch; it preserves an existing archive when available and omits the macOS app template if that archive is absent.
+Windows uses its own complete application template, with no runtime removal/replacement of macOS source files. SDK packing prepares the pinned Runtimes archive and Windows Nitro, OP-SQLite, and WebView adapters on either host OS. Patch application uses JavaScript; consumers receive ordinary dependency archives.
 
 Direct `expo-desktop create-app --template` consumption is validated against local archives. Public runtime acquisition remains separate. See the [integration handoff](docs/expo-desktop-integration.md) for delegated responsibilities, beta limitations, and checks.
 
@@ -182,7 +182,7 @@ The framework owns a curated set of public capability contracts, with replaceabl
 
 External libraries retain their upstream APIs and attribution. Shared behavior across different platform backends can justify a framework adapter; integration, version pinning, prebuilt inclusion, and pruning alone do not. An upstream implementation can replace ours when it satisfies the supported contract and acceptance checks, preserving application imports and behavior. See [external libraries](docs/external-libraries.md) for ownership, replacement criteria, and migration paths.
 
-Margelo Runtimes is imported directly as `@react-native-runtimes/core`. The pack step fetches a pinned revision, applies the separate macOS and integration patches, and creates an ordinary dependency archive. Consumers do not need a Git checkout or patch hook. The recipe and patch inputs contribute to archive identity.
+Margelo Runtimes is imported directly as `@react-native-runtimes/core`. The pack step fetches a pinned revision, applies the separate macOS, Windows, and integration patches, and creates an ordinary dependency archive. Consumers do not need a Git checkout or patch hook. The recipe and patch inputs contribute to archive identity.
 
 The Metro wrapper and worker-aware entry arrange task registration without mounting the main app in a worker. In production the build first discovers reachable sources with registrations suppressed, then generates registrations from that graph and bundles again. This prevents unused task files or development-generated registrations from retaining the entire Runtimes dependency graph. Worker-only imports still contribute their native requirements.
 
@@ -227,7 +227,7 @@ For a missing runtime, inspect SDK registration and binary metadata. For an inco
 
 Windows support is part of the existing framework. `legend create --platform windows`, `legend sdk build-prebuilt --platform windows`, `legend dev`, and `legend build --dev` share project discovery, runtime metadata, registry, compatibility policy, Metro gating, terminal actions, and build records with macOS. There is no second session implementation or external source kit. See the [Windows guide](docs/windows-slice.md) for commands and prerequisites.
 
-The development targets are Windows 11 x64 and ARM64, RNW 0.81.35, New Architecture/Hermes, and the pinned Expo Desktop template. That RNW template uses MSVC v145 / Visual Studio 2026. The starter provides the native host rather than implying that the complete macOS SDK is available on Windows. One desktop target is selected per generated project. Windows architecture defaults to the OS CPU (including ARM64 when the CLI is emulated) and can be overridden with `LEGEND_WINDOWS_ARCH=x64|arm64`. It participates in the native fingerprint and product path. Build records retain the latest build per mode; registered binaries for the other architecture remain intact. Expo Desktop beta owns generation and RNW receives the corresponding `--arch x64` or `--arch ARM64`.
+The development targets are Windows 11 x64 and ARM64, RNW 0.81.35, New Architecture/Hermes, and the pinned Expo Desktop template. That RNW template uses MSVC v145 / Visual Studio 2026. The minimal starter provides the native host; the SDK prebuilt profile adds the desktop SDK and external libraries. Universal projects preserve configuration and generated projects across platform switches. Windows architecture defaults to the OS CPU (including ARM64 when the CLI is emulated) and can be overridden with `LEGEND_WINDOWS_ARCH=x64|arm64`. It participates in the native fingerprint and product path. Build records retain the latest build per mode; registered binaries for the other architecture remain intact. Expo Desktop beta owns generation and RNW receives the corresponding `--arch x64` or `--arch ARM64`.
 
 Windows signatures include Windows native sources/project files and host/config integration; generated build outputs and NuGet lockfiles do not invalidate the source signature. Framework/runtime version changes participate in the mandatory host signature. Directly installed native packages without a Windows implementation fail clearly. This remains a constrained development graph, not acceptance of every third-party dependency arrangement or custom native project modification.
 
@@ -246,13 +246,13 @@ Remaining work includes:
 | Area | Outstanding acceptance or implementation |
 | --- | --- |
 | Native host | Windows execution, activation/single-instance behavior, lifecycle and window-option semantics beyond the starter |
-| SDK and external libraries | Windows implementations and validation of individual APIs; separate checks for WebView, SQLite, Nitro, and Runtimes |
+| SDK and external libraries | Native compilation and acceptance of implemented APIs, including WebView, SQLite, Nitro, and Runtimes |
 | Runtime distribution | Dependency-complete downloadable clients and clean-machine launch without a compiler/IDE |
 | Production | Windows Metro reachability, reduced native graphs, embedded bundles, and standalone launch without Metro |
 | Packaging | Installer/MSIX choice, signing, runtime deployment, updates, uninstall, and data preservation |
 | Coverage | Windows CI and interactive tests, DPI/multiple monitors, accessibility/input, and native acceptance on both x64 and ARM64 |
 
-Production analysis must use `platform=windows`; macOS reachability cannot justify Windows pruning. Application APIs also need explicit Windows semantics for menus, shortcuts, window coordinates, last-window closure, and unsupported macOS-only options.
+Production analysis must use `platform=windows`; macOS reachability cannot justify Windows pruning. Application adapters define Windows semantics for menus, shortcuts, window coordinates, last-window closure, and unsupported macOS-only options; these require native acceptance.
 
 The current adapter uses Expo Desktop prebuild and RNW tools without an upstream change. Coordinate the future generic prebuilt-binary launch contract through the [integration handoff](docs/expo-desktop-integration.md); `expo-desktop run ... --binary` is not assumed to exist in the pinned CLI. Windows App SDK deployment decisions should follow [Microsoft’s RNW architecture guidance](https://github.com/microsoft/react-native-windows-samples/blob/main/docs/new-architecture.md) and [deployment documentation](https://learn.microsoft.com/en-us/windows/apps/windows-app-sdk/deployment-architecture) for the selected versions.
 
@@ -385,3 +385,31 @@ menus run from the Win32 message loop so modal tracking does not hold an RN
 dispatcher callback. The host tags its windows for module parent lookup and enables
 Common Controls v6; public API shapes remain the same as macOS. Platform acceptance
 records implementation availability separately from verified native behavior.
+
+## Windows SDK and external native integration
+
+Capability packages use RNW autolinking and separate DLLs. The host supplies
+window ownership, menu composition, notification cold activation, runtime metadata,
+and secondary Hermes hosts. Notifications use project-scoped AUMIDs and COM
+activation; tray, shortcuts, processes, and power requests clean up their native
+resources on teardown. Drag/drop uses RNW Fabric components plus a version-checked
+geometry interface added to the pinned RNW source.
+
+`scripts/prepare-windows-libraries.ts` verifies pinned upstream archive integrity
+and applies explicit Windows adapters. Nitro installs its portable C++ runtime
+through RNW's JSI context and exports a shared registry. OP-SQLite uses bundled
+SQLite with Unicode paths and per-JS-thread installation state. WebView uses
+upstream's Fabric WebView2 view with initialization, navigation, messaging, and
+visible-error fixes. Optional database engines and non-Windows Nitro library
+implementations are not implied by these integrations.
+
+Margelo Runtimes keeps its upstream JavaScript API. Windows workers are independent
+RNW/Hermes hosts loading the generated Metro worker entry. Calls wait for bundle
+load, time out, propagate results/errors, and reject on destruction. Worker modules
+cannot replace the main host's application context. Worker surfaces use Composition
+content islands; load failures display a placeholder. The native worker backend is
+included only when the dependency appears in runtime metadata.
+
+The shared platform runner checks observable behavior and records unexecuted cases
+as `not-tested`. Generation and bundling on macOS do not verify native Windows
+compilation. See [Windows acceptance and limits](docs/windows-issues.md).
