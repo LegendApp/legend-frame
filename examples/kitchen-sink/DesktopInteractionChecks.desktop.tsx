@@ -3,6 +3,7 @@ import { Text, View } from "react-native";
 import { Button } from "@legend-apps/ui";
 import { showMessage } from "@legend-apps/message-dialog";
 import { showContextMenu } from "@legend-apps/context-menu";
+import * as system from "@legend-apps/system";
 import { createTray } from "@legend-apps/tray";
 import { registerGlobalShortcut } from "@legend-apps/global-shortcuts";
 import { configureMenus, clearMenus, addNativeMenuActionListener, updateMenuItems, commandModifier } from "@legend-apps/native-menu";
@@ -107,8 +108,28 @@ export default function DesktopInteractionChecks({ check, onError, onBusy }: {
     } finally { sub.remove(); clearMenus("contract-binding"); clearMenus("contract-base"); }
     setInstruction("Menu accelerator, targeting, update, and payload assertions passed.");
   }
+  async function systemChecks() {
+    const info = await system.getSystemInfo();
+    assertContract(!!info.osVersion && !!info.locale && info.idleSeconds >= 0 && (info.batteryLevel === null || (info.batteryLevel >= 0 && info.batteryLevel <= 1)), "Invalid system information");
+    const sleep = await system.preventSleep("Platform acceptance", "display");
+    await sleep.remove(); await sleep.remove();
+    const subscription = await system.onSystemEvent(() => {}); subscription.remove();
+    const attention = await system.requestAttention(); await attention.remove();
+    setInstruction("Verify badge ‘1’ on the Dock/taskbar. Open the Dock/taskbar menu and choose Continue. Windows hides disabled task entries.");
+    let selected!: () => void;
+    const action = new Promise<void>(resolve => { selected = resolve; });
+    await system.setDockBadge("1");
+    let menu: Awaited<ReturnType<typeof system.setDockMenu>> | undefined;
+    try {
+      menu = await system.setDockMenu([{ id: "checked", title: "Checked", checked: true }, { id: "disabled", title: "Disabled", enabled: false }, { id: "continue", title: "Continue" }], id => { if (id === "continue") selected(); });
+      await requireError(() => system.setDockMenu([{ id: "duplicate", title: "Duplicate" }], () => {}), "E_DOCK_MENU_EXISTS");
+      await within(action, 45000);
+    } finally { await menu?.remove(); await system.setDockBadge(""); }
+    setInstruction("System API lifecycle and Dock/taskbar action passed. Sleep/wake, session lock and OS theme-change events still need explicit native checks.");
+  }
   return <View style={{ gap: 8 }}>
     <Text>{instruction}</Text>
+    <Button disabled={busy} onPress={() => run("desktop.system", systemChecks)}>Check system and taskbar APIs</Button>
     <Button disabled={busy} onPress={() => run("desktop.modal-windows", modalWindows)}>Check modal window</Button>
     <Button disabled={busy} onPress={() => run("desktop.advanced-menus", advancedMenus)}>Check menu accelerators</Button>
     <Button disabled={busy} onPress={() => run("desktop.tray", tray)}>Check tray</Button>

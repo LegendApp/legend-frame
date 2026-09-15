@@ -10,7 +10,7 @@ is performed on Windows; generation and bundling never imply runtime success.
 - [x] 4. Tray and global shortcuts (source implementation; native acceptance pending).
 - [ ] 5. Notifications and response lifecycle.
 - [x] 6. Owned/modal windows and fuller menus (source implementation; native acceptance pending).
-- [ ] 7. Processes and system APIs.
+- [x] 7. Processes and system APIs (source implementation; native acceptance pending).
 - [ ] 8. Nitro, SQLite, WebView, secondary Hermes runtimes.
 - [x] 9. Rich clipboard and development connection/bundle options (source implementation; native acceptance pending).
 

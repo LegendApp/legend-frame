@@ -92,7 +92,7 @@ try {
     writeFileSync(path.join(root, "App.tsx"), 'export { default } from "./PlatformChecks";\n');
     if (desktop) {
       const pkg = readJson(path.join(root, "package.json"));
-      for (const name of ["@legend-apps/file-system", "@legend-apps/settings", "@legend-apps/message-dialog", "@legend-apps/context-menu", "@legend-apps/tray", "@legend-apps/global-shortcuts"]) pkg.dependencies[name] = pkg.overrides[name];
+      for (const name of ["@legend-apps/file-system", "@legend-apps/settings", "@legend-apps/message-dialog", "@legend-apps/context-menu", "@legend-apps/tray", "@legend-apps/global-shortcuts", "@legend-apps/processes", "@legend-apps/system"]) pkg.dependencies[name] = pkg.overrides[name];
       writeJson(path.join(root, "package.json"), pkg); await run(root, ["bun", "install"], { capture: true });
     }
     // A unique application ID prevents this probe replacing another test or user app.
@@ -104,7 +104,7 @@ try {
     const applicationId = `so.legend.acceptance.p${report.runId.replaceAll("-", "")}`;
     config.expo = { ...config.expo, ios: { bundleIdentifier: applicationId }, android: { package: applicationId } };
     writeJson(path.join(root, "desktop.config.json"), config);
-    const appCases = new Set(["clipboard.read", "clipboard.roundtrip", "storage.lifecycle", "storage.unavailable", "links.resolution", "ui.button", "ui.input", "ui.select", "desktop.filesystem", "desktop.settings", "desktop.recent-documents", "desktop.rich-clipboard", "desktop.message-dialog", "desktop.context-menu", "desktop.tray", "desktop.global-shortcuts", "desktop.modal-windows", "desktop.advanced-menus"]);
+    const appCases = new Set(["clipboard.read", "clipboard.roundtrip", "storage.lifecycle", "storage.unavailable", "links.resolution", "ui.button", "ui.input", "ui.select", "desktop.filesystem", "desktop.settings", "desktop.recent-documents", "desktop.rich-clipboard", "desktop.message-dialog", "desktop.context-menu", "desktop.tray", "desktop.global-shortcuts", "desktop.modal-windows", "desktop.advanced-menus", "desktop.processes", "desktop.system"]);
     server = Bun.serve({ hostname: "127.0.0.1", port: 0, maxRequestBodySize: 128 * 1024, async fetch(request) {
       const headers = { "Access-Control-Allow-Origin": "*", "Access-Control-Allow-Headers": "Content-Type", "Access-Control-Allow-Methods": "POST, OPTIONS" };
       if (new URL(request.url).pathname !== `/${report.runId}`) return new Response("Not found", { status: 404, headers });
@@ -117,7 +117,7 @@ try {
         return new Response("ok", { headers });
       } catch (error) { transportError = String(error); return new Response(String(error), { status: 400, headers }); }
     } });
-    writeFileSync(path.join(root, "platform-test-config.ts"), `export const testConfig = ${JSON.stringify({ runId: report.runId, reportURL: `http://127.0.0.1:${server.port}/${report.runId}`, apiOnly: !!values["api-only"] })};\n`);
+    writeFileSync(path.join(root, "platform-test-config.ts"), `export const testConfig = ${JSON.stringify({ runId: report.runId, reportURL: `http://127.0.0.1:${server.port}/${report.runId}`, apiOnly: !!values["api-only"], processExecutable: platform === "windows" ? Bun.which("pwsh.exe") ?? undefined : "/bin/sh" })};\n`);
     report.versions = installedVersions(root);
     if (platform === "macos") {
       const manifest = readFileSync(path.join(root, "package.json"), "utf8");

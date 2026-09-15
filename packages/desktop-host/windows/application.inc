@@ -131,7 +131,13 @@ static void QueueLaunch(std::wstring const &commandLine, bool initial) {
   int count = 0; auto argv = CommandLineToArgvW(commandLine.c_str(), &count);
   if (!argv) return;
   for (int i = 1; i < count; ++i) {
-    std::wstring candidate(argv[i]); if (candidate.empty() || candidate[0] == L'-') continue;
+    std::wstring candidate(argv[i]);
+    if (candidate.rfind(L"--legend-dock-action=", 0) == 0) {
+      auto payload = candidate.substr(21); auto separator = payload.find(L':');
+      if (separator != std::wstring::npos) try { Emit({{"type", "dockAction"}, {"owner", to_string(winrt::Windows::Foundation::Uri::UnescapeComponent(payload.substr(0, separator)))}, {"id", to_string(winrt::Windows::Foundation::Uri::UnescapeComponent(payload.substr(separator + 1)))}}); } catch (...) {}
+      continue;
+    }
+    if (candidate.empty() || candidate[0] == L'-') continue;
     bool file = std::filesystem::path(candidate).is_absolute();
     if (file) { wchar_t uri[32768]; DWORD length = 32768; if (FAILED(UrlCreateFromPathW(candidate.c_str(), uri, &length, 0))) continue; candidate = uri; }
     else { auto colon = candidate.find(L':'); if (colon == std::wstring::npos || colon < 2) continue; }

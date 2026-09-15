@@ -1,3 +1,4 @@
+import { copyHelpers } from "./helpers";
 import { registerWindowsAssociations } from "./windows-associations";
 import { checkExpoDesktopNode } from "./expo-node";
 import { cpSync, existsSync, mkdirSync, readdirSync, rmSync, readFileSync, writeFileSync } from "node:fs";
@@ -62,6 +63,7 @@ export async function buildWindows(root: string, mode: string, force: boolean): 
   rmSync(pending, { recursive: true, force: true });
   mkdirSync(path.dirname(pending), { recursive: true });
   cpSync(path.dirname(products[0]!), pending, { recursive: true });
+  copyHelpers(root, pending, readAppConfig(root).expo.extra?.legend?.helpers, "windows");
   writeJson(path.join(pending, "legend-runtime.json"), runtime);
   rmSync(app, { recursive: true, force: true });
   // Copy only after a complete build, keeping Go and dev products independent.

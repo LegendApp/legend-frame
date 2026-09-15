@@ -1,13 +1,15 @@
+import { Platform } from "react-native";
 import Native from "./NativeDesktopProcesses";
 import { onDesktopEvent } from "@legend-apps/desktop-app";
 export type ProcessOptions = { executable: string; args?: string[]; cwd?: string; env?: Record<string, string>; timeoutMs?: number; input?: string };
 export type ProcessOutput = { stream: "stdout" | "stderr"; base64: string };
 export type ProcessResult = { exitCode: number; signal: boolean; stdout: string; stderr: string; stdoutBase64: string; stderrBase64: string; timedOut: boolean; outputTruncated: boolean };
 let sequence = 0;
+function absolute(value: string) { return Platform.OS === "windows" ? /^(?:[a-z]:[\\/]|\\\\[^\\/]+[\\/][^\\/]+)/i.test(value) : value.startsWith("/"); }
 export async function spawn(options: ProcessOptions, onOutput?: (chunk: ProcessOutput) => void) {
-  if (!options.executable.startsWith("/") && !options.executable.startsWith("helper:")) throw new Error("executable must be an absolute path or helper:name");
+  if (!absolute(options.executable) && !options.executable.startsWith("helper:")) throw new Error("executable must be an absolute path or helper:name");
   if (options.executable.includes("\0") || options.args?.some(arg => typeof arg !== "string" || arg.includes("\0"))) throw new Error("Invalid process arguments");
-  if (options.cwd !== undefined && !options.cwd.startsWith("/")) throw new Error("cwd must be absolute");
+  if (options.cwd !== undefined && (!absolute(options.cwd) || options.cwd.includes("\0"))) throw new Error("cwd must be absolute");
   if (options.env && Object.entries(options.env).some(([key, value]) => !key || /[=\0]/.test(key) || typeof value !== "string" || value.includes("\0"))) throw new Error("Invalid process environment");
   if (options.timeoutMs !== undefined && (!Number.isFinite(options.timeoutMs) || options.timeoutMs < 1)) throw new Error("timeoutMs must be positive");
   const id = `process-${Date.now()}-${++sequence}`;

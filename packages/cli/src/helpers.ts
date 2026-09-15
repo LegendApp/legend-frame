@@ -9,9 +9,9 @@ export function resolveHelpers(root: string, helpers: Record<string, string> = {
     return { name, file, relative: path.relative(base, file) };
   });
 }
-export function copyHelpers(root: string, app: string, helpers: Record<string, string> = {}) {
+export function copyHelpers(root: string, app: string, helpers: Record<string, string> = {}, platform: "macos" | "windows" = "macos") {
   const files = resolveHelpers(root, helpers);
   if (!files.length) return;
-  const destination = path.join(app, "Contents/Helpers"); mkdirSync(destination, { recursive: true });
-  for (const helper of files) { const file = path.join(destination, helper.name); copyFileSync(helper.file, file); chmodSync(file, 0o755); }
+  const destination = path.join(app, platform === "windows" ? "Helpers" : "Contents/Helpers"); mkdirSync(destination, { recursive: true });
+  for (const helper of files) { const file = path.join(destination, helper.name + (platform === "windows" ? ".exe" : "")); copyFileSync(helper.file, file); chmodSync(file, 0o755); }
 }

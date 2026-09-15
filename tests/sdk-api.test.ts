@@ -412,3 +412,14 @@ test("Windows dialogs retain four-button indices, parent selection and checkbox 
     await expect(messages.showMessage(options)).rejects.toMatchObject({ code });
   }
 });
+
+
+test("Windows process validation accepts drive and UNC executables without allowing relative paths", async () => {
+  platform.OS = "windows";
+  const processes = await import("../packages/processes/src/index");
+  await processes.spawn({ executable: String.raw`C:\Program Files\tool.exe`, cwd: String.raw`\\server\share\folder`, args: ['a"b', "", "space value"] });
+  expect(calls.at(-1)).toMatchObject({ native: "NativeDesktopProcesses", method: "spawn", args: { executable: String.raw`C:\Program Files\tool.exe`, args: ['a"b', "", "space value"] } });
+  await expect(processes.spawn({ executable: "tool.exe" })).rejects.toThrow("absolute");
+  await expect(processes.spawn({ executable: "C:tool.exe" })).rejects.toThrow("absolute");
+  await expect(processes.spawn({ executable: String.raw`C:\tool.exe`, cwd: "relative" })).rejects.toThrow("cwd");
+});

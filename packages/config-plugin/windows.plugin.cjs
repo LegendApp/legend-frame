@@ -19,7 +19,7 @@ function patchHost(source, core, metadata, defaults = {}) {
   source = source.replace(anchor, `${anchor}\n  // BEGIN LEGEND CONNECTION\n  settings.SourceBundleHost(L"127.0.0.1");\n  settings.SourceBundlePort(LegendMetroPort());\n  // END LEGEND CONNECTION\n`);
   // Only patch the upstream template. Embedded host source can contain the same
   // API calls and must never be matched by these template replacements.
-  return source.replace(include, `${include}\n// BEGIN LEGEND CORE\n${core.replace('__LEGEND_METADATA__', JSON.stringify(metadata)).replace('__LEGEND_PROJECT_CONFIG__', JSON.stringify({ ...defaults, LEGEND_RUNTIME_MODE: metadata.mode }).replaceAll(')', '\\u0029'))}\n// END LEGEND CORE\n`);
+  return source.replace(include, `${include}\n// BEGIN LEGEND CORE\n${core.replace('__LEGEND_METADATA__', JSON.stringify(metadata)).replace('__LEGEND_PROJECT_CONFIG__', JSON.stringify({ ...defaults, LEGEND_RUNTIME_MODE: metadata.mode }).replaceAll(')', '\\u0029').replace(/[^\x00-\x7F]/g, char => '\\u' + char.charCodeAt(0).toString(16).padStart(4, '0')))}\n// END LEGEND CORE\n`);
 }
 module.exports = config => {
   const { withAppCpp } = require('expo-desktop-config-plugins');

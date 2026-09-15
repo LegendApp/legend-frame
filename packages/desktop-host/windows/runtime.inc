@@ -1,5 +1,7 @@
 // Legend development runtime, compiled into the Expo Desktop Win32 host.
 #include <string>
+#include <shellapi.h>
+#include <winrt/Windows.Foundation.h>
 #include <cstdlib>
 #include <cstdint>
 #include <cwchar>
@@ -19,6 +21,20 @@ static std::wstring LegendWindowsEnv(const wchar_t *name) {
 static void LegendInitializeEnvironment() {
   const auto defaults = winrt::Windows::Data::Json::JsonObject::Parse(LR"legend(__LEGEND_PROJECT_CONFIG__)legend");
   for (auto const &item : defaults) if (LegendWindowsEnv(item.Key().c_str()).empty()) SetEnvironmentVariableW(item.Key().c_str(), item.Value().GetString().c_str());
+  // Shell task activations carry their project context even in the shared prebuilt executable.
+  int count = 0; auto argv = CommandLineToArgvW(GetCommandLineW(), &count);
+  if (argv) {
+    try {
+      for (int i = 1; i < count; ++i) {
+        std::wstring argument(argv[i]); const std::wstring prefix = L"--legend-context=";
+        if (argument.rfind(prefix, 0) != 0) continue;
+        auto context = winrt::Windows::Data::Json::JsonObject::Parse(winrt::Windows::Foundation::Uri::UnescapeComponent(argument.substr(prefix.size())));
+        for (auto key : {L"LEGEND_PROJECT_ID", L"LEGEND_PROJECT_NAME", L"LEGEND_PROJECT_VERSION", L"LEGEND_WINDOW_CONFIG", L"LEGEND_SESSION_FILE"})
+          if (context.HasKey(key)) SetEnvironmentVariableW(key, context.GetNamedString(key).c_str());
+      }
+    } catch (...) { LocalFree(argv); throw; }
+    LocalFree(argv);
+  }
 }
 static uint16_t LegendMetroPort() {
   auto value = LegendWindowsEnv(L"LEGEND_METRO_PORT");

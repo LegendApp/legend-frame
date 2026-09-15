@@ -39,6 +39,8 @@ test("helpers copy project files and reject traversal and symlinks", () => fixtu
   expect(resolveHelpers(root, { tool: "bin/tool" })[0]?.relative).toBe("bin/tool");
   copyHelpers(root, path.join(root, "Demo.app"), { tool: "bin/tool" });
   expect(readFileSync(path.join(root, "Demo.app/Contents/Helpers/tool"), "utf8")).toBe("helper bytes");
+  copyHelpers(root, path.join(root, "Windows"), { tool: "bin/tool" }, "windows");
+  expect(readFileSync(path.join(root, "Windows/Helpers/tool.exe"), "utf8")).toBe("helper bytes");
   for (const helpers of ([{ tool: "../external" }, { "../bad": "bin/tool" }, { tool: "/bin/echo" }] as Record<string, string>[])) expect(() => resolveHelpers(root, helpers)).toThrow();
   symlinkSync("/bin/echo", path.join(root, "bin/link")); expect(() => resolveHelpers(root, { tool: "bin/link" })).toThrow();
   expect(goConfigurationIssues(toExpo({ ...base, helpers: { tool: "bin/tool" } })).join(" ")).toContain("helpers");

@@ -31,7 +31,7 @@ export async function launch(root: string, app: string, port?: number, options: 
     if (process.platform !== "win32") throw new Error("Launch the Windows runtime on Windows.");
     const nativePort = windowsMetroPort(root, port ?? 8081, options);
     writeJson(stateFile(root, "windows-connection.json"), { port: nativePort, dev: options.dev ?? true });
-    return Bun.spawn([path.join(app, "MyApp.exe")], { cwd: app, env: { ...process.env, ...projectEnvironment(root), LEGEND_METRO_PORT: String(nativePort), LEGEND_BUNDLE_DEV: String(options.dev ?? true) }, stdout: "inherit", stderr: "inherit" });
+    return Bun.spawn([path.join(app, "MyApp.exe")], { cwd: app, env: { ...process.env, ...projectEnvironment(root), LEGEND_METRO_PORT: String(nativePort), LEGEND_SESSION_FILE: stateFile(root, "windows-connection.json") }, stdout: "inherit", stderr: "inherit" });
   }
   const info = await run(
     root,

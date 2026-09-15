@@ -79,7 +79,9 @@
     "@legend-apps/settings": "workspace:*",
     "@legend-apps/context-menu": "workspace:*",
     "@legend-apps/tray": "workspace:*",
-    "@legend-apps/global-shortcuts": "workspace:*"
+    "@legend-apps/global-shortcuts": "workspace:*",
+    "@legend-apps/processes": "workspace:*",
+    "@legend-apps/system": "workspace:*"
   },
   "overrides": {
     "@expo/cli": "54.0.27",

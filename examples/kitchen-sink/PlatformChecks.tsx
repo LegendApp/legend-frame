@@ -19,7 +19,14 @@ async function runtimeIdentity() {
     native: runtimeModule ? JSON.parse(await runtimeModule.call("context", "{}")).runtime : null,
     reactNativeVersion: Platform.constants?.reactNativeVersion };
 }
-export default function PlatformChecks() {
+export default function PlatformChecks({ windowId }: { windowId?: string } = {}) {
+  if (windowId && windowId !== "main") return <View style={{ padding: 24, gap: 12 }}>
+    <Text>Window: {windowId}</Text><Text>This window participates in the main window's acceptance run.</Text>
+    <Button onPress={() => { void TurboModuleRegistry.get<RuntimeModule>("NativeDesktopWindowManager")?.call("close", JSON.stringify({ id: windowId })); }}>Close this window</Button>
+  </View>;
+  return <MainChecks />;
+}
+function MainChecks() {
   const results = useRef(initialResults(platform));
   const started = useRef(false);
   const [visible, setVisible] = useState(results.current);

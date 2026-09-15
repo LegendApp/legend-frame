@@ -193,3 +193,26 @@ certificate, export Expo's `SSL_CRT_FILE` in the invoking shell or trust its CA.
 The adapter lives until the dev session ends, including native app restarts.
 Local HTTP/WebSocket forwarding tests pass; native bundle/refresh/debugger checks
 with these options remain pending on Windows.
+
+
+## Processes and system APIs
+
+Windows child processes now support direct executable/helper launch, argument
+quoting, environment overrides, working directories, stdin writes/EOF, separate
+streaming stdout/stderr, binary results, exit status, timeout and termination.
+Captured output is capped at 8 MiB per stream, while pipes continue draining.
+Job objects terminate remaining descendants on parent exit or runtime teardown.
+Configured helpers are copied to `Helpers/<name>.exe` in the Windows product.
+The isolated platform runner discovers PowerShell and exercises arguments,
+environment, streams, binary output, timeout and termination.
+
+System APIs now expose Windows version/architecture/locale, power/idle/theme,
+sleep assertions, taskbar badges and attention, and OS power/session/theme/display
+events. Dock menus map to project-scoped taskbar Jump List tasks. Windows omits
+disabled tasks and prefixes checked tasks with a checkmark. Actions carry their
+project context when launching the shared prebuilt executable and are forwarded
+to the running owner. These tasks should be treated as runtime-lived controls;
+a crash can leave stale shell entries until they are replaced. Development
+login status remains `unavailable`, matching the macOS restriction to standalone
+apps. Native execution remains pending, including job cleanup, lock/wake events,
+badges, Jump List forwarding and x64/ARM64 behavior.
