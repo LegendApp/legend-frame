@@ -11,7 +11,7 @@ function fixture(platform: "windows" | "web" = "windows", scope: "prepare" | "ru
 test("coverage distinguishes missing implementations, not applicable, and absent evidence", () => {
   const windows = fixture(), web = fixture("web");
   expect(windows.results.find(c => c.id === "ui.button")?.status).toBe("not-tested");
-  expect(windows.results.find(c => c.id === "desktop.tray")?.status).toBe("missing-implementation");
+  expect(windows.results.find(c => c.id === "desktop.tray")?.status).toBe("not-tested");
   expect(web.results.find(c => c.id === "storage.lifecycle")?.status).toBe("not-applicable");
   record(web, { id: "storage.unavailable", status: "passed" });
   expect(web.results.find(c => c.id === "storage.lifecycle")?.status).toBe("not-applicable");
@@ -24,7 +24,7 @@ test("bundle passes cannot become runtime acceptance or hide a missing implement
   expect(() => record(report, { id: "ui.button", status: "passed" })).toThrow("Preparation");
   expect(() => record(report, { id: "build.native", status: "passed" })).toThrow("Preparation");
   expect(report.results.find(c => c.id === "ui.button")?.status).toBe("not-tested");
-  expect(() => record(fixture(), { id: "desktop.tray", status: "passed" })).toThrow("implemented support");
+  expect(() => record(fixture(), { id: "distribution.standalone", status: "passed" })).toThrow("implemented support");
   expect(() => record(fixture(), { id: "ui.button", status: "missing-implementation" })).toThrow("has an implementation");
 });
 test("a backend E_UNAVAILABLE is a failure and a later pass cannot erase it", async () => {

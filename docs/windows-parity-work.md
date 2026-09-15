@@ -7,7 +7,7 @@ is performed on Windows; generation and bundling never imply runtime success.
 - [x] 1. Filesystem and persistent settings (`99cc5d7`).
 - [x] 2. Native message dialogs and context menus (`6fcdee8`).
 - [ ] 3. Drag/drop, recent documents, file/URL associations. Recent documents and associations implemented; native drag/drop remains.
-- [ ] 4. Tray and global shortcuts.
+- [x] 4. Tray and global shortcuts (source implementation; native acceptance pending).
 - [ ] 5. Notifications and response lifecycle.
 - [ ] 6. Owned/modal windows and fuller menus.
 - [ ] 7. Processes and system APIs.

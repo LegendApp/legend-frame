@@ -5,11 +5,11 @@ const modifiers: Record<string, number> = {
   ctrl: 1 << 18, control: 1 << 18, alt: 1 << 19, option: 1 << 19, shift: 1 << 17,
 };
 const named: Record<string, string> = { enter: "\r", return: "\r", escape: "\u001b", esc: "\u001b", tab: "\t", space: " ", backspace: "\u007f", delete: "\uf728", up: "\uf700", down: "\uf701", left: "\uf702", right: "\uf703", plus: "+" };
-export function parseAccelerator(value: string): Accelerator {
+export function parseAccelerator(value: string, platform: "macos" | "windows" = "macos"): Accelerator {
   const parts = value.toLowerCase().split("+").map(part => part.trim());
   let flags = 0;
   for (const part of parts.slice(0, -1)) {
-    const flag = modifiers[part];
+    const flag = platform === "windows" && (part === "cmdorctrl" || part === "commandorcontrol") ? 1 << 18 : modifiers[part];
     if (!flag || (flags & flag)) throw new Error(`Invalid or duplicate modifier: ${part}`);
     flags |= flag;
   }

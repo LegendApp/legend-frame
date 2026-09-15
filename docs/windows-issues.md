@@ -143,3 +143,18 @@ the project's session file supply identity and port outside CLI launches.
 Pending native acceptance: register and activate a custom URI and a file from
 Explorer with the app both running and closed; verify one owner receives each
 launch, and verify recent history across a process restart and a second project.
+
+
+## Tray and global shortcuts
+
+Windows backends now provide tray create/update/remove, nested menus with semantic
+action IDs, disabled/checked entries, Explorer restart recovery, and global
+hotkeys with conflict rejection and reload cleanup. `CommandOrControl` selects
+Control on Windows; explicit Meta uses the Windows key, subject to OS-reserved
+combinations. Windows tray entries use the executable's icon and their title as
+the default tooltip, since the shell has no text labels or SF Symbols.
+
+The shared Platform Checks screen tests a tray menu action and removal, plus a
+global shortcut while another application has focus, duplicate rejection, and
+re-registration after removal. Native execution and Explorer-restart recovery
+remain unverified; run these on Windows x64 and ARM64 before marking parity passed.
