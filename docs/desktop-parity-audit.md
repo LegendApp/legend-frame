@@ -208,3 +208,9 @@ and [platform tests](platform-testing.md) for execution and report collection.
   file/folder selection explicitly rejects with E_UNSUPPORTED_OPTION. Folder-only
   requests must set canChooseFiles:false. Added revealInFileManager on both
   desktops, with Explorer selection on Windows and the legacy alias retained.
+- Group 4: Windows accepts closable, restoreFrame, appearance and backgroundColor.
+  Appearance controls native titlebar and Legend UI islands per window; React
+  styles and arbitrary third-party platform-color tokens are not rewritten.
+  AppKit materials, custom titlebar/transparency/shadow options remain unsupported.
+  Frame persistence is opt-in and per window ID. Closability governs OS close
+  controls; explicit closeWindow still runs the normal close guard, as on macOS.

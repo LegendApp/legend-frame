@@ -38,12 +38,18 @@ struct Control : implements<Control, Windows::Foundation::IInspectable> {
   Xaml::Controls::Control control{nullptr};
   React::EventEmitter emitter{nullptr};
   React::ReactContext context;
+  weak_ref<Composition::ContentIslandComponentView> component;
+  Composition::ComponentView::ThemeChanged_revoker windowThemeChanged;
   React::ReactNotificationSubscription themeSubscription;
   Windows::UI::ViewManagement::UISettings systemSettings;
   Windows::UI::ViewManagement::UISettings::ColorValuesChanged_revoker systemChanged;
   void ApplyTheme() {
     if (!control || !failure.empty()) return;
-    try { control.RequestedTheme(EffectiveTheme(context) ? Xaml::ElementTheme::Dark : Xaml::ElementTheme::Light); }
+    try {
+      auto view = component.get(); Windows::UI::Color color{};
+      const bool override = view && view.Theme().TryGetPlatformColor(L"LegendWindowTheme", color) && color.A == 255;
+      control.RequestedTheme((override ? color.R != 0 : EffectiveTheme(context)) ? Xaml::ElementTheme::Dark : Xaml::ElementTheme::Light);
+    }
     catch (hresult_error const &error) { failure = to_string(error.message()); Emit(L"unavailable", "message", failure); }
   }
   std::string kind, failure, items;
@@ -57,12 +63,13 @@ struct Control : implements<Control, Windows::Foundation::IInspectable> {
     });
   }
   void Create(Composition::ContentIslandComponentView const &view, std::string type) {
-    kind = std::move(type);
+    kind = std::move(type); component = make_weak(view);
     try {
       // Retain one XAML environment for the UI thread, including across Fast Refresh.
       static thread_local auto manager = Xaml::Hosting::WindowsXamlManager::InitializeForCurrentThread();
       island = Xaml::XamlIsland();
       const auto weak = get_weak();
+      windowThemeChanged = view.ThemeChanged(auto_revoke, [weak](auto const &, auto const &) { if (auto self = weak.get()) self->ApplyTheme(); });
       if (kind == "Button") {
         Xaml::Controls::Button button;
         button.Click([weak](auto const &, auto const &) { if (auto self = weak.get()) self->Emit(L"buttonPress"); });
@@ -96,6 +103,7 @@ struct Control : implements<Control, Windows::Foundation::IInspectable> {
       });
       island.Content(control);
       view.Connect(island.ContentIsland());
+      ApplyTheme();
     } catch (hresult_error const &error) { failure = to_string(error.message()); }
   }
   void Update(Props const &props) {

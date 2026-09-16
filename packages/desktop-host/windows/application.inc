@@ -11,6 +11,10 @@
 #include <filesystem>
 #include <shlobj.h>
 #include <commctrl.h>
+#include <dwmapi.h>
+#include <winrt/Windows.UI.ViewManagement.h>
+#include <winrt/Microsoft.ReactNative.Composition.h>
+#pragma comment(lib, "Dwmapi.lib")
 #include <winrt/Windows.ApplicationModel.Core.h>
 #include <winrt/Windows.Data.Json.h>
 #include <winrt/Windows.Security.Cryptography.h>
@@ -25,7 +29,17 @@ namespace React = winrt::Microsoft::ReactNative;
 namespace Json = winrt::Windows::Data::Json;
 namespace UI = winrt::Microsoft::UI::Windowing;
 using winrt::to_hstring; using winrt::to_string;
-struct Window { React::ReactNativeWindow view{nullptr}; UI::AppWindow app{nullptr}; UI::OverlappedPresenter normal{nullptr}; int32_t minWidth = 100, minHeight = 100, maxWidth = 20000, maxHeight = 20000; std::string parentId; bool modal = false; bool disabledByModal = false; bool enabledBeforeModal = false; bool guard = false; bool pending = false; bool allow = false; uint64_t request = 0; HMONITOR monitor = nullptr; bool fullscreen = false; };
+struct WindowResources : winrt::implements<WindowResources, React::Composition::ICustomResourceLoader> {
+  int theme = -1;
+  winrt::event<winrt::Windows::Foundation::EventHandler<winrt::Windows::Foundation::IInspectable>> changed;
+  void GetResource(winrt::hstring const &id, React::Composition::ResourceType, React::Composition::CustomResourceResult const &result) {
+    if (id == L"LegendWindowTheme") result.Resource(winrt::box_value(winrt::Windows::UI::Color{static_cast<uint8_t>(theme < 0 ? 0 : 255), static_cast<uint8_t>(theme == 1 ? 255 : 0), 0, 0}));
+  }
+  winrt::event_token ResourcesChanged(winrt::Windows::Foundation::EventHandler<winrt::Windows::Foundation::IInspectable> const &handler) { return changed.add(handler); }
+  void ResourcesChanged(winrt::event_token const &token) noexcept { changed.remove(token); }
+  void SetTheme(int value) { theme = value; changed(*this, nullptr); }
+};
+struct Window { React::ReactNativeWindow view{nullptr}; UI::AppWindow app{nullptr}; UI::OverlappedPresenter normal{nullptr}; int32_t minWidth = 100, minHeight = 100, maxWidth = 20000, maxHeight = 20000; std::string parentId; bool modal = false; bool disabledByModal = false; bool enabledBeforeModal = false; bool guard = false; bool pending = false; bool allow = false; uint64_t request = 0; HMONITOR monitor = nullptr; bool fullscreen = false; bool closable = true; bool restoreFrame = false; int theme = -1; winrt::com_ptr<WindowResources> resources; winrt::Microsoft::UI::Composition::SpriteVisual background{nullptr}; };
 static std::map<std::string, Window> windows;
 static React::ReactNativeHost host{nullptr};
 static winrt::Microsoft::UI::Composition::Compositor compositor{nullptr};
@@ -143,8 +157,32 @@ static int32_t Dimension(Json::JsonObject const &args, wchar_t const *key, int32
   if (!std::isfinite(value) || value < 100 || value > 20000) throw winrt::hresult_invalid_argument(L"Invalid window dimension");
   return static_cast<int32_t>(value);
 }
+static void ApplyAppearance(Window &window) {
+  auto foreground = winrt::Windows::UI::ViewManagement::UISettings().GetColorValue(winrt::Windows::UI::ViewManagement::UIColorType::Foreground);
+  BOOL dark = window.theme < 0 ? (5 * foreground.G + 2 * foreground.R + foreground.B) > 8 * 128 : window.theme == 1;
+  // Windows 10/11 titlebar appearance; unsupported OS chrome does not block content.
+  DwmSetWindowAttribute(Hwnd(window), 20 /* DWMWA_USE_IMMERSIVE_DARK_MODE */, &dark, sizeof(dark));
+  if (!window.resources) { window.resources = winrt::make_self<WindowResources>(); window.view.ReactNativeIsland().Resources(window.resources.as<React::Composition::ICustomResourceLoader>()); }
+  window.resources->SetTheme(window.theme);
+}
+static std::filesystem::path FrameFile(std::string const &id) {
+  return dataDirectory / (id == "main" ? L"window.json" : L"window-" + std::wstring(to_hstring(id)) + L".json");
+}
+static void RestoreFrame(std::string const &id) {
+  auto &window = windows.at(id); if (!window.restoreFrame) return;
+  try {
+    std::ifstream stream(FrameFile(id)); std::string text((std::istreambuf_iterator<char>(stream)), std::istreambuf_iterator<char>());
+    auto frame = Json::JsonObject::Parse(to_hstring(text));
+    double x = frame.GetNamedNumber(L"x"), y = frame.GetNamedNumber(L"y");
+    if (!std::isfinite(x) || !std::isfinite(y) || std::abs(x) > INT32_MAX / 2 || std::abs(y) > INT32_MAX / 2) return;
+    auto width = Dimension(frame, L"width", 640), height = Dimension(frame, L"height", 480);
+    width = std::clamp(width, window.minWidth, window.maxWidth); height = std::clamp(height, window.minHeight, window.maxHeight);
+    RECT rect{static_cast<LONG>(x), static_cast<LONG>(y), static_cast<LONG>(x) + width, static_cast<LONG>(y) + height};
+    if (MonitorFromRect(&rect, MONITOR_DEFAULTTONULL)) window.app.MoveAndResize({rect.left, rect.top, width, height});
+  } catch (...) { /* Missing or invalid saved geometry uses configured defaults. */ }
+}
 static void ApplyOptions(Window &window, Json::JsonObject const &options) {
-  static const std::set<std::wstring> supported{L"title", L"width", L"height", L"minWidth", L"minHeight", L"maxWidth", L"maxHeight", L"resizable", L"minimizable", L"alwaysOnTop"};
+  static const std::set<std::wstring> supported{L"title", L"width", L"height", L"minWidth", L"minHeight", L"maxWidth", L"maxHeight", L"resizable", L"minimizable", L"alwaysOnTop", L"closable", L"appearance", L"backgroundColor", L"restoreFrame"};
   for (auto const &pair : options) if (!supported.count(std::wstring(pair.Key()))) throw winrt::hresult_invalid_argument(L"Unsupported Windows window option");
   const auto minWidth = Dimension(options, L"minWidth", window.minWidth), minHeight = Dimension(options, L"minHeight", window.minHeight);
   const auto maxWidth = Dimension(options, L"maxWidth", window.maxWidth), maxHeight = Dimension(options, L"maxHeight", window.maxHeight);
@@ -158,6 +196,26 @@ static void ApplyOptions(Window &window, Json::JsonObject const &options) {
   if (options.HasKey(L"resizable")) { window.normal.IsResizable(options.GetNamedBoolean(L"resizable")); window.normal.IsMaximizable(options.GetNamedBoolean(L"resizable")); }
   if (options.HasKey(L"minimizable")) window.normal.IsMinimizable(options.GetNamedBoolean(L"minimizable"));
   if (options.HasKey(L"alwaysOnTop")) window.normal.IsAlwaysOnTop(options.GetNamedBoolean(L"alwaysOnTop"));
+  if (options.HasKey(L"closable")) {
+    window.closable = options.GetNamedBoolean(L"closable");
+    EnableMenuItem(GetSystemMenu(Hwnd(window), FALSE), SC_CLOSE, MF_BYCOMMAND | (window.closable ? MF_ENABLED : MF_GRAYED));
+  }
+  if (options.HasKey(L"restoreFrame")) window.restoreFrame = options.GetNamedBoolean(L"restoreFrame");
+  if (options.HasKey(L"appearance")) {
+    auto theme = options.GetNamedString(L"appearance");
+    window.theme = theme == L"dark" ? 1 : theme == L"light" ? 0 : -1; ApplyAppearance(window);
+  }
+  if (options.HasKey(L"backgroundColor")) {
+    auto color = to_string(options.GetNamedString(L"backgroundColor"));
+    if ((color.size() != 7 && color.size() != 9) || color[0] != '#' || color.find_first_not_of("0123456789abcdefABCDEF", 1) != std::string::npos) throw winrt::hresult_invalid_argument(L"Invalid background color");
+    auto rgba = std::stoul(color.substr(1), nullptr, 16); if (color.size() == 7) rgba = (rgba << 8) | 255;
+    if (!window.background) {
+      // RNW's root is a SpriteVisual. Paint its brush beneath all React children
+      // instead of inserting a child that could obscure a later-mounted surface.
+      window.background = window.view.ReactNativeIsland().RootVisual().as<winrt::Microsoft::UI::Composition::SpriteVisual>();
+    }
+    window.background.Brush(compositor.CreateColorBrush(winrt::Windows::UI::Color{static_cast<uint8_t>(rgba & 255), static_cast<uint8_t>((rgba >> 24) & 255), static_cast<uint8_t>((rgba >> 16) & 255), static_cast<uint8_t>((rgba >> 8) & 255)}));
+  }
   if (window.app.Presenter().Kind() != UI::AppWindowPresenterKind::FullScreen) window.app.Resize({width, height});
 }
 static void QueueLaunch(std::wstring const &commandLine, bool initial) {
@@ -218,8 +276,8 @@ static bool ForwardLaunch() {
   }
 }
 static void SaveFrame(std::string const &id, HWND hwnd) {
-  if (id != "main" || dataDirectory.empty() || IsIconic(hwnd) || IsZoomed(hwnd)) return;
-  auto file = dataDirectory / L"window.json", temporary = dataDirectory / L"window.pending";
+  if (dataDirectory.empty() || !windows.at(id).restoreFrame || IsIconic(hwnd) || IsZoomed(hwnd) || windows.at(id).fullscreen) return;
+  auto file = FrameFile(id), temporary = file; temporary += L".pending";
   auto text = to_string(Info(id).GetNamedObject(L"frame").Stringify()); std::ofstream stream(temporary, std::ios::binary | std::ios::trunc); stream << text; stream.close();
   if (stream) MoveFileExW(temporary.c_str(), file.c_str(), MOVEFILE_REPLACE_EXISTING | MOVEFILE_WRITE_THROUGH);
 }
@@ -248,6 +306,8 @@ static LRESULT CALLBACK WindowProc(HWND hwnd, UINT message, WPARAM wParam, LPARA
     }
     if (message == WM_SHOWWINDOW) PostMessageW(hwnd, WM_APP + 18, 0, 0);
     if (message == WM_APP + 18) { UpdateModality(); return 0; }
+    if (message == WM_SETTINGCHANGE || message == WM_THEMECHANGED) ApplyAppearance(windows.at(id));
+    if (message == WM_SYSCOMMAND && (wParam & 0xfff0) == SC_CLOSE && !windows.at(id).closable) return 0;
     if (message == WM_EXITSIZEMOVE) SaveFrame(id, hwnd);
     if (message == WM_ACTIVATEAPP) {
       const bool active = wParam != 0;
@@ -281,6 +341,7 @@ static void Attach(std::string id, React::ReactNativeWindow view) {
   app.Closing([id](auto const &, UI::AppWindowClosingEventArgs const &args) {
     auto found = windows.find(id); if (found == windows.end() || found->second.allow) return;
     auto &window = found->second;
+    SaveFrame(id, Hwnd(window));
     if (window.guard) {
       args.Cancel(true); if (window.pending) return;
       window.pending = true; window.request = ++generation;
@@ -395,14 +456,10 @@ static void Initialize(React::ReactNativeWin32App const &app) {
   Json::JsonObject style;
   style.SetNamedValue(L"width", Json::JsonValue::CreateNumberValue(config.GetNamedNumber(L"width", 1000)));
   style.SetNamedValue(L"height", Json::JsonValue::CreateNumberValue(config.GetNamedNumber(L"height", 700)));
-  for (auto key : {L"minWidth", L"minHeight", L"maxWidth", L"maxHeight", L"resizable", L"minimizable", L"alwaysOnTop"})
+  for (auto key : {L"minWidth", L"minHeight", L"maxWidth", L"maxHeight", L"resizable", L"minimizable", L"alwaysOnTop", L"closable", L"appearance", L"backgroundColor", L"restoreFrame"})
     if (config.HasKey(key)) style.SetNamedValue(key, config.GetNamedValue(key));
   ApplyOptions(windows.at("main"), style);
-  if (config.GetNamedBoolean(L"restoreFrame", false)) try {
-    std::ifstream stream(directory / L"window.json"); std::string text((std::istreambuf_iterator<char>(stream)), std::istreambuf_iterator<char>());
-    auto frame = Json::JsonObject::Parse(to_hstring(text)); RECT rect{static_cast<LONG>(frame.GetNamedNumber(L"x")), static_cast<LONG>(frame.GetNamedNumber(L"y")), 0, 0}; rect.right = rect.left + static_cast<LONG>(frame.GetNamedNumber(L"width")); rect.bottom = rect.top + static_cast<LONG>(frame.GetNamedNumber(L"height"));
-    if (rect.right - rect.left >= 100 && rect.bottom - rect.top >= 100 && MonitorFromRect(&rect, MONITOR_DEFAULTTONULL)) appWindow.MoveAndResize({rect.left, rect.top, rect.right-rect.left, rect.bottom-rect.top});
-  } catch (...) { /* Missing/invalid saved geometry uses the configured frame. */ }
+  RestoreFrame("main");
 
   winrt::Windows::ApplicationModel::Core::CoreApplication::Properties().Insert(L"React-Native-Community-Async-Storage-Database-Path", winrt::box_value(winrt::hstring((directory / L"AsyncStorage.db").wstring())));
 }
@@ -473,8 +530,8 @@ struct LegendDesktopWindows {
             SetLastError(0); SetWindowLongPtrW(Hwnd(attached), GWLP_HWNDPARENT, reinterpret_cast<LONG_PTR>(Hwnd(windows.at(parentId))));
             if (GetLastError()) { app.Destroy(); throw winrt::hresult_error(HRESULT_FROM_WIN32(GetLastError())); }
           }
-          attached.minWidth = pending.minWidth; attached.minHeight = pending.minHeight; attached.maxWidth = pending.maxWidth; attached.maxHeight = pending.maxHeight;
-          view.ReactNativeIsland().ReactViewHost(React::ReactCoreInjection::MakeViewHost(host, options)); app.Show(); UpdateModality(); Emit({{"type", "opened"}, {"windowId", id}});
+          attached.minWidth = pending.minWidth; attached.minHeight = pending.minHeight; attached.maxWidth = pending.maxWidth; attached.maxHeight = pending.maxHeight; attached.closable = pending.closable; attached.restoreFrame = pending.restoreFrame; attached.theme = pending.theme; attached.resources = pending.resources; attached.background = pending.background;
+          view.ReactNativeIsland().ReactViewHost(React::ReactCoreInjection::MakeViewHost(host, options)); RestoreFrame(id); ApplyAppearance(attached); app.Show(); UpdateModality(); Emit({{"type", "opened"}, {"windowId", id}});
           promise.Resolve(to_string(Info(id).Stringify())); return;
         }
         if (method == "displays") { promise.Resolve(to_string(Displays().Stringify())); return; }
