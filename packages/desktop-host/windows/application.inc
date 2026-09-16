@@ -25,7 +25,7 @@ namespace React = winrt::Microsoft::ReactNative;
 namespace Json = winrt::Windows::Data::Json;
 namespace UI = winrt::Microsoft::UI::Windowing;
 using winrt::to_hstring; using winrt::to_string;
-struct Window { React::ReactNativeWindow view{nullptr}; UI::AppWindow app{nullptr}; UI::OverlappedPresenter normal{nullptr}; int32_t minWidth = 100, minHeight = 100, maxWidth = 20000, maxHeight = 20000; std::string parentId; bool modal = false; bool disabledByModal = false; bool enabledBeforeModal = false; bool guard = false; bool pending = false; bool allow = false; uint64_t request = 0; };
+struct Window { React::ReactNativeWindow view{nullptr}; UI::AppWindow app{nullptr}; UI::OverlappedPresenter normal{nullptr}; int32_t minWidth = 100, minHeight = 100, maxWidth = 20000, maxHeight = 20000; std::string parentId; bool modal = false; bool disabledByModal = false; bool enabledBeforeModal = false; bool guard = false; bool pending = false; bool allow = false; uint64_t request = 0; HMONITOR monitor = nullptr; bool fullscreen = false; };
 static std::map<std::string, Window> windows;
 static React::ReactNativeHost host{nullptr};
 static winrt::Microsoft::UI::Composition::Compositor compositor{nullptr};
@@ -63,6 +63,14 @@ static void UpdateModality() {
 }
 static std::string Id(HWND hwnd) { auto root = GetAncestor(hwnd, GA_ROOT); for (auto const &[id, window] : windows) if (Hwnd(window) == root) return id; return ""; }
 static void Emit(React::JSValueObject value) { if (context) context.EmitJSEvent(L"RCTDeviceEventEmitter", L"desktop", std::move(value)); }
+static void WindowTransitions(std::string const &id) {
+  auto found = windows.find(id); if (found == windows.end()) return;
+  auto &window = found->second;
+  auto monitor = MonitorFromWindow(Hwnd(window), MONITOR_DEFAULTTONEAREST);
+  if (monitor != window.monitor) { window.monitor = monitor; Emit({{"type", "screenChanged"}, {"windowId", id}}); }
+  bool fullscreen = window.app.Presenter().Kind() == UI::AppWindowPresenterKind::FullScreen;
+  if (fullscreen != window.fullscreen) { window.fullscreen = fullscreen; Emit({{"type", fullscreen ? "enterFullscreen" : "leaveFullscreen"}, {"windowId", id}}); }
+}
 static void HideApplication() {
   hiddenFocus = Id(GetForegroundWindow());
   for (auto &[id, window] : windows) if (IsWindowVisible(Hwnd(window))) { hiddenByApp.insert(id); window.app.Hide(); }
@@ -245,6 +253,7 @@ static LRESULT CALLBACK WindowProc(HWND hwnd, UINT message, WPARAM wParam, LPARA
       const bool active = wParam != 0;
       if (active != appActive) { appActive = active; Emit({{"type", active ? "activate" : "deactivate"}}); }
     }
+    if (message == WM_MOVE || message == WM_SIZE || message == WM_DPICHANGED) WindowTransitions(id);
     if (message == WM_MOVE) Emit({{"type", "move"}, {"windowId", id}});
     if (message == WM_SIZE) Emit({{"type", "resize"}, {"windowId", id}});
     if (message == WM_NCDESTROY && id == "main") SetNotificationWindow(nullptr);
@@ -262,11 +271,13 @@ static LRESULT CALLBACK WindowProc(HWND hwnd, UINT message, WPARAM wParam, LPARA
   return DefSubclassProc(hwnd, message, wParam, lParam);
 }
 static void Attach(std::string id, React::ReactNativeWindow view) {
-  Window window; window.view = view; window.app = view.AppWindow(); window.normal = window.app.Presenter().as<UI::OverlappedPresenter>(); windows.emplace(id, window);
+  Window window; window.view = view; window.app = view.AppWindow(); window.normal = window.app.Presenter().as<UI::OverlappedPresenter>(); window.monitor = MonitorFromWindow(Hwnd(window), MONITOR_DEFAULTTONEAREST); windows.emplace(id, window);
   SetPropW(Hwnd(window), (L"Legend.Window." + std::wstring(to_hstring(id))).c_str(), reinterpret_cast<HANDLE>(1));
   SetPropW(Hwnd(window), L"Legend.ReactWindow", reinterpret_cast<HANDLE>(1));
   if (id == "main") SetNotificationWindow(Hwnd(window));
-  auto app = window.app; SetWindowSubclass(Hwnd(window), WindowProc, 0x4C47, 0);
+  auto app = window.app;
+  app.Changed([id](auto const &, auto const &) { WindowTransitions(id); });
+  SetWindowSubclass(Hwnd(window), WindowProc, 0x4C47, 0);
   app.Closing([id](auto const &, UI::AppWindowClosingEventArgs const &args) {
     auto found = windows.find(id); if (found == windows.end() || found->second.allow) return;
     auto &window = found->second;
@@ -435,14 +446,17 @@ struct LegendDesktopWindows {
       try {
         auto args = Json::JsonObject::Parse(to_hstring(encoded)); auto id = to_string(args.GetNamedString(L"id", L"main"));
         if (method == "open") {
-          if (windows.count(id)) throw winrt::hresult_invalid_argument(L"Window already exists");
+          if (windows.count(id)) {
+            auto hwnd = Hwnd(windows.at(id)); ShowWindow(hwnd, IsIconic(hwnd) ? SW_RESTORE : SW_SHOW); UpdateModality(); SetForegroundWindow(hwnd);
+            promise.Resolve(to_string(Info(id).Stringify())); return;
+          }
           const auto parentId = to_string(args.GetNamedString(L"parentId", L""));
           const bool modal = args.GetNamedBoolean(L"modal", false);
           if ((modal && parentId.empty()) || parentId == id) throw winrt::hresult_invalid_argument(L"Modal windows need a distinct parent");
           if (!parentId.empty() && !windows.count(parentId)) { promise.Reject(React::ReactError{"E_NOT_FOUND", "Parent window not found"}); return; }
           if (modal) for (auto const &[childId, child] : windows) if (child.parentId == parentId && child.modal) { promise.Reject(React::ReactError{"E_BUSY", "Parent already has a modal window"}); return; }
           auto view = React::ReactNativeWindow::CreateFromCompositor(compositor); auto app = view.AppWindow();
-          app.Title(args.GetNamedString(L"title", L"Window")); app.Resize({static_cast<int32_t>(args.GetNamedNumber(L"width", 800)), static_cast<int32_t>(args.GetNamedNumber(L"height", 600))});
+          app.Title(args.GetNamedString(L"title", LegendWindowsEnv(L"LEGEND_PROJECT_NAME"))); app.Resize({static_cast<int32_t>(args.GetNamedNumber(L"width", 640)), static_cast<int32_t>(args.GetNamedNumber(L"height", 480))});
           React::ReactViewOptions options; options.ComponentName(L"main");
           Json::JsonObject props; props.SetNamedValue(L"windowId", Json::JsonValue::CreateStringValue(to_hstring(id))); props.SetNamedValue(L"windowProps", args.GetNamedObject(L"props", Json::JsonObject()));
           // Write JSON props through the public JSValue writer contract.
@@ -460,7 +474,7 @@ struct LegendDesktopWindows {
             if (GetLastError()) { app.Destroy(); throw winrt::hresult_error(HRESULT_FROM_WIN32(GetLastError())); }
           }
           attached.minWidth = pending.minWidth; attached.minHeight = pending.minHeight; attached.maxWidth = pending.maxWidth; attached.maxHeight = pending.maxHeight;
-          view.ReactNativeIsland().ReactViewHost(React::ReactCoreInjection::MakeViewHost(host, options)); app.Show(); UpdateModality();
+          view.ReactNativeIsland().ReactViewHost(React::ReactCoreInjection::MakeViewHost(host, options)); app.Show(); UpdateModality(); Emit({{"type", "opened"}, {"windowId", id}});
           promise.Resolve(to_string(Info(id).Stringify())); return;
         }
         if (method == "displays") { promise.Resolve(to_string(Displays().Stringify())); return; }
@@ -483,12 +497,13 @@ struct LegendDesktopWindows {
         } else if (method == "fullscreen") {
           if (args.GetNamedBoolean(L"enabled")) window.app.SetPresenter(UI::AppWindowPresenterKind::FullScreen);
           else window.app.SetPresenter(window.normal);
+          WindowTransitions(id);
         } else if (method == "title") window.app.Title(args.GetNamedString(L"title"));
-        else if (method == "closeGuard") window.guard = args.GetNamedBoolean(L"enabled");
+        else if (method == "closeGuard") { window.guard = args.GetNamedBoolean(L"enabled"); window.pending = false; window.request = ++generation; KillTimer(hwnd, 0x4C47); }
         else if (method == "replyClose") {
           if (window.pending && args.GetNamedNumber(L"requestId", 0) == window.request) { window.pending = false; KillTimer(hwnd, 0x4C47); if (args.GetNamedBoolean(L"allow")) { if (id == "main") RequestQuit(); else { window.allow = true; window.app.Destroy(); } } }
         } else if (method == "close") PostMessageW(hwnd, WM_CLOSE, 0, 0);
-        else if (method == "show") { window.app.Show(); UpdateModality(); SetForegroundWindow(hwnd); }
+        else if (method == "show") { ShowWindow(hwnd, IsIconic(hwnd) ? SW_RESTORE : SW_SHOW); UpdateModality(); SetForegroundWindow(hwnd); }
         else if (method == "hide") { window.app.Hide(); UpdateModality(); }
         else if (method == "minimize") ShowWindow(hwnd, SW_MINIMIZE);
         else if (method == "maximize") ShowWindow(hwnd, SW_MAXIMIZE);

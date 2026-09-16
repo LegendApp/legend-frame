@@ -10,6 +10,9 @@
 @property NSString *windowID;
 @property BOOL guarded;
 @property BOOL allowingClose;
+@property NSUInteger request;
+@property BOOL pending;
+- (void)requestClose;
 @end
 static NSMutableDictionary<NSString *, NSWindow *> *windows;
 static NSMutableDictionary<NSString *, LegendWindowDelegate *> *delegates;
@@ -26,8 +29,18 @@ static NSWindow *Window(NSString *key) {
 }
 static void Event(NSString *type, NSString *key) { LegendEmit(@{ @"type": type, @"windowId": key }); }
 @implementation LegendWindowDelegate
+- (void)requestClose {
+  if (self.pending) return;
+  self.pending = YES; NSUInteger request = ++self.request;
+  LegendEmit(@{ @"type": @"beforeClose", @"windowId": self.windowID, @"requestId": @(request) });
+  __weak LegendWindowDelegate *weakSelf = self;
+  dispatch_after(dispatch_time(DISPATCH_TIME_NOW, 30 * NSEC_PER_SEC), dispatch_get_main_queue(), ^{
+    LegendWindowDelegate *delegate = weakSelf;
+    if (delegate.request == request) delegate.pending = NO;
+  });
+}
 - (BOOL)windowShouldClose:(NSWindow *)sender {
-  if (self.guarded && !self.allowingClose) { Event(@"beforeClose", self.windowID); return NO; }
+  if (self.guarded && !self.allowingClose) { [self requestClose]; return NO; }
   return YES;
 }
 - (void)windowWillClose:(NSNotification *)note {
@@ -64,7 +77,7 @@ static void InstallDelegate(NSWindow *window, NSString *key) {
 }
 static void RequestClose(NSWindow *window, NSString *key) {
   LegendWindowDelegate *delegate = delegates[key];
-  if (delegate.guarded && !delegate.allowingClose) { Event(@"beforeClose", key); return; }
+  if (delegate.guarded && !delegate.allowingClose) { [delegate requestClose]; return; }
   if (window.sheetParent) [window.sheetParent endSheet:window];
   [window close];
 }
@@ -101,7 +114,8 @@ RCT_EXPORT_MODULE(NativeDesktopWindowManager)
     if ([method isEqual:@"open"]) {
       if (!key.length || [key isEqual:@"main"]) { LegendInvalid(reject, @"Secondary windows need a non-main id"); return; }
       NSWindow *parent = args[@"parentId"] ? Window(args[@"parentId"]) : nil;
-      if (args[@"parentId"] && (!parent || parent == window)) { LegendInvalid(reject, @"Invalid parent window"); return; }
+      if (args[@"parentId"] && !parent) { reject(@"E_NOT_FOUND", @"Parent window not found", nil); return; }
+      if (parent && parent == window) { LegendInvalid(reject, @"Invalid parent window"); return; }
       if ([args[@"modal"] boolValue] && (!parent || parent.attachedSheet)) { reject(@"E_BUSY", @"Modal window requires an available parent", nil); return; }
       if (!window) {
         id delegate = NSApp.delegate;
@@ -130,9 +144,13 @@ RCT_EXPORT_MODULE(NativeDesktopWindowManager)
     if (!window) { reject(@"E_NOT_FOUND", @"Window does not exist", nil); return; }
     if ([method isEqual:@"info"]) { resolve(LegendJSON(Info(key, window))); return; }
     if ([method isEqual:@"close"]) RequestClose(window, key);
-    else if ([method isEqual:@"closeGuard"]) delegates[key].guarded = [args[@"enabled"] boolValue];
+    else if ([method isEqual:@"closeGuard"]) { delegates[key].guarded = [args[@"enabled"] boolValue]; delegates[key].pending = NO; delegates[key].request++; }
     else if ([method isEqual:@"replyClose"]) {
-      if ([args[@"allow"] boolValue]) { delegates[key].allowingClose = YES; RequestClose(window, key); delegates[key].allowingClose = NO; }
+      LegendWindowDelegate *delegate = delegates[key];
+      if (delegate.pending && delegate.request == [args[@"requestId"] unsignedIntegerValue]) {
+        delegate.pending = NO;
+        if ([args[@"allow"] boolValue]) { delegate.allowingClose = YES; RequestClose(window, key); delegate.allowingClose = NO; }
+      }
     }
     else if ([method isEqual:@"show"]) { [window deminiaturize:nil]; [window makeKeyAndOrderFront:nil]; }
     else if ([method isEqual:@"options"]) LegendApplyWindowOptions(window, args[@"options"]);

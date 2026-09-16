@@ -55,14 +55,14 @@ const guards = new Set<string>();
 export async function beforeWindowClose(windowId: string, handler: () => boolean | Promise<boolean>) {
   id(windowId);
   if (guards.has(windowId)) throw new Error("This window already has a close handler");
-  guards.add(windowId); let removed = false; let pending = false;
+  guards.add(windowId); let removed = false; let pending: number | undefined;
   const subscription = onWindowEvent(event => {
-    if (event.windowId !== windowId || event.type !== "beforeClose" || pending) return;
-    pending = true;
+    if (event.windowId !== windowId || event.type !== "beforeClose" || pending === event.requestId) return;
+    pending = event.requestId;
     void Promise.resolve().then(handler).then(
       allow => call("replyClose", { id: windowId, requestId: event.requestId, allow: !removed && allow === true }),
       () => call("replyClose", { id: windowId, requestId: event.requestId, allow: false }),
-    ).catch(console.error).finally(() => { pending = false; });
+    ).catch(console.error).finally(() => { if (pending === event.requestId) pending = undefined; });
   });
   try { await call("closeGuard", { id: windowId, enabled: true }); }
   catch (error) { subscription.remove(); guards.delete(windowId); throw error; }

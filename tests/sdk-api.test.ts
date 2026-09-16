@@ -96,10 +96,24 @@ test("window close guards handle only their window and coalesce repeated request
   let requests = 0; let finish!: (allow: boolean) => void;
   const guard = await windows.beforeWindowClose("test", () => { requests++; return new Promise<boolean>(resolve => { finish = resolve; }); });
   emit("NativeDesktopApp", "desktop", { type: "beforeClose", windowId: "other" });
-  emit("NativeDesktopApp", "desktop", { type: "beforeClose", windowId: "test" });
-  emit("NativeDesktopApp", "desktop", { type: "beforeClose", windowId: "test" }); await tick(); expect(requests).toBe(1);
-  finish(false); await tick(); expect(calls.find(call => call.method === "replyClose")?.args).toEqual({ id: "test", allow: false });
+  emit("NativeDesktopApp", "desktop", { type: "beforeClose", windowId: "test", requestId: 1 });
+  emit("NativeDesktopApp", "desktop", { type: "beforeClose", windowId: "test", requestId: 1 }); await tick(); expect(requests).toBe(1);
+  finish(false); await tick(); expect(calls.find(call => call.method === "replyClose")?.args).toEqual({ id: "test", requestId: 1, allow: false });
   await guard.remove();
+});
+test("new close requests supersede expired handlers without losing request identity", async () => {
+  const finish: ((allow: boolean) => void)[] = [];
+  const guard = await windows.beforeWindowClose("expiry", () => new Promise<boolean>(resolve => finish.push(resolve)));
+  emit("NativeDesktopApp", "desktop", { type: "beforeClose", windowId: "expiry", requestId: 10 }); await tick();
+  emit("NativeDesktopApp", "desktop", { type: "beforeClose", windowId: "expiry", requestId: 11 }); await tick();
+  expect(finish).toHaveLength(2);
+  finish[0]!(true); await tick();
+  emit("NativeDesktopApp", "desktop", { type: "beforeClose", windowId: "expiry", requestId: 11 }); await tick();
+  expect(finish).toHaveLength(2);
+  await guard.remove(); finish[1]!(true); await tick();
+  expect(calls.filter(call => call.method === "replyClose").map(call => call.args)).toEqual([
+    { id: "expiry", requestId: 10, allow: true }, { id: "expiry", requestId: 11, allow: false },
+  ]);
 });
 test("filesystem errors preserve permission failures instead of pretending files are absent", async () => {
   handlers.set("NativeDesktopFileSystem.stat", () => { throw nativeError("E_NOT_FOUND"); }); expect(await files.exists("/missing")).toBe(false);

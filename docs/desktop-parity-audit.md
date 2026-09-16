@@ -200,3 +200,7 @@ and [platform tests](platform-testing.md) for execution and report collection.
   process arguments, emits second-instance/reopen events for forwarded launches,
   and hides/restores the app's visible windows as a group. Previously hidden
   windows stay hidden. Windows native acceptance remains pending.
+- Group 2: Windows reuses secondary IDs, restores minimized windows, aligns defaults,
+  and emits opened/fullscreen/display transitions. macOS close guards now carry
+  request IDs and expire after 30 seconds; stale responses cannot close a newer
+  request. Missing parents use E_NOT_FOUND. Native event ordering awaits acceptance.
