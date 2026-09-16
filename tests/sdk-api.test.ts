@@ -255,7 +255,7 @@ test("process subscriptions exist before launch and survive immediate exit", asy
   await expect(child.write("late")).rejects.toThrow("exited");
 });
 test("process validation and failed launches do not leak listeners", async () => {
-  for (const options of [{ executable: "echo" }, { executable: "/bin/echo", timeoutMs: -1 }, { executable: "/bin/echo", env: { "BAD=KEY": "x" } }]) await expect(processes.spawn(options)).rejects.toThrow();
+  for (const options of [{ executable: "echo" }, { executable: "helper:../escape" }, { executable: "helper:" }, { executable: "/bin/echo", input: 123 as never }, { executable: "/bin/echo", timeoutMs: -1 }, { executable: "/bin/echo", env: { "BAD=KEY": "x" } }]) await expect(processes.spawn(options)).rejects.toThrow();
   handlers.set("NativeDesktopProcesses.spawn", () => { throw nativeError("E_NOT_FOUND"); });
   await expect(processes.spawn({ executable: "/missing" })).rejects.toThrow("E_NOT_FOUND"); expect(subscriptions.get("NativeDesktopApp.desktop")?.size).toBe(0);
 });

@@ -419,3 +419,7 @@ included only when the dependency appears in runtime metadata.
 The shared platform runner checks observable behavior and records unexecuted cases
 as `not-tested`. Generation and bundling on macOS do not verify native Windows
 compilation. See [Windows acceptance and limits](docs/windows-issues.md).
+
+## App-supplied sidecars
+
+Helper configuration selects an explicit OS/architecture bundle. The CLI validates project-relative paths, fingerprints every bundled file, and copies the bundle before signing. Native process modules resolve logical `helper:name` entries from framework-generated metadata. The public process API remains transport-oriented: stdout/stderr streams, stdin, exit results, and cancellation; readiness, protocols, and restart policy belong to the application. macOS uses atomically established process groups; Windows uses kill-on-close Job Objects. Runtime teardown owns cleanup, while individual window closure does not. See [sidecars](docs/sidecars.md) for the precise lifecycle guarantees, crash limitations, and packaging boundaries.

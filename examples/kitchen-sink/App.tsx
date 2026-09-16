@@ -14,6 +14,7 @@ import { registerShortcut } from "@legend-apps/desktop/shortcuts";
 import { showContextMenu } from "@legend-apps/desktop/context-menu";
 import { configureMenus, clearMenus, addNativeMenuActionListener } from "@legend-apps/desktop/menus";
 import { openFileDialog, saveFileDialog, revealInFinder } from "@legend-apps/desktop/dialogs";
+import { runSidecarChecks } from "./sidecar-checks";
 import { runChecks, type Check } from "./checks";
 import { APIChecks } from "./APIChecks";
 import { NativeControls } from "./NativeControls";
@@ -56,7 +57,7 @@ function AutomatedChecks({ report, args }: { report: string; args: string[] }) {
     // Let the main React window mount before opening secondary roots.
     const timer = setTimeout(() => {
       if (started) return; started = true;
-      void runChecks(async result => { setChecks(previous => [...previous, result]); await files.writeText(`${report}.progress`, JSON.stringify(result)); }, testDriver, argument(args, "--legend-isolation-expect") ? { expect: argument(args, "--legend-isolation-expect") as "absent" | "present", cleanup: args.includes("--legend-isolation-cleanup") } : undefined)
+      void (args.includes("--legend-sidecar-probe") ? runSidecarChecks() : runChecks(async result => { setChecks(previous => [...previous, result]); await files.writeText(`${report}.progress`, JSON.stringify(result)); }, testDriver, argument(args, "--legend-isolation-expect") ? { expect: argument(args, "--legend-isolation-expect") as "absent" | "present", cleanup: args.includes("--legend-isolation-cleanup") } : undefined))
         .then(async result => {
           await files.writeText(report, JSON.stringify(result, null, 2));
           if (args.includes("--legend-test-quit-on-complete")) { await new Promise(resolve => setTimeout(resolve, 2500)); await app.beforeQuit(() => true); await app.quit(); }

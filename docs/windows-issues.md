@@ -133,3 +133,13 @@ owner. The platform runner's prepare-only mode is available on macOS, including
 For machine setup use [windows-slice.md](windows-slice.md). For moving a built
 client/SDK use [sdk-distribution.md](sdk-distribution.md). Record actual Windows
 failures here with reproduction steps and evidence before closing acceptance work.
+
+## App-supplied helper bundles (2026-09-16)
+
+The CLI now selects target-specific helper directories and the Windows process
+module resolves their entry metadata. Native x64/ARM64 validation is pending: run
+the [sidecar probe](sidecars.md#example-and-verification), verify adjacent DLL and
+asset loading, and verify Job Object cleanup on root exit, cancellation, runtime
+reload, normal quit, and abrupt host termination. Windows distribution signing
+and packaging remain separate gaps. The macOS probe does not establish Windows
+acceptance.

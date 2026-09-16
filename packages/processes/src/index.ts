@@ -7,6 +7,8 @@ export type ProcessResult = { exitCode: number; signal: boolean; stdout: string;
 let sequence = 0;
 function absolute(value: string) { return Platform.OS === "windows" ? /^(?:[a-z]:[\\/]|\\\\[^\\/]+[\\/][^\\/]+)/i.test(value) : value.startsWith("/"); }
 export async function spawn(options: ProcessOptions, onOutput?: (chunk: ProcessOutput) => void) {
+  if (typeof options.executable !== "string" || (options.executable.startsWith("helper:") && !/^helper:[A-Za-z0-9_-]+$/.test(options.executable))) throw new Error("Invalid helper name or executable");
+  if (options.input !== undefined && typeof options.input !== "string") throw new Error("input must be a string");
   if (!absolute(options.executable) && !options.executable.startsWith("helper:")) throw new Error("executable must be an absolute path or helper:name");
   if (options.executable.includes("\0") || options.args?.some(arg => typeof arg !== "string" || arg.includes("\0"))) throw new Error("Invalid process arguments");
   if (options.cwd !== undefined && (!absolute(options.cwd) || options.cwd.includes("\0"))) throw new Error("cwd must be absolute");
@@ -25,7 +27,7 @@ export async function spawn(options: ProcessOptions, onOutput?: (chunk: ProcessO
   try { await call("spawn", { ...options, streamOutput: !!onOutput }); } catch (error) { subscription.remove(); throw error; }
   return {
     id, exited,
-    async write(text: string) { if (ended) throw new Error("Process has exited"); await call("write", { text }); },
+    async write(text: string) { if (typeof text !== "string") throw new Error("Process input must be a string"); if (ended) throw new Error("Process has exited"); await call("write", { text }); },
     async closeInput() { if (!ended) await call("closeInput"); },
     async terminate() { if (!ended) await call("terminate"); },
   };

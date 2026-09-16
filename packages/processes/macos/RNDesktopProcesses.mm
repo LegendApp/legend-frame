@@ -1,8 +1,13 @@
 #import "RNDesktopProcesses.h"
 #import <RNDesktopApp/LegendDesktop.h>
 #import <signal.h>
+#import <AppKit/AppKit.h>
+#import <spawn.h>
+#import <sys/wait.h>
+#import <vector>
 @interface LegendProcess : NSObject
-@property NSTask *task;
+@property pid_t pid;
+@property BOOL running;
 @property NSFileHandle *input;
 @property BOOL timedOut;
 @property BOOL truncated;
@@ -18,15 +23,25 @@
 @implementation RNDesktopProcesses
 RCT_EXPORT_MODULE(NativeDesktopProcesses)
 + (BOOL)requiresMainQueueSetup { return YES; }
-- (instancetype)init { if (self = [super init]) _processes = [NSMutableDictionary new]; return self; }
+- (instancetype)init {
+  if (self = [super init]) {
+    _processes = [NSMutableDictionary new];
+    [[NSNotificationCenter defaultCenter] addObserver:self selector:@selector(stopAll) name:NSApplicationWillTerminateNotification object:nil];
+  }
+  return self;
+}
+- (void)stopAll { for (LegendProcess *process in self.processes.allValues) if (process.running) kill(-process.pid, SIGKILL); }
+- (void)dealloc { [[NSNotificationCenter defaultCenter] removeObserver:self]; }
+
 - (void)terminate:(LegendProcess *)process {
-  if (process.task.running) {
-    [process.task terminate];
+  if (process.running) {
+    kill(-process.pid, SIGTERM);
     dispatch_after(dispatch_time(DISPATCH_TIME_NOW, 2 * NSEC_PER_SEC), dispatch_get_main_queue(), ^{
-      if (process.task.running) kill(process.task.processIdentifier, SIGKILL);
+      if (process.running) kill(-process.pid, SIGKILL);
     });
   }
 }
+
 - (void)call:(NSString *)method args:(NSString *)json resolve:(RCTPromiseResolveBlock)resolve reject:(RCTPromiseRejectBlock)reject {
   dispatch_async(dispatch_get_main_queue(), ^{
     NSDictionary *args = LegendArgs(json); NSString *key = args[@"id"];
@@ -37,18 +52,44 @@ RCT_EXPORT_MODULE(NativeDesktopProcesses)
       NSString *executable = args[@"executable"];
       if ([executable hasPrefix:@"helper:"]) {
         NSString *name = [executable substringFromIndex:7];
-        if (!name.length || [name containsString:@"/"] || [name isEqual:@".."] || [name isEqual:@"."]) { LegendInvalid(reject, @"Invalid helper name"); return; }
-        executable = [[NSBundle.mainBundle.bundlePath stringByAppendingPathComponent:@"Contents/Helpers"] stringByAppendingPathComponent:name];
+        if (!name.length || [name rangeOfCharacterFromSet:[[NSCharacterSet characterSetWithCharactersInString:@"abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789_-"] invertedSet]].location != NSNotFound) { LegendInvalid(reject, @"Invalid helper name"); return; }
+        NSString *helpers = [NSBundle.mainBundle.bundlePath stringByAppendingPathComponent:@"Contents/Helpers"];
+        NSString *bundle = [helpers stringByAppendingPathComponent:[name stringByAppendingString:@".helper"]];
+        executable = [helpers stringByAppendingPathComponent:name];
+        if ([NSFileManager.defaultManager fileExistsAtPath:bundle]) {
+          NSString *entry = [NSString stringWithContentsOfFile:[bundle stringByAppendingPathComponent:@".legend-entry"] encoding:NSUTF8StringEncoding error:nil];
+          if (!entry.length || [entry hasPrefix:@"/"] || [entry containsString:@"\\"] || [[entry componentsSeparatedByString:@"/"] containsObject:@".."] || [entry containsString:@"\0"]) { LegendInvalid(reject, @"Invalid helper bundle entry"); return; }
+          executable = [bundle stringByAppendingPathComponent:entry];
+        }
       }
       if (![executable hasPrefix:@"/"]) { LegendInvalid(reject, @"Executable path must be absolute"); return; }
-      process = [LegendProcess new]; process.task = [NSTask new];
+      process = [LegendProcess new];
       process.inputQueue = dispatch_queue_create("desktop.process.input", DISPATCH_QUEUE_SERIAL);
-      process.task.executableURL = [NSURL fileURLWithPath:executable]; process.task.arguments = args[@"args"] ?: @[];
-      NSMutableDictionary *environment = [NSProcessInfo.processInfo.environment mutableCopy]; [environment addEntriesFromDictionary:args[@"env"] ?: @{}]; process.task.environment = environment;
-      if (args[@"cwd"]) process.task.currentDirectoryURL = [NSURL fileURLWithPath:args[@"cwd"] isDirectory:YES];
+      NSMutableDictionary *environment = [NSProcessInfo.processInfo.environment mutableCopy]; [environment addEntriesFromDictionary:args[@"env"] ?: @{}];
       NSPipe *input = [NSPipe pipe], *output = [NSPipe pipe], *errorPipe = [NSPipe pipe];
-      process.task.standardInput = input; process.task.standardOutput = output; process.task.standardError = errorPipe; process.input = input.fileHandleForWriting;
-      NSError *error; if (![process.task launchAndReturnError:&error]) { LegendReject(reject, error); return; }
+      process.input = input.fileHandleForWriting;
+      // Create the process group atomically, before executable code can fork.
+      // NSTask + setpgid after launch has a race and cannot provide this contract.
+      posix_spawnattr_t attributes; posix_spawnattr_init(&attributes);
+      posix_spawnattr_setflags(&attributes, POSIX_SPAWN_SETPGROUP | POSIX_SPAWN_CLOEXEC_DEFAULT);
+      posix_spawnattr_setpgroup(&attributes, 0);
+      posix_spawn_file_actions_t actions; posix_spawn_file_actions_init(&actions);
+      posix_spawn_file_actions_adddup2(&actions, input.fileHandleForReading.fileDescriptor, STDIN_FILENO);
+      posix_spawn_file_actions_adddup2(&actions, output.fileHandleForWriting.fileDescriptor, STDOUT_FILENO);
+      posix_spawn_file_actions_adddup2(&actions, errorPipe.fileHandleForWriting.fileDescriptor, STDERR_FILENO);
+      if (args[@"cwd"]) posix_spawn_file_actions_addchdir_np(&actions, [args[@"cwd"] fileSystemRepresentation]);
+      NSArray *arguments = [@[executable] arrayByAddingObjectsFromArray:args[@"args"] ?: @[]];
+      NSMutableArray *variables = [NSMutableArray new];
+      for (NSString *name in environment) [variables addObject:[NSString stringWithFormat:@"%@=%@", name, environment[name]]];
+      std::vector<char *> argv, envp;
+      for (NSString *argument in arguments) argv.push_back((char *)argument.UTF8String); argv.push_back(nullptr);
+      for (NSString *variable in variables) envp.push_back((char *)variable.UTF8String); envp.push_back(nullptr);
+      pid_t pid = 0;
+      int error = posix_spawn(&pid, executable.fileSystemRepresentation, &actions, &attributes, argv.data(), envp.data());
+      posix_spawn_file_actions_destroy(&actions); posix_spawnattr_destroy(&attributes);
+      [input.fileHandleForReading closeFile]; [output.fileHandleForWriting closeFile]; [errorPipe.fileHandleForWriting closeFile];
+      if (error) { [process.input closeFile]; [output.fileHandleForReading closeFile]; [errorPipe.fileHandleForReading closeFile]; LegendReject(reject, [NSError errorWithDomain:NSPOSIXErrorDomain code:error userInfo:nil]); return; }
+      process.pid = pid; process.running = YES;
       self.processes[key] = process;
       NSMutableData *stdoutData = [NSMutableData new], *stderrData = [NSMutableData new];
       dispatch_group_t group = dispatch_group_create();
@@ -59,7 +100,12 @@ RCT_EXPORT_MODULE(NativeDesktopProcesses)
         dispatch_group_async(group, dispatch_get_global_queue(QOS_CLASS_UTILITY, 0), ^{
           @try {
             while (YES) {
-              NSData *data = [handle readDataOfLength:16384]; if (!data.length) break;
+              // readDataOfLength can wait for the requested length. A service's
+              // short readiness/response message must be delivered before EOF.
+              char bytes[16384]; ssize_t count;
+              do { count = read(handle.fileDescriptor, bytes, sizeof(bytes)); } while (count < 0 && errno == EINTR);
+              if (count <= 0) break;
+              NSData *data = [NSData dataWithBytes:bytes length:(NSUInteger)count];
               @synchronized(process) { NSUInteger remaining = 8 * 1024 * 1024 - buffer.length; if (data.length > remaining) process.truncated = YES; [buffer appendData:[data subdataWithRange:NSMakeRange(0, MIN(remaining, data.length))]]; }
               if ([args[@"streamOutput"] boolValue]) dispatch_sync(dispatch_get_main_queue(), ^{ if (!self.invalidated) LegendEmit(@{ @"type": @"processOutput", @"processId": key, @"stream": stream, @"base64": [data base64EncodedStringWithOptions:0] }); });
             }
@@ -68,12 +114,17 @@ RCT_EXPORT_MODULE(NativeDesktopProcesses)
         });
       }
       dispatch_async(dispatch_get_global_queue(QOS_CLASS_UTILITY, 0), ^{
-        [process.task waitUntilExit];
+        int status = 0; while (waitpid(process.pid, &status, 0) < 0 && errno == EINTR) {}
+        dispatch_sync(dispatch_get_main_queue(), ^{
+          // Descendants must not keep the output pipes (and exited promise) alive.
+          kill(-process.pid, SIGKILL); process.running = NO;
+        });
         dispatch_group_notify(group, dispatch_get_main_queue(), ^{
+          int terminationStatus = status;
           process.ended = YES;
           dispatch_async(process.inputQueue, ^{ @try { [process.input closeFile]; } @catch (NSException *exception) {} });
           if (!self.invalidated) LegendEmit(@{ @"type": @"processExit", @"processId": key, @"result": @{
-            @"exitCode": @(process.task.terminationStatus), @"signal": @(process.task.terminationReason == NSTaskTerminationReasonUncaughtSignal),
+            @"exitCode": @(WIFEXITED(terminationStatus) ? WEXITSTATUS(terminationStatus) : WTERMSIG(terminationStatus)), @"signal": @(WIFSIGNALED(terminationStatus)),
             @"stdout": [[NSString alloc] initWithData:stdoutData encoding:NSUTF8StringEncoding] ?: @"", @"stderr": [[NSString alloc] initWithData:stderrData encoding:NSUTF8StringEncoding] ?: @"",
             @"stdoutBase64": [stdoutData base64EncodedStringWithOptions:0], @"stderrBase64": [stderrData base64EncodedStringWithOptions:0],
             @"timedOut": @(process.timedOut), @"outputTruncated": @(process.truncated) } });
@@ -82,7 +133,7 @@ RCT_EXPORT_MODULE(NativeDesktopProcesses)
       });
       if (args[@"input"]) { NSData *data = [args[@"input"] dataUsingEncoding:NSUTF8StringEncoding]; dispatch_async(process.inputQueue, ^{ @try { [process.input writeData:data]; } @catch (NSException *exception) {} }); }
       if (args[@"timeoutMs"]) dispatch_after(dispatch_time(DISPATCH_TIME_NOW, [args[@"timeoutMs"] doubleValue] * NSEC_PER_MSEC), dispatch_get_main_queue(), ^{
-        if (process.task.running) { process.timedOut = YES; [self terminate:process]; }
+        if (process.running) { process.timedOut = YES; [self terminate:process]; }
       });
     } else {
       if (!process || process.ended) { if ([method isEqual:@"terminate"] || [method isEqual:@"closeInput"]) { resolve(@"null"); return; } reject(@"E_CLOSED", @"Process has exited", nil); return; }
@@ -97,6 +148,6 @@ RCT_EXPORT_MODULE(NativeDesktopProcesses)
     resolve(@"null");
   });
 }
-- (void)invalidate { dispatch_async(dispatch_get_main_queue(), ^{ self.invalidated = YES; for (LegendProcess *process in self.processes.allValues) [self terminate:process]; }); }
+- (void)invalidate { dispatch_async(dispatch_get_main_queue(), ^{ self.invalidated = YES; [self stopAll]; }); }
 - (std::shared_ptr<facebook::react::TurboModule>)getTurboModule:(const facebook::react::ObjCTurboModule::InitParams &)params { return std::make_shared<facebook::react::NativeDesktopProcessesSpecJSI>(params); }
 @end

@@ -6,6 +6,7 @@
 #include <deque>
 #include <filesystem>
 #include <future>
+#include <fstream>
 #include <map>
 #include <memory>
 #include <mutex>
@@ -79,7 +80,18 @@ struct Process : std::enable_shared_from_this<Process> {
     auto executable = std::wstring(args.GetNamedString(L"executable"));
     if (executable.rfind(L"helper:", 0) == 0) {
       const auto name = executable.substr(7); if (name.empty() || name.find_first_not_of(L"abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789_-") != std::wstring::npos) throw hresult_invalid_argument(L"Invalid helper name");
-      wchar_t module[32768]{}; GetModuleFileNameW(nullptr, module, 32768); executable = (std::filesystem::path(module).parent_path() / L"Helpers" / (name + L".exe")).wstring();
+      wchar_t module[32768]{}; GetModuleFileNameW(nullptr, module, 32768);
+      const auto helpers = std::filesystem::path(module).parent_path() / L"Helpers";
+      const auto bundle = helpers / (name + L".helper");
+      executable = (helpers / (name + L".exe")).wstring();
+      if (std::filesystem::exists(bundle)) {
+        std::ifstream metadata(bundle / L".legend-entry", std::ios::binary);
+        std::string entry((std::istreambuf_iterator<char>(metadata)), std::istreambuf_iterator<char>());
+        if (entry.empty() || entry.front() == '/' || entry.find_first_of("\\:") != std::string::npos || entry.find('\0') != std::string::npos) throw hresult_invalid_argument(L"Invalid helper bundle entry");
+        const auto relative = std::filesystem::path(winrt::to_hstring(entry).c_str());
+        for (auto const &part : relative) if (part == L"..") throw hresult_invalid_argument(L"Invalid helper bundle entry");
+        executable = (bundle / relative).wstring();
+      }
     }
     if (!std::filesystem::path(executable).is_absolute()) throw hresult_invalid_argument(L"Executable must be absolute");
     std::wstring command = Quote(executable); for (auto const &value : args.GetNamedArray(L"args", Json::JsonArray())) { command += L' '; command += Quote(std::wstring(value.GetString())); }

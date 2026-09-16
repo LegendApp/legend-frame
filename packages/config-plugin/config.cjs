@@ -90,7 +90,7 @@ function toExpo(value, target) {
   if (platforms.includes("macos") && (!value.macos || typeof value.macos.bundleIdentifier !== "string" || !/^[A-Za-z0-9-]+(?:\.[A-Za-z0-9-]+)+$/.test(value.macos.bundleIdentifier))) throw new Error("macos.bundleIdentifier must be a reverse-DNS identifier");
   validateWindow(value.window ?? {});
   if (value.include !== undefined && (!Array.isArray(value.include) || value.include.some(x => typeof x !== "string"))) throw new Error("include must be a list of package names");
-  if (value.helpers !== undefined && (!value.helpers || typeof value.helpers !== "object" || Array.isArray(value.helpers) || Object.entries(value.helpers).some(([key, file]) => !/^[A-Za-z0-9_-]+$/.test(key) || typeof file !== "string" || file.startsWith("/")))) throw new Error("helpers must map simple names to project-relative files");
+  require("./helpers.cjs").validateHelpers(value.helpers);
   const extra = { projectId: value.projectId };
   for (const key of ["window", "documentTypes", "menuBarOnly", "updates", "include", "signing", "helpers"]) if (value[key] !== undefined) extra[key] = value[key];
   const overrides = value.expoByPlatform ?? {};

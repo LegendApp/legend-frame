@@ -309,3 +309,5 @@ replacing a backend while preserving a framework contract.
 ## Cross-platform acceptance
 
 Run `bun run test:platform --platform macos` (or `windows`, `ios`, `android`, `web`) for a fresh shared test app. `--prepare-only` checks generation/bundling; `--api-only` runs API assertions without claiming UI acceptance. Collect JSON reports from each machine and run `bun run test:report --output .legend/platform-coverage.md` to see passed, failed, missing, inapplicable, and untested cases. See [platform testing](docs/platform-testing.md) for devices, commands, cleanup, and current coverage.
+
+App-supplied backend executables can be packaged as target-specific helper bundles. See the [sidecar guide](docs/sidecars.md) for configuration, lifecycle, distribution limits, and a runnable C example. No Node runtime is included.

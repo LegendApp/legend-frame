@@ -291,7 +291,7 @@ export function runtimeFor(
         modules,
         pins,
         config: readAppConfig(root),
-        helpers: hashFiles(root, resolveHelpers(root, readAppConfig(root).expo?.extra?.legend?.helpers).map(helper => helper.relative)),
+        helpers: resolveHelpers(root, readAppConfig(root).expo?.extra?.legend?.helpers, platform).map(helper => ({ name: helper.name, contents: hashFiles(root, helper.files), modes: helper.modes, directories: helper.directories })),
         adapter: hostSourceSignature(root),
       }),
     ),

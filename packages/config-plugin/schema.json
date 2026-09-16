@@ -171,8 +171,43 @@
     },
     "helpers": {
       "type": "object",
+      "propertyNames": {
+        "pattern": "^[A-Za-z0-9_-]+$"
+      },
       "additionalProperties": {
-        "type": "string"
+        "oneOf": [
+          {
+            "type": "string"
+          },
+          {
+            "type": "object",
+            "minProperties": 1,
+            "propertyNames": {
+              "enum": [
+                "macos-arm64",
+                "macos-x64",
+                "windows-arm64",
+                "windows-x64"
+              ]
+            },
+            "additionalProperties": {
+              "type": "object",
+              "required": [
+                "directory",
+                "executable"
+              ],
+              "additionalProperties": false,
+              "properties": {
+                "directory": {
+                  "type": "string"
+                },
+                "executable": {
+                  "type": "string"
+                }
+              }
+            }
+          }
+        ]
       }
     },
     "signing": {

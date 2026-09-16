@@ -89,7 +89,14 @@ test("signing traverses nested code inside out without following symlinks outsid
     const helper = path.join(app, "Contents/Helpers/Worker.app");
     machO(path.join(helper, "Contents/MacOS/Worker"));
     writeJson(path.join(helper, "Contents/Info.plist"), { CFBundleExecutable: "Worker" });
+    const helperBinary = path.join(app, "Contents/Helpers/backend.helper/bin/backend");
+    machO(helperBinary);
+    const helperLibrary = path.join(app, "Contents/Helpers/backend.helper/lib/library.dylib");
+    machO(helperLibrary, 6);
     const order = signingOrder(app);
+    expect(order).toContain(realpathSync(helperBinary));
+    expect(order).toContain(realpathSync(helperLibrary));
+    expect(order.some(item => item.endsWith("backend.helper"))).toBe(false);
     expect(order.at(-1)).toBe(realpathSync(app));
     const library = order.findIndex((item) => item.endsWith("Versions/A/Hermes"));
     const framework = order.findIndex((item) => item.endsWith("Hermes.framework"));
