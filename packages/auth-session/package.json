@@ -1,0 +1,40 @@
+{
+  "name": "@legend-apps/auth-session",
+  "version": "0.1.0-prototype.0",
+  "license": "MIT",
+  "main": "src/index",
+  "react-native": "src/index",
+  "files": [
+    "src"
+  ],
+  "dependencies": {
+    "@legend-apps/desktop-links": "0.1.0-prototype.0",
+    "base64-js": "1.5.1"
+  },
+  "peerDependencies": {
+    "react-native": "0.81.6",
+    "expo-web-browser": "~15.0.10",
+    "expo-crypto": "~15.0.8"
+  },
+  "peerDependenciesMeta": {
+    "expo-web-browser": {
+      "optional": true
+    },
+    "expo-crypto": {
+      "optional": true
+    }
+  },
+  "legend": {
+    "sdk": true,
+    "platforms": [
+      "macos",
+      "windows",
+      "ios",
+      "android",
+      "web"
+    ],
+    "requires": [
+      "@legend-apps/desktop-links"
+    ]
+  }
+}

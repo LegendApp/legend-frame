@@ -313,3 +313,5 @@ Run `bun run test:platform --platform macos` (or `windows`, `ios`, `android`, `w
 App-supplied backend executables can be packaged as target-specific helper bundles. See the [sidecar guide](docs/sidecars.md) for configuration, lifecycle, distribution limits, and a runnable C example. No Node runtime is included.
 
 See [desktop foundations](docs/desktop-foundations.md) for nonactivating overlay windows, recursive directory watching, and custom drag payloads with hover and copy/move/link negotiation. Kitchen Sink demonstrates these contracts; Windows native acceptance remains pending.
+
+Optional [audio/media sessions](docs/audio.md) and [browser authentication](docs/auth-session.md) provide system media controls and external-browser callback transport. Provider SDKs, queues, and OAuth token exchange remain application/library responsibilities.

@@ -1,4 +1,8 @@
 #pragma once
+#include "../../common/AuthLoopback.h"
+#include <map>
+#include <memory>
+#include <cmath>
 #include "NativeModules.h"
 #include <shellapi.h>
 #include <shlobj.h>
@@ -59,13 +63,37 @@ struct RecentDocuments {
 };
 REACT_MODULE(LegendLinks, L"NativeDesktopLinks")
 struct LegendLinks {
+  using Receivers = std::map<std::string, std::unique_ptr<legend::AuthLoopback>>;
+  std::shared_ptr<Receivers> receivers = std::make_shared<Receivers>();
   React::ReactContext context;
   REACT_INIT(Initialize)
   void Initialize(React::ReactContext const &value) noexcept { context = value; }
-  static fire_and_forget Invoke(std::string method, std::string encoded, React::ReactPromise<std::string> promise) {
+  static fire_and_forget Invoke(std::shared_ptr<Receivers> receivers, std::string method, std::string encoded, React::ReactPromise<std::string> promise) {
     try {
       auto args = Json::JsonObject::Parse(to_hstring(encoded));
-      if (method == "recent" || method == "noteRecent" || method == "clearRecent") {
+      if (method == "cryptoRandom") {
+        auto count = args.GetNamedNumber(L"count"); if (count < 1 || count > 1024 || count != std::floor(count)) throw hresult_invalid_argument(L"Random byte count must be 1–1024");
+        auto bytes = Windows::Security::Cryptography::CryptographicBuffer::GenerateRandom(static_cast<uint32_t>(count));
+        promise.Resolve(to_string(Json::JsonValue::CreateStringValue(Windows::Security::Cryptography::CryptographicBuffer::EncodeToBase64String(bytes)).Stringify()));
+      } else if (method == "cryptoDigest") {
+        using namespace Windows::Security::Cryptography;
+        auto data = CryptographicBuffer::ConvertStringToBinary(args.GetNamedString(L"value"), BinaryStringEncoding::Utf8);
+        if (data.Length() > 1048576) throw hresult_invalid_argument(L"Digest input exceeds 1 MiB");
+        auto digest = Core::HashAlgorithmProvider::OpenAlgorithm(Core::HashAlgorithmNames::Sha256()).HashData(data);
+        promise.Resolve(to_string(Json::JsonValue::CreateStringValue(CryptographicBuffer::EncodeToHexString(digest)).Stringify()));
+      } else if (method.starts_with("auth")) {
+        auto id = to_string(args.GetNamedString(L"id"));
+        if (method == "authPrepare") {
+          if (id.empty() || receivers->count(id) || receivers->size() >= 4) throw hresult_invalid_argument(L"Invalid or busy auth session");
+          auto port = args.GetNamedNumber(L"port"); if (port < 0 || port > 65535 || port != std::floor(port)) throw hresult_invalid_argument(L"Invalid callback port");
+          auto receiver = std::make_unique<legend::AuthLoopback>(static_cast<unsigned short>(port), to_string(args.GetNamedString(L"path")));
+          auto uri = receiver->RedirectURI(); receivers->emplace(id, std::move(receiver)); promise.Resolve(to_string(Json::JsonValue::CreateStringValue(to_hstring(uri)).Stringify()));
+        } else if (method == "authClose") { receivers->erase(id); promise.Resolve("null"); }
+        else if (method == "authPoll") {
+          auto found = receivers->find(id); if (found == receivers->end()) throw hresult_invalid_argument(L"Auth session is closed");
+          Json::JsonArray urls; for (auto const &uri : found->second->Drain()) urls.Append(Json::JsonValue::CreateStringValue(to_hstring(uri))); promise.Resolve(to_string(urls.Stringify()));
+        } else throw hresult_invalid_argument(L"Unknown auth operation");
+      } else if (method == "recent" || method == "noteRecent" || method == "clearRecent") {
         RecentDocuments recent;
         if (method == "recent") promise.Resolve(to_string(recent.Read().Stringify()));
         else { if (method == "noteRecent") recent.Add(args.GetNamedString(L"url")); else recent.Clear(); promise.Resolve("null"); }
@@ -89,11 +117,12 @@ struct LegendLinks {
           promise.Resolve(status == Windows::System::LaunchQuerySupportStatus::Available ? "true" : "false");
         } else promise.Reject(React::ReactError{"E_UNSUPPORTED", "Unsupported Windows linking operation"});
       }
-    } catch (hresult_error const &error) { promise.Reject(React::ReactError{"E_LINKING", to_string(error.message())}); }
+    } catch (std::exception const &error) { promise.Reject(React::ReactError{"E_AUTH", error.what()}); }
+    catch (hresult_error const &error) { promise.Reject(React::ReactError{"E_LINKING", to_string(error.message())}); }
   }
   REACT_METHOD(call)
   void call(std::string method, std::string args, React::ReactPromise<std::string> promise) noexcept {
-    context.UIDispatcher().Post([method = std::move(method), args = std::move(args), promise]() { Invoke(method, args, promise); });
+    context.UIDispatcher().Post([receivers = receivers, method = std::move(method), args = std::move(args), promise]() { Invoke(receivers, method, args, promise); });
   }
 };
 }

@@ -9,7 +9,8 @@
     "macos",
     "*.podspec",
     "react-native.config.js",
-    "windows"
+    "windows",
+    "common"
   ],
   "peerDependencies": {
     "react": "19.1.4",

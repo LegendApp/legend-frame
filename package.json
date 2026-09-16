@@ -90,7 +90,10 @@
     "@legend-apps/sqlite": "workspace:*",
     "@legend-apps/webview": "workspace:*",
     "react-native-nitro-modules": "0.35.7",
-    "@react-native-runtimes/core": "0.1.0-alpha.2"
+    "@react-native-runtimes/core": "0.1.0-alpha.2",
+    "@legend-apps/auth-session": "workspace:*",
+    "expo-web-browser": "15.0.10",
+    "expo-crypto": "15.0.8"
   },
   "overrides": {
     "@expo/cli": "54.0.27",

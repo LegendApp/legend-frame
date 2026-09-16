@@ -9,7 +9,8 @@ Pod::Spec.new do |s|
   s.homepage = "https://legendapp.com"
   s.source = { :path => "." }
   s.platforms = { :osx => "14.0" }
-  s.source_files = "macos/**/*.{h,m,mm}"
+  s.source_files = "macos/**/*.{h,m,mm}", "common/**/*.h"
+  s.frameworks = "Security"
   s.dependency "React-Core"
   s.dependency "ReactCodegen"
   s.dependency "RNDesktopApp"

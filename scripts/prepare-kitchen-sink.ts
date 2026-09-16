@@ -23,7 +23,10 @@ async function prepareKitchenSinkConsumer(root: string) {
   if (!existsSync(path.join(root, "package.json"))) await create(root, manifest);
   else await refreshLocalPackages(root, manifest);
   const pkg = readJson(path.join(root, "package.json"));
-  pkg.dependencies["@legend-apps/ui"] = pkg.overrides["@legend-apps/ui"];
+  for (const name of ["@legend-apps/ui", "@legend-apps/audio", "@legend-apps/auth-session"]) {
+    if (!pkg.overrides[name]) throw new Error(`Kitchen Sink needs the packed ${name} archive`);
+    pkg.dependencies[name] = pkg.overrides[name];
+  }
   pkg.dependencies["base64-js"] = "1.5.1";
   pkg.dependencies.uniwind = "1.6.3";
   pkg.dependencies.tailwindcss = "4.2.4";

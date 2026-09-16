@@ -14,6 +14,7 @@ import { registerShortcut } from "@legend-apps/desktop/shortcuts";
 import { showContextMenu } from "@legend-apps/desktop/context-menu";
 import { configureMenus, clearMenus, addNativeMenuActionListener } from "@legend-apps/desktop/menus";
 import { openFileDialog, saveFileDialog, revealInFinder } from "@legend-apps/desktop/dialogs";
+import { AuthChecks } from "./AuthChecks";
 import { AudioChecks } from "./AudioChecks";
 import { FoundationChecks } from "./FoundationChecks";
 import { runSidecarChecks } from "./sidecar-checks";
@@ -32,6 +33,8 @@ export default function App(props: Props) {
   const args = props.launchArguments ?? [];
   const report = argument(args, "--legend-test-report");
   if (props.windowId && props.windowId !== "main") return <SecondaryWindow {...props} />;
+  const authReport = argument(args, "--legend-auth-report");
+  if (authReport) return <AuthChecks report={authReport} provider={argument(args, "--legend-auth-provider")!} />;
   const audioReport = argument(args, "--legend-audio-report");
   if (audioReport) return <AudioChecks report={audioReport} source={argument(args, "--legend-audio-source")!} />;
   const foundationReport = argument(args, "--legend-foundation-report");
