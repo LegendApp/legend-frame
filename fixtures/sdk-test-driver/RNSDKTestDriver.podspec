@@ -7,7 +7,7 @@ Pod::Spec.new do |s|
   s.license = { :type => "MIT" }
   s.author = "Legend"
   s.homepage = "https://legendapp.com"
-  s.frameworks = "UniformTypeIdentifiers"
+  s.frameworks = "UniformTypeIdentifiers", "MediaPlayer"
   s.source = { :path => "." }
   s.platforms = { :osx => "14.0" }
   s.source_files = "macos/**/*.{h,m,mm}"

@@ -3,9 +3,9 @@ import { MusicModel } from '../packages/cli/templates/music-lite/model';
 import { compare } from '../packages/cli/templates/diff-lite/compare';
 test('restoring a queue never autoplays and resumes only after a play command', async () => {
   const calls: string[] = []; let saved: unknown;
-  const model = new MusicModel({ load: async () => ({ value: { version: 1, tracks: [{ id: 'one', name: 'One', uri: 'one.wav' }], currentId: 'one', position: 12 }, recovered: false }), save: async value => { saved = value; } }, async () => ({ release() { calls.push('release'); }, player: {
+  const model = new MusicModel({ load: async () => ({ value: { version: 1, tracks: [{ id: 'one', name: 'One', uri: 'one.wav' }], currentId: 'one', position: 12 }, recovered: false }), save: async value => { saved = value; } }, async () => ({ release() { calls.push('release'); }, player: { async setVolume() {}, async setMetadata() {}, addListener() { return { remove() {} }; },
     async play() { calls.push('play'); }, async pause() { calls.push('pause'); }, async seekTo(seconds) { calls.push(`seek:${seconds}`); }, async remove() { calls.push('remove'); },
-    async getStatus() { return { currentTime: 12, duration: 30, playing: true, didJustFinish: false, error: null }; },
+    async getStatus() { return { currentTime: 12, duration: 30, playing: true, didJustFinish: false, error: null, volume: 1 }; },
   } }));
   await model.load(); expect(calls).toEqual([]); await model.play(); expect(calls).toEqual(['seek:12','play']); expect(saved).toBeDefined(); await model.dispose(); expect(calls.slice(-2)).toEqual(['remove','release']);
 });
@@ -23,9 +23,9 @@ test('line comparison preserves old/new line numbers and marks additions and del
 test('disposal waits for in-flight creation and releases the player once', async () => {
   let finish!: () => void; const ready = new Promise<void>(resolve => { finish = resolve; }); const calls: string[] = [];
   const model = new MusicModel({ load: async () => ({ value: null, recovered: false }), save: async () => {} }, async () => {
-    await ready; return { release() { calls.push('release'); }, player: {
+    await ready; return { release() { calls.push('release'); }, player: { async setVolume() {}, async setMetadata() {}, addListener() { return { remove() {} }; },
       async play() { calls.push('play'); }, async pause() {}, async seekTo() {}, async remove() { calls.push('remove'); },
-      async getStatus() { return { playing: true, currentTime: 0, duration: 30, didJustFinish: false, error: null }; },
+      async getStatus() { return { playing: true, currentTime: 0, duration: 30, didJustFinish: false, error: null, volume: 1 }; },
     } };
   });
   await model.load(); await model.add([{ id:'one', name:'One', uri:'one.wav' }]);

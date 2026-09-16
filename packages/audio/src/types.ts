@@ -1,7 +1,12 @@
+import type { AudioMetadata } from "./media-types";
+export * from "./media-types";
 /** Seconds throughout. Commands reject when the backend cannot complete them. */
-export type AudioStatus = { playing: boolean; currentTime: number; duration: number; didJustFinish: boolean; error: string | null };
+export type AudioStatus = { playing: boolean; currentTime: number; duration: number; didJustFinish: boolean; error: string | null; volume: number };
 export type AudioSource = { uri: string; title?: string };
 export interface AudioPlayer {
+  setVolume(volume: number): Promise<void>;
+  setMetadata(metadata: AudioMetadata): Promise<void>;
+  addListener(event: "playbackStatusUpdate", listener: (status: AudioStatus) => void): { remove(): void };
   play(): Promise<void>;
   pause(): Promise<void>;
   seekTo(seconds: number): Promise<void>;

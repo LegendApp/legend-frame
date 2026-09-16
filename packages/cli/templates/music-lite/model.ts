@@ -6,7 +6,7 @@ export function decodeLibrary(value: unknown): Library {
   if (data?.version !== 1 || !Array.isArray(data.tracks) || !data.tracks.every(track => track && typeof track.id === "string" && typeof track.name === "string" && typeof track.uri === "string") || !Number.isFinite(data.position) || data.position < 0 || (data.currentId !== null && typeof data.currentId !== "string")) throw new Error("Unsupported music library format");
   return data;
 }
-const stopped: AudioStatus = { playing: false, currentTime: 0, duration: 0, didJustFinish: false, error: null };
+const stopped: AudioStatus = { playing: false, currentTime: 0, duration: 0, didJustFinish: false, error: null, volume: 1 };
 export class MusicModel {
   private state = { version: 1 as const, tracks: [] as Track[], currentId: null as string | null, position: 0, status: stopped, ready: false, busy: false, dirty: false, error: null as string | null };
   private listeners = new Set<() => void>();

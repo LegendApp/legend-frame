@@ -1,3 +1,7 @@
+import { validateVolume, validateMetadata } from "./media-types";
+import { statusListeners } from "./status-listeners";
+export type * from "./media-types";
+export { createMediaSession } from "./media-session-unavailable";
 import { createAudioPlayer as createExpoPlayer, setAudioModeAsync } from "expo-audio";
 import { validateSource, validateTime, type AudioPlayer, type AudioSource } from "./types";
 export type { AudioPlayer, AudioSource, AudioStatus } from "./types";
@@ -19,11 +23,16 @@ export async function createAudioPlayer(source: AudioSource): Promise<AudioPlaye
     });
     player.setActiveForLockScreen(true, { title: source.title ?? "Music" });
   } catch (error) { subscription.remove(); player.remove(); throw error; }
+  const read = async () => { alive(); const status = player.currentStatus; return { playing: status.playing, currentTime: status.currentTime, duration: status.duration, didJustFinish: ended, error: failed ? "Audio could not be decoded or loaded" : null, volume: player.volume }; };
+  const listeners = statusListeners(read);
   return {
+    async setVolume(volume) { alive(); validateVolume(volume); player.volume = volume; },
+    async setMetadata(metadata) { alive(); validateMetadata(metadata); player.updateLockScreenMetadata(metadata); },
+    addListener(event, listener) { if (event !== "playbackStatusUpdate") throw new TypeError("Unknown audio event"); return listeners.add(listener); },
     async play() { alive(); ended = false; player.play(); },
     async pause() { alive(); player.pause(); },
     async seekTo(seconds) { alive(); validateTime(seconds); ended = false; await player.seekTo(seconds); },
-    async getStatus() { alive(); const status = player.currentStatus; return { playing: status.playing, currentTime: status.currentTime, duration: status.duration, didJustFinish: ended, error: failed ? "Audio could not be decoded or loaded" : null }; },
-    async remove() { if (!removed) { removed = true; subscription.remove(); player.clearLockScreenControls(); player.remove(); } },
+    getStatus: read,
+    async remove() { if (!removed) { removed = true; listeners.close(); subscription.remove(); player.clearLockScreenControls(); player.remove(); } },
   };
 }

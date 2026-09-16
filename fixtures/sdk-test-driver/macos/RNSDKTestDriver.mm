@@ -1,5 +1,6 @@
 #import "RNSDKTestDriver.h"
 #import <UniformTypeIdentifiers/UniformTypeIdentifiers.h>
+#import <MediaPlayer/MediaPlayer.h>
 #import <RNDesktopApp/LegendDesktop.h>
 @interface RNSDKTestDriver ()
 @property NSArray<NSPasteboardItem *> *savedClipboard;
@@ -86,6 +87,12 @@ RCT_EXPORT_MODULE(NativeSDKTestDriver)
       NSMutableArray *urls = [NSMutableArray new];
       for (NSString *url in args[@"urls"]) [urls addObject:[NSURL URLWithString:url]];
       [NSApp.delegate application:NSApp openURLs:urls];
+    }
+    else if ([method isEqual:@"mediaInfo"]) {
+      NSDictionary *info = MPNowPlayingInfoCenter.defaultCenter.nowPlayingInfo;
+      resolve(LegendJSON(@{ @"title": info[MPMediaItemPropertyTitle] ?: @"", @"artist": info[MPMediaItemPropertyArtist] ?: @"",
+        @"position": info[MPNowPlayingInfoPropertyElapsedPlaybackTime] ?: @0,
+        @"next": @(MPRemoteCommandCenter.sharedCommandCenter.nextTrackCommand.enabled), @"previous": @(MPRemoteCommandCenter.sharedCommandCenter.previousTrackCommand.enabled) })); return;
     }
     else if ([method isEqual:@"overlayInfo"]) {
       for (NSWindow *window in NSApp.windows) if ([window.identifier isEqual:args[@"identifier"]]) {

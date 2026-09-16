@@ -41,3 +41,59 @@ Replacement implementations must preserve seconds, explicit resource disposal,
 command failures, and status semantics. No player, queue, or audio module is loaded
 by the framework root. Use direct external-library imports for capabilities outside
 this contract, such as recording or sample analysis.
+
+## Volume, metadata, and status observation
+
+```ts
+await player.setVolume(0.5); // 0–1
+await player.setMetadata({ title: 'Episode', artist: 'Host', albumTitle: 'Series', artworkUrl: 'https://example.com/cover.png' });
+const subscription = player.addListener('playbackStatusUpdate', status => {
+  // Includes volume, position, completion and errors. No React state is required.
+});
+subscription.remove();
+```
+
+Status subscriptions sample at 250 ms only while observed. They report state, not
+an exact event journal. Removal stops callbacks, and player disposal removes all
+subscriptions. Artwork loading is best effort; transport/decoding failures remain
+visible through player status. Replacing a player does not transfer its listeners.
+
+## Independent system media sessions
+
+Desktop and web can publish controls for an external playback engine:
+
+```ts
+import { createMediaSession } from '@legend-apps/audio';
+const session = await createMediaSession({
+  metadata: { title: 'Episode', artist: 'Host' },
+  playbackState: 'playing', position: 12, duration: 120,
+  commands: ['play', 'pause', 'nextTrack', 'previousTrack', 'seekTo'],
+}, command => {
+  // Route to your engine; seekTo includes position in seconds.
+});
+await session.update({ playbackState: 'paused', position: 30 });
+await session.remove();
+```
+
+One explicit session owns the system controls. Creating another replaces it;
+updates to the old session reject, and disposing it cannot clear the new session.
+Explicit sessions take precedence over built-in players. Removing one clears its
+controls; it does not silently restore a previous player. Updates patch session
+fields; `metadata` replaces the metadata object. The application supplies progress
+and owns queue/next/previous behavior. Commands never mutate an external player.
+Desktop command delivery drains a bounded native queue every 100 ms while the
+session is active. Treat callbacks as commands, not confirmations of playback.
+Web support depends on browser Media Session action support. Windows owns a
+MediaPlayer-backed SMTC session with its automatic command manager disabled.
+
+On iOS/Android, player volume and metadata delegate to Expo Audio. Standalone
+sessions for external engines explicitly reject with `E_UNAVAILABLE`: Expo Audio
+binds its lock-screen controls to its own player. This module does not invent a
+mobile media service or claim arbitrary-engine parity. Recording, queue management,
+provider SDKs and media indexing remain outside this contract.
+
+`bun scripts/test-audio.ts` builds and runs the macOS probe for real local decoding,
+volume, seek, status cleanup, metadata, command configuration and session replacement.
+It does not synthesize OS media-key input. Check real system controls and artwork
+visually on both platforms. Windows native compilation/runtime acceptance remains
+pending. Rebuild the native runtime for these additions.
