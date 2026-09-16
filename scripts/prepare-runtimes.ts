@@ -45,6 +45,6 @@ export async function packRuntimes(root: string, output: string) {
   pkg.dependencies = { ...pkg.dependencies, "@babel/parser": "7.28.5", "@babel/traverse": "7.28.5", "react-native-nitro-modules": "0.35.7" };
   writeJson(path.join(core, "package.json"), pkg);
   const file = `react-native-runtimes-core-${pkg.version}-${hash}.tgz`;
-  await run(core, ["tar", "-czf", path.join(output, file), "."], { capture: true });
+  await run(core, ["tar", "--exclude=.legend", "-czf", path.join(output, file), "."], { capture: true });
   return { [pkg.name]: file };
 }

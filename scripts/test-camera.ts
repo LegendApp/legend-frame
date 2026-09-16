@@ -1,6 +1,6 @@
 import { cpSync, existsSync, mkdirSync, rmSync } from "node:fs";
 import path from "node:path";
-import { prepareKitchenSink } from "./kitchen-sink";
+import { prepareKitchenSink } from "./prepare-kitchen-sink";
 import { packageCameraApp } from "./package-camera";
 import { installCameraPackages } from "./prepare-camera";
 import { build } from "../packages/cli/src/build";

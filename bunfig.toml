@@ -1,0 +1,3 @@
+[install]
+# Expo Desktop beta's native templates expect sibling React Native packages.
+linker = "hoisted"

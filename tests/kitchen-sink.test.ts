@@ -1,32 +1,29 @@
 import { expect, test } from "bun:test";
-import { mkdtempSync, mkdirSync, writeFileSync, rmSync } from "node:fs";
+import { mkdtempSync, mkdirSync, writeFileSync, readFileSync, existsSync, rmSync } from "node:fs";
 import os from "node:os";
 import path from "node:path";
-import { kitchenSinkInputs, prepareKitchenSink, prepareKitchenSinkDev } from "../scripts/kitchen-sink";
+import { copyKitchenSinkScreens, prepareKitchenSink } from "../scripts/prepare-kitchen-sink";
 
-test("screen and CSS edits keep the setup cache, SDK and Metro edits invalidate it", () => {
-  const root = mkdtempSync(path.join(os.tmpdir(), "kitchen-inputs-"));
-  const write = (file: string, content: string) => {
-    mkdirSync(path.dirname(path.join(root, file)), { recursive: true });
-    writeFileSync(path.join(root, file), content);
-  };
+test("packaged consumers receive screens without workspace manifests or native projects", () => {
+  const root = mkdtempSync(path.join(os.tmpdir(), "kitchen-copy-"));
+  const source = path.join(root, "source"), consumer = path.join(root, "consumer");
+  mkdirSync(source); mkdirSync(consumer);
   try {
-    write("examples/kitchen-sink/App.tsx", "screen");
-    write("examples/kitchen-sink/global.css", "styles");
-    write("packages/ui/src/index.tsx", "native control");
-    const initial = kitchenSinkInputs(root);
-    write("examples/kitchen-sink/App.tsx", "edited screen");
-    write("examples/kitchen-sink/global.css", "edited styles");
-    expect(kitchenSinkInputs(root)).toBe(initial);
-    write("packages/ui/src/index.tsx", "changed control");
-    const sdk = kitchenSinkInputs(root);
-    expect(sdk).not.toBe(initial);
-    write("examples/kitchen-sink/metro.config.js", "changed resolver");
-    expect(kitchenSinkInputs(root)).not.toBe(sdk);
+    for (const [file, value] of Object.entries({ "App.tsx": "screen", "global.css": "styles", "metro.config.js": "metro", "package.json": "workspace dependencies", "desktop.config.json": "checkout identity", "app.config.js": "checkout config" })) writeFileSync(path.join(source, file), value);
+    mkdirSync(path.join(source, "macos")); writeFileSync(path.join(source, "macos/keep"), "native source");
+    writeFileSync(path.join(consumer, "package.json"), "SDK archives");
+    writeFileSync(path.join(consumer, "desktop.config.json"), "test identity");
+    copyKitchenSinkScreens(source, consumer);
+    expect(readFileSync(path.join(consumer, "App.tsx"), "utf8")).toBe("screen");
+    expect(readFileSync(path.join(consumer, "global.css"), "utf8")).toBe("styles");
+    expect(readFileSync(path.join(consumer, "package.json"), "utf8")).toBe("SDK archives");
+    expect(readFileSync(path.join(consumer, "desktop.config.json"), "utf8")).toBe("test identity");
+    expect(existsSync(path.join(consumer, "macos"))).toBe(false);
+    expect(existsSync(path.join(consumer, "app.config.js"))).toBe(false);
   } finally { rmSync(root, { recursive: true, force: true }); }
 });
 
-test("packaged test preparation refuses a live source consumer", async () => {
+test("packaged preparation refuses an old live source consumer", async () => {
   const root = mkdtempSync(path.join(os.tmpdir(), "kitchen-live-"));
   try {
     mkdirSync(path.join(root, ".legend"));
@@ -35,10 +32,10 @@ test("packaged test preparation refuses a live source consumer", async () => {
   } finally { rmSync(root, { recursive: true, force: true }); }
 });
 
-test("live preparation refuses an unmanaged application", async () => {
+test("packaged preparation refuses the checked-in or any unmanaged application", async () => {
   const root = mkdtempSync(path.join(os.tmpdir(), "kitchen-unmanaged-"));
   try {
     writeFileSync(path.join(root, "package.json"), "{}");
-    await expect(prepareKitchenSinkDev(root)).rejects.toThrow("Refusing to overwrite");
+    await expect(prepareKitchenSink(root)).rejects.toThrow("Refusing to overwrite");
   } finally { rmSync(root, { recursive: true, force: true }); }
 });

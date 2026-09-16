@@ -324,30 +324,36 @@ acceptance; all open native checks remain in [Windows issues](docs/windows-issue
 
 ## Kitchen sink development
 
-`bun run kitchen-sink` prepares a managed consumer only when its SDK content hash,
-dependency configuration, or installation changes, then delegates to the installed
-`legend dev` / Expo CLI. It never builds native code automatically. The registered
-prebuilt runtime supplies native modules and remains subject to normal compatibility
-checks; Metro supplies the example's JavaScript.
+`examples/kitchen-sink` is a checked-in Bun workspace app with its own manifest,
+canonical desktop configuration, Expo config, Metro config and run scripts. The
+repository lockfile and hoisted Bun installation match Expo Desktop beta's native
+template assumptions. Application dependencies reference framework workspace
+packages; Metro watches workspace source through Expo's ordinary monorepo support.
+The desktop adapter keeps the bundle server root at the app so prebuilt hosts can
+continue requesting `/index.bundle` and `/.threaded-runtime/entry.bundle`.
 
-The consumer preserves its identity, configuration, native projects, and runtime
-selection. Its `src` directory links to `examples/kitchen-sink` (a junction on
-Windows). Metro watches the real source and Uniwind CSS, while package imports from
-that source resolve against the consumer's installed dependencies to avoid workspace
-leaks and duplicate React. SDK edits refresh packaged dependencies on the next run;
-screen and style edits reach Metro immediately.
+`bun install` applies checked-in external-library deltas through
+`scripts/install-workspace-adapters.ts`. The hook performs local file operations
+only, validates versions and patch contexts, supports repeat installs, and replaces
+files atomically to preserve package-cache hardlinks. This avoids Bun 1.3.14's
+nested-file patching failure. `scripts/sync-workspace-patches.ts` is a maintainer
+command deriving those patches from the same pinned recipes as SDK packing.
+Neither command generates an application or compiles native code during install.
 
-`bun run kitchen-sink:prepare` and integration runners using `prepareKitchenSink`
-keep a separate copied consumer for distribution validation and test-driver edits.
-They reject the live-source consumer so tests cannot accidentally modify checkout
-source through its link. `--prepare-only` prepares the live development consumer
-without launching; `--refresh` forces repacking and installation.
+`bun run macos` and `bun run windows` invoke the existing Legend/Expo development
+session and prebuilt registry. Native dependencies come from the compatible binary;
+Metro supplies live JavaScript and CSS. No hosted download service exists yet.
+The explicit `rebuild:macos` / `rebuild:windows` commands build and register a
+matching prebuilt from this app's dependency graph. Native changes invalidate it;
+screen changes Fast Refresh. Platform state and generated projects remain separate
+and ignored without changing the app's checked-in identity.
 
-Validated on macOS on 2026-09-15: fresh and cached preparation, a separate packed
-consumer, the real Metro macOS graph resolving checkout source with one installed
-React copy, TypeScript and CSS edits delivered over HMR, and session shutdown.
-TypeScript and 172 tests passed. Native launch remains gated by the locally outdated
-prebuilt host; native execution and Windows junction behavior were not retested.
+The root `kitchen-sink` script only delegates to this app. SDK integration tests use
+`scripts/prepare-kitchen-sink.ts` to create a separate packed consumer and copy only
+screens/assets/Metro config, preserving generated identity and archive dependencies.
+The helper rejects the checkout app, unmanaged directories, and old live-source
+consumers. The old `.legend/examples/KitchenSink` daily-development indirection is
+no longer used.
 
 ## Small application examples
 

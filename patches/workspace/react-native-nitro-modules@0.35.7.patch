@@ -1,0 +1,1319 @@
+diff --git a/cpp/core/AnyMap.hpp b/cpp/core/AnyMap.hpp
+index 8aaf161..7b5ba34 100644
+--- a/cpp/core/AnyMap.hpp
++++ b/cpp/core/AnyMap.hpp
+@@ -1,3 +1,4 @@
++#include "NitroDefines.hpp"
+ //
+ // Created by Marc Rousavy on 30.07.24.
+ //
+@@ -36,7 +37,7 @@ struct AnyValue : VariantType {
+  * 2. Arrays of primitives
+  * 3. Objects of primitives
+  */
+-class AnyMap final {
++class NITRO_WINDOWS_API AnyMap final {
+ private:
+   AnyMap() = default;
+   explicit AnyMap(size_t size) {
+diff --git a/cpp/core/ArrayBuffer.hpp b/cpp/core/ArrayBuffer.hpp
+index 5121a6f..ece8edd 100644
+--- a/cpp/core/ArrayBuffer.hpp
++++ b/cpp/core/ArrayBuffer.hpp
+@@ -1,3 +1,4 @@
++#include "NitroDefines.hpp"
+ //
+ //  ArrayBuffer.hpp
+ //  react-native-nitro
+@@ -34,7 +35,7 @@ using DeleteFn = std::function<void()>;
+  * - Borrowed = the `ArrayBuffer`'s `data()` might be deleted at any point from an external source (e.g. the JS garbage collector).
+  *   When this `ArrayBuffer` gets deleted, the memory will not be freed explicitly, as someone else owns it.
+  */
+-class ArrayBuffer : public jsi::MutableBuffer {
++class NITRO_WINDOWS_API ArrayBuffer : public jsi::MutableBuffer {
+ public:
+   ArrayBuffer() = default;
+   ArrayBuffer(const ArrayBuffer&) = delete;
+@@ -89,7 +90,7 @@ public:
+  *
+  * It is safe to access `data()` and `size()` from any Thread, but there are no synchronization/mutexes implemented by default.
+  */
+-class NativeArrayBuffer final : public ArrayBuffer {
++class NITRO_WINDOWS_API NativeArrayBuffer final : public ArrayBuffer {
+ public:
+   /**
+    * Create a new **owning** `ArrayBuffer`.
+@@ -124,7 +125,7 @@ private:
+  *
+  * If the JS ArrayBuffer (or its JS Runtime) have already been deleted, `data()` returns `nullptr`.
+  */
+-class JSArrayBuffer final : public ArrayBuffer {
++class NITRO_WINDOWS_API JSArrayBuffer final : public ArrayBuffer {
+ public:
+   explicit JSArrayBuffer(jsi::Runtime& runtime, BorrowingReference<jsi::ArrayBuffer> jsReference);
+   ~JSArrayBuffer();
+diff --git a/cpp/core/BoxedHybridObject.hpp b/cpp/core/BoxedHybridObject.hpp
+index 2f44481..8d6e3de 100644
+--- a/cpp/core/BoxedHybridObject.hpp
++++ b/cpp/core/BoxedHybridObject.hpp
+@@ -1,3 +1,4 @@
++#include "NitroDefines.hpp"
+ //
+ // Created by Marc Rousavy on 21.02.24.
+ //
+@@ -21,7 +22,7 @@ using namespace facebook;
+  *
+  * Simply call `unbox()` on this `jsi::HostObject` from the new Runtime/context to get the `HybridObject` again.
+  */
+-class BoxedHybridObject final : public jsi::HostObject {
++class NITRO_WINDOWS_API BoxedHybridObject final : public jsi::HostObject {
+ public:
+   explicit BoxedHybridObject(const std::shared_ptr<HybridObject>& hybridObject) : _hybridObject(hybridObject) {}
+ 
+diff --git a/cpp/core/HybridObject.hpp b/cpp/core/HybridObject.hpp
+index 79307b7..93eeeed 100644
+--- a/cpp/core/HybridObject.hpp
++++ b/cpp/core/HybridObject.hpp
+@@ -1,3 +1,4 @@
++#include "NitroDefines.hpp"
+ //
+ // Created by Marc Rousavy on 21.02.24.
+ //
+@@ -24,7 +25,7 @@ using namespace facebook;
+  *
+  * The new class can then be passed to JS using the `JSIConverter<HybridObject>`.
+  */
+-class HybridObject : public virtual jsi::NativeState, public HybridObjectPrototype, public std::enable_shared_from_this<HybridObject> {
++class NITRO_WINDOWS_API HybridObject : public virtual jsi::NativeState, public HybridObjectPrototype, public std::enable_shared_from_this<HybridObject> {
+ public:
+   /**
+    * Create a new instance of a `HybridObject`.
+diff --git a/cpp/entrypoint/InstallNitro.hpp b/cpp/entrypoint/InstallNitro.hpp
+index 7abbdcb..26909f6 100644
+--- a/cpp/entrypoint/InstallNitro.hpp
++++ b/cpp/entrypoint/InstallNitro.hpp
+@@ -1,3 +1,4 @@
++#include "NitroDefines.hpp"
+ //
+ //  InstallNitro.hpp
+ //  NitroModules
+@@ -26,7 +27,7 @@ namespace margelo::nitro {
+  * React's `CallInvoker`), but in a thread-safe Runtime it might just be
+  * an implementation that runs the method directly.
+  */
+-void install(jsi::Runtime& runtime, std::shared_ptr<Dispatcher> dispatcher);
++NITRO_WINDOWS_API void install(jsi::Runtime& runtime, std::shared_ptr<Dispatcher> dispatcher);
+ 
+ /**
+  * Installs Nitro into the given JS `runtime`.
+@@ -36,6 +37,6 @@ void install(jsi::Runtime& runtime, std::shared_ptr<Dispatcher> dispatcher);
+  * No `Dispatcher` will be installed, meaning Nitro can only use synchronous
+  * methods.
+  */
+-void install(jsi::Runtime& runtime);
++NITRO_WINDOWS_API void install(jsi::Runtime& runtime);
+ 
+ } // namespace margelo::nitro
+diff --git a/cpp/jsi/JSICache.hpp b/cpp/jsi/JSICache.hpp
+index 7578579..7cde951 100644
+--- a/cpp/jsi/JSICache.hpp
++++ b/cpp/jsi/JSICache.hpp
+@@ -1,3 +1,4 @@
++#include "NitroDefines.hpp"
+ //
+ //  JSICache.hpp
+ //  NitroModules
+@@ -33,7 +34,7 @@ class JSICacheReference;
+  * the same Thread that it was created on. This ensures that the `jsi::Runtime` cannot
+  * delete it while you are still using it.
+  */
+-class JSICache final : public jsi::NativeState {
++class NITRO_WINDOWS_API JSICache final : public jsi::NativeState {
+ public:
+   ~JSICache();
+ 
+diff --git a/cpp/platform/NitroLogger.hpp b/cpp/platform/NitroLogger.hpp
+index 59daefb..574b015 100644
+--- a/cpp/platform/NitroLogger.hpp
++++ b/cpp/platform/NitroLogger.hpp
+@@ -1,3 +1,4 @@
++#include "NitroDefines.hpp"
+ //
+ // Created by Marc Rousavy on 05.03.24.
+ //
+@@ -16,7 +17,7 @@ namespace margelo::nitro {
+ 
+ enum class LogLevel { Debug, Info, Warning, Error };
+ 
+-class Logger final {
++class NITRO_WINDOWS_API Logger final {
+ private:
+   Logger() = delete;
+ 
+diff --git a/cpp/platform/ThreadUtils.hpp b/cpp/platform/ThreadUtils.hpp
+index 6b19ac7..2725bb5 100644
+--- a/cpp/platform/ThreadUtils.hpp
++++ b/cpp/platform/ThreadUtils.hpp
+@@ -1,3 +1,4 @@
++#include "NitroDefines.hpp"
+ //
+ //  ThreadUtils.hpp
+ //  react-native-nitro
+@@ -13,7 +14,7 @@
+ 
+ namespace margelo::nitro {
+ 
+-class ThreadUtils final {
++class NITRO_WINDOWS_API ThreadUtils final {
+ public:
+   ThreadUtils() = delete;
+ 
+diff --git a/cpp/prototype/HybridObjectPrototype.hpp b/cpp/prototype/HybridObjectPrototype.hpp
+index 522f991..e1bdb7b 100644
+--- a/cpp/prototype/HybridObjectPrototype.hpp
++++ b/cpp/prototype/HybridObjectPrototype.hpp
+@@ -1,3 +1,4 @@
++#include "NitroDefines.hpp"
+ //
+ //  HybridObjectPrototype.hpp
+ //  NitroModules
+@@ -29,7 +30,7 @@ using namespace facebook;
+  * When assigned to a jsi::Object, all methods of this prototype can be called on that jsi::Object,
+  * as long as it has a valid NativeState (`this`).
+  */
+-class HybridObjectPrototype {
++class NITRO_WINDOWS_API HybridObjectPrototype {
+ public:
+   HybridObjectPrototype() {}
+ 
+diff --git a/cpp/registry/HybridObjectRegistry.hpp b/cpp/registry/HybridObjectRegistry.hpp
+index 10795e1..56bfac9 100644
+--- a/cpp/registry/HybridObjectRegistry.hpp
++++ b/cpp/registry/HybridObjectRegistry.hpp
+@@ -1,3 +1,4 @@
++#include "NitroDefines.hpp"
+ //
+ //  HybridObjectRegistry.hpp
+ //  react-native-nitro
+@@ -17,7 +18,7 @@ namespace margelo::nitro {
+  * A registry that holds initializers for HybridObjects.
+  * This will be used to initialize them from JS using `NitroModules.createHybridObject<T>(name)`.
+  */
+-class HybridObjectRegistry {
++class NITRO_WINDOWS_API HybridObjectRegistry {
+ public:
+   HybridObjectRegistry() = delete;
+ 
+diff --git a/cpp/threading/Dispatcher.hpp b/cpp/threading/Dispatcher.hpp
+index dfe3070..210bd98 100644
+--- a/cpp/threading/Dispatcher.hpp
++++ b/cpp/threading/Dispatcher.hpp
+@@ -1,3 +1,4 @@
++#include "NitroDefines.hpp"
+ //
+ // Created by Marc Rousavy on 12.03.24.
+ //
+@@ -15,7 +16,7 @@ namespace margelo::nitro {
+ 
+ using namespace facebook;
+ 
+-class Dispatcher : public jsi::NativeState {
++class NITRO_WINDOWS_API Dispatcher : public jsi::NativeState {
+ public:
+   /**
+    Installs the Dispatcher into the given Runtime.
+diff --git a/cpp/threading/ThreadPool.hpp b/cpp/threading/ThreadPool.hpp
+index 6437b31..6ecba64 100644
+--- a/cpp/threading/ThreadPool.hpp
++++ b/cpp/threading/ThreadPool.hpp
+@@ -1,3 +1,4 @@
++#include "NitroDefines.hpp"
+ //
+ //  ThreadPool.hpp
+ //  NitroModules
+@@ -20,7 +21,7 @@
+ 
+ namespace margelo::nitro {
+ 
+-class ThreadPool final {
++class NITRO_WINDOWS_API ThreadPool final {
+ public:
+   /**
+    * Create a new ThreadPool with the given number of minimum workers/threads.
+diff --git a/cpp/utils/CommonGlobals.hpp b/cpp/utils/CommonGlobals.hpp
+index 388e74b..9df8515 100644
+--- a/cpp/utils/CommonGlobals.hpp
++++ b/cpp/utils/CommonGlobals.hpp
+@@ -1,3 +1,4 @@
++#include "NitroDefines.hpp"
+ //
+ //  CommonGlobals.hpp
+ //  react-native-nitro
+@@ -35,7 +36,7 @@ struct ComputedPropertyDescriptor {
+ 
+ enum class KnownGlobalPropertyName { DISPATCHER, JSI_CACHE, NITRO_MODULES_PROXY };
+ 
+-class CommonGlobals final {
++class NITRO_WINDOWS_API CommonGlobals final {
+ public:
+   CommonGlobals() = delete;
+   ~CommonGlobals() = delete;
+diff --git a/cpp/utils/NitroDefines.hpp b/cpp/utils/NitroDefines.hpp
+index c5665d7..95df558 100644
+--- a/cpp/utils/NitroDefines.hpp
++++ b/cpp/utils/NitroDefines.hpp
+@@ -71,3 +71,13 @@
+ #endif
+ 
+ #endif /* NitroDefines_h */
++
++#ifdef _WIN32
++#ifdef NITRO_WINDOWS_EXPORTS
++#define NITRO_WINDOWS_API __declspec(dllexport)
++#else
++#define NITRO_WINDOWS_API __declspec(dllimport)
++#endif
++#else
++#define NITRO_WINDOWS_API
++#endif
+diff --git a/cpp/utils/NitroTypeInfo.hpp b/cpp/utils/NitroTypeInfo.hpp
+index 128b807..b0cabce 100644
+--- a/cpp/utils/NitroTypeInfo.hpp
++++ b/cpp/utils/NitroTypeInfo.hpp
+@@ -1,3 +1,4 @@
++#include "NitroDefines.hpp"
+ //
+ //  NitroTypeInfo.hpp
+ //  Nitro
+diff --git a/cpp/utils/PropNameIDCache.hpp b/cpp/utils/PropNameIDCache.hpp
+index 1867ec9..51281db 100644
+--- a/cpp/utils/PropNameIDCache.hpp
++++ b/cpp/utils/PropNameIDCache.hpp
+@@ -1,3 +1,4 @@
++#include "NitroDefines.hpp"
+ //
+ //  PropNameIDCache.hpp
+ //  react-native-nitro
+@@ -24,7 +25,7 @@ using namespace facebook;
+  * And is more efficient than the string equivalent overloads of those
+  * functions due to caching.
+  */
+-class PropNameIDCache final {
++class NITRO_WINDOWS_API PropNameIDCache final {
+ public:
+   PropNameIDCache() = delete;
+   ~PropNameIDCache() = delete;
+diff --git a/package.json b/package.json
+index b1cee79..4b98442 100644
+--- a/package.json
++++ b/package.json
+@@ -22,7 +22,8 @@
+     "app.plugin.js",
+     "*.podspec",
+     "nitro_pod_utils.rb",
+-    "README.md"
++    "README.md",
++    "windows"
+   ],
+   "keywords": [
+     "react-native",
+@@ -123,5 +124,10 @@
+         }
+       ]
+     ]
++  },
++  "legend": {
++    "sdk": true,
++    "windowsAdapter": true,
++    "upstreamIntegrity": "sha512-3EiU27EmnxTlD3pAXR2OBWeDg7+9tdjKrNQOPX08rFX5hJPNIT/h1i2PjvTUieOypCGTEi9nW/SNBtK3F+4HYg=="
+   }
+ }
+diff --git a/react-native.config.js b/react-native.config.js
+index 3fdf8ea..0d98711 100644
+--- a/react-native.config.js
++++ b/react-native.config.js
+@@ -14,3 +14,6 @@ module.exports = {
+     },
+   },
+ }
++
++module.exports.dependency ??= {}; module.exports.dependency.platforms ??= {};
++module.exports.dependency.platforms.windows = {"sourceDir":"windows","solutionFile":"LegendNitro.sln","projects":[{"projectFile":"LegendNitro/LegendNitro.vcxproj","directDependency":true}]};
+diff --git a/windows/.gitignore b/windows/.gitignore
+new file mode 100644
+index 0000000..0fd0acf
+--- /dev/null
++++ b/windows/.gitignore
+@@ -0,0 +1,46 @@
++*AppPackages*
++*BundleArtifacts*
++
++#OS junk files
++[Tt]humbs.db
++*.DS_Store
++
++#Visual Studio files
++*.[Oo]bj
++*.user
++*.aps
++*.pch
++*.vspscc
++*.vssscc
++*_i.c
++*_p.c
++*.ncb
++*.suo
++*.tlb
++*.tlh
++*.bak
++*.[Cc]ache
++*.ilk
++*.log
++*.lib
++*.sbr
++*.sdf
++*.opensdf
++*.opendb
++*.unsuccessfulbuild
++ipch/
++[Oo]bj/
++[Bb]in
++[Dd]ebug*/
++[Rr]elease*/
++Ankh.NoLoad
++.vs/
++# Visual C++ cache files
++
++#Files generated by the VS build
++**/Generated Files/**
++
++#Files generated by MS build
++*.binlog
++*.err
++*.wrn
+diff --git a/windows/ExperimentalFeatures.props b/windows/ExperimentalFeatures.props
+new file mode 100644
+index 0000000..d7b6c40
+--- /dev/null
++++ b/windows/ExperimentalFeatures.props
+@@ -0,0 +1,33 @@
++<?xml version="1.0" encoding="utf-8"?>
++<Project xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
++
++  <PropertyGroup Label="Microsoft.ReactNative Experimental Features">
++    <!--
++      Required for building a New Architecture project.
++
++      Library projects can change this value to test against Old and New
++      Architectures when building the library project's local sln file.
++
++      Otherwise this value will be decided by the consuming RNW app.
++
++      See https://microsoft.github.io/react-native-windows/docs/new-architecture
++    -->
++    <RnwNewArch>true</RnwNewArch>
++
++    <!--
++      Changes compilation to assume use of Microsoft.ReactNative NuGet packages
++      instead of building the framework from source. Defaults to true.
++
++      This is set during library project creation and is used when building
++      the library project's local sln file.
++
++      Otherwise this value will be decided by the consuming RNW app.
++
++      See https://microsoft.github.io/react-native-windows/docs/nuget
++    -->
++    <UseExperimentalNuget>true</UseExperimentalNuget>
++
++    <ReactExperimentalFeaturesSet>true</ReactExperimentalFeaturesSet>
++  </PropertyGroup>
++
++</Project>
+diff --git a/windows/LICENSE b/windows/LICENSE
+new file mode 100644
+index 0000000..b4f554e
+--- /dev/null
++++ b/windows/LICENSE
+@@ -0,0 +1,25 @@
++The MIT License (MIT)
++
++Copyright (c) Microsoft Corporation and contributors. All rights reserved.
++
++Portions derived from React Native:
++
++Copyright (c) 2015-present, Facebook, Inc.
++
++Permission is hereby granted, free of charge, to any person obtaining a copy
++of this software and associated documentation files (the "Software"), to deal
++in the Software without restriction, including without limitation the rights
++to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
++copies of the Software, and to permit persons to whom the Software is
++furnished to do so, subject to the following conditions:
++
++The above copyright notice and this permission notice shall be included in all
++copies or substantial portions of the Software.
++
++THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
++IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
++FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
++AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
++LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
++OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
++SOFTWARE.
+diff --git a/windows/LegendNitro/LegendNitro.cpp b/windows/LegendNitro/LegendNitro.cpp
+new file mode 100644
+index 0000000..0c9f64f
+--- /dev/null
++++ b/windows/LegendNitro/LegendNitro.cpp
+@@ -0,0 +1,2 @@
++#include "pch.h"
++#include "LegendNitro.h"
+diff --git a/windows/LegendNitro/LegendNitro.def b/windows/LegendNitro/LegendNitro.def
+new file mode 100644
+index 0000000..24e7c12
+--- /dev/null
++++ b/windows/LegendNitro/LegendNitro.def
+@@ -0,0 +1,3 @@
++﻿EXPORTS
++DllCanUnloadNow = WINRT_CanUnloadNow                    PRIVATE
++DllGetActivationFactory = WINRT_GetActivationFactory    PRIVATE
+diff --git a/windows/LegendNitro/LegendNitro.h b/windows/LegendNitro/LegendNitro.h
+new file mode 100644
+index 0000000..eb2d6db
+--- /dev/null
++++ b/windows/LegendNitro/LegendNitro.h
+@@ -0,0 +1,23 @@
++#pragma once
++#include "NativeModules.h"
++#include <JSI/JsiApiContext.h>
++#include <InstallNitro.hpp>
++#include <CallInvokerDispatcher.hpp>
++#include <optional>
++namespace margelo::nitro { void SetWindowsUIDispatcher(winrt::Microsoft::ReactNative::ReactDispatcher const &); }
++REACT_MODULE(LegendNitroModule, L"NitroModules")
++struct LegendNitroModule {
++  winrt::Microsoft::ReactNative::ReactContext context;
++  REACT_INIT(Initialize) void Initialize(winrt::Microsoft::ReactNative::ReactContext const &value) noexcept { context = value; margelo::nitro::SetWindowsUIDispatcher(context.UIDispatcher()); }
++  REACT_SYNC_METHOD(install) std::optional<std::string> install() noexcept {
++    try {
++      auto handle = context.Handle().JSRuntime();
++      if (!handle) return "The Windows runtime does not expose JSI";
++      auto &runtime = winrt::Microsoft::ReactNative::GetOrCreateContextRuntime(context, handle);
++      // This synchronous TurboModule method is invoked on the owning JS thread.
++      margelo::nitro::install(runtime, std::make_shared<margelo::nitro::CallInvokerDispatcher>(context.CallInvoker()));
++      return std::nullopt;
++    } catch (std::exception const &error) { return error.what(); }
++    catch (winrt::hresult_error const &error) { return winrt::to_string(error.message()); }
++  }
++};
+diff --git a/windows/LegendNitro/LegendNitro.rc b/windows/LegendNitro/LegendNitro.rc
+new file mode 100644
+index 0000000..23aece1
+--- /dev/null
++++ b/windows/LegendNitro/LegendNitro.rc
+@@ -0,0 +1,3 @@
++// Microsoft Visual C++ generated resource script.
++//
++#include "resource.h"
+diff --git a/windows/LegendNitro/LegendNitro.vcxproj b/windows/LegendNitro/LegendNitro.vcxproj
+new file mode 100644
+index 0000000..9149a89
+--- /dev/null
++++ b/windows/LegendNitro/LegendNitro.vcxproj
+@@ -0,0 +1,148 @@
++<?xml version="1.0" encoding="utf-8"?>
++<!-- This project was created with react-native-windows 0.81.35 -->
++<Project DefaultTargets="Build" ToolsVersion="15.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
++  <Import Project="$(SolutionDir)\ExperimentalFeatures.props" Condition="Exists('$(SolutionDir)\ExperimentalFeatures.props')" />
++  <PropertyGroup Label="Globals">
++    <CppWinRTOptimized>true</CppWinRTOptimized>
++    <MinimalCoreWin>true</MinimalCoreWin>
++    <ProjectGuid>{6A8C5C24-E759-4E69-AE60-36A65693573D}</ProjectGuid>
++    <ProjectName>LegendNitro</ProjectName>
++    <Keyword>Win32Proj</Keyword>
++    <RootNamespace>LegendNitro</RootNamespace>
++    <WindowsTargetPlatformVersion>10.0</WindowsTargetPlatformVersion>
++    <DefaultLanguage>en-US</DefaultLanguage>
++    <MinimumVisualStudioVersion>17.0</MinimumVisualStudioVersion>
++    <AppxPackage>false</AppxPackage>
++  </PropertyGroup>
++  <Import Project="$(VCTargetsPath)\Microsoft.Cpp.Default.props" />
++  <PropertyGroup Label="ReactNativeWindowsProps">
++    <ReactNativeWindowsDir Condition="'$(ReactNativeWindowsDir)' == ''">$([MSBuild]::GetDirectoryNameOfFileAbove($(MSBuildThisFileDirectory), 'node_modules\react-native-windows\package.json'))\node_modules\react-native-windows\</ReactNativeWindowsDir>
++    <RunAutolinkCheck>false</RunAutolinkCheck>
++  </PropertyGroup>
++  <Import Project="$(ReactNativeWindowsDir)\PropertySheets\External\Microsoft.ReactNative.WindowsSdk.Default.props" />
++  <ItemGroup Label="ProjectConfigurations">
++    <ProjectConfiguration Include="Debug|Win32">
++      <Configuration>Debug</Configuration>
++      <Platform>Win32</Platform>
++    </ProjectConfiguration>
++    <ProjectConfiguration Include="Release|Win32">
++      <Configuration>Release</Configuration>
++      <Platform>Win32</Platform>
++    </ProjectConfiguration>
++    <ProjectConfiguration Include="Debug|x64">
++      <Configuration>Debug</Configuration>
++      <Platform>x64</Platform>
++    </ProjectConfiguration>
++    <ProjectConfiguration Include="Release|x64">
++      <Configuration>Release</Configuration>
++      <Platform>x64</Platform>
++    </ProjectConfiguration>
++    <ProjectConfiguration Include="Debug|ARM64">
++      <Configuration>Debug</Configuration>
++      <Platform>ARM64</Platform>
++    </ProjectConfiguration>
++    <ProjectConfiguration Include="Release|ARM64">
++      <Configuration>Release</Configuration>
++      <Platform>ARM64</Platform>
++    </ProjectConfiguration>
++  </ItemGroup>
++  <PropertyGroup Label="Configuration">
++    <ConfigurationType>DynamicLibrary</ConfigurationType>
++    <CharacterSet>Unicode</CharacterSet>
++    <PlatformToolset>v145</PlatformToolset>
++    <GenerateManifest>false</GenerateManifest>
++  </PropertyGroup>
++  <PropertyGroup Condition="'$(Configuration)'=='Debug'" Label="Configuration">
++    <UseDebugLibraries>true</UseDebugLibraries>
++  </PropertyGroup>
++  <PropertyGroup Condition="'$(Configuration)'=='Release'" Label="Configuration">
++    <UseDebugLibraries>false</UseDebugLibraries>
++    <WholeProgramOptimization>true</WholeProgramOptimization>
++  </PropertyGroup>
++  <Import Project="$(VCTargetsPath)\Microsoft.Cpp.props" />
++  <ImportGroup Label="ExtensionSettings">
++  </ImportGroup>
++  <ImportGroup Label="PropertySheets">
++    <Import Project="$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props" Condition="exists('$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props')" Label="LocalAppDataPlatform" />
++  </ImportGroup>
++  <ImportGroup Label="ReactNativeWindowsPropertySheets">
++    <Import Project="$(ReactNativeWindowsDir)\PropertySheets\External\Microsoft.ReactNative.CppLib.props" Condition="Exists('$(ReactNativeWindowsDir)\PropertySheets\External\Microsoft.ReactNative.CppLib.props')" />
++  </ImportGroup>
++  <ItemDefinitionGroup>
++    <ClCompile>
++      <PrecompiledHeader>Use</PrecompiledHeader>
++      <PrecompiledHeaderFile>pch.h</PrecompiledHeaderFile>
++      <PrecompiledHeaderOutputFile>$(IntDir)pch.pch</PrecompiledHeaderOutputFile>
++      <WarningLevel>Level4</WarningLevel>
++      <SDLCheck>true</SDLCheck>
++      <LanguageStandard>stdcpp20</LanguageStandard>
++      <AdditionalOptions>%(AdditionalOptions) /bigobj</AdditionalOptions>
++      <DisableSpecificWarnings>4453;28204</DisableSpecificWarnings>
++      <PreprocessorDefinitions>_WINRT_DLL;NOMINMAX;WIN32_LEAN_AND_MEAN;_CRT_SECURE_NO_WARNINGS;NITRO_WINDOWS_EXPORTS;%(PreprocessorDefinitions)</PreprocessorDefinitions>
++      <AdditionalUsingDirectories>$(WindowsSDK_WindowsMetadata);$(AdditionalUsingDirectories)</AdditionalUsingDirectories>
++      <AdditionalIncludeDirectories>
++        $(MSBuildThisFileDirectory);$(MSBuildThisFileDirectory)..\..\cpp\core;$(MSBuildThisFileDirectory)..\..\cpp\jsi;$(MSBuildThisFileDirectory)..\..\cpp\platform;$(MSBuildThisFileDirectory)..\..\cpp\prototype;$(MSBuildThisFileDirectory)..\..\cpp\registry;$(MSBuildThisFileDirectory)..\..\cpp\entrypoint;$(MSBuildThisFileDirectory)..\..\cpp\templates;$(MSBuildThisFileDirectory)..\..\cpp\threading;$(MSBuildThisFileDirectory)..\..\cpp\utils;$(MSBuildThisFileDirectory)..\..\cpp\views;
++        %(AdditionalIncludeDirectories)
++      </AdditionalIncludeDirectories>
++    </ClCompile>
++    <Link>
++      <AdditionalDependencies>shell32.lib;user32.lib;windowsapp.lib;%(AdditionalDependencies)</AdditionalDependencies>
++      <SubSystem>Console</SubSystem>
++      <GenerateWindowsMetadata>true</GenerateWindowsMetadata>
++      <ModuleDefinitionFile>LegendNitro.def</ModuleDefinitionFile>
++    </Link>
++  </ItemDefinitionGroup>
++  <ItemDefinitionGroup Condition="'$(Configuration)'=='Debug'">
++    <ClCompile>
++      <PreprocessorDefinitions>_DEBUG;%(PreprocessorDefinitions)</PreprocessorDefinitions>
++    </ClCompile>
++  </ItemDefinitionGroup>
++  <ItemDefinitionGroup Condition="'$(Configuration)'=='Release'">
++    <ClCompile>
++      <PreprocessorDefinitions>NDEBUG;%(PreprocessorDefinitions)</PreprocessorDefinitions>
++    </ClCompile>
++  </ItemDefinitionGroup>
++  <PropertyGroup Label="UserMacros" />
++  <ItemGroup>
++    <ClInclude Include="LegendNitro.h" />
++    <ClInclude Include="ReactPackageProvider.h">
++      <DependentUpon>ReactPackageProvider.idl</DependentUpon>
++    </ClInclude>
++    <ClInclude Include="resource.h" />
++    <ClInclude Include="pch.h" />
++    <ClInclude Include="targetver.h" />
++  </ItemGroup>
++  <ItemGroup>
++    <ClCompile Include="LegendNitro.cpp" />
++    <ClCompile Include="pch.cpp">
++      <PrecompiledHeader>Create</PrecompiledHeader>
++    </ClCompile>
++    <ClCompile Include="ReactPackageProvider.cpp">
++      <DependentUpon>ReactPackageProvider.idl</DependentUpon>
++    </ClCompile>
++    <ClCompile Include="$(GeneratedFilesDir)module.g.cpp" />
++  </ItemGroup>
++  <ItemGroup>
++    <Midl Include="ReactPackageProvider.idl" />
++  </ItemGroup>
++  <ItemGroup>
++    <ResourceCompile Include="LegendNitro.rc" />
++  </ItemGroup>
++  <ItemGroup>
++<ClCompile Include="$(MSBuildThisFileDirectory)..\..\cpp\**\*.cpp"><PrecompiledHeader>NotUsing</PrecompiledHeader></ClCompile>
++<ClCompile Include="Platform.cpp" />
++</ItemGroup>
++<Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
++  <ImportGroup Label="ReactNativeWindowsTargets">
++    <Import Project="$(ReactNativeWindowsDir)\PropertySheets\External\Microsoft.ReactNative.CppLib.targets" Condition="Exists('$(ReactNativeWindowsDir)\PropertySheets\External\Microsoft.ReactNative.CppLib.targets')" />
++  </ImportGroup>
++  <ItemGroup>
++  </ItemGroup>
++  <Target Name="EnsureReactNativeWindowsTargets" BeforeTargets="PrepareForBuild">
++    <PropertyGroup>
++      <ErrorText>This project references targets in your node_modules\react-native-windows folder. The missing file is {0}.</ErrorText>
++    </PropertyGroup>
++    <Error Condition="!Exists('$(ReactNativeWindowsDir)\PropertySheets\External\Microsoft.ReactNative.CppLib.props')" Text="$([System.String]::Format('$(ErrorText)', '$(ReactNativeWindowsDir)\PropertySheets\External\Microsoft.ReactNative.CppLib.props'))" />
++    <Error Condition="!Exists('$(ReactNativeWindowsDir)\PropertySheets\External\Microsoft.ReactNative.CppLib.targets')" Text="$([System.String]::Format('$(ErrorText)', '$(ReactNativeWindowsDir)\PropertySheets\External\Microsoft.ReactNative.CppLib.targets'))" />
++  </Target>
++</Project>
+\ No newline at end of file
+diff --git a/windows/LegendNitro/LegendNitro.vcxproj.filters b/windows/LegendNitro/LegendNitro.vcxproj.filters
+new file mode 100644
+index 0000000..3dcf2c5
+--- /dev/null
++++ b/windows/LegendNitro/LegendNitro.vcxproj.filters
+@@ -0,0 +1,44 @@
++﻿<?xml version="1.0" encoding="utf-8"?>
++<Project ToolsVersion="4.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
++  <ItemGroup>
++    <Filter Include="Source Files">
++      <UniqueIdentifier>{4FC737F1-C7A5-4376-A066-2A32D752A2FF}</UniqueIdentifier>
++      <Extensions>cpp;c;cc;cxx;def;odl;idl;hpj;bat;asm;asmx</Extensions>
++    </Filter>
++    <Filter Include="Header Files">
++      <UniqueIdentifier>{93995380-89BD-4b04-88EB-625FBE52EBFB}</UniqueIdentifier>
++      <Extensions>h;hh;hpp;hxx;hm;inl;inc;ipp;xsd</Extensions>
++    </Filter>
++    <Filter Include="Resource Files">
++      <UniqueIdentifier>{67DA6AB6-F800-4c08-8B7A-83BB121AAD01}</UniqueIdentifier>
++      <Extensions>rc;ico;cur;bmp;dlg;rc2;rct;bin;rgs;gif;jpg;jpeg;jpe;resx;tiff;tif;png;wav;mfcribbon-ms</Extensions>
++    </Filter>
++  </ItemGroup>
++  <ItemGroup>
++    <ClInclude Include="targetver.h">
++      <Filter>Header Files</Filter>
++    </ClInclude>
++    <ClInclude Include="resource.h">
++      <Filter>Header Files</Filter>
++    </ClInclude>
++    <ClInclude Include="LegendNitro.h">
++      <Filter>Header Files</Filter>
++    </ClInclude>
++    <ClInclude Include="pch.h">
++      <Filter>Header Files</Filter>
++    </ClInclude>
++  </ItemGroup>
++  <ItemGroup>
++    <ClCompile Include="LegendNitro.cpp">
++      <Filter>Source Files</Filter>
++    </ClCompile>
++    <ClCompile Include="pch.cpp">
++      <Filter>Source Files</Filter>
++    </ClCompile>
++  </ItemGroup>
++  <ItemGroup>
++    <ResourceCompile Include="LegendNitro.rc">
++      <Filter>Resource Files</Filter>
++    </ResourceCompile>
++  </ItemGroup>
++</Project>
+\ No newline at end of file
+diff --git a/windows/LegendNitro/Platform.cpp b/windows/LegendNitro/Platform.cpp
+new file mode 100644
+index 0000000..f88ac62
+--- /dev/null
++++ b/windows/LegendNitro/Platform.cpp
+@@ -0,0 +1,23 @@
++#include "pch.h"
++#include <ThreadUtils.hpp>
++#include <NitroLogger.hpp>
++#include <future>
++#include <mutex>
++#include <winrt/Microsoft.UI.Dispatching.h>
++namespace margelo::nitro {
++static std::mutex uiMutex;
++static winrt::Microsoft::ReactNative::ReactDispatcher ui{nullptr};
++void SetWindowsUIDispatcher(winrt::Microsoft::ReactNative::ReactDispatcher const &value) { std::lock_guard lock(uiMutex); ui = value; }
++std::string ThreadUtils::getThreadName() { PWSTR raw = nullptr; if (FAILED(GetThreadDescription(GetCurrentThread(), &raw))) return {}; std::string name = winrt::to_string(raw); LocalFree(raw); return name; }
++void ThreadUtils::setThreadName(std::string const &name) { winrt::check_hresult(SetThreadDescription(GetCurrentThread(), winrt::to_hstring(name).c_str())); }
++bool ThreadUtils::isUIThread() { return winrt::Microsoft::UI::Dispatching::DispatcherQueue::GetForCurrentThread() != nullptr; }
++class WindowsUIDispatcher final : public Dispatcher {
++  winrt::Microsoft::ReactNative::ReactDispatcher queue{nullptr};
++public:
++  WindowsUIDispatcher() { std::lock_guard lock(uiMutex); queue = ui; if (!queue) throw std::runtime_error("Windows UI dispatcher is not initialized"); }
++  void runAsync(std::function<void()> &&fn) override { queue.Post([fn = std::move(fn)]() { fn(); }); }
++  void runSync(std::function<void()> &&fn) override { if (queue.HasThreadAccess()) { fn(); return; } auto task = std::make_shared<std::packaged_task<void()>>(std::move(fn)); auto done = task->get_future(); runAsync([task]() { (*task)(); }); done.get(); }
++};
++std::shared_ptr<Dispatcher> ThreadUtils::createUIThreadDispatcher() { return std::make_shared<WindowsUIDispatcher>(); }
++void Logger::nativeLog(LogLevel, char const *tag, std::string const &text) { OutputDebugStringA((std::string(tag) + ": " + text + "\n").c_str()); }
++}
+diff --git a/windows/LegendNitro/ReactPackageProvider.cpp b/windows/LegendNitro/ReactPackageProvider.cpp
+new file mode 100644
+index 0000000..78bd465
+--- /dev/null
++++ b/windows/LegendNitro/ReactPackageProvider.cpp
+@@ -0,0 +1,20 @@
++#include "pch.h"
++
++#include "ReactPackageProvider.h"
++#if __has_include("ReactPackageProvider.g.cpp")
++#include "ReactPackageProvider.g.cpp"
++#endif
++
++#include "LegendNitro.h"
++
++using namespace winrt::Microsoft::ReactNative;
++
++namespace winrt::LegendNitro::implementation
++{
++
++void ReactPackageProvider::CreatePackage(IReactPackageBuilder const &packageBuilder) noexcept
++{
++  AddAttributedModules(packageBuilder, true);
++}
++
++} // namespace winrt::LegendNitro::implementation
+diff --git a/windows/LegendNitro/ReactPackageProvider.h b/windows/LegendNitro/ReactPackageProvider.h
+new file mode 100644
+index 0000000..02136a0
+--- /dev/null
++++ b/windows/LegendNitro/ReactPackageProvider.h
+@@ -0,0 +1,24 @@
++#pragma once
++
++#include "ReactPackageProvider.g.h"
++
++using namespace winrt::Microsoft::ReactNative;
++
++namespace winrt::LegendNitro::implementation
++{
++
++struct ReactPackageProvider : ReactPackageProviderT<ReactPackageProvider>
++{
++  ReactPackageProvider() = default;
++
++  void CreatePackage(IReactPackageBuilder const &packageBuilder) noexcept;
++};
++
++} // namespace winrt::LegendNitro::implementation
++
++namespace winrt::LegendNitro::factory_implementation
++{
++
++struct ReactPackageProvider : ReactPackageProviderT<ReactPackageProvider, implementation::ReactPackageProvider> {};
++
++} // namespace winrt::LegendNitro::factory_implementation
+diff --git a/windows/LegendNitro/ReactPackageProvider.idl b/windows/LegendNitro/ReactPackageProvider.idl
+new file mode 100644
+index 0000000..52bdb4c
+--- /dev/null
++++ b/windows/LegendNitro/ReactPackageProvider.idl
+@@ -0,0 +1,9 @@
++namespace LegendNitro
++{
++  [webhosthidden]
++  [default_interface]
++  runtimeclass ReactPackageProvider : Microsoft.ReactNative.IReactPackageProvider
++  {
++    ReactPackageProvider();
++  };
++}
+diff --git a/windows/LegendNitro/pch.cpp b/windows/LegendNitro/pch.cpp
+new file mode 100644
+index 0000000..1d9f38c
+--- /dev/null
++++ b/windows/LegendNitro/pch.cpp
+@@ -0,0 +1 @@
++#include "pch.h"
+diff --git a/windows/LegendNitro/pch.h b/windows/LegendNitro/pch.h
+new file mode 100644
+index 0000000..61d356d
+--- /dev/null
++++ b/windows/LegendNitro/pch.h
+@@ -0,0 +1,30 @@
++// pch.h : include file for standard system include files,
++// or project specific include files that are used frequently, but
++// are changed infrequently
++//
++
++#pragma once
++
++#include "targetver.h"
++
++#define NOMINMAX 1
++#define WIN32_LEAN_AND_MEAN 1
++#define WINRT_LEAN_AND_MEAN 1
++
++// Windows Header Files
++#include <windows.h>
++#undef GetCurrentTime
++#include <unknwn.h>
++
++// WinRT Header Files
++#include <winrt/base.h>
++#include <CppWinRTIncludes.h>
++#include <winrt/Microsoft.ReactNative.h>
++
++// C RunTime Header Files
++#include <malloc.h>
++#include <memory.h>
++#include <stdlib.h>
++#include <tchar.h>
++
++// Reference additional headers your project requires here
+diff --git a/windows/LegendNitro/resource.h b/windows/LegendNitro/resource.h
+new file mode 100644
+index 0000000..2d86653
+--- /dev/null
++++ b/windows/LegendNitro/resource.h
+@@ -0,0 +1,5 @@
++//
++// Microsoft Visual C++ generated include file.
++// Used by LegendNitro.rc
++
++#pragma once
+diff --git a/windows/LegendNitro/targetver.h b/windows/LegendNitro/targetver.h
+new file mode 100644
+index 0000000..87c0086
+--- /dev/null
++++ b/windows/LegendNitro/targetver.h
+@@ -0,0 +1,8 @@
++#pragma once
++
++// Including SDKDDKVer.h defines the highest available Windows platform.
++
++// If you wish to build your application for a previous Windows platform, include WinSDKVer.h and
++// set the _WIN32_WINNT macro to the platform you wish to support before including SDKDDKVer.h.
++
++#include <SDKDDKVer.h>
+diff --git a/windows/LegendNitro.sln b/windows/LegendNitro.sln
+new file mode 100644
+index 0000000..a591174
+--- /dev/null
++++ b/windows/LegendNitro.sln
+@@ -0,0 +1,43 @@
++﻿
++Microsoft Visual Studio Solution File, Format Version 12.00
++# Visual Studio Version 17
++VisualStudioVersion = 17.3.32929.385
++MinimumVisualStudioVersion = 10.0.40219.1
++Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "LegendNitro", "LegendNitro\LegendNitro.vcxproj", "{6A8C5C24-E759-4E69-AE60-36A65693573D}"
++EndProject
++Global
++	GlobalSection(SolutionConfigurationPlatforms) = preSolution
++		Debug|x64 = Debug|x64
++		Debug|x86 = Debug|x86
++		Debug|ARM64 = Debug|ARM64
++		Release|x64 = Release|x64
++		Release|x86 = Release|x86
++		Release|ARM64 = Release|ARM64
++	EndGlobalSection
++	GlobalSection(ProjectConfigurationPlatforms) = postSolution
++		{6A8C5C24-E759-4E69-AE60-36A65693573D}.Debug|x64.ActiveCfg = Debug|x64
++		{6A8C5C24-E759-4E69-AE60-36A65693573D}.Debug|x64.Build.0 = Debug|x64
++		{6A8C5C24-E759-4E69-AE60-36A65693573D}.Debug|x64.Deploy.0 = Debug|x64
++		{6A8C5C24-E759-4E69-AE60-36A65693573D}.Debug|x86.ActiveCfg = Debug|Win32
++		{6A8C5C24-E759-4E69-AE60-36A65693573D}.Debug|x86.Build.0 = Debug|Win32
++		{6A8C5C24-E759-4E69-AE60-36A65693573D}.Debug|x86.Deploy.0 = Debug|Win32
++		{6A8C5C24-E759-4E69-AE60-36A65693573D}.Debug|ARM64.ActiveCfg = Debug|ARM64
++		{6A8C5C24-E759-4E69-AE60-36A65693573D}.Debug|ARM64.Build.0 = Debug|ARM64
++		{6A8C5C24-E759-4E69-AE60-36A65693573D}.Debug|ARM64.Deploy.0 = Debug|ARM64
++		{6A8C5C24-E759-4E69-AE60-36A65693573D}.Release|x64.ActiveCfg = Release|x64
++		{6A8C5C24-E759-4E69-AE60-36A65693573D}.Release|x64.Build.0 = Release|x64
++		{6A8C5C24-E759-4E69-AE60-36A65693573D}.Release|x64.Deploy.0 = Release|x64
++		{6A8C5C24-E759-4E69-AE60-36A65693573D}.Release|x86.ActiveCfg = Release|Win32
++		{6A8C5C24-E759-4E69-AE60-36A65693573D}.Release|x86.Build.0 = Release|Win32
++		{6A8C5C24-E759-4E69-AE60-36A65693573D}.Release|x86.Deploy.0 = Release|Win32
++		{6A8C5C24-E759-4E69-AE60-36A65693573D}.Release|ARM64.ActiveCfg = Release|ARM64
++		{6A8C5C24-E759-4E69-AE60-36A65693573D}.Release|ARM64.Build.0 = Release|ARM64
++		{6A8C5C24-E759-4E69-AE60-36A65693573D}.Release|ARM64.Deploy.0 = Release|ARM64
++	EndGlobalSection
++	GlobalSection(SolutionProperties) = preSolution
++		HideSolutionNode = FALSE
++	EndGlobalSection
++	GlobalSection(ExtensibilityGlobals) = postSolution
++		SolutionGuid = {D43FAD39-F619-437D-BB40-04A3982ACB6A}
++	EndGlobalSection
++EndGlobal
+diff --git a/windows/include/NitroModules/AnyMap.hpp b/windows/include/NitroModules/AnyMap.hpp
+new file mode 100644
+index 0000000..bec56cc
+--- /dev/null
++++ b/windows/include/NitroModules/AnyMap.hpp
+@@ -0,0 +1 @@
++#include "../../../cpp/core/AnyMap.hpp"
+diff --git a/windows/include/NitroModules/ArrayBuffer.hpp b/windows/include/NitroModules/ArrayBuffer.hpp
+new file mode 100644
+index 0000000..401e788
+--- /dev/null
++++ b/windows/include/NitroModules/ArrayBuffer.hpp
+@@ -0,0 +1 @@
++#include "../../../cpp/core/ArrayBuffer.hpp"
+diff --git a/windows/include/NitroModules/AssertPromiseState.hpp b/windows/include/NitroModules/AssertPromiseState.hpp
+new file mode 100644
+index 0000000..855330e
+--- /dev/null
++++ b/windows/include/NitroModules/AssertPromiseState.hpp
+@@ -0,0 +1 @@
++#include "../../../cpp/utils/AssertPromiseState.hpp"
+diff --git a/windows/include/NitroModules/BorrowingReference.hpp b/windows/include/NitroModules/BorrowingReference.hpp
+new file mode 100644
+index 0000000..4456e08
+--- /dev/null
++++ b/windows/include/NitroModules/BorrowingReference.hpp
+@@ -0,0 +1 @@
++#include "../../../cpp/utils/BorrowingReference.hpp"
+diff --git a/windows/include/NitroModules/BoxedHybridObject.hpp b/windows/include/NitroModules/BoxedHybridObject.hpp
+new file mode 100644
+index 0000000..0788f88
+--- /dev/null
++++ b/windows/include/NitroModules/BoxedHybridObject.hpp
+@@ -0,0 +1 @@
++#include "../../../cpp/core/BoxedHybridObject.hpp"
+diff --git a/windows/include/NitroModules/CachedProp.hpp b/windows/include/NitroModules/CachedProp.hpp
+new file mode 100644
+index 0000000..d2278d1
+--- /dev/null
++++ b/windows/include/NitroModules/CachedProp.hpp
+@@ -0,0 +1 @@
++#include "../../../cpp/views/CachedProp.hpp"
+diff --git a/windows/include/NitroModules/CallInvokerDispatcher.hpp b/windows/include/NitroModules/CallInvokerDispatcher.hpp
+new file mode 100644
+index 0000000..032358e
+--- /dev/null
++++ b/windows/include/NitroModules/CallInvokerDispatcher.hpp
+@@ -0,0 +1 @@
++#include "../../../cpp/threading/CallInvokerDispatcher.hpp"
+diff --git a/windows/include/NitroModules/CommonGlobals.hpp b/windows/include/NitroModules/CommonGlobals.hpp
+new file mode 100644
+index 0000000..6698678
+--- /dev/null
++++ b/windows/include/NitroModules/CommonGlobals.hpp
+@@ -0,0 +1 @@
++#include "../../../cpp/utils/CommonGlobals.hpp"
+diff --git a/windows/include/NitroModules/CountTrailingOptionals.hpp b/windows/include/NitroModules/CountTrailingOptionals.hpp
+new file mode 100644
+index 0000000..9db2e75
+--- /dev/null
++++ b/windows/include/NitroModules/CountTrailingOptionals.hpp
+@@ -0,0 +1 @@
++#include "../../../cpp/templates/CountTrailingOptionals.hpp"
+diff --git a/windows/include/NitroModules/Dispatcher.hpp b/windows/include/NitroModules/Dispatcher.hpp
+new file mode 100644
+index 0000000..6683867
+--- /dev/null
++++ b/windows/include/NitroModules/Dispatcher.hpp
+@@ -0,0 +1 @@
++#include "../../../cpp/threading/Dispatcher.hpp"
+diff --git a/windows/include/NitroModules/FastVectorCopy.hpp b/windows/include/NitroModules/FastVectorCopy.hpp
+new file mode 100644
+index 0000000..3757d09
+--- /dev/null
++++ b/windows/include/NitroModules/FastVectorCopy.hpp
+@@ -0,0 +1 @@
++#include "../../../cpp/utils/FastVectorCopy.hpp"
+diff --git a/windows/include/NitroModules/FutureType.hpp b/windows/include/NitroModules/FutureType.hpp
+new file mode 100644
+index 0000000..70455c4
+--- /dev/null
++++ b/windows/include/NitroModules/FutureType.hpp
+@@ -0,0 +1 @@
++#include "../../../cpp/templates/FutureType.hpp"
+diff --git a/windows/include/NitroModules/HybridFunction.hpp b/windows/include/NitroModules/HybridFunction.hpp
+new file mode 100644
+index 0000000..c2c787c
+--- /dev/null
++++ b/windows/include/NitroModules/HybridFunction.hpp
+@@ -0,0 +1 @@
++#include "../../../cpp/core/HybridFunction.hpp"
+diff --git a/windows/include/NitroModules/HybridNitroModulesProxy.hpp b/windows/include/NitroModules/HybridNitroModulesProxy.hpp
+new file mode 100644
+index 0000000..5da70bd
+--- /dev/null
++++ b/windows/include/NitroModules/HybridNitroModulesProxy.hpp
+@@ -0,0 +1 @@
++#include "../../../cpp/entrypoint/HybridNitroModulesProxy.hpp"
+diff --git a/windows/include/NitroModules/HybridObject.hpp b/windows/include/NitroModules/HybridObject.hpp
+new file mode 100644
+index 0000000..fc59b62
+--- /dev/null
++++ b/windows/include/NitroModules/HybridObject.hpp
+@@ -0,0 +1 @@
++#include "../../../cpp/core/HybridObject.hpp"
+diff --git a/windows/include/NitroModules/HybridObjectPrototype.hpp b/windows/include/NitroModules/HybridObjectPrototype.hpp
+new file mode 100644
+index 0000000..d9791dd
+--- /dev/null
++++ b/windows/include/NitroModules/HybridObjectPrototype.hpp
+@@ -0,0 +1 @@
++#include "../../../cpp/prototype/HybridObjectPrototype.hpp"
+diff --git a/windows/include/NitroModules/HybridObjectRegistry.hpp b/windows/include/NitroModules/HybridObjectRegistry.hpp
+new file mode 100644
+index 0000000..ca47d00
+--- /dev/null
++++ b/windows/include/NitroModules/HybridObjectRegistry.hpp
+@@ -0,0 +1 @@
++#include "../../../cpp/registry/HybridObjectRegistry.hpp"
+diff --git a/windows/include/NitroModules/InstallNitro.hpp b/windows/include/NitroModules/InstallNitro.hpp
+new file mode 100644
+index 0000000..c64e5c9
+--- /dev/null
++++ b/windows/include/NitroModules/InstallNitro.hpp
+@@ -0,0 +1 @@
++#include "../../../cpp/entrypoint/InstallNitro.hpp"
+diff --git a/windows/include/NitroModules/InstanceMethod.hpp b/windows/include/NitroModules/InstanceMethod.hpp
+new file mode 100644
+index 0000000..2a989f8
+--- /dev/null
++++ b/windows/include/NitroModules/InstanceMethod.hpp
+@@ -0,0 +1 @@
++#include "../../../cpp/templates/InstanceMethod.hpp"
+diff --git a/windows/include/NitroModules/IsSharedPtrTo.hpp b/windows/include/NitroModules/IsSharedPtrTo.hpp
+new file mode 100644
+index 0000000..6a0fab2
+--- /dev/null
++++ b/windows/include/NitroModules/IsSharedPtrTo.hpp
+@@ -0,0 +1 @@
++#include "../../../cpp/templates/IsSharedPtrTo.hpp"
+diff --git a/windows/include/NitroModules/JSCallback.hpp b/windows/include/NitroModules/JSCallback.hpp
+new file mode 100644
+index 0000000..a8cf61b
+--- /dev/null
++++ b/windows/include/NitroModules/JSCallback.hpp
+@@ -0,0 +1 @@
++#include "../../../cpp/utils/JSCallback.hpp"
+diff --git a/windows/include/NitroModules/JSICache.hpp b/windows/include/NitroModules/JSICache.hpp
+new file mode 100644
+index 0000000..b1cfc10
+--- /dev/null
++++ b/windows/include/NitroModules/JSICache.hpp
+@@ -0,0 +1 @@
++#include "../../../cpp/jsi/JSICache.hpp"
+diff --git a/windows/include/NitroModules/JSIConverter+AnyMap.hpp b/windows/include/NitroModules/JSIConverter+AnyMap.hpp
+new file mode 100644
+index 0000000..3fc3edf
+--- /dev/null
++++ b/windows/include/NitroModules/JSIConverter+AnyMap.hpp
+@@ -0,0 +1 @@
++#include "../../../cpp/jsi/JSIConverter+AnyMap.hpp"
+diff --git a/windows/include/NitroModules/JSIConverter+ArrayBuffer.hpp b/windows/include/NitroModules/JSIConverter+ArrayBuffer.hpp
+new file mode 100644
+index 0000000..93fc05d
+--- /dev/null
++++ b/windows/include/NitroModules/JSIConverter+ArrayBuffer.hpp
+@@ -0,0 +1 @@
++#include "../../../cpp/jsi/JSIConverter+ArrayBuffer.hpp"
+diff --git a/windows/include/NitroModules/JSIConverter+Date.hpp b/windows/include/NitroModules/JSIConverter+Date.hpp
+new file mode 100644
+index 0000000..8ee2dcd
+--- /dev/null
++++ b/windows/include/NitroModules/JSIConverter+Date.hpp
+@@ -0,0 +1 @@
++#include "../../../cpp/jsi/JSIConverter+Date.hpp"
+diff --git a/windows/include/NitroModules/JSIConverter+Exception.hpp b/windows/include/NitroModules/JSIConverter+Exception.hpp
+new file mode 100644
+index 0000000..6ef7703
+--- /dev/null
++++ b/windows/include/NitroModules/JSIConverter+Exception.hpp
+@@ -0,0 +1 @@
++#include "../../../cpp/jsi/JSIConverter+Exception.hpp"
+diff --git a/windows/include/NitroModules/JSIConverter+Function.hpp b/windows/include/NitroModules/JSIConverter+Function.hpp
+new file mode 100644
+index 0000000..32ce339
+--- /dev/null
++++ b/windows/include/NitroModules/JSIConverter+Function.hpp
+@@ -0,0 +1 @@
++#include "../../../cpp/jsi/JSIConverter+Function.hpp"
+diff --git a/windows/include/NitroModules/JSIConverter+HostObject.hpp b/windows/include/NitroModules/JSIConverter+HostObject.hpp
+new file mode 100644
+index 0000000..68c0a13
+--- /dev/null
++++ b/windows/include/NitroModules/JSIConverter+HostObject.hpp
+@@ -0,0 +1 @@
++#include "../../../cpp/jsi/JSIConverter+HostObject.hpp"
+diff --git a/windows/include/NitroModules/JSIConverter+NativeState.hpp b/windows/include/NitroModules/JSIConverter+NativeState.hpp
+new file mode 100644
+index 0000000..e4bc7be
+--- /dev/null
++++ b/windows/include/NitroModules/JSIConverter+NativeState.hpp
+@@ -0,0 +1 @@
++#include "../../../cpp/jsi/JSIConverter+NativeState.hpp"
+diff --git a/windows/include/NitroModules/JSIConverter+Null.hpp b/windows/include/NitroModules/JSIConverter+Null.hpp
+new file mode 100644
+index 0000000..69e3a01
+--- /dev/null
++++ b/windows/include/NitroModules/JSIConverter+Null.hpp
+@@ -0,0 +1 @@
++#include "../../../cpp/jsi/JSIConverter+Null.hpp"
+diff --git a/windows/include/NitroModules/JSIConverter+Optional.hpp b/windows/include/NitroModules/JSIConverter+Optional.hpp
+new file mode 100644
+index 0000000..a47ffce
+--- /dev/null
++++ b/windows/include/NitroModules/JSIConverter+Optional.hpp
+@@ -0,0 +1 @@
++#include "../../../cpp/jsi/JSIConverter+Optional.hpp"
+diff --git a/windows/include/NitroModules/JSIConverter+Promise.hpp b/windows/include/NitroModules/JSIConverter+Promise.hpp
+new file mode 100644
+index 0000000..2fea65f
+--- /dev/null
++++ b/windows/include/NitroModules/JSIConverter+Promise.hpp
+@@ -0,0 +1 @@
++#include "../../../cpp/jsi/JSIConverter+Promise.hpp"
+diff --git a/windows/include/NitroModules/JSIConverter+Tuple.hpp b/windows/include/NitroModules/JSIConverter+Tuple.hpp
+new file mode 100644
+index 0000000..6576fdb
+--- /dev/null
++++ b/windows/include/NitroModules/JSIConverter+Tuple.hpp
+@@ -0,0 +1 @@
++#include "../../../cpp/jsi/JSIConverter+Tuple.hpp"
+diff --git a/windows/include/NitroModules/JSIConverter+UnorderedMap.hpp b/windows/include/NitroModules/JSIConverter+UnorderedMap.hpp
+new file mode 100644
+index 0000000..29c6120
+--- /dev/null
++++ b/windows/include/NitroModules/JSIConverter+UnorderedMap.hpp
+@@ -0,0 +1 @@
++#include "../../../cpp/jsi/JSIConverter+UnorderedMap.hpp"
+diff --git a/windows/include/NitroModules/JSIConverter+Variant.hpp b/windows/include/NitroModules/JSIConverter+Variant.hpp
+new file mode 100644
+index 0000000..bc0101d
+--- /dev/null
++++ b/windows/include/NitroModules/JSIConverter+Variant.hpp
+@@ -0,0 +1 @@
++#include "../../../cpp/jsi/JSIConverter+Variant.hpp"
+diff --git a/windows/include/NitroModules/JSIConverter+Vector.hpp b/windows/include/NitroModules/JSIConverter+Vector.hpp
+new file mode 100644
+index 0000000..d3ff05d
+--- /dev/null
++++ b/windows/include/NitroModules/JSIConverter+Vector.hpp
+@@ -0,0 +1 @@
++#include "../../../cpp/jsi/JSIConverter+Vector.hpp"
+diff --git a/windows/include/NitroModules/JSIConverter.hpp b/windows/include/NitroModules/JSIConverter.hpp
+new file mode 100644
+index 0000000..26bcb03
+--- /dev/null
++++ b/windows/include/NitroModules/JSIConverter.hpp
+@@ -0,0 +1 @@
++#include "../../../cpp/jsi/JSIConverter.hpp"
+diff --git a/windows/include/NitroModules/JSIHelpers.hpp b/windows/include/NitroModules/JSIHelpers.hpp
+new file mode 100644
+index 0000000..3740256
+--- /dev/null
++++ b/windows/include/NitroModules/JSIHelpers.hpp
+@@ -0,0 +1 @@
++#include "../../../cpp/jsi/JSIHelpers.hpp"
+diff --git a/windows/include/NitroModules/NitroDefines.hpp b/windows/include/NitroModules/NitroDefines.hpp
+new file mode 100644
+index 0000000..55e7fc3
+--- /dev/null
++++ b/windows/include/NitroModules/NitroDefines.hpp
+@@ -0,0 +1 @@
++#include "../../../cpp/utils/NitroDefines.hpp"
+diff --git a/windows/include/NitroModules/NitroHash.hpp b/windows/include/NitroModules/NitroHash.hpp
+new file mode 100644
+index 0000000..f67ad6d
+--- /dev/null
++++ b/windows/include/NitroModules/NitroHash.hpp
+@@ -0,0 +1 @@
++#include "../../../cpp/utils/NitroHash.hpp"
+diff --git a/windows/include/NitroModules/NitroLogger.hpp b/windows/include/NitroModules/NitroLogger.hpp
+new file mode 100644
+index 0000000..bf0fe36
+--- /dev/null
++++ b/windows/include/NitroModules/NitroLogger.hpp
+@@ -0,0 +1 @@
++#include "../../../cpp/platform/NitroLogger.hpp"
+diff --git a/windows/include/NitroModules/NitroTypeInfo.hpp b/windows/include/NitroModules/NitroTypeInfo.hpp
+new file mode 100644
+index 0000000..11757e6
+--- /dev/null
++++ b/windows/include/NitroModules/NitroTypeInfo.hpp
+@@ -0,0 +1 @@
++#include "../../../cpp/utils/NitroTypeInfo.hpp"
+diff --git a/windows/include/NitroModules/Null.hpp b/windows/include/NitroModules/Null.hpp
+new file mode 100644
+index 0000000..fb5d3b3
+--- /dev/null
++++ b/windows/include/NitroModules/Null.hpp
+@@ -0,0 +1 @@
++#include "../../../cpp/core/Null.hpp"
+diff --git a/windows/include/NitroModules/Promise.hpp b/windows/include/NitroModules/Promise.hpp
+new file mode 100644
+index 0000000..76dfcdf
+--- /dev/null
++++ b/windows/include/NitroModules/Promise.hpp
+@@ -0,0 +1 @@
++#include "../../../cpp/core/Promise.hpp"
+diff --git a/windows/include/NitroModules/PromiseType.hpp b/windows/include/NitroModules/PromiseType.hpp
+new file mode 100644
+index 0000000..25bf89c
+--- /dev/null
++++ b/windows/include/NitroModules/PromiseType.hpp
+@@ -0,0 +1 @@
++#include "../../../cpp/templates/PromiseType.hpp"
+diff --git a/windows/include/NitroModules/PropNameIDCache.hpp b/windows/include/NitroModules/PropNameIDCache.hpp
+new file mode 100644
+index 0000000..c5f4547
+--- /dev/null
++++ b/windows/include/NitroModules/PropNameIDCache.hpp
+@@ -0,0 +1 @@
++#include "../../../cpp/utils/PropNameIDCache.hpp"
+diff --git a/windows/include/NitroModules/Prototype.hpp b/windows/include/NitroModules/Prototype.hpp
+new file mode 100644
+index 0000000..854e063
+--- /dev/null
++++ b/windows/include/NitroModules/Prototype.hpp
+@@ -0,0 +1 @@
++#include "../../../cpp/prototype/Prototype.hpp"
+diff --git a/windows/include/NitroModules/PrototypeChain.hpp b/windows/include/NitroModules/PrototypeChain.hpp
+new file mode 100644
+index 0000000..30dffa2
+--- /dev/null
++++ b/windows/include/NitroModules/PrototypeChain.hpp
+@@ -0,0 +1 @@
++#include "../../../cpp/prototype/PrototypeChain.hpp"
+diff --git a/windows/include/NitroModules/ReferenceState.hpp b/windows/include/NitroModules/ReferenceState.hpp
+new file mode 100644
+index 0000000..be85ce2
+--- /dev/null
++++ b/windows/include/NitroModules/ReferenceState.hpp
+@@ -0,0 +1 @@
++#include "../../../cpp/utils/ReferenceState.hpp"
+diff --git a/windows/include/NitroModules/ThreadPool.hpp b/windows/include/NitroModules/ThreadPool.hpp
+new file mode 100644
+index 0000000..8bd2cd4
+--- /dev/null
++++ b/windows/include/NitroModules/ThreadPool.hpp
+@@ -0,0 +1 @@
++#include "../../../cpp/threading/ThreadPool.hpp"
+diff --git a/windows/include/NitroModules/ThreadUtils.hpp b/windows/include/NitroModules/ThreadUtils.hpp
+new file mode 100644
+index 0000000..d033cf5
+--- /dev/null
++++ b/windows/include/NitroModules/ThreadUtils.hpp
+@@ -0,0 +1 @@
++#include "../../../cpp/platform/ThreadUtils.hpp"
+diff --git a/windows/include/NitroModules/TypeIndex.hpp b/windows/include/NitroModules/TypeIndex.hpp
+new file mode 100644
+index 0000000..13f14c2
+--- /dev/null
++++ b/windows/include/NitroModules/TypeIndex.hpp
+@@ -0,0 +1 @@
++#include "../../../cpp/templates/TypeIndex.hpp"
+diff --git a/windows/include/NitroModules/WeakReference+Borrowing.hpp b/windows/include/NitroModules/WeakReference+Borrowing.hpp
+new file mode 100644
+index 0000000..67db3e5
+--- /dev/null
++++ b/windows/include/NitroModules/WeakReference+Borrowing.hpp
+@@ -0,0 +1 @@
++#include "../../../cpp/utils/WeakReference+Borrowing.hpp"
+diff --git a/windows/include/NitroModules/WeakReference.hpp b/windows/include/NitroModules/WeakReference.hpp
+new file mode 100644
+index 0000000..dcb5b9b
+--- /dev/null
++++ b/windows/include/NitroModules/WeakReference.hpp
+@@ -0,0 +1 @@
++#include "../../../cpp/utils/WeakReference.hpp"

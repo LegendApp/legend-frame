@@ -87,7 +87,7 @@ export async function packWindowsLibraries(output: string) {
     }
     pkg.legend = { ...pkg.legend, sdk: true, windowsAdapter: true, upstreamIntegrity: pin.integrity }; writeJson(path.join(stage, "package.json"), pkg);
     const temporary = path.join(output, "windows-library.tgz");
-    await run(stage, ["tar", "-czf", temporary, "."], { capture: true });
+    await run(stage, ["tar", "--exclude=.legend", "-czf", temporary, "."], { capture: true });
     const hash = createHash("sha256").update(readFileSync(temporary)).digest("hex").slice(0, 12);
     const file = `${name.replace(/^@/, "").replaceAll("/", "-")}-${pin.version}-${hash}.tgz`; cpSync(temporary, path.join(output, file)); rmSync(temporary); result[name] = file;
   }

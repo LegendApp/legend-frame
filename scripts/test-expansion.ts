@@ -1,6 +1,6 @@
 import { existsSync, mkdirSync, rmSync, readFileSync, writeFileSync } from "node:fs";
 import path from "node:path";
-import { prepareKitchenSink } from "./kitchen-sink";
+import { prepareKitchenSink } from "./prepare-kitchen-sink";
 import { build } from "../packages/cli/src/build";
 import { availablePort } from "../packages/cli/src/local";
 import { binary, run } from "../packages/cli/src/commands";

@@ -1,7 +1,7 @@
 import { generateKeyPairSync } from "node:crypto";
 import { existsSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import path from "node:path";
-import { prepareKitchenSink } from "./kitchen-sink";
+import { prepareKitchenSink } from "./prepare-kitchen-sink";
 import { build } from "../packages/cli/src/build";
 import { binary, run } from "../packages/cli/src/commands";
 import { readJson, writeJson, prepareConfig } from "../packages/cli/src/project";

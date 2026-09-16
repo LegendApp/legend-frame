@@ -1,0 +1,58 @@
+{
+  "$schema": "./node_modules/@legend-apps/desktop-config/schema.json",
+  "name": "KitchenSink",
+  "version": "0.1.0",
+  "window": {
+    "width": 1000,
+    "height": 700,
+    "restoreFrame": true
+  },
+  "macos": {
+    "bundleIdentifier": "so.legend.examples.kitchensink"
+  },
+  "platforms": [
+    "macos",
+    "windows"
+  ],
+  "expo": {
+    "name": "KitchenSink",
+    "slug": "legend-kitchen-sink"
+  },
+  "expoByPlatform": {
+    "macos": {
+      "autolinking": {
+        "exclude": [
+          "@expo/ui",
+          "expo-clipboard",
+          "expo-linking",
+          "expo-secure-store",
+          "expo-dev-client",
+          "expo-dev-launcher",
+          "expo-dev-menu",
+          "expo-dev-menu-interface",
+          "expo-manifests",
+          "expo-updates-interface",
+          "react-native-windows"
+        ]
+      }
+    },
+    "windows": {
+      "autolinking": {
+        "exclude": [
+          "@expo/ui",
+          "expo-clipboard",
+          "expo-linking",
+          "expo-secure-store",
+          "expo-dev-client",
+          "expo-dev-launcher",
+          "expo-dev-menu",
+          "expo-dev-menu-interface",
+          "expo-manifests",
+          "expo-updates-interface",
+          "react-native-macos"
+        ]
+      }
+    }
+  },
+  "projectId": "c0bdf12f-0f35-4b71-8363-b83097388d7b"
+}
