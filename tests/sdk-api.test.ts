@@ -451,3 +451,9 @@ test("invalid Windows menu contributions leave the last good owner set intact", 
     menus.clearAllMenus();
   } finally { platform.OS = "macos"; }
 });
+
+test("overlay windows use portable defaults and reject modality", async () => {
+  await windows.openWindow({ id: "overlay-probe", kind: "overlay", width: 340, height: 140 });
+  expect(calls.at(-1)?.args).toMatchObject({ kind: "overlay", titleBarStyle: "borderless", transparent: true, hasShadow: false, alwaysOnTop: true, resizable: false, minimizable: false });
+  expect(() => windows.openWindow({ id: "overlay-probe", kind: "overlay", parentId: "main", modal: true })).toThrow("cannot be modal");
+});

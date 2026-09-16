@@ -81,7 +81,8 @@
           "enum": [
             "default",
             "overlay",
-            "hidden"
+            "hidden",
+            "borderless"
           ]
         },
         "appearance": {

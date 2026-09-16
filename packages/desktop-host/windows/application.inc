@@ -39,7 +39,7 @@ struct WindowResources : winrt::implements<WindowResources, React::Composition::
   void ResourcesChanged(winrt::event_token const &token) noexcept { changed.remove(token); }
   void SetTheme(int value) { theme = value; changed(*this, nullptr); }
 };
-struct Window { React::ReactNativeWindow view{nullptr}; UI::AppWindow app{nullptr}; UI::OverlappedPresenter normal{nullptr}; int32_t minWidth = 100, minHeight = 100, maxWidth = 20000, maxHeight = 20000; std::string parentId; bool modal = false; bool disabledByModal = false; bool enabledBeforeModal = false; bool guard = false; bool pending = false; bool allow = false; uint64_t request = 0; HMONITOR monitor = nullptr; bool fullscreen = false; bool closable = true; bool restoreFrame = false; int theme = -1; winrt::com_ptr<WindowResources> resources; winrt::Microsoft::UI::Composition::SpriteVisual background{nullptr}; };
+struct Window { React::ReactNativeWindow view{nullptr}; UI::AppWindow app{nullptr}; UI::OverlappedPresenter normal{nullptr}; int32_t minWidth = 100, minHeight = 100, maxWidth = 20000, maxHeight = 20000; std::string parentId; bool modal = false; bool overlay = false; bool transparent = false; bool shadow = true; bool disabledByModal = false; bool enabledBeforeModal = false; bool guard = false; bool pending = false; bool allow = false; uint64_t request = 0; HMONITOR monitor = nullptr; bool fullscreen = false; bool closable = true; bool restoreFrame = false; int theme = -1; winrt::com_ptr<WindowResources> resources; winrt::Microsoft::UI::Composition::SpriteVisual background{nullptr}; };
 static std::map<std::string, Window> windows;
 static React::ReactNativeHost host{nullptr};
 static winrt::Microsoft::UI::Composition::Compositor compositor{nullptr};
@@ -91,7 +91,7 @@ static void HideApplication() {
   UpdateModality();
 }
 static void ActivateApplication() {
-  for (auto const &id : hiddenByApp) if (windows.count(id)) windows.at(id).app.Show();
+  for (auto const &id : hiddenByApp) if (windows.count(id)) windows.at(id).app.Show(!windows.at(id).overlay);
   hiddenByApp.clear();
   auto id = windows.count(hiddenFocus) ? hiddenFocus : "main";
   auto &window = windows.at(id);
@@ -115,6 +115,7 @@ static Json::JsonObject Info(std::string const &id) {
   auto &window = windows.at(id); auto hwnd = Hwnd(window); RECT frame{}; GetWindowRect(hwnd, &frame);
   Json::JsonObject result, rect;
   result.SetNamedValue(L"id", Json::JsonValue::CreateStringValue(to_hstring(id))); result.SetNamedValue(L"title", Json::JsonValue::CreateStringValue(window.app.Title()));
+  result.SetNamedValue(L"kind", Json::JsonValue::CreateStringValue(window.overlay ? L"overlay" : L"window"));
   result.SetNamedValue(L"visible", Json::JsonValue::CreateBooleanValue(IsWindowVisible(hwnd))); result.SetNamedValue(L"focused", Json::JsonValue::CreateBooleanValue(GetForegroundWindow() == hwnd));
   result.SetNamedValue(L"minimized", Json::JsonValue::CreateBooleanValue(IsIconic(hwnd)));
   result.SetNamedValue(L"resizable", Json::JsonValue::CreateBooleanValue((GetWindowLongPtrW(hwnd, GWL_STYLE) & WS_THICKFRAME) != 0));
@@ -182,7 +183,7 @@ static void RestoreFrame(std::string const &id) {
   } catch (...) { /* Missing or invalid saved geometry uses configured defaults. */ }
 }
 static void ApplyOptions(Window &window, Json::JsonObject const &options) {
-  static const std::set<std::wstring> supported{L"title", L"width", L"height", L"minWidth", L"minHeight", L"maxWidth", L"maxHeight", L"resizable", L"minimizable", L"alwaysOnTop", L"closable", L"appearance", L"backgroundColor", L"restoreFrame"};
+  static const std::set<std::wstring> supported{L"title", L"width", L"height", L"minWidth", L"minHeight", L"maxWidth", L"maxHeight", L"resizable", L"minimizable", L"alwaysOnTop", L"closable", L"appearance", L"backgroundColor", L"restoreFrame", L"titleBarStyle", L"transparent", L"hasShadow"};
   for (auto const &pair : options) if (!supported.count(std::wstring(pair.Key()))) throw winrt::hresult_invalid_argument(L"Unsupported Windows window option");
   const auto minWidth = Dimension(options, L"minWidth", window.minWidth), minHeight = Dimension(options, L"minHeight", window.minHeight);
   const auto maxWidth = Dimension(options, L"maxWidth", window.maxWidth), maxHeight = Dimension(options, L"maxHeight", window.maxHeight);
@@ -192,6 +193,23 @@ static void ApplyOptions(Window &window, Json::JsonObject const &options) {
   const auto height = Dimension(options, L"height", std::clamp(size.Height, minHeight, maxHeight));
   if (width < minWidth || width > maxWidth || height < minHeight || height > maxHeight) throw winrt::hresult_invalid_argument(L"Window size is outside its constraints");
   window.minWidth = minWidth; window.minHeight = minHeight; window.maxWidth = maxWidth; window.maxHeight = maxHeight;
+  if (options.HasKey(L"titleBarStyle")) {
+    auto style = options.GetNamedString(L"titleBarStyle");
+    if (style != L"default" && style != L"hidden" && style != L"borderless") throw winrt::hresult_invalid_argument(L"Unsupported Windows titlebar style");
+    window.normal.SetBorderAndTitleBar(style != L"borderless", style == L"default");
+  }
+  if (options.HasKey(L"transparent")) window.transparent = options.GetNamedBoolean(L"transparent");
+  if (options.HasKey(L"hasShadow")) window.shadow = options.GetNamedBoolean(L"hasShadow");
+  if (options.HasKey(L"transparent") || options.HasKey(L"hasShadow")) {
+    auto hwnd = Hwnd(window); auto style = GetWindowLongPtrW(hwnd, GWL_EXSTYLE);
+    // Composition supplies the client pixels; don't retain an opaque GDI surface.
+    SetWindowLongPtrW(hwnd, GWL_EXSTYLE, window.transparent ? style | WS_EX_NOREDIRECTIONBITMAP : style & ~WS_EX_NOREDIRECTIONBITMAP);
+    MARGINS margins = window.transparent ? MARGINS{-1, -1, -1, -1} : MARGINS{0, 0, 0, 0};
+    winrt::check_hresult(DwmExtendFrameIntoClientArea(hwnd, &margins));
+    DWMNCRENDERINGPOLICY policy = window.shadow ? DWMNCRP_ENABLED : DWMNCRP_DISABLED;
+    winrt::check_hresult(DwmSetWindowAttribute(hwnd, DWMWA_NCRENDERING_POLICY, &policy, sizeof(policy)));
+    SetWindowPos(hwnd, nullptr, 0, 0, 0, 0, SWP_NOMOVE | SWP_NOSIZE | SWP_NOZORDER | SWP_NOACTIVATE | SWP_FRAMECHANGED);
+  }
   if (options.HasKey(L"title")) window.app.Title(options.GetNamedString(L"title"));
   if (options.HasKey(L"resizable")) { window.normal.IsResizable(options.GetNamedBoolean(L"resizable")); window.normal.IsMaximizable(options.GetNamedBoolean(L"resizable")); }
   if (options.HasKey(L"minimizable")) window.normal.IsMinimizable(options.GetNamedBoolean(L"minimizable"));
@@ -205,8 +223,8 @@ static void ApplyOptions(Window &window, Json::JsonObject const &options) {
     auto theme = options.GetNamedString(L"appearance");
     window.theme = theme == L"dark" ? 1 : theme == L"light" ? 0 : -1; ApplyAppearance(window);
   }
-  if (options.HasKey(L"backgroundColor")) {
-    auto color = to_string(options.GetNamedString(L"backgroundColor"));
+  if (options.HasKey(L"backgroundColor") || options.HasKey(L"transparent")) {
+    auto color = to_string(options.GetNamedString(L"backgroundColor", window.transparent ? L"#00000000" : L"#FFFFFFFF"));
     if ((color.size() != 7 && color.size() != 9) || color[0] != '#' || color.find_first_not_of("0123456789abcdefABCDEF", 1) != std::string::npos) throw winrt::hresult_invalid_argument(L"Invalid background color");
     auto rgba = std::stoul(color.substr(1), nullptr, 16); if (color.size() == 7) rgba = (rgba << 8) | 255;
     if (!window.background) {
@@ -291,6 +309,8 @@ static void RequestQuit() {
 static LRESULT CALLBACK WindowProc(HWND hwnd, UINT message, WPARAM wParam, LPARAM lParam, UINT_PTR, DWORD_PTR) {
   auto id = Id(hwnd);
   if (!id.empty()) {
+    if (message == WM_MOUSEACTIVATE && windows.at(id).overlay) return MA_NOACTIVATE;
+    if (message == WM_ERASEBKGND && windows.at(id).transparent) return 1;
     if (message == WM_APP + 19) { EmitNotificationEvents(); return 0; }
     if (message == WM_COPYDATA) {
       auto notification = reinterpret_cast<COPYDATASTRUCT *>(lParam);
@@ -358,9 +378,10 @@ static void Attach(std::string id, React::ReactNativeWindow view) {
         SetMenu(Hwnd(closing->second), nullptr);
         auto main = Hwnd(windows.at("main")); SetMenu(main, currentMenu); DrawMenuBar(main);
       }
+      const bool overlay = windows.at(id).overlay;
       const auto parent = windows.at(id).parentId;
       windows.erase(id); UpdateModality();
-      if (!parent.empty() && windows.count(parent) && IsWindowEnabled(Hwnd(windows.at(parent)))) SetForegroundWindow(Hwnd(windows.at(parent)));
+      if (!overlay && !parent.empty() && windows.count(parent) && IsWindowEnabled(Hwnd(windows.at(parent)))) SetForegroundWindow(Hwnd(windows.at(parent)));
     }
   });
 }
@@ -456,7 +477,7 @@ static void Initialize(React::ReactNativeWin32App const &app) {
   Json::JsonObject style;
   style.SetNamedValue(L"width", Json::JsonValue::CreateNumberValue(config.GetNamedNumber(L"width", 1000)));
   style.SetNamedValue(L"height", Json::JsonValue::CreateNumberValue(config.GetNamedNumber(L"height", 700)));
-  for (auto key : {L"minWidth", L"minHeight", L"maxWidth", L"maxHeight", L"resizable", L"minimizable", L"alwaysOnTop", L"closable", L"appearance", L"backgroundColor", L"restoreFrame"})
+  for (auto key : {L"minWidth", L"minHeight", L"maxWidth", L"maxHeight", L"resizable", L"minimizable", L"alwaysOnTop", L"closable", L"appearance", L"backgroundColor", L"restoreFrame", L"titleBarStyle", L"transparent", L"hasShadow"})
     if (config.HasKey(key)) style.SetNamedValue(key, config.GetNamedValue(key));
   ApplyOptions(windows.at("main"), style);
   RestoreFrame("main");
@@ -504,11 +525,15 @@ struct LegendDesktopWindows {
         auto args = Json::JsonObject::Parse(to_hstring(encoded)); auto id = to_string(args.GetNamedString(L"id", L"main"));
         if (method == "open") {
           if (windows.count(id)) {
-            auto hwnd = Hwnd(windows.at(id)); ShowWindow(hwnd, IsIconic(hwnd) ? SW_RESTORE : SW_SHOW); UpdateModality(); SetForegroundWindow(hwnd);
+            auto &existing = windows.at(id); auto hwnd = Hwnd(existing); ShowWindow(hwnd, existing.overlay ? SW_SHOWNOACTIVATE : IsIconic(hwnd) ? SW_RESTORE : SW_SHOW); UpdateModality(); if (!existing.overlay) SetForegroundWindow(hwnd);
             promise.Resolve(to_string(Info(id).Stringify())); return;
           }
           const auto parentId = to_string(args.GetNamedString(L"parentId", L""));
+          const auto kind = args.GetNamedString(L"kind", L"window");
+          if (kind != L"window" && kind != L"overlay") throw winrt::hresult_invalid_argument(L"Invalid window kind");
+          const bool overlay = kind == L"overlay";
           const bool modal = args.GetNamedBoolean(L"modal", false);
+          if (modal && overlay) throw winrt::hresult_invalid_argument(L"An overlay cannot be modal");
           if ((modal && parentId.empty()) || parentId == id) throw winrt::hresult_invalid_argument(L"Modal windows need a distinct parent");
           if (!parentId.empty() && !windows.count(parentId)) { promise.Reject(React::ReactError{"E_NOT_FOUND", "Parent window not found"}); return; }
           if (modal) for (auto const &[childId, child] : windows) if (child.parentId == parentId && child.modal) { promise.Reject(React::ReactError{"E_BUSY", "Parent already has a modal window"}); return; }
@@ -521,17 +546,21 @@ struct LegendDesktopWindows {
           options.InitialProps([propsJson](React::IJSValueWriter const &writer) { WriteJson(writer, Json::JsonObject::Parse(to_hstring(propsJson))); });
           // Validate all options before attaching/showing a new React root.
           Json::JsonObject style;
-          for (auto const &pair : args) if (pair.Key() != L"id" && pair.Key() != L"props" && pair.Key() != L"parentId" && pair.Key() != L"modal") style.SetNamedValue(pair.Key(), pair.Value());
-          Window pending; pending.view = view; pending.app = app; pending.normal = app.Presenter().as<UI::OverlappedPresenter>();
+          for (auto const &pair : args) if (pair.Key() != L"id" && pair.Key() != L"props" && pair.Key() != L"parentId" && pair.Key() != L"modal" && pair.Key() != L"kind") style.SetNamedValue(pair.Key(), pair.Value());
+          Window pending; pending.overlay = overlay; pending.view = view; pending.app = app; pending.normal = app.Presenter().as<UI::OverlappedPresenter>();
           try { ApplyOptions(pending, style); } catch (...) { app.Destroy(); throw; }
+          if (overlay) {
+            auto hwnd = Hwnd(pending);
+            SetWindowLongPtrW(hwnd, GWL_EXSTYLE, (GetWindowLongPtrW(hwnd, GWL_EXSTYLE) | WS_EX_NOACTIVATE | WS_EX_TOOLWINDOW) & ~WS_EX_APPWINDOW);
+          }
           Attach(id, view);
-          auto &attached = windows.at(id); attached.parentId = parentId; attached.modal = modal;
+          auto &attached = windows.at(id); attached.parentId = parentId; attached.modal = modal; attached.overlay = overlay; attached.transparent = pending.transparent; attached.shadow = pending.shadow;
           if (!parentId.empty()) {
             SetLastError(0); SetWindowLongPtrW(Hwnd(attached), GWLP_HWNDPARENT, reinterpret_cast<LONG_PTR>(Hwnd(windows.at(parentId))));
             if (GetLastError()) { app.Destroy(); throw winrt::hresult_error(HRESULT_FROM_WIN32(GetLastError())); }
           }
           attached.minWidth = pending.minWidth; attached.minHeight = pending.minHeight; attached.maxWidth = pending.maxWidth; attached.maxHeight = pending.maxHeight; attached.closable = pending.closable; attached.restoreFrame = pending.restoreFrame; attached.theme = pending.theme; attached.resources = pending.resources; attached.background = pending.background;
-          view.ReactNativeIsland().ReactViewHost(React::ReactCoreInjection::MakeViewHost(host, options)); RestoreFrame(id); ApplyAppearance(attached); app.Show(); UpdateModality(); Emit({{"type", "opened"}, {"windowId", id}});
+          view.ReactNativeIsland().ReactViewHost(React::ReactCoreInjection::MakeViewHost(host, options)); RestoreFrame(id); ApplyAppearance(attached); app.Show(!overlay); UpdateModality(); Emit({{"type", "opened"}, {"windowId", id}});
           promise.Resolve(to_string(Info(id).Stringify())); return;
         }
         if (method == "displays") { promise.Resolve(to_string(Displays().Stringify())); return; }
@@ -560,7 +589,7 @@ struct LegendDesktopWindows {
         else if (method == "replyClose") {
           if (window.pending && args.GetNamedNumber(L"requestId", 0) == window.request) { window.pending = false; KillTimer(hwnd, 0x4C47); if (args.GetNamedBoolean(L"allow")) { if (id == "main") RequestQuit(); else { window.allow = true; window.app.Destroy(); } } }
         } else if (method == "close") PostMessageW(hwnd, WM_CLOSE, 0, 0);
-        else if (method == "show") { ShowWindow(hwnd, IsIconic(hwnd) ? SW_RESTORE : SW_SHOW); UpdateModality(); SetForegroundWindow(hwnd); }
+        else if (method == "show") { ShowWindow(hwnd, window.overlay ? SW_SHOWNOACTIVATE : IsIconic(hwnd) ? SW_RESTORE : SW_SHOW); UpdateModality(); if (!window.overlay) SetForegroundWindow(hwnd); }
         else if (method == "hide") { window.app.Hide(); UpdateModality(); }
         else if (method == "minimize") ShowWindow(hwnd, SW_MINIMIZE);
         else if (method == "maximize") ShowWindow(hwnd, SW_MAXIMIZE);

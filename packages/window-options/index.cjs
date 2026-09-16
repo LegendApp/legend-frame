@@ -1,5 +1,5 @@
 const enums = {
-  titleBarStyle: ["default", "overlay", "hidden"],
+  titleBarStyle: ["default", "overlay", "hidden", "borderless"],
   appearance: ["system", "light", "dark"],
   material: ["none", "sidebar", "windowBackground", "hudWindow", "popover"],
 };

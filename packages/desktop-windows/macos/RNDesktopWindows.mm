@@ -3,6 +3,17 @@
 #import <React-RCTAppDelegate/RCTRootViewFactory.h>
 #import <React/RCTSurfaceHostingView.h>
 
+// Overlay controls accept mouse input without taking keyboard focus from an app.
+@interface LegendOverlayPanel : NSPanel
+@end
+@implementation LegendOverlayPanel
+- (BOOL)canBecomeKeyWindow { return NO; }
+- (BOOL)canBecomeMainWindow { return NO; }
+@end
+static void Show(NSWindow *window) {
+  if ([window isKindOfClass:LegendOverlayPanel.class]) [window orderFrontRegardless];
+  else [window makeKeyAndOrderFront:nil];
+}
 @protocol LegendRootFactory
 - (RCTRootViewFactory *)rootViewFactory;
 @end
@@ -85,8 +96,8 @@ static NSDictionary *Frame(NSRect frame) {
   return @{ @"x": @(frame.origin.x), @"y": @(frame.origin.y), @"width": @(frame.size.width), @"height": @(frame.size.height) };
 }
 static NSDictionary *Info(NSString *key, NSWindow *window) {
-  return @{ @"id": key, @"title": window.title, @"visible": @(window.visible), @"focused": @(window.keyWindow),
-    @"resizable": @((window.styleMask & NSWindowStyleMaskResizable) != 0), @"alwaysOnTop": @(window.level == NSFloatingWindowLevel),
+  return @{ @"id": key, @"kind": [window isKindOfClass:LegendOverlayPanel.class] ? @"overlay" : @"window", @"title": window.title, @"visible": @(window.visible), @"focused": @(window.keyWindow),
+    @"resizable": @((window.styleMask & NSWindowStyleMaskResizable) != 0), @"alwaysOnTop": @(window.level >= NSFloatingWindowLevel),
     @"minWidth": @(window.contentMinSize.width), @"maxWidth": @(window.contentMaxSize.width),
     @"minimized": @(window.miniaturized), @"fullscreen": @((window.styleMask & NSWindowStyleMaskFullScreen) != 0), @"frame": Frame(window.frame) };
 }
@@ -122,9 +133,15 @@ RCT_EXPORT_MODULE(NativeDesktopWindowManager)
         if (![delegate respondsToSelector:@selector(rootViewFactory)]) { reject(@"E_HOST", @"Host has no React root factory", nil); return; }
         CGFloat width = args[@"width"] ? [args[@"width"] doubleValue] : 640;
         CGFloat height = args[@"height"] ? [args[@"height"] doubleValue] : 480;
-        window = [[NSWindow alloc] initWithContentRect:NSMakeRect(0, 0, width, height)
-          styleMask:NSWindowStyleMaskTitled | NSWindowStyleMaskClosable | NSWindowStyleMaskMiniaturizable | NSWindowStyleMaskResizable
+        BOOL overlay = [args[@"kind"] isEqual:@"overlay"];
+        if (overlay && [args[@"modal"] boolValue]) { LegendInvalid(reject, @"An overlay cannot be modal"); return; }
+        window = [[(overlay ? LegendOverlayPanel.class : NSWindow.class) alloc] initWithContentRect:NSMakeRect(0, 0, width, height)
+          styleMask:NSWindowStyleMaskTitled | NSWindowStyleMaskClosable | NSWindowStyleMaskMiniaturizable | NSWindowStyleMaskResizable | (overlay ? NSWindowStyleMaskNonactivatingPanel : 0)
           backing:NSBackingStoreBuffered defer:NO];
+        if (overlay) {
+          ((NSPanel *)window).hidesOnDeactivate = NO;
+          window.collectionBehavior = NSWindowCollectionBehaviorCanJoinAllSpaces | NSWindowCollectionBehaviorFullScreenAuxiliary;
+        }
         window.releasedWhenClosed = NO;
         window.identifier = [@"legend." stringByAppendingString:key];
         window.title = args[@"title"] ?: LegendContext()[@"name"];
@@ -138,7 +155,7 @@ RCT_EXPORT_MODULE(NativeDesktopWindowManager)
         Event(@"opened", key);
       }
       if ([args[@"modal"] boolValue]) [parent beginSheet:window completionHandler:nil];
-      else { NSInteger level = window.level; if (parent) [parent addChildWindow:window ordered:NSWindowAbove]; [window makeKeyAndOrderFront:nil]; window.level = level; }
+      else { NSInteger level = window.level; if (parent) [parent addChildWindow:window ordered:NSWindowAbove]; Show(window); window.level = level; }
       resolve(LegendJSON(Info(key, window))); return;
     }
     if (!window) { reject(@"E_NOT_FOUND", @"Window does not exist", nil); return; }
@@ -152,7 +169,7 @@ RCT_EXPORT_MODULE(NativeDesktopWindowManager)
         if ([args[@"allow"] boolValue]) { delegate.allowingClose = YES; RequestClose(window, key); delegate.allowingClose = NO; }
       }
     }
-    else if ([method isEqual:@"show"]) { [window deminiaturize:nil]; [window makeKeyAndOrderFront:nil]; }
+    else if ([method isEqual:@"show"]) { [window deminiaturize:nil]; Show(window); }
     else if ([method isEqual:@"options"]) LegendApplyWindowOptions(window, args[@"options"]);
     else if ([method isEqual:@"maximize"]) { if (!window.zoomed) [window zoom:nil]; }
     else if ([method isEqual:@"unmaximize"]) { if (window.zoomed) [window zoom:nil]; }

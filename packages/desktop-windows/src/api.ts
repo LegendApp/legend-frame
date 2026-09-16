@@ -5,9 +5,9 @@ import { Platform } from "react-native";
 import { validateWindowsWindowOptions } from "./windows-options";
 import { onDesktopEvent } from "@legend-apps/desktop-app";
 export type Frame = { x: number; y: number; width: number; height: number };
-export type WindowInfo = { id: string; title: string; visible: boolean; focused: boolean; resizable: boolean; alwaysOnTop: boolean; minWidth: number; maxWidth: number; minimized: boolean; fullscreen: boolean; frame: Frame };
+export type WindowInfo = { id: string; kind: "window" | "overlay"; title: string; visible: boolean; focused: boolean; resizable: boolean; alwaysOnTop: boolean; minWidth: number; maxWidth: number; minimized: boolean; fullscreen: boolean; frame: Frame };
 export type Display = { id: string; name: string; frame: Frame; workArea: Frame; scale: number };
-export type WindowOptions = WindowStyle & { id: string; parentId?: string; modal?: boolean; props?: Record<string, unknown> };
+export type WindowOptions = WindowStyle & { id: string; kind?: "window" | "overlay"; parentId?: string; modal?: boolean; props?: Record<string, unknown> };
 export type WindowEvent = { type: string; windowId: string; requestId?: number };
 async function call<T = void>(method: string, args: object = {}): Promise<T> {
   return JSON.parse(await Native.call(method, JSON.stringify(args))) as T;
@@ -16,7 +16,10 @@ function id(value: string) { if (!/^[a-zA-Z0-9_-]{1,100}$/.test(value)) throw ne
 function dimension(value: number) { if (!Number.isFinite(value) || value < 100 || value > 20000) throw new Error("Window dimensions must be between 100 and 20000 points"); }
 export function openWindow(options: WindowOptions) {
   id(options.id); if (options.id === "main") throw new Error("Use showWindow for the main window");
-  const { id: _id, parentId, modal, props, ...style } = options;
+  if (options.kind !== undefined && !["window", "overlay"].includes(options.kind)) throw new Error("Invalid window kind");
+  if (options.kind === "overlay" && options.modal) throw new Error("An overlay cannot be modal");
+  options = options.kind === "overlay" ? { titleBarStyle: "borderless", transparent: true, hasShadow: false, alwaysOnTop: true, resizable: false, minimizable: false, ...options } : options;
+  const { id: _id, kind, parentId, modal, props, ...style } = options;
   validateWindow(style);
   if (Platform.OS === "windows") {
     validateWindowsWindowOptions(style);

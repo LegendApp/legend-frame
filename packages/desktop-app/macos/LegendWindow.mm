@@ -24,7 +24,8 @@ void LegendApplyWindowOptions(NSWindow *window, NSDictionary *patch) {
   [options addEntriesFromDictionary:patch];
   objc_setAssociatedObject(window, &optionsKey, options, OBJC_ASSOCIATION_RETAIN_NONATOMIC);
   NSString *style = options[@"titleBarStyle"] ?: @"default";
-  NSWindowStyleMask mask = NSWindowStyleMaskTitled;
+  NSWindowStyleMask mask = [style isEqual:@"borderless"] ? NSWindowStyleMaskBorderless : NSWindowStyleMaskTitled;
+  if ([window isKindOfClass:NSPanel.class]) mask |= NSWindowStyleMaskNonactivatingPanel;
   if (!options[@"resizable"] || [options[@"resizable"] boolValue]) mask |= NSWindowStyleMaskResizable;
   if (!options[@"closable"] || [options[@"closable"] boolValue]) mask |= NSWindowStyleMaskClosable;
   if (!options[@"minimizable"] || [options[@"minimizable"] boolValue]) mask |= NSWindowStyleMaskMiniaturizable;
@@ -34,7 +35,7 @@ void LegendApplyWindowOptions(NSWindow *window, NSDictionary *patch) {
   window.titleVisibility = [style isEqual:@"default"] ? NSWindowTitleVisible : NSWindowTitleHidden;
   BOOL hideButtons = [style isEqual:@"hidden"] || (options[@"trafficLights"] && ![options[@"trafficLights"] boolValue]);
   for (NSNumber *button in @[@(NSWindowCloseButton), @(NSWindowMiniaturizeButton), @(NSWindowZoomButton)]) [window standardWindowButton:(NSWindowButton)button.integerValue].hidden = hideButtons;
-  window.level = [options[@"alwaysOnTop"] boolValue] ? NSFloatingWindowLevel : NSNormalWindowLevel;
+  window.level = [options[@"alwaysOnTop"] boolValue] ? ([window isKindOfClass:NSPanel.class] ? NSStatusWindowLevel : NSFloatingWindowLevel) : NSNormalWindowLevel;
   window.hasShadow = !options[@"hasShadow"] || [options[@"hasShadow"] boolValue];
   window.opaque = ![options[@"transparent"] boolValue];
   NSString *appearance = options[@"appearance"];
