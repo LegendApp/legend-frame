@@ -243,7 +243,7 @@ async function buildUnlocked(
           "--platform",
           "macos",
           "--template",
-          "expo-desktop-template-bare-minimum@54.81.1-beta.5",
+          "expo-desktop-template-bare-minimum@54.81.1-beta.6",
           "--no-install",
           ...(force ? ["--clean"] : []),
         ],

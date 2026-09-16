@@ -10,7 +10,7 @@
     "*.d.cts"
   ],
   "dependencies": {
-    "expo-desktop-config-plugins": "1.2.0-beta.0",
+    "expo-desktop-config-plugins": "1.2.0-beta.1",
     "@legend-apps/desktop-host": "0.1.0-prototype.0",
     "@legend-apps/window-options": "0.1.0-prototype.0",
     "@expo/config-plugins": "54.0.5"

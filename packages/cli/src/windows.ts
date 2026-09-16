@@ -30,7 +30,7 @@ export async function prepareWindows(root: string, mode: "go" | "dev") {
   writeJson(stateFile(root, "native-selection.json"), { included: packages.map(pkg => ({ name: pkg.name, root: pkg.root })), excluded: [] });
   const manifest = readFileSync(path.join(root, "package.json"), "utf8");
   try {
-    await run(root, nodeCommand(root, "expo-desktop", "expo-desktop", ["prebuild", "--platform", "windows", "--template", "expo-desktop-template-bare-minimum@54.81.1-beta.5", "--no-install"]), { env: { CI: "1" }, capture: true });
+    await run(root, nodeCommand(root, "expo-desktop", "expo-desktop", ["prebuild", "--platform", "windows", "--template", "expo-desktop-template-bare-minimum@54.81.1-beta.6", "--no-install"]), { env: { CI: "1" }, capture: true });
     // The beta template expands all-platform dependencies. Keep the consumer's installed graph.
   } finally {
     writeFileSync(path.join(root, "package.json"), manifest);

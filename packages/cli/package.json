@@ -16,7 +16,7 @@
   "dependencies": {
     "@legend-apps/desktop-config": "0.1.0-prototype.0",
     "ws": "8.18.3",
-    "expo-desktop": "1.0.0-beta.5",
+    "expo-desktop": "1.0.0-beta.6",
     "npm": "11.11.0",
     "typescript": "5.9.3"
   }
