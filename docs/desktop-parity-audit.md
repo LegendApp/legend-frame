@@ -204,3 +204,7 @@ and [platform tests](platform-testing.md) for execution and report collection.
   and emits opened/fullscreen/display transitions. macOS close guards now carry
   request IDs and expire after 30 seconds; stale responses cannot close a newer
   request. Missing parents use E_NOT_FOUND. Native event ordering awaits acceptance.
+- Group 3: Windows consumes initial directories, prompt and message; mixed
+  file/folder selection explicitly rejects with E_UNSUPPORTED_OPTION. Folder-only
+  requests must set canChooseFiles:false. Added revealInFileManager on both
+  desktops, with Explorer selection on Windows and the legacy alias retained.

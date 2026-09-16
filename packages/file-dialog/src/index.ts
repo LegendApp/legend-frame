@@ -1,3 +1,4 @@
+import { validateDialogOptions } from "./options";
 import { Platform } from "react-native";
 import NativeFileDialog from "./NativeFileDialog";
 
@@ -31,6 +32,7 @@ function parseJsonResult<T>(value: string, fallback: T): T {
 }
 
 export async function openFileDialog(options: FileDialogOpenOptions = {}) {
+  validateDialogOptions(options, false);
   if (Platform.OS !== "macos") {
     return null;
   }
@@ -40,6 +42,7 @@ export async function openFileDialog(options: FileDialogOpenOptions = {}) {
 }
 
 export async function saveFileDialog(options: FileDialogSaveOptions = {}) {
+  validateDialogOptions(options, false);
   if (Platform.OS !== "macos") {
     return null;
   }
@@ -81,3 +84,6 @@ export function writeTextFileIfUnchanged(path: string, expectedContents: string,
 }
 
 export { default as NativeFileDialog } from "./NativeFileDialog";
+
+/** Reveal a file in the platform file manager (Finder or Explorer). */
+export const revealInFileManager = revealInFinder;

@@ -1,6 +1,10 @@
 #pragma once
 #include "NativeModules.h"
 #include <shobjidl.h>
+#include <shlobj.h>
+#include <shlwapi.h>
+#pragma comment(lib, "Shell32.lib")
+#pragma comment(lib, "Shlwapi.lib")
 #include <winrt/Windows.Data.Json.h>
 #include <filesystem>
 #include <fstream>
@@ -59,6 +63,17 @@ struct LegendFileDialog {
         if (!save && args.GetNamedBoolean(L"allowsMultipleSelection", false)) flags |= FOS_ALLOWMULTISELECT;
         check_hresult(dialog->SetOptions(flags));
         const auto title = args.GetNamedString(L"title", L""); if (!title.empty()) check_hresult(dialog->SetTitle(title.c_str()));
+        const auto prompt = args.GetNamedString(L"prompt", L""); if (!prompt.empty()) check_hresult(dialog->SetOkButtonLabel(prompt.c_str()));
+        const auto message = args.GetNamedString(L"message", L"");
+        if (!message.empty()) { auto custom = dialog.as<IFileDialogCustomize>(); check_hresult(custom->AddText(100, message.c_str())); }
+        auto directory = args.GetNamedString(save ? L"directory" : L"directoryURL", L"");
+        if (!directory.empty()) {
+          std::wstring value(directory);
+          if (value.rfind(L"file:", 0) == 0) { wchar_t buffer[32768]; DWORD length = 32768; check_hresult(PathCreateFromUrlW(value.c_str(), buffer, &length, 0)); value = buffer; }
+          auto folder = FilePath(to_string(value)); com_ptr<IShellItem> item;
+          check_hresult(SHCreateItemFromParsingName(folder.c_str(), nullptr, IID_PPV_ARGS(item.put())));
+          check_hresult(dialog->SetFolder(item.get()));
+        }
         const auto name = args.GetNamedString(L"defaultName", L"Untitled.txt"); if (save) check_hresult(dialog->SetFileName(name.c_str()));
         std::vector<std::wstring> patterns;
         if (args.HasKey(L"allowedFileTypes")) for (auto const &item : args.GetNamedArray(L"allowedFileTypes")) patterns.push_back(L"*." + std::wstring(item.GetString()));
@@ -97,6 +112,17 @@ struct LegendFileDialog {
     catch (std::exception const &error) { promise.Reject(error.what()); } catch (hresult_error const &error) { promise.Reject(to_string(error.message()).c_str()); }
   }
   REACT_METHOD(revealInFinder)
-  void revealInFinder(std::string, React::ReactPromise<bool> promise) noexcept { promise.Reject(React::ReactError{"E_UNSUPPORTED", "Finder is macOS-only"}); }
+  void revealInFinder(std::string file, React::ReactPromise<bool> promise) noexcept {
+    context.UIDispatcher().Post([file, promise] {
+      PIDLIST_ABSOLUTE item = nullptr;
+      try {
+        auto path = FilePath(file);
+        check_hresult(SHParseDisplayName(path.c_str(), nullptr, &item, 0, nullptr));
+        auto result = SHOpenFolderAndSelectItems(item, 0, nullptr, 0);
+        CoTaskMemFree(item); item = nullptr; check_hresult(result); promise.Resolve(true);
+      } catch (hresult_error const &error) { if (item) CoTaskMemFree(item); promise.Reject(React::ReactError{"E_REVEAL", to_string(error.message())}); }
+      catch (std::exception const &error) { if (item) CoTaskMemFree(item); promise.Reject(error.what()); }
+    });
+  }
 };
 }
