@@ -214,3 +214,8 @@ and [platform tests](platform-testing.md) for execution and report collection.
   AppKit materials, custom titlebar/transparency/shadow options remain unsupported.
   Frame persistence is opt-in and per window ID. Closability governs OS close
   controls; explicit closeWindow still runs the normal close guard, as on macOS.
+- Group 5: Windows diagnoses missing targets and rejects nested targetPath with
+  E_MENU_TARGET_UNSUPPORTED before changing published menus. One-level targeting,
+  original action/payload preservation, and owner restoration remain supported.
+  The public contribution model is flat; adding a cross-platform submenu API is
+  separate feature design rather than pretending AppKit system submenus exist.

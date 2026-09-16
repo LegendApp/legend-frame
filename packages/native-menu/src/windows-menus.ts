@@ -10,7 +10,8 @@ function insertion<T extends { title?: string }>(items: T[], placement?: { befor
   return items.length;
 }
 /** Recompute owners' contributions so removing a binding restores the original item. */
-export function composeWindowsMenus(owners: ReadonlyMap<string, NativeMenuConfig[]>): Menu[] {
+export type MenuDiagnostic = { code: "E_MENU_TARGET_NOT_FOUND"; ownerId: string; menuId: string; itemId: string; targets: string[] };
+export function composeWindowsMenus(owners: ReadonlyMap<string, NativeMenuConfig[]>, diagnose: (diagnostic: MenuDiagnostic) => void = diagnostic => console.warn("Windows menu target not found", diagnostic)): Menu[] {
   const result: Menu[] = [];
   for (const [owner, configs] of owners) for (const config of configs) {
     let menu = result.find(menu => config.systemMenu === "app" ? menu.systemMenu === "app" : menu.title === config.title);
@@ -19,10 +20,13 @@ export function composeWindowsMenus(owners: ReadonlyMap<string, NativeMenuConfig
       result.splice(config.systemMenu === "app" ? 0 : insertion(result, config.placement), 0, menu);
     }
     for (const input of config.items) {
-      const candidates = input.targetPath?.length ? input.targetPath.length === 1 ? input.targetPath : [] : [input.targetTitle, ...(input.targetTitles ?? [])].filter((title): title is string => !!title);
+      // Public menu contributions are flat on Windows; AppKit system submenus
+      // have no counterpart. Reject before publishing rather than dropping them.
+      if ((input.targetPath?.length ?? 0) > 1) throw Object.assign(new Error(`Windows menu ${config.id}/${input.id} does not support nested targetPath: ${input.targetPath!.join(" > ")}`), { code: "E_MENU_TARGET_UNSUPPORTED" });
+      const candidates = input.targetPath?.length ? input.targetPath : [input.targetTitle, ...(input.targetTitles ?? [])].filter((title): title is string => !!title);
       const targets = !!(input.targetTitle || input.targetTitles?.length || input.targetPath?.length);
       const target = candidates.map(title => menu.items.find(item => titleKey(item.title) === titleKey(title))).find(Boolean);
-      if (targets && !target) continue;
+      if (targets && !target) { diagnose({ code: "E_MENU_TARGET_NOT_FOUND", ownerId: owner, menuId: config.id, itemId: input.id, targets: candidates }); continue; }
       const identity = input.targetPath?.length && target ? { _legendOwner: target._legendOwner, _legendMenu: target._legendMenu, id: target.id, payload: target.payload } : { _legendOwner: owner, _legendMenu: config.id, id: input.id };
       const item: Item = { ...target, ...input, ...identity };
       if (target) {

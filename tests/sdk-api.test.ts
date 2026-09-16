@@ -437,3 +437,17 @@ test("Windows process validation accepts drive and UNC executables without allow
   await expect(processes.spawn({ executable: "C:tool.exe" })).rejects.toThrow("absolute");
   await expect(processes.spawn({ executable: String.raw`C:\tool.exe`, cwd: "relative" })).rejects.toThrow("cwd");
 });
+
+test("invalid Windows menu contributions leave the last good owner set intact", () => {
+  platform.OS = "windows";
+  try {
+    menus.clearAllMenus();
+    menus.configureMenus("base", [{ id: "file", title: "File", items: [{ id: "open", title: "Open" }] }]);
+    expect(() => menus.configureMenus("invalid", [{ id: "file", title: "File", items: [{ id: "bad", targetPath: ["Recent", "Clear"] }] }])).toThrow("nested targetPath");
+    menus.configureMenus("other", [{ id: "edit", title: "Edit", items: [] }]);
+    const published = JSON.parse(calls.filter(call => call.method === "configureMenus").at(-1)!.args[1]);
+    expect(published[0].items.map((item: any) => item.id)).toEqual(["open"]);
+    expect(published.some((menu: any) => menu.items.some((item: any) => item._legendOwner === "invalid"))).toBe(false);
+    menus.clearAllMenus();
+  } finally { platform.OS = "macos"; }
+});

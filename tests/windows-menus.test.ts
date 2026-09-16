@@ -30,3 +30,13 @@ test("Windows app menu and named root placement have deterministic order", () =>
   ]]]);
   expect(composeWindowsMenus(owners).map(menu => menu.title)).toEqual(["My app", "File", "Edit", "Window"]);
 });
+test("Windows reports missing targets and rejects nested paths without mutating contributions", () => {
+  const owners = new Map<string, NativeMenuConfig[]>([["editor", [{ id: "file", title: "File", items: [{ id: "save", targetTitle: "Absent" }] }]]]);
+  const diagnostics: unknown[] = [];
+  expect(composeWindowsMenus(owners, diagnostic => diagnostics.push(diagnostic))[0]!.items).toEqual([]);
+  expect(diagnostics).toEqual([{ code: "E_MENU_TARGET_NOT_FOUND", ownerId: "editor", menuId: "file", itemId: "save", targets: ["Absent"] }]);
+  owners.get("editor")![0]!.items[0]!.targetPath = ["Recent", "Clear"];
+  const before = JSON.stringify([...owners]);
+  expect(() => composeWindowsMenus(owners)).toThrow("does not support nested targetPath");
+  expect(JSON.stringify([...owners])).toBe(before);
+});

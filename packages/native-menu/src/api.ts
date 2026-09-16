@@ -26,6 +26,7 @@ export type NativeMenuItem = {
   title?: string;
   targetTitle?: string;
   targetTitles?: string[];
+  /** Nested native system-menu paths are macOS-only. Windows accepts one item title. */
   targetPath?: string[];
   enabled?: boolean;
   checked?: boolean;
@@ -68,22 +69,28 @@ export type UseNativeMenuOptions = {
 };
 
 const windowsOwners = new Map<string, NativeMenuConfig[]>();
-function publishWindowsMenus() { NativeMenu.configureMenus("legend.windows.menus", JSON.stringify(composeWindowsMenus(windowsOwners))); }
+function publishWindowsMenus(next: Map<string, NativeMenuConfig[]>) {
+  // Composition can reject unsupported targets. Preserve the last good owners
+  // and native menu when a proposed contribution is invalid.
+  const composed = composeWindowsMenus(next);
+  NativeMenu.configureMenus("legend.windows.menus", JSON.stringify(composed));
+  windowsOwners.clear(); for (const [owner, menus] of next) windowsOwners.set(owner, menus);
+}
 export function configureMenus(ownerId: string, menus: NativeMenuConfig[]) {
-  if (Platform.OS === "windows") { windowsOwners.set(ownerId, JSON.parse(JSON.stringify(menus))); publishWindowsMenus(); }
+  if (Platform.OS === "windows") { const next = new Map(windowsOwners); next.set(ownerId, JSON.parse(JSON.stringify(menus))); publishWindowsMenus(next); }
   else if (Platform.OS === "macos") NativeMenu.configureMenus(ownerId, JSON.stringify(menus));
 }
 export function updateMenuItems(ownerId: string, patches: NativeMenuItemPatch[]) {
   if (Platform.OS === "windows") {
-    const menus = windowsOwners.get(ownerId); if (menus) { windowsOwners.set(ownerId, patchWindowsMenus(menus, patches)); publishWindowsMenus(); }
+    const menus = windowsOwners.get(ownerId); if (menus) { const next = new Map(windowsOwners); next.set(ownerId, patchWindowsMenus(menus, patches)); publishWindowsMenus(next); }
   } else if (Platform.OS === "macos") NativeMenu.updateMenuItems(ownerId, JSON.stringify(patches));
 }
 export function clearMenus(ownerId: string) {
-  if (Platform.OS === "windows") { windowsOwners.delete(ownerId); publishWindowsMenus(); }
+  if (Platform.OS === "windows") { const next = new Map(windowsOwners); next.delete(ownerId); publishWindowsMenus(next); }
   else if (Platform.OS === "macos") NativeMenu.clearMenus(ownerId);
 }
 export function clearAllMenus() {
-  if (Platform.OS === "windows") { windowsOwners.clear(); publishWindowsMenus(); }
+  if (Platform.OS === "windows") { publishWindowsMenus(new Map()); }
   else if (Platform.OS === "macos") NativeMenu.clearAllMenus();
 }
 
