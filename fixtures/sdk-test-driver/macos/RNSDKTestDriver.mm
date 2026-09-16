@@ -1,4 +1,5 @@
 #import "RNSDKTestDriver.h"
+#import <UniformTypeIdentifiers/UniformTypeIdentifiers.h>
 #import <RNDesktopApp/LegendDesktop.h>
 @interface RNSDKTestDriver ()
 @property NSArray<NSPasteboardItem *> *savedClipboard;
@@ -23,6 +24,7 @@ static void PostKey(NSString *key, NSUInteger flags) {
 @interface LegendTestDragInfo : NSObject
 @property NSPasteboard *draggingPasteboard;
 @property NSPoint draggingLocation;
+@property NSDragOperation draggingSourceOperationMask;
 @end
 @implementation LegendTestDragInfo
 @end
@@ -85,11 +87,17 @@ RCT_EXPORT_MODULE(NativeSDKTestDriver)
       for (NSString *url in args[@"urls"]) [urls addObject:[NSURL URLWithString:url]];
       [NSApp.delegate application:NSApp openURLs:urls];
     }
+    else if ([method isEqual:@"overlayInfo"]) {
+      for (NSWindow *window in NSApp.windows) if ([window.identifier isEqual:args[@"identifier"]]) {
+        resolve(LegendJSON(@{ @"panel": @([window isKindOfClass:NSPanel.class]), @"canBecomeKey": @(window.canBecomeKeyWindow), @"borderless": @((window.styleMask & NSWindowStyleMaskTitled) == 0), @"transparent": @(!window.opaque), @"statusLevel": @(window.level == NSStatusWindowLevel) })); return;
+      }
+      reject(@"E_TEST", @"Overlay window not found", nil); return;
+    }
     else if ([method isEqual:@"dragDrop"]) {
       NSView *source = nil, *destination = nil;
       for (NSWindow *window in NSApp.windows) {
-        source = source ?: FindView(window.contentView, @"expansion-drag-source");
-        destination = destination ?: FindView(window.contentView, @"expansion-drop-target");
+        source = source ?: FindView(window.contentView, args[@"source"] ?: @"expansion-drag-source");
+        destination = destination ?: FindView(window.contentView, args[@"target"] ?: @"expansion-drop-target");
       }
       if (!source || !destination) { reject(@"E_TEST", @"Drag views have not mounted", nil); return; }
       NSPoint point = NSMakePoint(NSMidX(source.bounds), NSMidY(source.bounds));
@@ -99,13 +107,18 @@ RCT_EXPORT_MODULE(NativeSDKTestDriver)
       }
       LegendTestDragInfo *info = [LegendTestDragInfo new];
       info.draggingPasteboard = [NSPasteboard pasteboardWithUniqueName];
-      [info.draggingPasteboard writeObjects:@[@"Native drag regression"]];
+      info.draggingSourceOperationMask = [args[@"operation"] isEqual:@"move"] ? NSDragOperationMove : NSDragOperationCopy;
+      if ([args[@"custom"] boolValue]) {
+        NSPasteboardItem *item = [NSPasteboardItem new]; [item setString:@"{\"id\":42}" forType:[UTType typeWithMIMEType:@"application/x-legend-test-item"].identifier];
+        [info.draggingPasteboard writeObjects:@[item]];
+      } else [info.draggingPasteboard writeObjects:@[@"Native drag regression"]];
       info.draggingLocation = [destination convertPoint:NSMakePoint(12, 14) toView:nil];
       NSDragOperation operation = [destination draggingEntered:(id<NSDraggingInfo>)info];
-      BOOL accepted = operation == NSDragOperationCopy && [destination performDragOperation:(id<NSDraggingInfo>)info];
-      [source draggingSession:nil endedAtPoint:NSZeroPoint operation:accepted ? NSDragOperationCopy : NSDragOperationNone];
+      [destination draggingUpdated:(id<NSDraggingInfo>)info];
+      BOOL accepted = operation == info.draggingSourceOperationMask && [destination performDragOperation:(id<NSDraggingInfo>)info];
+      [source draggingSession:nil endedAtPoint:NSZeroPoint operation:accepted ? operation : NSDragOperationNone];
+      if (accepted == [args[@"expectRejected"] boolValue]) { reject(@"E_TEST", [NSString stringWithFormat:@"Unexpected drag acceptance: operation=%lu source=%lu registered=%@ available=%@", (unsigned long)operation, (unsigned long)info.draggingSourceOperationMask, destination.registeredDraggedTypes, info.draggingPasteboard.types], nil); [info.draggingPasteboard releaseGlobally]; return; }
       [info.draggingPasteboard releaseGlobally];
-      if (!accepted) { reject(@"E_TEST", @"Drop destination refused text", nil); return; }
     }
     else if ([method isEqual:@"acceptMessage"]) {
       NSWindow *sheet = nil;

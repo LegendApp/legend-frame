@@ -4,10 +4,12 @@ import codegenNativeComponent from "react-native/Libraries/Utilities/codegenNati
 type Payload = Readonly<{ json: string }>;
 export interface NativeProps extends ViewProps {
   sourceJson?: string;
+  optionsJson?: string;
   disabled?: WithDefault<boolean, false>;
   onUnavailable?: DirectEventHandler<Payload>;
   onDrop?: DirectEventHandler<Payload>;
   onDragEnter?: DirectEventHandler<Payload>;
+  onDragOver?: DirectEventHandler<Payload>;
   onDragLeave?: DirectEventHandler<Payload>;
   onDragEnd?: DirectEventHandler<Payload>;
 }

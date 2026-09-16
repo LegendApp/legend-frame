@@ -14,6 +14,7 @@ import { registerShortcut } from "@legend-apps/desktop/shortcuts";
 import { showContextMenu } from "@legend-apps/desktop/context-menu";
 import { configureMenus, clearMenus, addNativeMenuActionListener } from "@legend-apps/desktop/menus";
 import { openFileDialog, saveFileDialog, revealInFinder } from "@legend-apps/desktop/dialogs";
+import { FoundationChecks } from "./FoundationChecks";
 import { runSidecarChecks } from "./sidecar-checks";
 import { runChecks, type Check } from "./checks";
 import { APIChecks } from "./APIChecks";
@@ -24,12 +25,14 @@ import { Integrations } from "./Integrations";
 import { ThemeToggle } from "./ThemeToggle";
 import { testDriver } from "./test-driver";
 
-type Props = Partial<app.AppContext> & { windowId?: string; windowProps?: { message?: string; readyFile?: string } };
+type Props = Partial<app.AppContext> & { windowId?: string; windowProps?: { overlay?: boolean; message?: string; readyFile?: string } };
 function argument(args: string[], name: string) { const at = args.indexOf(name); return at < 0 ? undefined : args[at + 1]; }
 export default function App(props: Props) {
   const args = props.launchArguments ?? [];
   const report = argument(args, "--legend-test-report");
   if (props.windowId && props.windowId !== "main") return <SecondaryWindow {...props} />;
+  const foundationReport = argument(args, "--legend-foundation-report");
+  if (foundationReport) return <FoundationChecks report={foundationReport} />;
   const uiReport = argument(args, "--legend-ui-report");
   if (uiReport) return <NativeControls report={uiReport} />;
   const apiReport = argument(args, "--legend-api-report");
@@ -45,6 +48,12 @@ function SecondaryWindow(props: Props) {
     if (file) void files.writeText(file, props.windowProps?.message ?? "").catch(console.error);
     return () => { if (file) void files.writeText(`${file}.closed`, "unmounted").catch(console.error); };
   }, [props.windowProps?.readyFile, props.windowProps?.message]);
+  if (props.windowProps?.overlay) return <View style={{ flex: 1, padding: 12, backgroundColor: "transparent" }}>
+    <View style={{ borderRadius: 12, padding: 12, gap: 8 }} className="bg-background">
+      <Text className="text-foreground">Overlay — keyboard focus stays in your app</Text>
+      <Button onPress={() => void windows.closeWindow(props.windowId).catch(console.error)}>Close overlay</Button>
+    </View>
+  </View>;
   return <View style={styles.root} className="bg-background" testID="secondary-window">
     <Text style={styles.title} className="text-foreground">Secondary window</Text><Text className="text-muted">{props.windowProps?.message ?? props.windowId}</Text>
     <Button onPress={() => void windows.closeWindow(props.windowId).catch(console.error)}>Close this window</Button>

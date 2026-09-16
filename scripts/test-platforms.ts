@@ -88,7 +88,7 @@ try {
     }
     await run(framework, ["bun", "scripts/pack.ts", ...(platform === "windows" ? ["--platform=windows"] : [])], { capture: true });
     await create(root, path.join(framework, "artifacts/packages/manifest.json"), platform === "windows" ? "windows" : "macos", true);
-    for (const name of ["contract-cases.ts", "contract-report.ts", "PlatformChecks.tsx", "desktop-contract-cases.ts", "desktop-contracts.ts", "desktop-contracts.desktop.ts", "desktop-contracts.macos.ts", "desktop-contracts.windows.ts", "DesktopInteractionChecks.tsx", "DesktopInteractionChecks.desktop.tsx", "DesktopInteractionChecks.macos.tsx", "DesktopInteractionChecks.windows.tsx", "DesktopLibraryChecks.tsx", "DesktopLibraryChecks.desktop.tsx", "DesktopLibraryChecks.macos.tsx", "DesktopLibraryChecks.windows.tsx", "platform-runtime-tasks.ts"]) cpSync(path.join(framework, "examples/kitchen-sink", name), path.join(root, name));
+    for (const name of ["contract-cases.ts", "contract-report.ts", "PlatformChecks.tsx", "desktop-contract-cases.ts", "foundation-checks.ts", "desktop-contracts.ts", "desktop-contracts.desktop.ts", "desktop-contracts.macos.ts", "desktop-contracts.windows.ts", "DesktopInteractionChecks.tsx", "DesktopInteractionChecks.desktop.tsx", "DesktopInteractionChecks.macos.tsx", "DesktopInteractionChecks.windows.tsx", "DesktopLibraryChecks.tsx", "DesktopLibraryChecks.desktop.tsx", "DesktopLibraryChecks.macos.tsx", "DesktopLibraryChecks.windows.tsx", "platform-runtime-tasks.ts"]) cpSync(path.join(framework, "examples/kitchen-sink", name), path.join(root, name));
     writeFileSync(path.join(root, "App.tsx"), 'export { default } from "./PlatformChecks";\n');
     if (desktop) {
       const pkg = readJson(path.join(root, "package.json"));

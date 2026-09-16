@@ -40,13 +40,13 @@ platform differences and upstream limits below remain part of the API contract.
 | Area | Windows implementation | Native acceptance still required |
 | --- | --- | --- |
 | UI and theme | WinUI Button, TextBox, ComboBox in RNW ContentIslands; light/dark/system override | Mouse/keyboard, accessibility, semantic selection, high contrast, theme changes without losing focus/text, and initialization-failure placeholders |
-| Files and settings | Scoped directories, text/base64 I/O, atomic writes, metadata, copy/move/remove, watch invalidation; persistent settings | Shared lifecycle assertions, restart persistence, permissions, UNC paths, symlinks, cross-volume moves, watcher disposal |
+| Files and settings | Scoped directories, text/base64 I/O, atomic writes, metadata, copy/move/remove, recursive directory watch invalidation; persistent settings | Shared lifecycle assertions, restart persistence, permissions, UNC paths, symlinks, cross-volume moves, watcher disposal, nested edits and root replacement |
 | Dialogs/context menus | Win32 TaskDialog and popup menus; buttons, checkbox, cancellation, ownership, IDs and state | Keyboard default/cancel, busy rejection, parent modality, mixed-DPI placement, reload while open |
-| Drag/drop | Fabric drag source/target, text/files/URLs, geometry-based hit testing, lifecycle events | Enter/leave/drop coordinates, scrolling/clipping, child controls, cancellation, reload and external drags |
+| Drag/drop | Fabric drag source/target, text/files/URLs/custom MIME strings, hover and copy/move/link negotiation, geometry-based hit testing, lifecycle events | Enter/leave/drop coordinates, scrolling/clipping, child controls, cancellation, reload and external drags |
 | Recent files/associations | Project history; development-only shell recent files and per-user file/protocol registration | Explorer activation both warm/cold, history persistence/isolation, changed declarations, and conflict rejection |
 | Tray/global shortcuts | Shell notification icon with nested menus; RegisterHotKey and conflict detection | Actions, update/remove, other-app focus, reload cleanup, Explorer restart recovery |
 | Notifications | Project-scoped toast identity, classic COM activation, scheduling/history/cancellation, response queue | Permission disabled/enabled, visible delivery, live click/dismiss, delayed delivery after exit, cold click into the correct project |
-| Windows/menus | Shared React windows, owned/modal windows, close/quit guards, constraints/fullscreen, menu placement/targeting/payload/accelerators | Modality and owner destruction, focus, close guards, layout/DPI, menu restoration, accelerators and callbacks |
+| Windows/menus | Shared React windows, owned/modal windows, close/quit guards, nonactivating overlays, borderless/transparency/shadow options, constraints/fullscreen, menu placement/targeting/payload/accelerators | Modality and owner destruction, focus, close guards, layout/DPI, menu restoration, accelerators and callbacks |
 | Processes | CreateProcessW, explicit inherited handles, stdin/stdout/stderr, Job Object cleanup, timeout/termination | PowerShell contract checks, binary output, large streams, descendants, failed spawn, reload during execution |
 | System/audio | Info, power/session/theme events, sleep prevention, attention, taskbar badge/Jump List; MediaPlayer and transport controls | Lifecycle and task actions, OS lock/sleep/wake/theme events, playback/seek/end/error/disposal |
 | Clipboard/storage/links | Text/HTML/RTF/PNG/files; scoped Credential Manager; URI handling and launch queue | Rich-format round trips, malformed content, credential lifecycle, cold/warm activation |
@@ -55,6 +55,11 @@ platform differences and upstream limits below remain part of the API contract.
 | WebView | Pinned upstream Fabric WebView2, with startup/navigation/messaging/error fixes | HTML and URL loads, injection/messages, errors, unmount input recovery, resize/clipping and missing WebView2 runtime |
 | Secondary runtimes | Real RNW hosts and Hermes heaps using Margelo's native-call transport; native threaded surfaces | Identity/isolation/timers/errors, create/destroy/recreate, native filesystem, reload with work pending, threaded surface input/teardown |
 | Development connection | Expo CLI/Metro with a local Windows relay for HTTPS and dev/minify flags | HTTP/HTTPS, certificate trust, source maps, refresh/WebSocket disconnect/reconnect |
+
+The new overlay, recursive-watch and custom-drag contracts and focused acceptance
+steps are documented in [desktop foundations](desktop-foundations.md). Windows
+composition transparency, nonactivation and drag operation negotiation require
+native verification; macOS probe results do not establish Windows acceptance.
 
 ## Run and report
 

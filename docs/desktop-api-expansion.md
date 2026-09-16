@@ -47,7 +47,7 @@ activation, update feeds and bundled helpers still need custom builds.
 `openWindow` and `setWindowOptions` accept the same style fields as config:
 
 - `width`, `height`, `minWidth`, `minHeight`, `maxWidth`, `maxHeight` (content points)
-- `titleBarStyle`: `default`, `overlay`, `hidden` (full content with hidden controls)
+- `titleBarStyle`: `default`, `overlay`, `hidden` (full content with hidden controls), `borderless`
 - `resizable`, `closable`, `minimizable`, `alwaysOnTop`, `hasShadow`, `trafficLights`
 - `appearance`: `system`, `light`, `dark`
 - `transparent`, `backgroundColor` (#RRGGBB or #RRGGBBAA)
@@ -92,11 +92,11 @@ import { DragDropView } from "@legend-apps/desktop/drag-drop";
 </DragDropView>
 ```
 
-Sources support existing file paths, text and URLs. Drag-out copies; it does not
+Sources support existing file paths, text, URLs and custom MIME strings. Drag-out defaults to copy; it does not
 move/delete the original. File promises are not implemented. Source-enabled views
 own their mouse gesture, so use a dedicated drag handle rather than wrapping
 interactive controls. Drop events include local x/y coordinates. `disabled`,
-`onDragEnter`, `onDragLeave`, and `onDragEnd({ accepted })` are available. Fabric
+`onDragEnter`, `onDragOver`, `onDragLeave`, and `onDragEnd({ accepted, operation })` are available. See [desktop foundations](desktop-foundations.md) for accepted types, copy/move/link negotiation, overlays, and recursive watches. Fabric
 recycling resets retained drag state.
 
 ## Processes and helpers

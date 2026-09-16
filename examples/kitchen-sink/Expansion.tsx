@@ -1,3 +1,4 @@
+import { DesktopFoundations } from "./DesktopFoundations";
 import { ActionButton } from "./ActionButton";
 import { EventResults, useEventResults } from "./EventResults";
 import { toByteArray } from "base64-js";
@@ -62,6 +63,7 @@ export function Expansion({ report }: { report: (value: unknown) => void }) {
     } finally { db.close(); }
   }
   return <View style={styles.section}>
+    <DesktopFoundations report={report} />
     <Text style={styles.heading} className="text-foreground">Window styling</Text>
     <View style={styles.row}>
       <ActionButton onPress={() => act(async () => { await windows.setWindowOptions("main", { titleBarStyle: style ? "default" : "overlay" }); setStyle(!style); })}>{style ? "Default title bar" : "Overlay title bar"}</ActionButton>
