@@ -28,14 +28,17 @@ export const copy = (path: string, to: string) => call("copy", { path: absolute(
 export const move = (path: string, to: string) => call("move", { path: absolute(path), to: absolute(to) });
 let nextWatch = 0;
 const emitter = new NativeEventEmitter(Native);
-/** Nonrecursive invalidation, possibly including sibling changes. Re-read the file in the callback. */
-export async function watch(path: string, listener: (path: string) => void) {
+export type WatchOptions = { recursive?: boolean };
+/** Invalidation, not an exact change log. Recursive watches require a directory.
+ * Re-read the watched path after a callback; events may be coalesced. */
+export async function watch(path: string, listener: (path: string) => void, options: WatchOptions = {}) {
+  if (options.recursive !== undefined && typeof options.recursive !== "boolean") throw new TypeError("recursive must be a boolean");
   const id = `watch-${Date.now()}-${++nextWatch}`;
   let removed = false;
   const subscription = emitter.addListener("change", (event: { id: string; path: string }) => {
     if (!removed && event.id === id) listener(event.path);
   });
-  try { await call("watch", { path: absolute(path), id }); }
+  try { await call("watch", { path: absolute(path), id, recursive: options.recursive ?? false }); }
   catch (error) { subscription.remove(); throw error; }
   return { async remove() {
     if (removed) return;

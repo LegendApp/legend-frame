@@ -457,3 +457,11 @@ test("overlay windows use portable defaults and reject modality", async () => {
   expect(calls.at(-1)?.args).toMatchObject({ kind: "overlay", titleBarStyle: "borderless", transparent: true, hasShadow: false, alwaysOnTop: true, resizable: false, minimizable: false });
   expect(() => windows.openWindow({ id: "overlay-probe", kind: "overlay", parentId: "main", modal: true })).toThrow("cannot be modal");
 });
+test("recursive watch is explicit and retains removal semantics", async () => {
+  let count = 0;
+  const sub = await files.watch("/tree", () => count++, { recursive: true });
+  const args = calls.at(-1)?.args; expect(args.recursive).toBe(true);
+  emit("NativeDesktopFileSystem", "change", { id: args.id, path: "/tree" }); expect(count).toBe(1);
+  await sub.remove(); emit("NativeDesktopFileSystem", "change", { id: args.id, path: "/tree" }); expect(count).toBe(1);
+  await expect(files.watch("/tree", () => {}, { recursive: "yes" as never })).rejects.toThrow("boolean");
+});

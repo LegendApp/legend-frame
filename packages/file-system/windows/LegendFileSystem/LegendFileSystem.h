@@ -6,6 +6,7 @@
 #include <winrt/Windows.Security.Cryptography.h>
 #include <winrt/Windows.Storage.Streams.h>
 #include <filesystem>
+#include <algorithm>
 #include <thread>
 #include <mutex>
 #include <condition_variable>
@@ -114,26 +115,27 @@ inline fs::path Directory(hstring const &kind) {
   base /= kind.c_str(); fs::create_directories(base); return base;
 }
 
-// Nonrecursive invalidation: a file watches its parent so atomic replacement does
+// Invalidation: a file watches its parent so atomic replacement does
 // not detach the subscription. Signals may include sibling changes, as on macOS.
 struct Watch {
   std::vector<HANDLE> notifications;
   handle stop{CreateEventW(nullptr, TRUE, FALSE, nullptr)};
   std::thread thread;
-  Watch(fs::path const &path, std::string id, React::ReactContext context) {
+  Watch(fs::path const &path, std::string id, React::ReactContext context, bool recursive) {
     if (!stop) throw_last_error();
+    if (recursive && !fs::is_directory(path)) throw hresult_invalid_argument(L"Recursive watch requires an existing directory");
     const auto observed = fs::is_directory(path) ? path : path.parent_path();
-    auto observe = [this](fs::path const &directory) {
-      auto handle = FindFirstChangeNotificationW(directory.c_str(), FALSE,
+    auto observe = [this](fs::path const &directory, bool subtree) {
+      auto handle = FindFirstChangeNotificationW(directory.c_str(), subtree,
         FILE_NOTIFY_CHANGE_FILE_NAME | FILE_NOTIFY_CHANGE_DIR_NAME | FILE_NOTIFY_CHANGE_ATTRIBUTES | FILE_NOTIFY_CHANGE_SIZE | FILE_NOTIFY_CHANGE_LAST_WRITE);
       if (handle == INVALID_HANDLE_VALUE) throw_last_error();
       notifications.push_back(handle);
     };
     try {
-      observe(observed);
+      observe(observed, recursive);
       // A directory's own rename/deletion changes its parent, not its contents.
       // Keep that invalidation too; as on macOS, listeners must re-read the path.
-      if (observed.has_parent_path() && observed.parent_path() != observed) observe(observed.parent_path());
+      if (observed.has_parent_path() && observed.parent_path() != observed) observe(observed.parent_path(), recursive);
       thread = std::thread([this, id, context, path = PathString(path)] {
         init_apartment(apartment_type::multi_threaded);
         std::vector<HANDLE> signals{stop.get()}; signals.insert(signals.end(), notifications.begin(), notifications.end());
@@ -143,7 +145,13 @@ struct Watch {
           const bool rearmed = FindNextChangeNotification(signals[result - WAIT_OBJECT_0]) != FALSE;
           if (WaitForSingleObject(stop.get(), 0) != WAIT_TIMEOUT) break;
           context.EmitJSEvent(L"RCTDeviceEventEmitter", L"change", React::JSValueObject{{"id", id}, {"path", path}});
-          if (!rearmed) break;
+          if (!rearmed) {
+            const auto index = result - WAIT_OBJECT_0;
+            auto failed = signals[index]; signals.erase(signals.begin() + index);
+            notifications.erase(std::remove(notifications.begin(), notifications.end(), failed), notifications.end());
+            FindCloseChangeNotification(failed);
+            if (signals.size() == 1) break;
+          }
         }
         uninit_apartment();
       });
@@ -220,7 +228,7 @@ struct FileQueue {
     } else if (method == "watch") {
       auto id = to_string(args.GetNamedString(L"id"));
       if (id.empty() || watches.count(id)) throw hresult_invalid_argument(L"Watch id must be unique and nonempty");
-      watches.emplace(id, std::make_unique<Watch>(path, id, context));
+      watches.emplace(id, std::make_unique<Watch>(path, id, context, args.GetNamedBoolean(L"recursive", false)));
     } else throw hresult_invalid_argument(L"Unknown filesystem operation");
     return Json::JsonValue::Parse(L"null");
   }

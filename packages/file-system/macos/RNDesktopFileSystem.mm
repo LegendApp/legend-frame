@@ -2,10 +2,32 @@
 #import <RNDesktopApp/LegendDesktop.h>
 #import <fcntl.h>
 #import <unistd.h>
+#import <stdlib.h>
+#import <CoreServices/CoreServices.h>
+
+@interface LegendRecursiveWatch : NSObject
+@property FSEventStreamRef stream;
+@property NSString *path;
+@property (copy) void (^changed)(void);
+- (void)stop;
+@end
+@implementation LegendRecursiveWatch
+- (void)stop { if (_stream) { FSEventStreamStop(_stream); FSEventStreamInvalidate(_stream); FSEventStreamRelease(_stream); _stream = NULL; } }
+- (void)dealloc { [self stop]; }
+@end
+static void RecursiveChanges(ConstFSEventStreamRef stream, void *info, size_t count, void *paths, const FSEventStreamEventFlags flags[], const FSEventStreamEventId ids[]) {
+  LegendRecursiveWatch *watch = (__bridge LegendRecursiveWatch *)info;
+  NSArray *changed = (__bridge NSArray *)paths;
+  for (NSUInteger i = 0; i < count; i++) {
+    NSString *path = changed[i];
+    if ([watch.path isEqual:@"/"] || (flags[i] & (kFSEventStreamEventFlagMustScanSubDirs | kFSEventStreamEventFlagRootChanged)) || [path isEqual:watch.path] || [path hasPrefix:[watch.path stringByAppendingString:@"/"]] || [watch.path hasPrefix:[path stringByAppendingString:@"/"]]) { watch.changed(); break; }
+  }
+}
 
 @interface RNDesktopFileSystem ()
 @property dispatch_queue_t ioQueue;
 @property NSMutableDictionary<NSString *, dispatch_source_t> *watches;
+@property NSMutableDictionary<NSString *, LegendRecursiveWatch *> *recursiveWatches;
 @end
 static NSURL *FileURL(id value) {
   if (![value isKindOfClass:NSString.class] || ![value length]) return nil;
@@ -15,7 +37,7 @@ static NSURL *FileURL(id value) {
 @implementation RNDesktopFileSystem
 RCT_EXPORT_MODULE(NativeDesktopFileSystem)
 + (BOOL)requiresMainQueueSetup { return NO; }
-- (instancetype)init { if (self = [super init]) { _ioQueue = dispatch_queue_create("legend.files", DISPATCH_QUEUE_SERIAL); _watches = [NSMutableDictionary new]; } return self; }
+- (instancetype)init { if (self = [super init]) { _ioQueue = dispatch_queue_create("legend.files", DISPATCH_QUEUE_SERIAL); _watches = [NSMutableDictionary new]; _recursiveWatches = [NSMutableDictionary new]; } return self; }
 - (NSArray<NSString *> *)supportedEvents { return @[@"change"]; }
 - (void)call:(NSString *)method args:(NSString *)json resolve:(RCTPromiseResolveBlock)resolve reject:(RCTPromiseRejectBlock)reject {
   dispatch_async(self.ioQueue, ^{
@@ -32,6 +54,7 @@ RCT_EXPORT_MODULE(NativeDesktopFileSystem)
       if (!error) [fm createDirectoryAtURL:url withIntermediateDirectories:YES attributes:nil error:&error];
       result = url.path;
     } else if ([method isEqual:@"unwatch"]) {
+      [self.recursiveWatches[args[@"id"]] stop]; [self.recursiveWatches removeObjectForKey:args[@"id"]];
       dispatch_source_t source = self.watches[args[@"id"]];
       if (source) { dispatch_source_cancel(source); [self.watches removeObjectForKey:args[@"id"]]; }
     } else {
@@ -73,14 +96,35 @@ RCT_EXPORT_MODULE(NativeDesktopFileSystem)
         result = [names sortedArrayUsingSelector:@selector(compare:)];
       }
       else if ([method isEqual:@"watch"]) {
+        NSString *watchID = args[@"id"];
+        if (self.watches[watchID] || self.recursiveWatches[watchID]) { LegendInvalid(reject, @"Watch id already exists"); return; }
+        if ([args[@"recursive"] boolValue]) {
+          BOOL directory = NO;
+          if (![fm fileExistsAtPath:url.path isDirectory:&directory] || !directory) { LegendInvalid(reject, @"Recursive watch requires an existing directory"); return; }
+          LegendRecursiveWatch *watch = [LegendRecursiveWatch new];
+          // Keep real filesystem paths: Foundation can strip /private while a path
+          // exists, then preserve it after deletion, breaking event comparisons.
+          char *resolved = realpath(url.fileSystemRepresentation, NULL);
+          if (!resolved) { LegendReject(reject, [NSError errorWithDomain:NSPOSIXErrorDomain code:errno userInfo:nil]); return; }
+          watch.path = [NSString stringWithUTF8String:resolved]; free(resolved);
+          __weak RNDesktopFileSystem *weakSelf = self;
+          watch.changed = ^{ [weakSelf sendEventWithName:@"change" body:@{ @"id": watchID, @"path": url.path }]; };
+          FSEventStreamContext context = {0, (__bridge void *)watch, NULL, NULL, NULL};
+          // Observe the parent too, keeping deletion/replacement of the root visible.
+          NSArray *roots = @[[watch.path stringByDeletingLastPathComponent]];
+          watch.stream = FSEventStreamCreate(NULL, RecursiveChanges, &context, (__bridge CFArrayRef)roots, kFSEventStreamEventIdSinceNow, 0.05,
+            kFSEventStreamCreateFlagUseCFTypes | kFSEventStreamCreateFlagFileEvents | kFSEventStreamCreateFlagWatchRoot | kFSEventStreamCreateFlagNoDefer);
+          if (!watch.stream) { reject(@"E_WATCH", @"Could not create directory watcher", nil); return; }
+          FSEventStreamSetDispatchQueue(watch.stream, self.ioQueue);
+          if (!FSEventStreamStart(watch.stream)) { [watch stop]; reject(@"E_WATCH", @"Could not start directory watcher", nil); return; }
+          self.recursiveWatches[watchID] = watch; resolve(@"null"); return;
+        }
         // Observe the parent so replacing a file atomically does not lose its watch.
         BOOL isDirectory = NO;
         [fm fileExistsAtPath:url.path isDirectory:&isDirectory];
         NSURL *observed = isDirectory ? url : [url URLByDeletingLastPathComponent];
         int fd = open(observed.fileSystemRepresentation, O_EVTONLY);
         if (fd < 0) { LegendReject(reject, [NSError errorWithDomain:NSPOSIXErrorDomain code:errno userInfo:nil]); return; }
-        NSString *watchID = args[@"id"];
-        if (self.watches[watchID]) { close(fd); LegendInvalid(reject, @"Watch id already exists"); return; }
         dispatch_source_t source = dispatch_source_create(DISPATCH_SOURCE_TYPE_VNODE, fd,
           DISPATCH_VNODE_WRITE | DISPATCH_VNODE_DELETE | DISPATCH_VNODE_RENAME | DISPATCH_VNODE_EXTEND | DISPATCH_VNODE_ATTRIB,
           self.ioQueue);
@@ -98,7 +142,7 @@ RCT_EXPORT_MODULE(NativeDesktopFileSystem)
   });
 }
 - (void)invalidate {
-  dispatch_async(self.ioQueue, ^{ for (dispatch_source_t source in self.watches.allValues) dispatch_source_cancel(source); [self.watches removeAllObjects]; });
+  dispatch_async(self.ioQueue, ^{ for (LegendRecursiveWatch *watch in self.recursiveWatches.allValues) [watch stop]; [self.recursiveWatches removeAllObjects]; for (dispatch_source_t source in self.watches.allValues) dispatch_source_cancel(source); [self.watches removeAllObjects]; });
   [super invalidate];
 }
 - (std::shared_ptr<facebook::react::TurboModule>)getTurboModule:(const facebook::react::ObjCTurboModule::InitParams &)params {
