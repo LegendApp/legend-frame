@@ -5,6 +5,23 @@ feature groups now have source implementations. **Native compilation and runtime
 acceptance are still unverified on both Windows x64 and ARM64.** Generation,
 JavaScript bundling, and unit tests never count as native acceptance.
 
+The [public API parity audit](desktop-parity-audit.md) identifies source-level
+gaps beneath the feature checklist: app/window lifecycle, launch arguments,
+file-dialog options, portable window options, and nested menu targeting. These
+need implementation or explicit contract decisions as well as native testing.
+
+## Confirmed Nitro integration blocker (2026-09-16)
+
+The current Nitro adapter calls `ReactContext.JSRuntime()` in
+`patches/windows/nitro/windows/LegendNitro/LegendNitro.h`. The pinned RNW
+`IReactContext.cpp` explicitly fail-fasts for that call in Debug Fabric builds.
+This is a source-confirmed incompatibility, not merely missing runtime evidence.
+Replace the installation entry point before expecting Nitro acceptance to pass.
+The draft [upstream Windows PR](https://github.com/margelo/nitro/pull/1483) uses a
+JSI initializer and makes different linkage choices; review it with maintainers
+before continuing the separate DLL adapter. Native buffers and cross-module
+runtime identity also need focused checks. This parity batch does not repair Nitro.
+
 ## What remains
 
 1. Run native compilation and the shared acceptance suite on Windows; fix any

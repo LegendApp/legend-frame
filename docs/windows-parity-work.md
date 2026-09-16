@@ -23,6 +23,11 @@ All groups now have source implementations for the development contracts; option
 acceptance remain unverified. The test catalog marks only standalone distribution
 and updates as missing; implementation status is not a test pass.
 
+The later [public API audit](desktop-parity-audit.md) found incomplete options,
+events, and behavior within these groups. These checkmarks mean a feature has an
+implementation, not that its full macOS contract is implemented on Windows. Use
+the audit's prioritized findings for the next implementation batch.
+
 ## Commits and local validation
 
 | Group | Implementation commits |

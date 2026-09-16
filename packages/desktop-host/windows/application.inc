@@ -39,6 +39,10 @@ static bool quitGuard = false, quitPending = false;
 static uint64_t generation = 0, quitRequest = 0;
 static Json::JsonArray pendingURLs{nullptr};
 static std::string initialURL;
+static Json::JsonArray launchArguments{nullptr};
+static bool appActive = false;
+static std::set<std::string> hiddenByApp;
+static std::string hiddenFocus;
 static std::filesystem::path dataDirectory;
 struct Shortcut { std::string id, windowId; UINT key; int modifiers; bool repeat; };
 static std::map<std::string, Shortcut> shortcuts;
@@ -59,6 +63,22 @@ static void UpdateModality() {
 }
 static std::string Id(HWND hwnd) { auto root = GetAncestor(hwnd, GA_ROOT); for (auto const &[id, window] : windows) if (Hwnd(window) == root) return id; return ""; }
 static void Emit(React::JSValueObject value) { if (context) context.EmitJSEvent(L"RCTDeviceEventEmitter", L"desktop", std::move(value)); }
+static void HideApplication() {
+  hiddenFocus = Id(GetForegroundWindow());
+  for (auto &[id, window] : windows) if (IsWindowVisible(Hwnd(window))) { hiddenByApp.insert(id); window.app.Hide(); }
+  UpdateModality();
+}
+static void ActivateApplication() {
+  for (auto const &id : hiddenByApp) if (windows.count(id)) windows.at(id).app.Show();
+  hiddenByApp.clear();
+  auto id = windows.count(hiddenFocus) ? hiddenFocus : "main";
+  auto &window = windows.at(id);
+  ShowWindow(Hwnd(window), IsIconic(Hwnd(window)) ? SW_RESTORE : SW_SHOW);
+  UpdateModality();
+  // An owned modal window, when present, must receive activation instead.
+  HWND target = GetLastActivePopup(Hwnd(window));
+  SetForegroundWindow(IsWindowVisible(target) && IsWindowEnabled(target) ? target : Hwnd(window));
+}
 static void WriteJson(React::IJSValueWriter const &writer, Json::IJsonValue const &value) {
   switch (value.ValueType()) {
     case Json::JsonValueType::Object: writer.WriteObjectBegin(); for (auto const &pair : value.GetObject()) { writer.WritePropertyName(pair.Key()); WriteJson(writer, pair.Value()); } writer.WriteObjectEnd(); break;
@@ -135,6 +155,8 @@ static void ApplyOptions(Window &window, Json::JsonObject const &options) {
 static void QueueLaunch(std::wstring const &commandLine, bool initial) {
   int count = 0; auto argv = CommandLineToArgvW(commandLine.c_str(), &count);
   if (!argv) return;
+  if (initial) for (int i = 0; i < count; ++i) launchArguments.Append(Json::JsonValue::CreateStringValue(argv[i]));
+  else Emit({{"type", "secondInstance"}});
   for (int i = 1; i < count; ++i) {
     std::wstring candidate(argv[i]);
     if (candidate.rfind(L"--legend-dock-action=", 0) == 0) {
@@ -211,7 +233,7 @@ static LRESULT CALLBACK WindowProc(HWND hwnd, UINT message, WPARAM wParam, LPARA
         auto text = static_cast<wchar_t const *>(notification->lpData); if (text[notification->cbData / sizeof(wchar_t) - 1]) return FALSE;
         try { QueueNotificationResponse(to_string(text)); return TRUE; } catch (...) { return FALSE; }
       }
- auto data = reinterpret_cast<COPYDATASTRUCT *>(lParam); if (data && data->dwData == 0x4C47 && data->cbData >= sizeof(wchar_t) && data->cbData <= 65536 && data->cbData % sizeof(wchar_t) == 0) { auto text = static_cast<wchar_t *>(data->lpData); if (text && text[data->cbData / sizeof(wchar_t) - 1] == 0) { QueueLaunch(text, false); ShowWindow(hwnd, IsIconic(hwnd) ? SW_RESTORE : SW_SHOW); SetForegroundWindow(hwnd); return TRUE; } } return FALSE; }
+ auto data = reinterpret_cast<COPYDATASTRUCT *>(lParam); if (data && data->dwData == 0x4C47 && data->cbData >= sizeof(wchar_t) && data->cbData <= 65536 && data->cbData % sizeof(wchar_t) == 0) { auto text = static_cast<wchar_t *>(data->lpData); if (text && text[data->cbData / sizeof(wchar_t) - 1] == 0) { QueueLaunch(text, false); Emit({{"type", "reopen"}}); ActivateApplication(); return TRUE; } } return FALSE; }
     if (message == WM_GETMINMAXINFO) {
       auto limits = reinterpret_cast<MINMAXINFO *>(lParam); auto const &window = windows.at(id);
       limits->ptMinTrackSize = {window.minWidth, window.minHeight}; limits->ptMaxTrackSize = {window.maxWidth, window.maxHeight}; return 0;
@@ -219,6 +241,10 @@ static LRESULT CALLBACK WindowProc(HWND hwnd, UINT message, WPARAM wParam, LPARA
     if (message == WM_SHOWWINDOW) PostMessageW(hwnd, WM_APP + 18, 0, 0);
     if (message == WM_APP + 18) { UpdateModality(); return 0; }
     if (message == WM_EXITSIZEMOVE) SaveFrame(id, hwnd);
+    if (message == WM_ACTIVATEAPP) {
+      const bool active = wParam != 0;
+      if (active != appActive) { appActive = active; Emit({{"type", active ? "activate" : "deactivate"}}); }
+    }
     if (message == WM_MOVE) Emit({{"type", "move"}, {"windowId", id}});
     if (message == WM_SIZE) Emit({{"type", "resize"}, {"windowId", id}});
     if (message == WM_NCDESTROY && id == "main") SetNotificationWindow(nullptr);
@@ -339,7 +365,7 @@ static void RebuildMenus() {
 }
 static void Initialize(React::ReactNativeWin32App const &app) {
   // WinRT activation must follow init_apartment, never static initialization.
-  pendingURLs = Json::JsonArray(); menus = Json::JsonArray();
+  pendingURLs = Json::JsonArray(); launchArguments = Json::JsonArray(); menus = Json::JsonArray();
   host = app.ReactNativeHost(); compositor = app.ReactNativeWindow().ReactNativeIsland().Compositor(); Attach("main", app.ReactNativeWindow());
   keyboardHook = SetWindowsHookExW(WH_GETMESSAGE, Keyboard, nullptr, GetCurrentThreadId());
   // AsyncStorage's documented override supports unpackaged Win32 applications.
@@ -387,10 +413,10 @@ struct LegendDesktopApp {
         else if (method == "quit") RequestQuit();
         else if (method == "replyQuit") {
           if (quitPending && args.GetNamedNumber(L"requestId") == quitRequest) { quitPending = false; KillTimer(Hwnd(windows.at("main")), 0x4C47); if (args.GetNamedBoolean(L"allow")) { windows.at("main").allow = true; windows.at("main").app.Destroy(); } }
-        } else if (method == "hide") windows.at("main").app.Hide();
-        else if (method == "activate") { windows.at("main").app.Show(); SetForegroundWindow(Hwnd(windows.at("main"))); }
+        } else if (method == "hide") HideApplication();
+        else if (method == "activate") ActivateApplication();
         else if (method == "context") {
-          Json::JsonObject result; result.SetNamedValue(L"projectId", Json::JsonValue::CreateStringValue(LegendWindowsEnv(L"LEGEND_PROJECT_ID"))); result.SetNamedValue(L"name", Json::JsonValue::CreateStringValue(LegendWindowsEnv(L"LEGEND_PROJECT_NAME"))); result.SetNamedValue(L"version", Json::JsonValue::CreateStringValue(LegendWindowsEnv(L"LEGEND_PROJECT_VERSION"))); result.SetNamedValue(L"runtime", Json::JsonObject::Parse(to_hstring(NativeLegendRuntime{}.describe()))); result.SetNamedValue(L"launchArguments", Json::JsonArray()); promise.Resolve(to_string(result.Stringify())); return;
+          Json::JsonObject result; result.SetNamedValue(L"projectId", Json::JsonValue::CreateStringValue(LegendWindowsEnv(L"LEGEND_PROJECT_ID"))); result.SetNamedValue(L"name", Json::JsonValue::CreateStringValue(LegendWindowsEnv(L"LEGEND_PROJECT_NAME"))); result.SetNamedValue(L"version", Json::JsonValue::CreateStringValue(LegendWindowsEnv(L"LEGEND_PROJECT_VERSION"))); result.SetNamedValue(L"runtime", Json::JsonObject::Parse(to_hstring(NativeLegendRuntime{}.describe()))); result.SetNamedValue(L"launchArguments", launchArguments); promise.Resolve(to_string(result.Stringify())); return;
         } else if (method == "pendingURLs") { promise.Resolve(to_string(pendingURLs.Stringify())); return; }
         else if (method == "initialURL") { promise.Resolve(initialURL.empty() ? "null" : to_string(Json::JsonValue::CreateStringValue(to_hstring(initialURL)).Stringify())); return; }
         else throw winrt::hresult_invalid_argument(L"Unsupported application operation");
