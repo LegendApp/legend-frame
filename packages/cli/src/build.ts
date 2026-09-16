@@ -23,6 +23,7 @@ import {
   entryFile,
   digest,
   hashFiles,
+  hostSourceSignature,
   nativePackages,
   readJson,
   runtimeFor,
@@ -222,10 +223,7 @@ async function buildUnlocked(
           ...readdirSync(p.root).filter((name) => name.endsWith(".podspec")),
         ]),
       ]),
-      plugin: hashFiles(root, [
-        "node_modules/@legend-apps/desktop-host",
-        "node_modules/@legend-apps/desktop-config",
-      ]),
+      plugin: hostSourceSignature(root),
     }),
   );
   const preparedFile = stateFile(root, "native-preparation.json");

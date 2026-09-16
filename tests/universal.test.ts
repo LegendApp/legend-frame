@@ -62,12 +62,13 @@ test("desktop Metro selects native package exports while preserving application 
     writeFileSync(path.join(root, "desktop.config.json"), JSON.stringify(shared));
     const { withDesktop } = require("../packages/cli/src/metro.cjs");
     const conditions = { web: ["browser"], macos: ["custom"], windows: ["react-native", "custom"] };
-    const config = { projectRoot: root, resolver: { unstable_conditionsByPlatform: conditions } };
+    const config = { projectRoot: root, server: { unstable_serverRoot: path.dirname(root) }, resolver: { unstable_conditionsByPlatform: conditions } };
     const result = withDesktop(config, { runtimes: false });
     expect(result.resolver.unstable_conditionsByPlatform).toEqual({
       web: ["browser"], macos: ["custom", "react-native"], windows: ["react-native", "custom"],
     });
     expect(conditions.macos).toEqual(["custom"]);
+    expect(result.server.unstable_serverRoot).toBe(root);
   } finally {
     if (previous === undefined) delete process.env.LEGEND_PLATFORM; else process.env.LEGEND_PLATFORM = previous;
     rmSync(root, { recursive: true, force: true });

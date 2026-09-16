@@ -251,6 +251,11 @@ export function selection(
     reasons,
   };
 }
+export function hostSourceSignature(root: string) {
+  return digest(JSON.stringify(installedPackages(root)
+    .filter(pkg => ["@legend-apps/desktop-host", "@legend-apps/desktop-config"].includes(pkg.name))
+    .map(pkg => [pkg.name, hashFiles(pkg.root, ["package.json", "AppDelegate.mm", "windows", ...readdirSync(pkg.root).filter(file => file.endsWith(".cjs"))])])));
+}
 export function runtimeFor(
   root: string,
   packages: NativePackage[],
@@ -287,10 +292,7 @@ export function runtimeFor(
         pins,
         config: readAppConfig(root),
         helpers: hashFiles(root, resolveHelpers(root, readAppConfig(root).expo?.extra?.legend?.helpers).map(helper => helper.relative)),
-        adapter: hashFiles(root, [
-          "node_modules/@legend-apps/desktop-host",
-          "node_modules/@legend-apps/desktop-config",
-        ]),
+        adapter: hostSourceSignature(root),
       }),
     ),
   };

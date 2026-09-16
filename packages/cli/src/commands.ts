@@ -1,6 +1,7 @@
 import { checkExpoDesktopNode } from "./expo-node";
 import { appendFileSync, mkdirSync } from "node:fs";
 import path from "node:path";
+import { createRequire } from "node:module";
 import { stateFile } from "./project.ts";
 
 const running = new Map<string, Set<ReturnType<typeof Bun.spawn>>>();
@@ -82,13 +83,20 @@ export async function run(
   return output;
 }
 export function binary(root: string, name: string) {
-  return path.join(root, "node_modules", ".bin", name);
+  const require = createRequire(path.join(root, "package.json"));
+  const manifest = require.resolve(`${name}/package.json`);
+  const pkg = require(manifest);
+  const entry = typeof pkg.bin === "string" ? pkg.bin : pkg.bin?.[name];
+  if (!entry) throw new Error(`${name} does not expose its CLI entry point`);
+  return path.resolve(path.dirname(manifest), entry);
 }
 export async function doctor(root: string) {
   if (process.platform === "win32") {
     for (const tool of ["node", "bun", "pwsh.exe", "dotnet.exe"]) if (!Bun.which(tool)) throw new Error(`Missing ${tool}; see docs/windows-slice.md.`);
     await checkExpoDesktopNode(root);
-    await run(root, ["pwsh.exe", "-File", path.join(root, "node_modules/react-native-windows/Scripts/rnw-dependencies.ps1")]);
+    const require = createRequire(path.join(root, "package.json"));
+    const windows = path.dirname(require.resolve("react-native-windows/package.json"));
+    await run(root, ["pwsh.exe", "-File", path.join(windows, "Scripts/rnw-dependencies.ps1")]);
     return;
   }
   if (process.platform !== "darwin" || process.arch !== "arm64")

@@ -43,6 +43,12 @@ module.exports = function withLegendDesktop(config) {
     return mod;
   });
   return withPodfile(config, (mod) => {
+    // The beta template passes the resolved package to use_react_native!, but
+    // post_install otherwise resets Xcode script paths to ../node_modules.
+    mod.modResults.contents = mod.modResults.contents.replace(
+      "react_native_post_install(installer)",
+      'react_native_post_install(installer, "#{config[:reactNativePath]}-macos")',
+    );
     const selectionFile = statePath(mod.modRequest.projectRoot, "native-selection.json", "macos");
     const included = fs.existsSync(selectionFile) ? JSON.parse(fs.readFileSync(selectionFile, "utf8")).included : [];
     const updatePackage = included.find(pkg => pkg.name === "@legend-apps/updates");

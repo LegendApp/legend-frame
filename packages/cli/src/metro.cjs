@@ -24,7 +24,10 @@ function withDesktop(config, options = {}) {
   }
   config = { ...config, resolver: { ...config.resolver, unstable_conditionsByPlatform: conditions } };
   const root = path.resolve(config.projectRoot || process.cwd());
-  const { readConfig } = require("@legend-apps/desktop-config/config.cjs");
+  // Prebuilt hosts request /index.bundle and /.threaded-runtime/entry.bundle.
+  // Keep those URLs relative to the app inside a monorepo; Expo still discovers
+  // workspace watch folders and package dependencies.
+  config = { ...config, server: { ...config.server, unstable_serverRoot: root } };
   let core;
   try { core = require.resolve("@react-native-runtimes/core/metro", { paths: [root] }); } catch {}
   if (!core || options.runtimes === false) {
