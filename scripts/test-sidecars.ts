@@ -1,5 +1,5 @@
 // Exercise the actual React Native process module in a disposable packaged app.
-// Build Kitchen Sink first with: bun run --cwd examples/kitchen-sink rebuild:macos
+// Build Kitchen Sink first with: bun run legend build --dev --project examples/kitchen-sink
 import { cpSync, existsSync, mkdirSync, readFileSync, rmSync } from "node:fs";
 import path from "node:path";
 import { copyHelpers } from "../packages/cli/src/helpers";
@@ -8,14 +8,15 @@ import { binary, run } from "../packages/cli/src/commands";
 import { projectEnvironment } from "../packages/cli/src/project";
 if (process.platform !== "darwin") throw new Error("This launcher currently runs on macOS; see docs/sidecars.md for the Windows probe.");
 const root = path.resolve("examples/kitchen-sink");
-const source = path.join(root, ".legend/platforms/macos/products/go/KitchenSink.app");
+const source = path.join(root, ".legend/platforms/macos/products/dev/KitchenSink.app");
 if (!existsSync(source)) throw new Error("Build the Kitchen Sink macOS runtime first.");
 const directory = path.resolve(".legend/sidecar-tests");
 rmSync(directory, { recursive: true, force: true }); mkdirSync(path.join(directory, "binary"), { recursive: true });
 await run(directory, ["cc", path.resolve("examples/sidecar/echo.c"), "-o", path.join(directory, "binary/echo")]);
+await run(directory, ["cc", path.resolve("examples/sidecar/worker.c"), "-o", path.join(directory, "binary/worker")]);
 const appPath = path.join(directory, "SidecarTests.app");
 cpSync(source, appPath, { recursive: true });
-copyHelpers(directory, appPath, { echo: { "macos-arm64": { directory: "binary", executable: "echo" } } });
+copyHelpers(directory, appPath, { echo: { "macos-arm64": { directory: "binary", executable: "echo" } }, worker: { "macos-arm64": { directory: "binary", executable: "worker" } } });
 await run(directory, ["codesign", "--force", "--deep", "--sign", "-", appPath]);
 const port = await availablePort();
 const report = path.join(directory, "report.json");

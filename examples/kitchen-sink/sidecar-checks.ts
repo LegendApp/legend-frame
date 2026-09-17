@@ -1,3 +1,4 @@
+import { startHelper } from "./sidecar-client";
 import { getAppContext, quit } from "@legend-apps/desktop/app";
 import { Platform } from "react-native";
 import { toByteArray } from "base64-js";
@@ -50,6 +51,22 @@ export async function runSidecarChecks() {
       const result = await runCommand({ executable: "/bin/sh", args: ["-c", script], timeoutMs: 200 });
       assert(script.endsWith("exit 0") ? result.exitCode === 0 : result.timedOut, "Wrong descendant exit result");
     }
+  });
+  await check("worker readiness, concurrent binary protocol, crash and explicit restart", async () => {
+    const client = await startHelper(spawn);
+    try {
+      const input = new Uint8Array([0, 1, 127, 128, 255]);
+      const [echo, hash] = await Promise.all([client.request("echo", input), client.request("hash")]);
+      assert(echo.join() === input.join() && hash.join() === "129,28,157,197", "Worker reply mismatch");
+      let failed = false; try { await client.request("crash"); } catch { failed = true; } assert(failed, "Worker crash did not reject request");
+    } finally { await client.close(); }
+    const restarted = await startHelper(spawn);
+    try { assert((await restarted.request("echo")).length === 0, "Restart failed"); } finally { await restarted.close(); }
+  });
+  await check("worker readiness and request deadlines clean up the process", async () => {
+    let missing = false; try { await startHelper(spawn, { args: ["--no-ready"], readyTimeoutMs: 200 }); } catch { missing = true; } assert(missing, "Missing ready handshake succeeded");
+    const client = await startHelper(spawn, { requestTimeoutMs: 200 });
+    try { let failed = false; try { await client.request("hang"); } catch { failed = true; } assert(failed, "Hung worker request succeeded"); } finally { await client.close(); }
   });
   let livePid: number | undefined;
   if ((await getAppContext()).launchArguments.includes("--legend-sidecar-quit-probe")) {

@@ -109,7 +109,7 @@ feature does not claim to implement that pipeline.
 See [the standalone C example](../examples/sidecar/README.md). On macOS:
 
 ```sh
-bun run --cwd examples/kitchen-sink rebuild:macos
+bun run legend build --dev --project examples/kitchen-sink
 bun scripts/test-sidecars.ts
 ```
 
@@ -121,10 +121,25 @@ macOS descendant cleanup, prompt readiness delivery, and cleanup of a live helpe
 on normal application quit. It does not validate Developer ID notarization or
 abrupt macOS crash cleanup.
 
-On Windows, compile `echo.c` for the host target, add it to Kitchen Sink's helpers
+On Windows, compile `echo.c` and `worker.c` for the host target, add both to Kitchen Sink's helpers
 configuration using the example, build a **custom development app**, and launch
 its executable with `--legend-test-report <absolute-report-path>
 --legend-sidecar-probe` while Metro is running. The portable probe covers lookup,
-I/O, failures, timeout and window ownership. Separately verify Job Object cleanup
+I/O, failures, timeout, window ownership, and the worker readiness/request protocol. Separately verify Job Object cleanup
 by closing/reloading the host and by killing the host while helpers and their
 children are running. These native Windows results are pending.
+
+## Request/response service example
+
+The [sidecar example](../examples/sidecar/README.md#complete-requestresponse-example)
+now includes a worker executable, bounded client protocol, application-owned service,
+and a React Native UI. It demonstrates readiness, correlated concurrent requests,
+binary-safe framing, timeouts, crash handling, explicit restart, and graceful stop.
+These remain example-owned policies; the framework process API stays language- and
+protocol-neutral. For large input files, use [streaming file I/O](file-streams.md)
+or pass a validated path to an app-owned helper instead of one enormous message.
+
+Validated on macOS on 2026-09-17: the real native sidecar probe passed all nine
+checks, including binary worker requests, crash/restart, readiness/request timeouts,
+and normal app-quit cleanup. Portable client tests also split replies into three-byte
+fragments to exercise framing independently of OS pipe chunking.

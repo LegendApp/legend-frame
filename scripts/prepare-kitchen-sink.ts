@@ -42,6 +42,7 @@ export function copyKitchenSinkScreens(source: string, root: string) {
   for (const entry of readdirSync(source, { withFileTypes: true })) {
     if (entry.isFile() && (/\.tsx?$/.test(entry.name) || ["global.css", "metro.config.js"].includes(entry.name))) cpSync(path.join(source, entry.name), path.join(root, entry.name));
   }
+  cpSync(path.join(source, "../sidecar/client.ts"), path.join(root, "sidecar-client.ts"));
 }
 
 if (import.meta.main) {

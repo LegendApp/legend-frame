@@ -9,6 +9,9 @@ test("packaged consumers receive screens without workspace manifests or native p
   const source = path.join(root, "source"), consumer = path.join(root, "consumer");
   mkdirSync(source); mkdirSync(consumer);
   try {
+    mkdirSync(path.join(root, "sidecar"));
+    writeFileSync(path.join(root, "sidecar/client.ts"), "standalone helper client");
+    writeFileSync(path.join(source, "sidecar-client.ts"), 'export * from "../sidecar/client";');
     for (const [file, value] of Object.entries({ "App.tsx": "screen", "global.css": "styles", "metro.config.js": "metro", "package.json": "workspace dependencies", "desktop.config.json": "checkout identity", "app.config.js": "checkout config" })) writeFileSync(path.join(source, file), value);
     mkdirSync(path.join(source, "macos")); writeFileSync(path.join(source, "macos/keep"), "native source");
     writeFileSync(path.join(consumer, "package.json"), "SDK archives");
@@ -16,6 +19,7 @@ test("packaged consumers receive screens without workspace manifests or native p
     copyKitchenSinkScreens(source, consumer);
     expect(readFileSync(path.join(consumer, "App.tsx"), "utf8")).toBe("screen");
     expect(readFileSync(path.join(consumer, "global.css"), "utf8")).toBe("styles");
+    expect(readFileSync(path.join(consumer, "sidecar-client.ts"), "utf8")).toBe("standalone helper client");
     expect(readFileSync(path.join(consumer, "package.json"), "utf8")).toBe("SDK archives");
     expect(readFileSync(path.join(consumer, "desktop.config.json"), "utf8")).toBe("test identity");
     expect(existsSync(path.join(consumer, "macos"))).toBe(false);
