@@ -83,3 +83,36 @@ See [extension development](extensions.md), [audio](audio.md), and
 checks must run on Windows; bundle success alone does not establish native support.
 The [acceptance record](example-validation.md) distinguishes passing checks from
 remaining device work, including the development machine's audio-output limitation.
+
+## Notes Lite desktop behavior
+
+Notes Lite is also the integration example for window/session behavior. Its File
+menu, focused-window shortcuts, and buttons share command handlers. The modifier
+is Command on macOS and Control on Windows:
+
+| Action | Shortcut |
+| --- | --- |
+| New note | Modifier+N |
+| Save / retry | Modifier+S |
+| Import text | Modifier+O |
+| Search (focuses the main window) | Modifier+F |
+| Delete current note (recoverable) | Modifier+Shift+Backspace |
+| Open current note in its dedicated window | Modifier+Shift+N |
+| Settings | Modifier+, |
+
+Opening a note again focuses its existing dedicated window. Settings also has one
+desktop window; mobile and web show it within the app. System appearance is the
+default, with Light and Dark overrides saved in the notebook and shared by all
+windows. Existing notebooks without these fields keep their notes and use System.
+
+A normal quit saves the main, Settings, and note window frames; the next launch
+reopens surviving notes and fits frames onto the currently connected displays.
+Manually closed windows are removed from the session. Deleted notes are not reopened.
+This restores positions and sizes, not fullscreen/minimized state. The shared JS
+runtime is the synchronization boundary; separate application processes and browser
+tabs are not a cross-process editing solution.
+
+Failed saves remain visible and prevent guarded desktop close/quit. Retry save
+retries persistence; unrelated command failures have a separate dismissible message.
+OS force termination cannot be vetoed and may lose changes after the last completed
+snapshot. See [Notes acceptance](notes-lite-acceptance.md) for repeatable checks.

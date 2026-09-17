@@ -6,8 +6,11 @@ export function Lifecycle({ title, dirty, flush, commands }: LifecycleProps) {
     const close = (event: BeforeUnloadEvent) => { if (dirty()) { event.preventDefault(); event.returnValue = ""; } };
     const background = () => { if (document.visibilityState === "hidden") void flush(); };
     const key = (event: KeyboardEvent) => {
-      if (event.isComposing || event.altKey || event.shiftKey || !(event.metaKey || event.ctrlKey)) return;
-      const command = commands.find(command => command.key.toLowerCase() === event.key.toLowerCase());
+      if (event.isComposing || event.altKey || !(event.metaKey || event.ctrlKey)) return;
+      const command = commands.find(command => {
+        const parts = command.key.toLowerCase().split("+");
+        return parts.includes("shift") === event.shiftKey && parts.at(-1) === event.key.toLowerCase();
+      });
       if (command) { event.preventDefault(); command.run(); }
     };
     window.addEventListener("beforeunload", close); window.addEventListener("keydown", key); document.addEventListener("visibilitychange", background);

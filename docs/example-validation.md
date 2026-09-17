@@ -56,3 +56,12 @@ Music background/lock-screen behavior have bundle coverage, not runtime acceptan
 in this session. OS file-association registration on Windows is now implemented in source; native acceptance remains pending. See [Windows acceptance](windows-issues.md).
 
 No cloud services or sibling Legend application repositories are required.
+
+## Notes desktop behavior follow-up (2026-09-17)
+
+Notes Lite now includes shared commands, Settings/theme persistence, and window
+session restoration. A new packed consumer typechecked and bundled on all five
+platforms, and its macOS development binary built and passed the native checks
+recorded in [Notes acceptance](notes-lite-acceptance.md). The focused model/session
+suite has 15 passing tests; the workspace suite has 234 passing tests. Windows
+OS behavior and physical display removal remain target-machine acceptance work.

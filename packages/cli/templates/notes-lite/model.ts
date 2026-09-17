@@ -1,8 +1,11 @@
+import { decodeWindows, type SavedWindow, type Theme } from "./session";
 export type Note = { id: string; text: string; updatedAt: number; deleted: boolean };
-export type Notebook = { version: 1; notes: Note[]; selectedId: string | null };
+export type Notebook = { version: 1; notes: Note[]; selectedId: string | null; theme?: Theme; windows?: SavedWindow[] };
 export function decodeNotebook(value: unknown): Notebook {
   const data = value as Notebook;
   if (data?.version !== 1 || !Array.isArray(data.notes) || !data.notes.every(note => note && typeof note.id === "string" && typeof note.text === "string" && Number.isFinite(note.updatedAt) && typeof note.deleted === "boolean") || new Set(data.notes.map(note => note.id)).size !== data.notes.length || (data.selectedId !== null && typeof data.selectedId !== "string")) throw new Error("Unsupported notes format");
+  if (data.theme !== undefined && !["system", "light", "dark"].includes(data.theme)) throw new Error("Unsupported theme");
+  decodeWindows(data.windows);
   return data;
 }
 export type NotesState = Notebook & { ready: boolean; dirty: boolean; saving: boolean; error: string | null; recovered: boolean };
@@ -26,10 +29,13 @@ export class NotesModel {
     this.revision++; this.update({ ...patch, dirty: true });
     clearTimeout(this.timer); this.timer = setTimeout(() => { void this.flush(); }, 250);
   }
+  setTheme = (theme: Theme) => { if (theme !== (this.state.theme ?? "system")) this.change({ theme }); };
+  setWindows = (windows: SavedWindow[]) => { if (JSON.stringify(windows) !== JSON.stringify(this.state.windows ?? [])) this.change({ windows }); };
   create = (text = "") => {
     if (!this.state.ready) return;
     const id = `${Date.now().toString(36)}-${Math.random().toString(36).slice(2)}`;
     this.change({ notes: [{ id, text, updatedAt: Date.now(), deleted: false }, ...this.state.notes], selectedId: id });
+    return id;
   };
   select = (selectedId: string | null) => { if (selectedId !== this.state.selectedId) this.change({ selectedId }); };
   edit = (id: string, text: string) => {
@@ -37,16 +43,16 @@ export class NotesModel {
     if (!note || note.text === text || note.deleted) return;
     this.change({ notes: this.state.notes.map(item => item.id === id ? { ...item, text, updatedAt: Date.now() } : item) });
   };
-  setDeleted = (id: string, deleted: boolean) => this.change({ notes: this.state.notes.map(note => note.id === id ? { ...note, deleted, updatedAt: Date.now() } : note), selectedId: null });
+  setDeleted = (id: string, deleted: boolean) => this.change({ notes: this.state.notes.map(note => note.id === id ? { ...note, deleted, updatedAt: Date.now() } : note), selectedId: this.state.selectedId === id && deleted ? null : this.state.selectedId });
   flush = (): Promise<boolean> => {
     clearTimeout(this.timer);
     if (this.saving) return this.saving.then(ok => ok ? this.flush() : false);
     if (!this.state.ready) return Promise.resolve(false);
     if (!this.state.dirty) return Promise.resolve(true);
     const revision = this.revision;
-    const { notes, selectedId } = this.state;
+    const { notes, selectedId, theme, windows } = this.state;
     this.update({ saving: true, error: null });
-    this.saving = this.records.save({ version: 1, notes, selectedId }).then(() => {
+    this.saving = this.records.save({ version: 1, notes, selectedId, theme, windows }).then(() => {
       this.update({ dirty: revision !== this.revision }); return true;
     }, error => { this.update({ error: String(error) }); return false; }).finally(() => { this.saving = undefined; this.update({ saving: false }); });
     return this.saving.then(ok => ok && this.state.dirty ? this.flush() : ok);
