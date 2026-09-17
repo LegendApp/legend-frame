@@ -149,3 +149,13 @@ asset loading, and verify Job Object cleanup on root exit, cancellation, runtime
 reload, normal quit, and abrupt host termination. Windows distribution signing
 and packaging remain separate gaps. The macOS probe does not establish Windows
 acceptance.
+
+## Streaming files and Recycle Bin (2026-09-17)
+
+Source implementations now provide bounded positional file handles, pull-based
+binary iteration, streaming writes, runtime handle cleanup, and an STA
+`IFileOperation` recycle operation with a veto against permanent-delete fallback.
+Run Kitchen Sink's **Test streaming files and Trash** on x64 and ARM64. Verify
+recovery in Explorer and refusal on a non-recyclable volume, plus denied access,
+EOF, early iterator exit, cancellation, and reload cleanup. These additions passed
+native macOS checks; Windows build/runtime acceptance remains pending.

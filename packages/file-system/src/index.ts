@@ -45,3 +45,17 @@ export async function watch(path: string, listener: (path: string) => void, opti
     removed = true; subscription.remove(); await call("unwatch", { id });
   } };
 }
+
+import { createFileHandle, iterateFile, writeFileChunks, type FileMode, type ReadChunksOptions } from "./handles";
+export type { FileHandle, FileMode, ReadChunksOptions } from "./handles";
+/** read/readWrite require an existing regular file. write truncates; createNew fails if it exists. */
+export const openFile = (path: string, options: { mode?: FileMode } = {}) => createFileHandle(call, absolute(path), options.mode);
+/** Pull-based binary stream; closes the handle on EOF, error, abort, or early loop exit. */
+export const readChunks = (path: string, options: ReadChunksOptions = {}) => iterateFile(() => openFile(path), options);
+/** Writes sequentially, splitting large chunks. Failure leaves a partial file; use a temporary file + move for publication. */
+export const writeChunks = (path: string, chunks: AsyncIterable<Uint8Array> | Iterable<Uint8Array>, options: { mode?: "write" | "createNew"; signal?: AbortSignal } = {}) => {
+  if (options.mode !== undefined && options.mode !== "write" && options.mode !== "createNew") throw new TypeError("Streaming writes require write or createNew mode");
+  return writeFileChunks(() => openFile(path, { mode: options.mode ?? "write" }), chunks, options.signal);
+};
+/** Move to the OS Trash/Recycle Bin. Never falls back to permanent deletion. */
+export const trash = (path: string) => call<void>("trash", { path: absolute(path) });

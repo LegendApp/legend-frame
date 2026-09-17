@@ -16,6 +16,7 @@ import { configureMenus, clearMenus, addNativeMenuActionListener } from "@legend
 import { openFileDialog, saveFileDialog, revealInFinder } from "@legend-apps/desktop/dialogs";
 import { AuthChecks } from "./AuthChecks";
 import { AudioChecks } from "./AudioChecks";
+import { FileStreamChecks } from "./FileStreamChecks";
 import { FoundationChecks } from "./FoundationChecks";
 import { runSidecarChecks } from "./sidecar-checks";
 import { runChecks, type Check } from "./checks";
@@ -37,6 +38,8 @@ export default function App(props: Props) {
   if (authReport) return <AuthChecks report={authReport} provider={argument(args, "--legend-auth-provider")!} />;
   const audioReport = argument(args, "--legend-audio-report");
   if (audioReport) return <AudioChecks report={audioReport} source={argument(args, "--legend-audio-source")!} />;
+  const filesReport = argument(args, "--legend-files-report");
+  if (filesReport) return <FileStreamChecks report={filesReport} />;
   const foundationReport = argument(args, "--legend-foundation-report");
   if (foundationReport) return <FoundationChecks report={foundationReport} />;
   const uiReport = argument(args, "--legend-ui-report");
@@ -134,6 +137,7 @@ function KitchenSink({ runtime, projectId }: Props) {
   return <View style={{ flex: 1 }} className="bg-background">
     <View style={styles.header} className="border-border"><Text style={styles.title} className="text-foreground">Desktop Kitchen Sink</Text><Text className="text-muted">{runtime?.mode ?? "unknown"} · {projectId}</Text><ThemeToggle /></View>
     <ScrollView contentContainerStyle={styles.content} testID="kitchen-sink">
+      <Card title="Streaming files and Trash"><FileStreamChecks /></Card>
       <Card title="App and windows"><View style={styles.row}>
         <ActionButton onPress={() => action(() => windows.openWindow({ id: "demo", title: "Kitchen Sink · Second window", props: { message: "Same JavaScript bundle, separate native window." }, restoreFrame: true }).then(window => { report(window); return `Opened ${window.title}.`; }))}>Open second window</ActionButton>
         <ActionButton testID="list-windows" onPress={() => action(async () => {

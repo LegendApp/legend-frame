@@ -16,7 +16,10 @@
 #include <vector>
 #include <algorithm>
 #include <climits>
+#include <cmath>
+#include "Trash.h"
 #pragma comment(lib, "Ole32.lib")
+#pragma comment(lib, "Shell32.lib")
 #pragma comment(lib, "Shlwapi.lib")
 
 namespace winrt::LegendFileSystem {
@@ -50,6 +53,7 @@ inline std::string ErrorCode(DWORD error) {
     case ERROR_ACCESS_DENIED: case ERROR_PRIVILEGE_NOT_HELD: return "E_PERMISSION";
     case ERROR_ALREADY_EXISTS: case ERROR_FILE_EXISTS: return "E_EXISTS";
     case ERROR_DIR_NOT_EMPTY: return "E_NOT_EMPTY";
+    case ERROR_INVALID_HANDLE: return "E_CLOSED";
     case ERROR_INVALID_PARAMETER: case ERROR_INVALID_NAME: return "E_INVALID_ARGUMENT";
     default: return "E_IO";
   }
@@ -164,6 +168,7 @@ struct FileQueue {
   std::mutex mutex; std::condition_variable ready; bool stopping = false;
   std::deque<std::function<void()>> pending;
   std::map<std::string, std::unique_ptr<Watch>> watches;
+  std::map<std::string, handle> files;
   std::thread worker;
   explicit FileQueue(React::ReactContext value) : context(value), worker([this] {
     init_apartment(apartment_type::multi_threaded);
@@ -173,14 +178,55 @@ struct FileQueue {
         if (pending.empty()) break; action = std::move(pending.front()); pending.pop_front(); }
       action();
     }
-    watches.clear(); uninit_apartment();
+    files.clear(); watches.clear(); uninit_apartment();
   }) {}
   ~FileQueue() { { std::lock_guard lock(mutex); stopping = true; } ready.notify_one(); worker.join(); }
   void Post(std::function<void()> action) { { std::lock_guard lock(mutex); pending.push_back(std::move(action)); } ready.notify_one(); }
   Json::IJsonValue Call(std::string const &method, Json::JsonObject const &args) {
     if (method == "directory") return Json::JsonValue::CreateStringValue(Directory(args.GetNamedString(L"kind")).wstring());
     if (method == "unwatch") { watches.erase(to_string(args.GetNamedString(L"id"))); return Json::JsonValue::Parse(L"null"); }
+    if (method == "closeFile") { files.erase(to_string(args.GetNamedString(L"id"))); return Json::JsonValue::Parse(L"null"); }
+    if (method == "readChunk" || method == "writeChunk" || method == "flushFile") {
+      auto found = files.find(to_string(args.GetNamedString(L"id")));
+      if (found == files.end()) throw hresult_error(HRESULT_FROM_WIN32(ERROR_INVALID_HANDLE), L"Unknown or closed file handle");
+      auto file = found->second.get();
+      if (method == "flushFile") { if (!FlushFileBuffers(file)) throw_last_error(); return Json::JsonValue::Parse(L"null"); }
+      double offset = args.GetNamedNumber(L"offset");
+      if (!std::isfinite(offset) || offset < 0 || std::floor(offset) != offset || offset > 9007199254740991.0) throw hresult_invalid_argument(L"Invalid file offset");
+      LARGE_INTEGER position{}; position.QuadPart = static_cast<LONGLONG>(offset);
+      if (!SetFilePointerEx(file, position, nullptr, FILE_BEGIN)) throw_last_error();
+      if (method == "readChunk") {
+        double length = args.GetNamedNumber(L"length");
+        if (!std::isfinite(length) || length < 1 || length > 1048576 || std::floor(length) != length || offset + length > 9007199254740991.0) throw hresult_invalid_argument(L"Invalid chunk length");
+        std::vector<uint8_t> data(static_cast<size_t>(length)); DWORD count = 0;
+        if (!ReadFile(file, data.data(), static_cast<DWORD>(data.size()), &count, nullptr)) throw_last_error();
+        data.resize(count); return Json::JsonValue::CreateStringValue(Crypto::EncodeToBase64String(Crypto::CreateFromByteArray(data)));
+      }
+      auto base64 = args.GetNamedString(L"base64");
+      if (base64.size() > 1398104) throw hresult_invalid_argument(L"Chunk exceeds 1 MiB");
+      auto buffer = Crypto::DecodeFromBase64String(base64);
+      if (Crypto::EncodeToBase64String(buffer) != base64 || buffer.Length() > 1048576 || offset + buffer.Length() > 9007199254740991.0) throw hresult_invalid_argument(L"Invalid chunk");
+      com_array<uint8_t> data; Crypto::CopyToByteArray(buffer, data);
+      size_t written = 0;
+      while (written < data.size()) { DWORD count = 0; if (!WriteFile(file, data.data() + written, static_cast<DWORD>(data.size() - written), &count, nullptr)) throw_last_error(); if (!count) throw hresult_error(E_FAIL, L"File write made no progress"); written += count; }
+      return Json::JsonValue::CreateNumberValue(static_cast<double>(written));
+    }
     auto path = FilePath(args.GetNamedString(L"path"));
+    if (method == "openFile") {
+      auto mode = args.GetNamedString(L"mode"); DWORD access, creation;
+      if (mode == L"read") { access = GENERIC_READ; creation = OPEN_EXISTING; }
+      else if (mode == L"readWrite") { access = GENERIC_READ | GENERIC_WRITE; creation = OPEN_EXISTING; }
+      else if (mode == L"write") { access = GENERIC_WRITE; creation = OPEN_ALWAYS; }
+      else if (mode == L"createNew") { access = GENERIC_WRITE; creation = CREATE_NEW; }
+      else throw hresult_invalid_argument(L"Invalid file mode");
+      auto file = Open(path, access, creation);
+      BY_HANDLE_FILE_INFORMATION info{}; if (!GetFileInformationByHandle(file.get(), &info)) throw_last_error();
+      if (GetFileType(file.get()) != FILE_TYPE_DISK || (info.dwFileAttributes & FILE_ATTRIBUTE_DIRECTORY)) throw hresult_invalid_argument(L"Expected a regular file");
+      if (mode == L"write" && !SetEndOfFile(file.get())) throw_last_error();
+      GUID guid{}; check_hresult(CoCreateGuid(&guid)); wchar_t identifier[40]{}; StringFromGUID2(guid, identifier, 40);
+      files.emplace(to_string(hstring(identifier)), std::move(file)); return Json::JsonValue::CreateStringValue(identifier);
+    }
+    if (method == "trash") { Trash(path); return Json::JsonValue::Parse(L"null"); }
     if (method == "readText") {
       const auto bytes = Read(path); std::string text(bytes.begin(), bytes.end());
       if (text.starts_with("\xef\xbb\xbf")) text.erase(0, 3);

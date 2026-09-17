@@ -320,6 +320,7 @@
       "version": "0.1.0-prototype.0",
       "dependencies": {
         "@legend-apps/desktop-app": "0.1.0-prototype.0",
+        "base64-js": "1.5.1",
       },
       "peerDependencies": {
         "react": "19.1.4",

@@ -21,6 +21,8 @@ export const catalog: CaseDefinition[] = [
   definition("storage.unavailable", "Web secure storage explicitly reports unavailable", "api", { ...all, macos: "not-applicable", windows: "not-applicable", ios: "not-applicable", android: "not-applicable" }),
   definition("links.resolution", "Stable initial URL and HTTPS handler", "api"),
   definition("files.conflict", "Text file writes reject conflicting saves", "api", desktop),
+  definition("files.streaming", "Bounded streaming and positional binary I/O", "api", desktop),
+  definition("files.trash", "Recycle a disposable file without permanent-delete fallback", "api", desktop),
   definition("files.recursive-watch", "Recursive watch, root replacement and cleanup", "api", desktop),
   definition("windows.overlay", "Nonactivating overlay open/show and focus preservation", "api", desktop),
   definition("windows.geometry", "Secondary window options, geometry and fullscreen", "api", desktop),

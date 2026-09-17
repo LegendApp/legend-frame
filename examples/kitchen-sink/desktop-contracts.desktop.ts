@@ -1,3 +1,4 @@
+import { runFileStreamChecks } from "./file-stream-checks";
 import { runFoundationChecks } from "./foundation-checks";
 import { assertContract } from "./contract-cases";
 import * as processes from "@legend-apps/processes";
@@ -10,6 +11,7 @@ import { settings } from "@legend-apps/settings";
 import { filesystemLifecycle, settingsLifecycle, recentDocumentsLifecycle, richClipboardLifecycle, processLifecycle } from "./desktop-contract-cases";
 export async function runDesktopContracts(check: (id: string, action: () => Promise<void>) => Promise<void>, token: string) {
   await runFoundationChecks(check);
+  await runFileStreamChecks(check);
   await check("desktop.nitro", async () => {
     const { NitroModules } = await import("react-native-nitro-modules");
     assertContract(NitroModules.version === "0.35.7" && NitroModules.isHybridObject(NitroModules), "Native Nitro proxy is missing or incompatible");
