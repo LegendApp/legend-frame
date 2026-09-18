@@ -32,11 +32,14 @@ export async function runSidecarChecks() {
     const result = await child.exited;
     assert(valid && received === 9 * 1024 * 1024 && result.outputTruncated && toByteArray(result.stdoutBase64).length === 8 * 1024 * 1024, `Binary stream: ${received}, valid=${valid}, truncated=${result.outputTruncated}`);
   });
-  await check("closing a secondary window does not terminate an app-owned helper", async () => {
-    const child = await spawn({ executable: "helper:echo", timeoutMs: 5000 });
+  await check("repeated immediate secondary-window closure preserves the app-owned helper", async () => {
+    const child = await spawn({ executable: "helper:echo", timeoutMs: 30000 });
     try {
-      await windows.openWindow({ id: "sidecar-owner-probe", width: 400, height: 300 });
-      await windows.closeWindow("sidecar-owner-probe");
+      for (let attempt = 0; attempt < 50; attempt++) {
+        await windows.openWindow({ id: "sidecar-owner-probe", width: 400, height: 300 });
+        await windows.closeWindow("sidecar-owner-probe");
+        assert(!(await windows.listWindows()).some(window => window.id === "sidecar-owner-probe"), "Closed window remained registered");
+      }
       await child.write("still alive"); await child.closeInput();
       assert((await child.exited).stdout === "still alive", "Window close terminated helper");
     } finally { await child.terminate(); }

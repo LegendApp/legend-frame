@@ -42,6 +42,30 @@ For direct template creation, use npm 11 on PATH. The installed CLI's `src/npm-b
 
 Legend therefore retains desktop compilation and process ownership, module selection, build records, and prebuilt compatibility checks. App scripts continue to use Legend's development command, which delegates the terminal and Metro to Expo. Changing them directly to `expo-desktop run macos` would bypass this integration. Mobile/web already delegate to Expo's supported commands. See the [beta.6 handoff](expo-desktop-beta6-handoff.md) for reproductions and the proposed delegation boundary.
 
+## React Native macOS Fabric lifecycle compatibility
+
+The pinned `react-native-macos@0.81.7` starts Fabric surfaces asynchronously. An
+immediate secondary-window close can stop the shadow tree before startup finishes
+installing its animation driver. Legend applies `fabric-lifecycle.cjs` from its
+config plugin during macOS Podfile generation, before compilation. It serializes
+startup/setup with stop, cancels obsolete queued starts and detaches, and tracks
+attachment so repeated stops are safe. No timer or minimum window lifetime is
+required.
+
+This is a native-source compatibility patch, not an Expo CLI change. It checks the
+RN macOS version and exact lifecycle source, is idempotent, and atomically replaces
+the installed file to preserve package-manager hardlinks. An unexpected upstream
+version/source fails with a review instruction. Review/remove this patch when RN
+macOS incorporates an equivalent fix. The plugin ships it in SDK archives and its
+source affects runtime compatibility; existing runtimes need a rebuild.
+
+Regression: `bun scripts/test-sidecars.ts` performs 50 immediate window open/close
+cycles per run and checks that the app-owned helper survives. After building the
+Kitchen Sink development runtime, `bun scripts/test-fabric-reload.ts` verifies
+three full React Native reloads with ten immediate window-close cycles per JS
+session. See the
+[dated macOS report](macos-readiness-2026-09-18.md#fix-and-regression-evidence).
+
 ## Expo development terminal patch
 
 `legend dev` launches the app's installed `expo start` under Node, inheriting stdin/stdout/stderr. Its Bun supervisor retains desktop runtime discovery, compatibility enforcement, native builds and owned app processes. It has no keyboard interface. Desktop actions and results travel over a private JSON IPC channel; no HTTP command endpoint is exposed.
