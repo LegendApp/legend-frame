@@ -10,17 +10,17 @@ import { architecture } from "../packages/cli/src/platform";
 const framework = path.resolve(import.meta.dir, "..");
 const prepareOnly = process.argv.includes("--prepare-only");
 if (!prepareOnly && process.platform !== "win32") throw new Error("Native acceptance requires Windows. Use --prepare-only for generation/bundling.");
-process.env.LEGEND_PLATFORM = "windows";
+process.env.FRAME_PLATFORM = "windows";
 const at = process.argv.indexOf("--project");
-const root = path.resolve(at < 0 ? `.legend/windows-features/WindowsFeatures${Date.now()}` : process.argv[at + 1]!);
+const root = path.resolve(at < 0 ? `.frame/windows-features/WindowsFeatures${Date.now()}` : process.argv[at + 1]!);
 await run(framework, ["bun", "scripts/pack.ts", "--platform=windows"]);
 await create(root, path.join(framework, "artifacts/packages/manifest.json"), "windows", true);
 const pkg = readJson(path.join(root, "package.json"));
-for (const name of ["@legend-apps/file-dialog", "@legend-apps/desktop-windows", "@legend-apps/file-system", "@legend-apps/settings"]) pkg.dependencies[name] = pkg.overrides[name];
+for (const name of ["@legendapp/frame-file-dialog", "@legendapp/frame-desktop-windows", "@legendapp/frame-file-system", "@legendapp/frame-settings"]) pkg.dependencies[name] = pkg.overrides[name];
 writeJson(path.join(root, "package.json"), pkg); await run(root, ["bun", "install"]);
 for (const file of ["contract-cases.ts", "contract-report.ts", "desktop-contract-cases.ts"]) cpSync(path.join(framework, "examples/kitchen-sink", file), path.join(root, file));
 const coverage = createReport(framework, root, { platform: "windows", arch: architecture("windows"), device: "Windows desktop", mode: "dev" }, prepareOnly ? "prepare" : "runtime");
-const coverageFile = path.join(framework, ".legend/test-results", `${coverage.runId}.json`);
+const coverageFile = path.join(framework, ".frame/test-results", `${coverage.runId}.json`);
 coverage.versions = installedVersions(root);
 let coverageStage = "build.project";
 saveReport(coverageFile, coverage);
@@ -36,18 +36,18 @@ const server = Bun.serve({ hostname: "127.0.0.1", port: 0, async fetch(request) 
   if (report.error || report.passed) finish(report); return new Response("ok");
 } });
 const reportURL = `http://127.0.0.1:${server.port}/${token}`;
-const sampleFile = path.join(root, ".legend/windows-feature-sample.txt");
+const sampleFile = path.join(root, ".frame/windows-feature-sample.txt");
 writeFileSync(path.join(root, "App.tsx"), `import { useEffect, useState } from 'react';
 import { View, Text, Appearance } from 'react-native';
-import { Button, TextInput, Select } from '@legend-apps/ui';
-import * as Clipboard from '@legend-apps/clipboard';
-import * as SecureStore from '@legend-apps/secure-storage';
-import * as Linking from '@legend-apps/desktop-links';
-import * as Files from '@legend-apps/file-dialog';
-import * as FileSystem from '@legend-apps/file-system';
-import { settings } from '@legend-apps/settings';
+import { Button, TextInput, Select } from '@legendapp/frame-ui';
+import * as Clipboard from '@legendapp/frame-clipboard';
+import * as SecureStore from '@legendapp/frame-secure-storage';
+import * as Linking from '@legendapp/frame-desktop-links';
+import * as Files from '@legendapp/frame-file-dialog';
+import * as FileSystem from '@legendapp/frame-file-system';
+import { settings } from '@legendapp/frame-settings';
 import { filesystemLifecycle, settingsLifecycle } from './desktop-contract-cases';
-import * as Windows from '@legend-apps/desktop-windows';
+import * as Windows from '@legendapp/frame-desktop-windows';
 import { clipboardRead, clipboardRoundTrip, secureStorageLifecycle, linkingResolution, fileConflict } from './contract-cases';
 import { executeCase, type CaseResult } from './contract-report';
 const contracts: CaseResult[]=[];
@@ -65,7 +65,7 @@ function Main() {
  const [api,setAPI]=useState(false), [pressed,setPressed]=useState(false), [text,setText]=useState(''), [value,setValue]=useState('first');
  useEffect(()=>{void (async()=>{
   await check('clipboard.read',()=>clipboardRead(Clipboard));
-  await check('clipboard.roundtrip',()=>clipboardRoundTrip(Clipboard,'Legend native probe'));
+  await check('clipboard.roundtrip',()=>clipboardRoundTrip(Clipboard,'Frame native probe'));
   await check('storage.lifecycle',()=>secureStorageLifecycle(SecureStore,'probe-${token}'));
   await check('links.resolution',()=>linkingResolution(Linking));
   await check('files.conflict',()=>fileConflict(Files,${JSON.stringify(sampleFile)}));
@@ -73,7 +73,7 @@ function Main() {
   await check('desktop.settings',async()=>{
    await settingsLifecycle(settings,'${token}');
    const key='restart-${token}', previous=await settings.get(key);
-   if((await Linking.getInitialURL())==='legend-probe://recovered') {
+   if((await Linking.getInitialURL())==='frame-probe://recovered') {
     if(previous!=='saved before termination') throw Error('Settings did not survive process restart');
     await settings.remove(key);
    } else { if(previous!==null) throw Error('Test settings key was not isolated'); await settings.set(key,'saved before termination'); }
@@ -113,10 +113,10 @@ function Main() {
   });
   setAPI(true);
  })().catch(error=>fetch(${JSON.stringify(reportURL)},{method:'POST',body:JSON.stringify({error:String(error),contracts})}));},[]);
- useEffect(()=>{const passed=api&&pressed&&text==='Native edit'&&value==='second'&&launchURLs.includes('legend-probe://first')&&launchURLs.includes('legend-probe://second');
+ useEffect(()=>{const passed=api&&pressed&&text==='Native edit'&&value==='second'&&launchURLs.includes('frame-probe://first')&&launchURLs.includes('frame-probe://second');
   void fetch(${JSON.stringify(reportURL)},{method:'POST',body:JSON.stringify({passed,api,launchURLs,contracts:[...contracts,...(pressed?[{id:'ui.button',status:'passed'}]:[]),...(text==='Native edit'?[{id:'ui.input',status:'passed'}]:[]),...(value==='second'?[{id:'ui.select',status:'passed'}]:[])],checks:['clipboard','credentials','linking','files','windows','appearance','simultaneous-launch-forwarding','button','text-input','select'],hermes:!!(globalThis as any).HermesInternal})});
  },[api,pressed,text,value,launchURLs]);
- return <View style={{padding:30,gap:20}}><Text>Windows native acceptance</Text><Button testID='legend-button' onPress={()=>setPressed(true)}>Native button</Button><TextInput testID='legend-input' defaultValue='Initial' onChangeText={setText}/><Select testID='legend-select' options={options} value={value} onValueChange={setValue}/><Text>{api?'APIs passed':'Checking APIs'} {text} {value}</Text></View>;
+ return <View style={{padding:30,gap:20}}><Text>Windows native acceptance</Text><Button testID='frame-button' onPress={()=>setPressed(true)}>Native button</Button><TextInput testID='frame-input' defaultValue='Initial' onChangeText={setText}/><Select testID='frame-select' options={options} value={value} onValueChange={setValue}/><Text>{api?'APIs passed':'Checking APIs'} {text} {value}</Text></View>;
 }`);
 let metro: ReturnType<typeof Bun.spawn> | undefined, app: ReturnType<typeof Bun.spawn> | undefined;
 const clients: ReturnType<typeof Bun.spawn>[] = [];
@@ -144,15 +144,15 @@ try {
     }
     const startClient = (url: string) => {
       const child = Bun.spawn([path.join(product.app, "MyApp.exe"), url], { cwd: product.app,
-        env: { ...process.env, ...projectEnvironment(root), LEGEND_METRO_PORT: String(port) }, stdout: "inherit", stderr: "inherit" });
+        env: { ...process.env, ...projectEnvironment(root), FRAME_METRO_PORT: String(port) }, stdout: "inherit", stderr: "inherit" });
       clients.push(child); return child;
     };
-    const first = startClient("legend-probe://first"), second = startClient("legend-probe://second");
+    const first = startClient("frame-probe://first"), second = startClient("frame-probe://second");
     await until(() => [first, second].filter(child => child.exitCode === null).length === 1, "one primary instance");
     app = first.exitCode === null ? first : second;
     const forwarded = first === app ? second : first;
     if (forwarded.exitCode !== 0) throw new Error("Secondary launch failed to forward");
-    await until(() => latestReport?.api && latestReport?.launchURLs?.includes("legend-probe://first") && latestReport?.launchURLs?.includes("legend-probe://second"), "queued and forwarded launches in the primary");
+    await until(() => latestReport?.api && latestReport?.launchURLs?.includes("frame-probe://first") && latestReport?.launchURLs?.includes("frame-probe://second"), "queued and forwarded launches in the primary");
     record(coverage, { id: "runtime.launch", status: "passed" }); record(coverage, { id: "lifecycle.forwarding", status: "passed" });
     coverageStage = "ui-driver";
     await run(root, ["pwsh.exe", "-NoProfile", "-File", path.join(framework, "scripts/windows-feature-controls.ps1"), "-AppProcess", String(app.pid)], { capture: true });
@@ -163,8 +163,8 @@ try {
     // Terminating the owner abandons its mutex. A new process must recover without
     // an existing window/property or a manual registry cleanup.
     app.kill(); await app.exited; latestReport = undefined;
-    app = startClient("legend-probe://recovered");
-    await until(() => latestReport?.api && latestReport?.launchURLs?.includes("legend-probe://recovered"), "restart after owner termination");
+    app = startClient("frame-probe://recovered");
+    await until(() => latestReport?.api && latestReport?.launchURLs?.includes("frame-probe://recovered"), "restart after owner termination");
     record(coverage, { id: "lifecycle.recovery", status: "passed" });
     report.checks.push("single-instance-crash-recovery");
     writeJson(stateFile(root, "features-results.json"), report);

@@ -1,5 +1,5 @@
-exports.withLegendNative = (original, root) => {
-  if (!['macos', 'windows'].includes(process.env.LEGEND_PLATFORM)) return original;
+exports.withFrameNative = (original, root) => {
+  if (!['macos', 'windows'].includes(process.env.FRAME_PLATFORM)) return original;
   const generated = require('./universal.cjs').nativeConfig(root);
   const dependencies = { ...original.dependencies };
   for (const [name, config] of Object.entries(generated.dependencies ?? {})) {

@@ -3,8 +3,8 @@ import { Button, View } from "react-native";
 import { Text } from "./CameraText";
 import { Camera, VisionCamera, useCameraDevices, useCameraPermission, useMicrophonePermission, usePhotoOutput, useVideoOutput, type CameraDevice, type Recorder } from "react-native-vision-camera";
 import { NitroImage, type Image } from "react-native-nitro-image";
-import { revealInFinder, saveFileDialog } from "@legend-apps/desktop/dialogs";
-import { writeText } from "@legend-apps/desktop/files";
+import { revealInFinder, saveFileDialog } from "@legendapp/frame/dialogs";
+import { writeText } from "@legendapp/frame/files";
 
 export function CameraDemo() {
   const devices = useCameraDevices();

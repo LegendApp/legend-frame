@@ -184,7 +184,7 @@ index 1fea5aa..3fd8edc 100644
    "engines": {
      "node": ">=18.0.0"
 +  },
-+  "legend": {
++  "frame": {
 +    "sdk": true,
 +    "upstreamRevision": "58710c25c6e505dcc1292ee54d855408a6f7a42d",
 +    "patchHash": "a2059702d96e965d8d23fc4e952aaf314730af7f9bb6bfcf54605e6536d7ac09"
@@ -835,4 +835,4 @@ index 0000000..9c91bf9
 --- /dev/null
 +++ b/windows/README.md
 @@ -0,0 +1 @@
-+Windows native implementation lives in @legend-apps/desktop-host/windows/runtimes.inc.
++Windows native implementation lives in @legendapp/frame-desktop-host/windows/runtimes.inc.

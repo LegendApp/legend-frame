@@ -1,9 +1,9 @@
 import { useEffect } from "react";
 import { Platform } from "react-native";
-import { beforeWindowClose, setWindowTitle, onWindowEvent } from "@legend-apps/desktop-windows";
-import { beforeQuit } from "@legend-apps/desktop-app";
-import { configureMenus, clearMenus, addNativeMenuActionListener } from "@legend-apps/native-menu";
-import { registerShortcut, parseAccelerator } from "@legend-apps/desktop-shortcuts";
+import { beforeWindowClose, setWindowTitle, onWindowEvent } from "@legendapp/frame-desktop-windows";
+import { beforeQuit } from "@legendapp/frame-desktop-app";
+import { configureMenus, clearMenus, addNativeMenuActionListener } from "@legendapp/frame-native-menu";
+import { registerShortcut, parseAccelerator } from "@legendapp/frame-desktop-shortcuts";
 import { mountSerial } from "./lifetime";
 import type { LifecycleProps } from "./lifecycle-types";
 let activeMenuOwner: string | undefined;

@@ -2,7 +2,7 @@ import { projectId } from "./shared/identity";
 import type { Track } from "./model";
 async function database() {
   return new Promise<IDBDatabase>((resolve, reject) => {
-    const request = indexedDB.open(`legend-music-${projectId}`, 1);
+    const request = indexedDB.open(`frame-music-${projectId}`, 1);
     request.onupgradeneeded = () => request.result.createObjectStore("audio");
     request.onsuccess = () => resolve(request.result); request.onerror = () => reject(request.error);
   });

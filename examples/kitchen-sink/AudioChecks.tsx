@@ -1,7 +1,7 @@
 import { useEffect } from "react";
 import { Text, TurboModuleRegistry, type TurboModule } from "react-native";
-import { createAudioPlayer, createMediaSession } from "@legend-apps/audio";
-import * as files from "@legend-apps/desktop/files";
+import { createAudioPlayer, createMediaSession } from "@legendapp/frame-audio";
+import * as files from "@legendapp/frame/files";
 import type { TestDriver } from "./test-driver";
 const driver = TurboModuleRegistry.get<TestDriver & TurboModule>("NativeSDKTestDriver");
 const delay = (ms: number) => new Promise(resolve => setTimeout(resolve, ms));

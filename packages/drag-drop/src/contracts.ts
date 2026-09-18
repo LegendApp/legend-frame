@@ -11,7 +11,7 @@ export type DragOptions = {
 };
 const operations = ["copy", "move", "link"];
 const builtins = ["files", "text", "urls"];
-const customType = (type: string) => /^[a-z0-9][a-z0-9!#$&^_.+-]*\/[a-z0-9][a-z0-9!#$&^_.+-]*$/.test(type) && !["application/x-legend-drag", "text/plain", "text/uri-list"].includes(type);
+const customType = (type: string) => /^[a-z0-9][a-z0-9!#$&^_.+-]*\/[a-z0-9][a-z0-9!#$&^_.+-]*$/.test(type) && !["application/x-frame-drag", "text/plain", "text/uri-list"].includes(type);
 export function dragConfiguration(source: DragPayload | undefined, options: DragOptions, platform: string) {
   for (const values of [options.sourceOperations, options.acceptedOperations]) {
     if (values !== undefined && (!Array.isArray(values) || values.some(value => !operations.includes(value)) || new Set(values).size !== values.length)) throw new Error("Drag operations must be unique copy, move or link values");

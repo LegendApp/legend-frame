@@ -73,7 +73,7 @@ function publishWindowsMenus(next: Map<string, NativeMenuConfig[]>) {
   // Composition can reject unsupported targets. Preserve the last good owners
   // and native menu when a proposed contribution is invalid.
   const composed = composeWindowsMenus(next);
-  NativeMenu.configureMenus("legend.windows.menus", JSON.stringify(composed));
+  NativeMenu.configureMenus("frame.windows.menus", JSON.stringify(composed));
   windowsOwners.clear(); for (const [owner, menus] of next) windowsOwners.set(owner, menus);
 }
 export function configureMenus(ownerId: string, menus: NativeMenuConfig[]) {

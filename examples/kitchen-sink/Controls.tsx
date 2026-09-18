@@ -1,5 +1,5 @@
 import type { ComponentProps } from "react";
-import { Button as NativeButton } from "@legend-apps/ui/uniwind";
+import { Button as NativeButton } from "@legendapp/frame-ui/uniwind";
 
 // Leave room for the kitchen sink's descriptive action labels.
 export function Button(props: ComponentProps<typeof NativeButton>) {

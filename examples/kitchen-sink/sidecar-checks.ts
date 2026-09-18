@@ -1,9 +1,9 @@
 import { startHelper } from "./sidecar-client";
-import { getAppContext, quit } from "@legend-apps/desktop/app";
+import { getAppContext, quit } from "@legendapp/frame/app";
 import { Platform } from "react-native";
 import { toByteArray } from "base64-js";
-import { spawn, runCommand } from "@legend-apps/desktop/processes";
-import * as windows from "@legend-apps/desktop/windows";
+import { spawn, runCommand } from "@legendapp/frame/processes";
+import * as windows from "@legendapp/frame/windows";
 function assert(value: unknown, message: string): asserts value { if (!value) throw new Error(message); }
 export async function runSidecarChecks() {
   const results: { name: string; passed: boolean; error?: string }[] = [];
@@ -72,7 +72,7 @@ export async function runSidecarChecks() {
     try { let failed = false; try { await client.request("hang"); } catch { failed = true; } assert(failed, "Hung worker request succeeded"); } finally { await client.close(); }
   });
   let livePid: number | undefined;
-  if ((await getAppContext()).launchArguments.includes("--legend-sidecar-quit-probe")) {
+  if ((await getAppContext()).launchArguments.includes("--frame-sidecar-quit-probe")) {
     await check("live helper is ready for external app-quit cleanup verification", async () => {
       let text = "";
       await spawn({ executable: "helper:echo", args: ["--identity"] }, chunk => {

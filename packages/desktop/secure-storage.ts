@@ -1,1 +1,1 @@
-export * from "@legend-apps/secure-storage";
+export * from "@legendapp/frame-secure-storage";

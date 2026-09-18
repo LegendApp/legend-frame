@@ -67,7 +67,7 @@ export function exportSDK(manifest: string, destination: string, runtimes: strin
     }
     cpSync(path.join(import.meta.dir, "sdk-install.ts"), path.join(pending, "install.ts"));
     writeJson(path.join(pending, "sdk.json"), { schema: 1, framework: VERSION, runtimes: clients, sha256: treeHashes(pending) });
-    writeFileSync(path.join(pending, "README.md"), `# Legend SDK ${VERSION}
+    writeFileSync(path.join(pending, "README.md"), `# Frame SDK ${VERSION}
 
 Requires Bun 1.3.14+ and Node. Run \`bun install.ts\` in this directory. The installer prints the CLI command to create an app; add \`--universal\` for Settings or \`--example document-editor\` for the editor.
 

@@ -1,6 +1,6 @@
 import { Platform } from "react-native";
 import Native from "./NativeDesktopProcesses";
-import { onDesktopEvent } from "@legend-apps/desktop-app";
+import { onDesktopEvent } from "@legendapp/frame-desktop-app";
 export type ProcessOptions = { executable: string; args?: string[]; cwd?: string; env?: Record<string, string>; timeoutMs?: number; input?: string };
 export type ProcessOutput = { stream: "stdout" | "stderr"; base64: string };
 export type ProcessResult = { exitCode: number; signal: boolean; stdout: string; stderr: string; stdoutBase64: string; stderrBase64: string; timedOut: boolean; outputTruncated: boolean };

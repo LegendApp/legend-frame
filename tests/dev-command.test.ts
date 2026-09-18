@@ -1,7 +1,7 @@
 import { expect, test } from "bun:test";
 import { devArguments, devTargets } from "../packages/cli/src/dev-command";
 
-test("dev consumes Legend options and forwards Expo flags and aliases unchanged", () => {
+test("dev consumes frame options and forwards Expo flags and aliases unchanged", () => {
   const expo = ["--go", "--clear", "--offline", "-p", "8123", "--max-workers=2", "-w", "--scheme", "my-app", "--future-expo-flag"];
   expect(devArguments(["--project", "/tmp/My App", ...expo, "--platform=ios", "--prebuilt-binary=/tmp/Go=1.app", "--no-open"])).toEqual({
     project: "/tmp/My App", platform: "ios", prebuiltBinary: "/tmp/Go=1.app", noOpen: true, expo,

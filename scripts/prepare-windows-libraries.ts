@@ -11,7 +11,7 @@ export async function packWindowsLibraries(output: string) {
   const pins = readJson(path.join(root, "patches/windows/upstream.json")) as Record<string, { version: string; url: string; integrity: string }>;
   const result: Record<string, string> = {};
   for (const [name, pin] of Object.entries(pins)) {
-    const cache = path.join(root, ".legend/vendor/windows", name.replaceAll("/", "-")); mkdirSync(cache, { recursive: true });
+    const cache = path.join(root, ".frame/vendor/windows", name.replaceAll("/", "-")); mkdirSync(cache, { recursive: true });
     const archive = path.join(cache, "upstream.tgz");
     if (!existsSync(archive)) { const response = await fetch(pin.url); if (!response.ok) throw new Error(`Download ${name}: HTTP ${response.status}`); writeFileSync(archive, new Uint8Array(await response.arrayBuffer())); }
     if (`sha512-${createHash("sha512").update(readFileSync(archive)).digest("base64")}` !== pin.integrity) throw new Error(`Integrity mismatch: ${archive}`);
@@ -22,7 +22,7 @@ export async function packWindowsLibraries(output: string) {
     const adapter = name === "react-native-nitro-modules" ? "nitro" : name === "@op-engineering/op-sqlite" ? "sqlite" : undefined;
     if (adapter) {
       cpSync(path.join(root, "patches/windows", adapter, "windows"), path.join(stage, "windows"), { recursive: true });
-      const namespace = adapter === "nitro" ? "LegendNitro" : "LegendOPSQLite";
+      const namespace = adapter === "nitro" ? "FrameNitro" : "FrameOPSQLite";
       const config = path.join(stage, "react-native.config.js");
       writeFileSync(config, (existsSync(config) ? readFileSync(config, "utf8") : "module.exports = {};\n") + `\nmodule.exports.dependency ??= {}; module.exports.dependency.platforms ??= {};\nmodule.exports.dependency.platforms.windows = ${JSON.stringify({ sourceDir: "windows", solutionFile: `${namespace}.sln`, projects: [{ projectFile: `${namespace}/${namespace}.vcxproj`, directDependency: true }] })};\n`);
       pkg.files = [...new Set([...(pkg.files ?? []), "windows", "react-native.config.js"])];
@@ -85,9 +85,9 @@ export async function packWindowsLibraries(output: string) {
       const project = path.join(stage, "windows/ReactNativeWebView/ReactNativeWebView.vcxproj");
       writeFileSync(project, readFileSync(project, "utf8").replace("<PlatformToolset>v143</PlatformToolset>", "<PlatformToolset>v145</PlatformToolset>").replace("%(AdditionalDependenices)", "%(AdditionalDependencies)"));
     }
-    pkg.legend = { ...pkg.legend, sdk: true, windowsAdapter: true, upstreamIntegrity: pin.integrity }; writeJson(path.join(stage, "package.json"), pkg);
+    pkg.frame = { ...pkg.frame, sdk: true, windowsAdapter: true, upstreamIntegrity: pin.integrity }; writeJson(path.join(stage, "package.json"), pkg);
     const temporary = path.join(output, "windows-library.tgz");
-    await run(stage, ["tar", "--exclude=.legend", "-czf", temporary, "."], { capture: true });
+    await run(stage, ["tar", "--exclude=.frame", "-czf", temporary, "."], { capture: true });
     const hash = createHash("sha256").update(readFileSync(temporary)).digest("hex").slice(0, 12);
     const file = `${name.replace(/^@/, "").replaceAll("/", "-")}-${pin.version}-${hash}.tgz`; cpSync(temporary, path.join(output, file)); rmSync(temporary); result[name] = file;
   }

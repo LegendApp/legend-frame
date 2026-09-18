@@ -13,7 +13,7 @@
 #include <NitroModules/NitroHash.hpp>
 #include <NitroModules/ReactProp.hpp>
 
-namespace margelo::nitro::legendprobe::views {
+namespace margelo::nitro::frameprobe::views {
 
   using namespace facebook;
 
@@ -38,4 +38,4 @@ namespace margelo::nitro::legendprobe::views {
     }
   }
 
-} // namespace margelo::nitro::legendprobe::views
+} // namespace margelo::nitro::frameprobe::views

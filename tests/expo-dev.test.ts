@@ -28,7 +28,7 @@ test("desktop keys follow host/target and leave Expo's existing shortcuts availa
 
 test("the patch rejects unsupported versions and modified upstream sources without writing installed files", () => {
   const patches = preparePatch(root) as Map<string, string>;
-  const temp = mkdtempSync(path.join(os.tmpdir(), "legend-expo-patch-"));
+  const temp = mkdtempSync(path.join(os.tmpdir(), "frame-expo-patch-"));
   try {
     mkdirSync(path.join(temp, "node_modules/expo"), { recursive: true });
     writeFileSync(path.join(temp, "package.json"), "{}");
@@ -56,14 +56,14 @@ test("the patch rejects unsupported versions and modified upstream sources witho
 test("Expo's real key handler routes desktop actions over IPC and retains reload/menu actions", async () => {
   const actions: string[] = [];
   const child = Bun.spawn(["node", "--require", preload, path.join(import.meta.dir, "fixtures/expo-dev-session.cjs")], {
-    cwd: root, env: { ...process.env, LEGEND_PLATFORM: "macos", FORCE_COLOR: "0" },
+    cwd: root, env: { ...process.env, FRAME_PLATFORM: "macos", FORCE_COLOR: "0" },
     stdout: "pipe", stderr: "pipe", serialization: "json",
     ipc(message, sender) {
-      if (message.type === "test:ready") sender.send({ type: "legend:state", state: { target: "go", canBuild: true } });
-      if (message.type === "legend:action") {
+      if (message.type === "test:ready") sender.send({ type: "frame:state", state: { target: "go", canBuild: true } });
+      if (message.type === "frame:action") {
         actions.push(message.action);
-        sender.send({ type: "legend:state", state: { target: "dev", canBuild: true } });
-        sender.send({ type: "legend:result", id: message.id, ...(message.action === "build" ? { error: "Test build failure" } : {}) });
+        sender.send({ type: "frame:state", state: { target: "dev", canBuild: true } });
+        sender.send({ type: "frame:result", id: message.id, ...(message.action === "build" ? { error: "Test build failure" } : {}) });
       }
     },
   });
@@ -89,7 +89,7 @@ test("Expo's real key handler routes desktop actions over IPC and retains reload
 
 test("Metro child processes ignore the inherited preload", async () => {
   const child = Bun.spawn(["node", "--require", preload, "-e", "console.log('worker ready')"], {
-    cwd: os.tmpdir(), env: { ...process.env, LEGEND_EXPO_PRELOADED: "1" }, stdout: "pipe", stderr: "pipe",
+    cwd: os.tmpdir(), env: { ...process.env, FRAME_EXPO_PRELOADED: "1" }, stdout: "pipe", stderr: "pipe",
   });
   expect(await new Response(child.stdout).text()).toContain("worker ready");
   expect(await child.exited).toBe(0);

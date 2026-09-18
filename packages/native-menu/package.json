@@ -1,5 +1,5 @@
 {
-  "name": "@legend-apps/native-menu",
+  "name": "@legendapp/frame-native-menu",
   "version": "0.1.0-prototype.0",
   "main": "src/index",
   "react-native": "src/index",
@@ -8,7 +8,7 @@
     "type": "modules",
     "jsSrcsDir": "src",
     "android": {
-      "javaPackageName": "so.legend.apps.nativemenu"
+      "javaPackageName": "so.legend.frame.apps.nativemenu"
     },
     "ios": {
       "modulesProvider": {
@@ -26,7 +26,7 @@
     "ios",
     "*.podspec"
   ],
-  "legend": {
+  "frame": {
     "sdk": true,
     "nativeModules": [
       "NativeMenu"

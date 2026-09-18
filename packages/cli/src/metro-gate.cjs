@@ -1,5 +1,5 @@
 const fs = require("node:fs");
-const { statePath, supportedPlatforms } = require("@legend-apps/desktop-config/config.cjs");
+const { statePath, supportedPlatforms } = require("@legendapp/frame-desktop-config/config.cjs");
 // Builds/export operate independently. Only a managed live session enables this gate.
 exports.gate = (root, middleware) => (req, res, next) => {
   if (/\.(bundle|delta)(\?|$)/.test(req.url || "")) {
@@ -15,14 +15,14 @@ exports.gate = (root, middleware) => (req, res, next) => {
       } catch {
         res.statusCode = 503;
         res.end(
-          "Legend: runtime compatibility is being checked. Retry in a moment.",
+          "frame: runtime compatibility is being checked. Retry in a moment.",
         );
         return;
       }
       if (session && !session.compatible) {
         res.statusCode = 409;
         res.end(
-          "Legend: custom development build required. Press g to switch desktop runtime or b to build in the development terminal. " +
+          "frame: custom development build required. Press g to switch desktop runtime or b to build in the development terminal. " +
             (session.reason || ""),
         );
         return;

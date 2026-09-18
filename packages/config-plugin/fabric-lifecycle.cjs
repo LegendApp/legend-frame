@@ -106,18 +106,18 @@ const fixedMutex = originalMutex + "\n  NSUInteger _surfaceLifecycleGeneration;\
 function patchSurface(source) {
   if (source.includes(fixedLifecycle) && source.includes(fixedMutex)) return source;
   if (!source.includes(originalLifecycle) || !source.includes(originalMutex) || source.includes("_surfaceLifecycleGeneration"))
-    throw new Error("React Native macOS Fabric source changed; review the Legend surface lifecycle patch before building.");
+    throw new Error("React Native macOS Fabric source changed; review the Frame surface lifecycle patch before building.");
   return source.replace(originalLifecycle, fixedLifecycle).replace(originalMutex, fixedMutex);
 }
 function installSurfaceLifecyclePatch(root) {
   const manifest = require.resolve("react-native-macos/package.json", { paths: [root] });
   const version = JSON.parse(fs.readFileSync(manifest, "utf8")).version;
-  if (version !== "0.81.7") throw new Error(`Legend's Fabric lifecycle patch requires react-native-macos@0.81.7; found ${version}.`);
+  if (version !== "0.81.7") throw new Error(`frame's Fabric lifecycle patch requires react-native-macos@0.81.7; found ${version}.`);
   const file = path.join(path.dirname(manifest), "React/Fabric/Surface/RCTFabricSurface.mm");
   const before = fs.readFileSync(file, "utf8"), after = patchSurface(before);
   if (before !== after) {
     // Never mutate a package-manager cache through a hardlinked installed file.
-    const temporary = `${file}.legend-${process.pid}.tmp`;
+    const temporary = `${file}.frame-${process.pid}.tmp`;
     fs.writeFileSync(temporary, after);
     fs.renameSync(temporary, file);
   }

@@ -9,7 +9,7 @@ import { availablePort } from "../packages/cli/src/local";
 import { readJson, writeJson, prepareConfig, projectEnvironment } from "../packages/cli/src/project";
 
 const framework = path.resolve(import.meta.dir, "..");
-const root = path.resolve(process.argv.slice(2).find(value => !value.startsWith("--")) ?? ".legend/examples/LegendCameraKitchenSink");
+const root = path.resolve(process.argv.slice(2).find(value => !value.startsWith("--")) ?? ".frame/examples/FrameCameraKitchenSink");
 const probeOnly = process.argv.includes("--probe-only");
 const mode = process.argv.includes("--release") ? "release" : "dev";
 if (!process.argv.includes("--run-only")) {
@@ -20,22 +20,22 @@ if (!process.argv.includes("--run-only")) {
   await installCameraPackages(root, probeOnly);
   const config = readJson(path.join(root, "desktop.config.json"));
   config.macos.infoPlist = { ...config.macos.infoPlist,
-    NSCameraUsageDescription: "Try camera preview and capture in the Legend camera example.",
+    NSCameraUsageDescription: "Try camera preview and capture in the Frame camera example.",
     NSMicrophoneUsageDescription: "Record audio with your camera test videos.",
     NSCameraUseContinuityCameraDeviceType: true };
   writeJson(path.join(root, "desktop.config.json"), config); prepareConfig(root);
   writeJson(path.join(root, "tsconfig.json"), { extends: "expo/tsconfig.base", compilerOptions: { strict: true, skipLibCheck: true }, include: ["*.ts", "*.tsx"], exclude: ["node_modules"] });
 }
 if (process.argv.includes("--prepare-only")) { console.log(`Prepared ${root}`); process.exit(0); }
-const result = process.argv.includes("--run-only") ? readJson(path.join(root, `.legend/${mode}-build.json`)) : await build(root, mode, process.argv.includes("--force"));
-const directory = path.join(root, ".legend/camera-proof"); mkdirSync(directory, { recursive: true });
+const result = process.argv.includes("--run-only") ? readJson(path.join(root, `.frame/${mode}-build.json`)) : await build(root, mode, process.argv.includes("--force"));
+const directory = path.join(root, ".frame/camera-proof"); mkdirSync(directory, { recursive: true });
 const report = path.join(directory, `${probeOnly ? "nitro" : "camera"}-${mode}.json`); rmSync(report, { force: true });
 const port = await availablePort();
 let metro: ReturnType<typeof Bun.spawn> | undefined;
 let app: ReturnType<typeof Bun.spawn> | undefined;
 try {
   if (mode === "dev") {
-    writeJson(path.join(root, ".legend/session.json"), { compatible: true, target: "camera-proof", port });
+    writeJson(path.join(root, ".frame/session.json"), { compatible: true, target: "camera-proof", port });
     const log = Bun.file(path.join(directory, "metro.log"));
     metro = Bun.spawn([binary(root, "expo"), "start", "--localhost", "--port", String(port), "--max-workers", "2"], { cwd: root, env: { ...process.env, CI: "1" }, stdout: log, stderr: log });
     const deadline = Date.now() + 120000; let ready = false;
@@ -48,7 +48,7 @@ try {
   }
   const executable = (await run(root, ["/usr/libexec/PlistBuddy", "-c", "Print CFBundleExecutable", path.join(result.app, "Contents/Info.plist")], { capture: true })).trim();
   const log = Bun.file(path.join(directory, `${mode}.log`));
-  app = Bun.spawn([path.join(result.app, "Contents/MacOS", executable), "-RCT_jsLocation", `127.0.0.1:${port}`, "--legend-camera-proof", report], { cwd: root, env: { ...process.env, ...projectEnvironment(root), LEGEND_BUNDLE_URL: `http://127.0.0.1:${port}/index.bundle?platform=macos&dev=true&minify=false` }, stdout: log, stderr: log });
+  app = Bun.spawn([path.join(result.app, "Contents/MacOS", executable), "-RCT_jsLocation", `127.0.0.1:${port}`, "--frame-camera-proof", report], { cwd: root, env: { ...process.env, ...projectEnvironment(root), FRAME_BUNDLE_URL: `http://127.0.0.1:${port}/index.bundle?platform=macos&dev=true&minify=false` }, stdout: log, stderr: log });
   const deadline = Date.now() + 120000;
   while (!existsSync(report) && Date.now() < deadline) {
     if (app.exitCode !== null || app.signalCode !== null) throw new Error(`App exited before report (code ${app.exitCode}, signal ${app.signalCode}). Close any other instance of this example and inspect ${directory}`);
@@ -66,5 +66,5 @@ try {
 } finally {
   if (app) { app.kill(); await app.exited; }
   if (metro) { metro.kill(); await metro.exited; }
-  rmSync(path.join(root, ".legend/session.json"), { force: true });
+  rmSync(path.join(root, ".frame/session.json"), { force: true });
 }

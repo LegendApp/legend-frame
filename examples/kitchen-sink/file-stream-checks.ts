@@ -1,4 +1,4 @@
-import * as files from "@legend-apps/desktop/files";
+import * as files from "@legendapp/frame/files";
 function assert(value: unknown, message: string): asserts value { if (!value) throw Error(message); }
 export async function runFileStreamChecks(check: (name: string, run: () => Promise<void>) => Promise<void>) {
   await check("files.streaming", async () => {
@@ -22,8 +22,8 @@ export async function runFileStreamChecks(check: (name: string, run: () => Promi
     } finally { await files.remove(path); }
   });
   await check("files.trash", async () => {
-    const path = `${await files.getDirectory("temp")}/legend-recycle-probe-${Date.now()}.txt`;
-    await files.writeText(path, "Disposable Legend Trash/Recycle Bin acceptance file. Restore through the OS file manager.");
+    const path = `${await files.getDirectory("temp")}/frame-recycle-probe-${Date.now()}.txt`;
+    await files.writeText(path, "Disposable Frame Trash/Recycle Bin acceptance file. Restore through the OS file manager.");
     await files.trash(path);
     assert(!await files.exists(path), "Trash left the original file in place");
     let missing = false; try { await files.trash(path); } catch { missing = true; } assert(missing, "Missing trash item succeeded");

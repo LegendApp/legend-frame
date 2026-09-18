@@ -3,7 +3,7 @@ import { existsSync, mkdirSync, readFileSync, writeFileSync, renameSync } from "
 import path from "node:path";
 import { catalog, initialResults, summarize, updateResult, type CaseResult, type TestPlatform } from "../../examples/kitchen-sink/contract-report";
 export interface TestReport {
-  schema: "legend-platform-tests/v1";
+  schema: "frame-platform-tests/v1";
   runId: string;
   source: { commit: string; dirty: boolean; fingerprint: string };
   target: { platform: TestPlatform; arch: string; device: string; mode: string };
@@ -32,7 +32,7 @@ export function sourceIdentity(root: string): TestReport["source"] {
 }
 export function createReport(root: string, project: string, target: TestReport["target"], scope: TestReport["scope"]): TestReport {
   const results = initialResults(target.platform);
-  return { schema: "legend-platform-tests/v1", runId: crypto.randomUUID(), source: sourceIdentity(root), target,
+  return { schema: "frame-platform-tests/v1", runId: crypto.randomUUID(), source: sourceIdentity(root), target,
     host: { platform: process.platform, arch: process.arch }, versions: {}, scope, execution: "running", startedAt: new Date().toISOString(), project, results, summary: summarize(results) };
 }
 export function record(report: TestReport, result: CaseResult) {
@@ -60,7 +60,7 @@ export function saveReport(file: string, report: TestReport) {
 }
 export function validateReport(value: unknown): asserts value is TestReport {
   const r = value as TestReport;
-  if (!r || r.schema !== "legend-platform-tests/v1" || !r.runId || !r.source?.commit || !r.source.fingerprint || !r.target || !["running", "completed", "failed", "blocked"].includes(r.execution) || !["prepare", "runtime"].includes(r.scope) || !Array.isArray(r.results)) throw new Error("Invalid platform test report");
+  if (!r || r.schema !== "frame-platform-tests/v1" || !r.runId || !r.source?.commit || !r.source.fingerprint || !r.target || !["running", "completed", "failed", "blocked"].includes(r.execution) || !["prepare", "runtime"].includes(r.scope) || !Array.isArray(r.results)) throw new Error("Invalid platform test report");
   if (!catalog[0]!.support[r.target.platform]) throw new Error("Invalid report platform");
   const ids = new Set<string>();
   for (const result of r.results) {

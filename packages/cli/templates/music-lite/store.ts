@@ -1,4 +1,4 @@
-import { createAudioPlayer } from "@legend-apps/audio";
+import { createAudioPlayer } from "@legendapp/frame-audio";
 import { records } from "./shared/storage";
 import { resolveTrack } from "./assets";
 import { MusicModel, decodeLibrary } from "./model";

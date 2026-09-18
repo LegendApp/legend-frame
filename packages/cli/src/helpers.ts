@@ -2,7 +2,7 @@ import { copyFileSync, lstatSync, mkdirSync, realpathSync, chmodSync, readdirSyn
 import path from "node:path";
 import { createRequire } from "node:module";
 import { architecture, type DesktopPlatform } from "./platform";
-const { validateHelpers } = createRequire(import.meta.url)("@legend-apps/desktop-config/helpers.cjs");
+const { validateHelpers } = createRequire(import.meta.url)("@legendapp/frame-desktop-config/helpers.cjs");
 export type HelperBundle = { directory: string; executable: string };
 export type Helpers = Record<string, string | Partial<Record<`${DesktopPlatform}-${"arm64" | "x64"}`, HelperBundle>>>;
 
@@ -41,7 +41,7 @@ export function resolveHelpers(root: string, helpers: Helpers = {}, platform: De
       else throw new Error(`Helper contains a special file: ${entry}`);
     }
     visit(directory ?? file);
-    if (bundle && readdirSync(directory!).some(name => name.toLowerCase() === ".legend-entry")) throw new Error(".legend-entry is reserved for helper metadata");
+    if (bundle && readdirSync(directory!).some(name => name.toLowerCase() === ".frame-entry")) throw new Error(".frame-entry is reserved for helper metadata");
     return { name, file, relative: path.relative(base, file), directory, files, directories, modes, executable: bundle?.executable };
   });
 }
@@ -66,6 +66,6 @@ export function copyHelpers(root: string, app: string, helpers: Helpers = {}, pl
       mkdirSync(path.dirname(target), { recursive: true }); copyFileSync(source, target);
     }
     chmodSync(path.join(directory, helper.executable!), 0o755);
-    writeFileSync(path.join(directory, ".legend-entry"), helper.executable!, "utf8");
+    writeFileSync(path.join(directory, ".frame-entry"), helper.executable!, "utf8");
   }
 }

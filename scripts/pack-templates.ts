@@ -12,7 +12,7 @@ export async function packTemplates(root: string, output: string, packages: Reco
     const pkg = readJson(path.join(source, "package.json"));
     // Every desktop SDK carries the pinned cross-platform Runtimes archive.
     if (pkg.dependencies["@react-native-runtimes/core"] && !local["@react-native-runtimes/core"]) continue;
-    const temporary = mkdtempSync(path.join(os.tmpdir(), "legend-template-"));
+    const temporary = mkdtempSync(path.join(os.tmpdir(), "frame-template-"));
     try {
       cpSync(source, temporary, { recursive: true });
       // Expo extracts templates into a new app before installing. Carry the local

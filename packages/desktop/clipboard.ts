@@ -1,1 +1,1 @@
-export * from "@legend-apps/clipboard";
+export * from "@legendapp/frame-clipboard";

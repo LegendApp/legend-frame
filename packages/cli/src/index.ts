@@ -6,7 +6,7 @@ import { hostPlatform, type AppPlatform } from "./platform.ts";
 import path from "node:path";
 import { parseArgs } from "node:util";
 import { existsSync, readFileSync, writeFileSync } from "node:fs";
-import { prepareConfig, readConfig, isExpoProject } from "@legend-apps/desktop-config/config.cjs";
+import { prepareConfig, readConfig, isExpoProject } from "@legendapp/frame-desktop-config/config.cjs";
 import { nodeCommand, prepareWindows } from "./windows.ts";
 import { create, refreshLocalPackages } from "./create.ts";
 import { addDesktop } from "./add-desktop.ts";
@@ -17,7 +17,7 @@ import { credentials } from "./credentials.ts";
 import { build, analyze } from "./build.ts";
 import { launch } from "./dev.ts";
 import { doctor, run } from "./commands.ts";
-import { findFramework, findProject, legendHome, packageManifest, registerRuntime } from "./local.ts";
+import { findFramework, findProject, frameHome, packageManifest, registerRuntime } from "./local.ts";
 import { readJson, stateFile, VERSION, writeJson } from "./project.ts";
 import { devCommand } from "./dev-command";
 
@@ -48,7 +48,7 @@ async function main() {
     },
   });
   if (values.platform && !["macos", "windows", "ios", "android", "web"].includes(values.platform)) throw new Error("Platform must be macos, windows, ios, android, or web.");
-  if (values.platform) process.env.LEGEND_PLATFORM = values.platform;
+  if (values.platform) process.env.FRAME_PLATFORM = values.platform;
   const platform = (values.platform ?? hostPlatform()) as AppPlatform;
   const projectOption = values.project as string | undefined;
   const start = path.resolve(projectOption ?? process.cwd());
@@ -57,7 +57,7 @@ async function main() {
   if (port !== undefined && (!Number.isInteger(port) || port < 1 || port > 65535)) throw new Error("Port must be an integer between 1 and 65535.");
   const command = positionals[0];
   if (!values.help && !values.platform && !(command === "open" && positionals[1]) && ["build", "prebuild", "analyze", "package", "open", "updates", "credentials"].includes(command ?? "") && isExpoProject(project())) {
-    process.env.LEGEND_PLATFORM = readConfig(project()).expo.platforms[0];
+    process.env.FRAME_PLATFORM = readConfig(project()).expo.platforms[0];
   }
   if (values.example && (command !== "create" || !examples.includes(values.example as Example))) throw new Error(`Use create --example ${examples.join(" | ")}`);
   if (values.universal && command !== "create") throw new Error("--universal is a create option.");
@@ -81,18 +81,18 @@ async function main() {
     }
   }
   if (values.help || !command) {
-    console.log(`Legend
+    console.log(`Legend Frame
 
-  legend create MyApp  Create an app (--universal for shared Settings; --platform selects a target)
-  legend create MyEditor --example document-editor  Shared document editor
-  legend create MyNotes --example notes-lite        Local notes
-  legend create MyMusic --example music-lite        Audio queue
-  legend create MyDiff --example diff-lite          Text comparison
-  legend add desktop  Add desktop to an existing Expo app without replacing its entry point
-  legend dev           Develop with Fast Refresh
-  legend build         Build a standalone desktop app
-  legend prebuild      Generate a Windows/mobile native project
-  legend package       Sign and notarize a distribution archive
+  frame create MyApp  Create an app (--universal for shared Settings; --platform selects a target)
+  frame create MyEditor --example document-editor  Shared document editor
+  frame create MyNotes --example notes-lite        Local notes
+  frame create MyMusic --example music-lite        Audio queue
+  frame create MyDiff --example diff-lite          Text comparison
+  frame add desktop  Add desktop to an existing Expo app without replacing its entry point
+  frame dev           Develop with Fast Refresh
+  frame build         Build a standalone desktop app
+  frame prebuild      Generate a Windows/mobile native project
+  frame package       Sign and notarize a distribution archive
 
 Inside an app: bun dev, bun run build, bun run package
 
@@ -104,12 +104,12 @@ Targets: dev/build/prebuild --platform macos|windows|ios|android|web
 Overrides: --project <directory>, --port <number>, dev --prebuilt-binary <runtime path>, create --packages <manifest>`);
   } else switch (command) {
     case "add": {
-      if (positionals[1] !== "desktop") throw new Error("Usage: legend add desktop [--project <Expo app>]");
+      if (positionals[1] !== "desktop") throw new Error("Usage: frame add desktop [--project <Expo app>]");
       await addDesktop(start, packageManifest(values.packages as string | undefined));
       break;
     }
     case "create": {
-      if (!positionals[1]) throw new Error("Usage: legend create MyApp");
+      if (!positionals[1]) throw new Error("Usage: frame create MyApp");
       if (!values.universal && !["macos", "windows"].includes(platform)) throw new Error("Use create --universal for mobile/web targets");
       await create(path.resolve(positionals[1]), packageManifest(values.packages as string | undefined), platform, !!values.universal || !!values.example, values.example as Example | undefined);
       break;
@@ -118,23 +118,23 @@ Overrides: --project <directory>, --port <number>, dev --prebuilt-binary <runtim
       if (!["macos", "windows"].includes(platform)) throw new Error("SDK commands require a desktop target");
       switch (positionals[1]) {
         case "export": {
-          if (!positionals[2]) throw new Error("Usage: legend sdk export <directory> [--runtime <prebuilt runtime directory>]");
+          if (!positionals[2]) throw new Error("Usage: frame sdk export <directory> [--runtime <prebuilt runtime directory>]");
           console.log(`Exported SDK to ${exportSDK(packageManifest(values.packages as string | undefined), positionals[2], values.runtime)}. Transfer the directory and run bun install.ts there.`);
           break;
         }
         case "import": {
-          if (!positionals[2]) throw new Error("Usage: legend sdk import <SDK directory>");
+          if (!positionals[2]) throw new Error("Usage: frame sdk import <SDK directory>");
           console.log(`Registered SDK from ${importSDK(positionals[2])}`);
           break;
         }
         case "pack": {
           const framework = findFramework(start) ?? findFramework();
-          if (!framework) throw new Error("Run legend sdk pack inside the framework checkout.");
+          if (!framework) throw new Error("Run frame sdk pack inside the framework checkout.");
           await run(framework, ["bun", path.join(framework, "scripts/pack.ts"), ...(platform === "windows" ? ["--platform=windows"] : [])]);
           break;
         }
         case "register": {
-          if (!positionals[2]) throw new Error("Usage: legend sdk register <runtime directory>");
+          if (!positionals[2]) throw new Error("Usage: frame sdk register <runtime directory>");
           const result = registerRuntime(positionals[2]);
           console.log(`Registered prebuilt runtime for SDK ${result.runtime.framework}. Apps will discover it automatically.`);
           break;
@@ -144,7 +144,7 @@ Overrides: --project <directory>, --port <number>, dev --prebuilt-binary <runtim
           let root: string;
           if (projectOption) root = project();
           else {
-            root = path.join(legendHome(), "sdk-builds", VERSION, ...(platform === "windows" ? ["windows"] : []), "LegendGo");
+            root = path.join(frameHome(), "sdk-builds", VERSION, ...(platform === "windows" ? ["windows"] : []), "FramePrebuilt");
             const manifest = packageManifest(values.packages as string | undefined);
             if (!existsSync(path.join(root, "package.json"))) await create(root, manifest, platform);
             else await refreshLocalPackages(root, manifest);
@@ -153,12 +153,12 @@ Overrides: --project <directory>, --port <number>, dev --prebuilt-binary <runtim
           await build(root, "go", !!values.force);
           break;
         }
-        default: throw new Error("SDK commands: legend sdk pack, legend sdk build-prebuilt, legend sdk register <runtime directory>");
+        default: throw new Error("SDK commands: frame sdk pack, frame sdk build-prebuilt, frame sdk register <runtime directory>");
       }
       break;
     }
     case "prebuild":
-      if (readConfig(project()).expo.platforms[0] !== "windows") throw new Error("For macOS, legend build --dev generates and builds the native project.");
+      if (readConfig(project()).expo.platforms[0] !== "windows") throw new Error("For macOS, frame build --dev generates and builds the native project.");
       await prepareWindows(project(), "dev");
       break;
     case "doctor":
@@ -166,13 +166,13 @@ Overrides: --project <directory>, --port <number>, dev --prebuilt-binary <runtim
       console.log("Native toolchain available.");
       break;
     case "updates": {
-      if (positionals[1] !== "init" || !positionals[2]) throw new Error("Usage: legend updates init https://example.com/updates/appcast.xml");
+      if (positionals[1] !== "init" || !positionals[2]) throw new Error("Usage: frame updates init https://example.com/updates/appcast.xml");
       await initializeUpdates(project(), positionals[2]);
       break;
     }
     case "credentials":
       await credentials(project(), true);
-      console.log("Signing credentials configured. Run legend package to prepare a distribution archive.");
+      console.log("Signing credentials configured. Run frame package to prepare a distribution archive.");
       break;
     case "package": {
       if (process.platform !== "darwin" || process.arch !== "arm64") throw new Error("Packaging currently supports Apple Silicon macOS only.");
@@ -206,7 +206,7 @@ Overrides: --project <directory>, --port <number>, dev --prebuilt-binary <runtim
       await app.exited;
       break;
     }
-    default: throw new Error(`Unknown command: ${command}. Run legend --help.`);
+    default: throw new Error(`Unknown command: ${command}. Run frame --help.`);
   }
 }
 

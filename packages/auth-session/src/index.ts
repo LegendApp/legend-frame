@@ -1,5 +1,5 @@
-import Native from "@legend-apps/desktop-links/src/NativeDesktopLinks";
-import { onOpen, openURL } from "@legend-apps/desktop-links";
+import Native from "@legendapp/frame-desktop-links/src/NativeDesktopLinks";
+import { onOpen, openURL } from "@legendapp/frame-desktop-links";
 import { authSessions } from "./core";
 import { validateCount, validateDigest } from "./types";
 export type * from "./types";

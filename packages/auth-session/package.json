@@ -1,5 +1,5 @@
 {
-  "name": "@legend-apps/auth-session",
+  "name": "@legendapp/frame-auth-session",
   "version": "0.1.0-prototype.0",
   "license": "MIT",
   "main": "src/index",
@@ -8,7 +8,7 @@
     "src"
   ],
   "dependencies": {
-    "@legend-apps/desktop-links": "0.1.0-prototype.0",
+    "@legendapp/frame-desktop-links": "0.1.0-prototype.0",
     "base64-js": "1.5.1"
   },
   "peerDependencies": {
@@ -24,7 +24,7 @@
       "optional": true
     }
   },
-  "legend": {
+  "frame": {
     "sdk": true,
     "platforms": [
       "macos",
@@ -34,7 +34,7 @@
       "web"
     ],
     "requires": [
-      "@legend-apps/desktop-links"
+      "@legendapp/frame-desktop-links"
     ]
   }
 }

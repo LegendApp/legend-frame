@@ -5,27 +5,27 @@ import { readJson, writeJson } from "../packages/cli/src/project";
 import { run } from "../packages/cli/src/commands";
 // Run after test:runtimes --release. The managed fixture deliberately retains
 // tasks.ts and every SDK dependency while its entry stops importing those tasks.
-const root = path.resolve(process.argv[2] ?? "/tmp/LegendRuntimesProbe");
-if (!existsSync(path.join(root, ".legend/kitchen-sink.json"))) throw new Error("Use the managed runtimes test fixture.");
-const full = readJson(path.join(root, ".legend/release-build.json"));
+const root = path.resolve(process.argv[2] ?? "/tmp/FrameRuntimesProbe");
+if (!existsSync(path.join(root, ".frame/kitchen-sink.json"))) throw new Error("Use the managed runtimes test fixture.");
+const full = readJson(path.join(root, ".frame/release-build.json"));
 for (const name of ["@react-native-runtimes/core", "react-native-nitro-modules"]) {
   if (!full.runtime.modules[name]) throw new Error("First run the Runtimes-enabled Release proof.");
 }
-const proof = path.join(root, ".legend/runtimes-proof");
+const proof = path.join(root, ".frame/runtimes-proof");
 cpSync(full.app, path.join(proof, "with-runtimes.app"), { recursive: true, verbatimSymlinks: true });
 const appFile = path.join(root, "App.tsx"), original = readFileSync(appFile);
 const workerFile = path.join(root, "pruning-worker.ts");
 if (existsSync(workerFile)) throw new Error("Unexpected existing pruning-worker.ts");
 try {
-  writeFileSync(workerFile, 'import { runtimeFunction } from "@react-native-runtimes/core"; export const workerOnly = runtimeFunction(async () => { const { readText } = require("@legend-apps/desktop/files"); return readText("/tmp/worker-only.txt"); });\n');
+  writeFileSync(workerFile, 'import { runtimeFunction } from "@react-native-runtimes/core"; export const workerOnly = runtimeFunction(async () => { const { readText } = require("@legendapp/frame/files"); return readText("/tmp/worker-only.txt"); });\n');
   writeFileSync(appFile, 'import React from "react"; import { Text } from "react-native"; import { ThreadedRuntime } from "@react-native-runtimes/core"; import { workerOnly } from "./pruning-worker"; export default function App() { return <Text onPress={() => ThreadedRuntime.run("pruning", workerOnly)}>Worker</Text>; }\n');
   const used = await analyze(root);
-  for (const name of ["@react-native-runtimes/core", "react-native-nitro-modules", "@legend-apps/file-system"]) {
+  for (const name of ["@react-native-runtimes/core", "react-native-nitro-modules", "@legendapp/frame-file-system"]) {
     if (!used.included.some(pkg => pkg.name === name)) throw new Error(`${name} was pruned despite worker reachability`);
   }
   writeFileSync(appFile, 'import React from "react"; import { Text } from "react-native"; export default function App() { return <Text>Production without workers</Text>; }\n');
   const built = await build(root, "release");
-  const report = readJson(path.join(root, ".legend/selection-report.json"));
+  const report = readJson(path.join(root, ".frame/selection-report.json"));
   const forbidden = ["@react-native-runtimes/core", "react-native-nitro-modules"];
   for (const name of forbidden) {
     if (built.runtime.modules[name] || !report.excluded.includes(name)) throw new Error(`${name} survived native pruning`);

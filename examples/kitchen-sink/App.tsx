@@ -3,17 +3,17 @@ import { ActionButton } from "./ActionButton";
 import { EventResults, useEventResults } from "./EventResults";
 import React, { useCallback, useEffect, useRef, useState } from "react";
 import { Alert, ScrollView, StyleSheet, Text, TextInput, View } from "react-native";
-import * as app from "@legend-apps/desktop/app";
-import * as windows from "@legend-apps/desktop/windows";
-import * as files from "@legend-apps/desktop/files";
-import { settings } from "@legend-apps/desktop/settings";
-import * as clipboard from "@legend-apps/desktop/clipboard";
-import * as links from "@legend-apps/desktop/links";
-import * as secureStore from "@legend-apps/desktop/secure-storage";
-import { registerShortcut } from "@legend-apps/desktop/shortcuts";
-import { showContextMenu } from "@legend-apps/desktop/context-menu";
-import { configureMenus, clearMenus, addNativeMenuActionListener } from "@legend-apps/desktop/menus";
-import { openFileDialog, saveFileDialog, revealInFinder } from "@legend-apps/desktop/dialogs";
+import * as app from "@legendapp/frame/app";
+import * as windows from "@legendapp/frame/windows";
+import * as files from "@legendapp/frame/files";
+import { settings } from "@legendapp/frame/settings";
+import * as clipboard from "@legendapp/frame/clipboard";
+import * as links from "@legendapp/frame/links";
+import * as secureStore from "@legendapp/frame/secure-storage";
+import { registerShortcut } from "@legendapp/frame/shortcuts";
+import { showContextMenu } from "@legendapp/frame/context-menu";
+import { configureMenus, clearMenus, addNativeMenuActionListener } from "@legendapp/frame/menus";
+import { openFileDialog, saveFileDialog, revealInFinder } from "@legendapp/frame/dialogs";
 import { AuthChecks } from "./AuthChecks";
 import { AudioChecks } from "./AudioChecks";
 import { FileStreamChecks } from "./FileStreamChecks";
@@ -32,21 +32,21 @@ type Props = Partial<app.AppContext> & { windowId?: string; windowProps?: { over
 function argument(args: string[], name: string) { const at = args.indexOf(name); return at < 0 ? undefined : args[at + 1]; }
 export default function App(props: Props) {
   const args = props.launchArguments ?? [];
-  const report = argument(args, "--legend-test-report");
+  const report = argument(args, "--frame-test-report");
   if (props.windowId && props.windowId !== "main") return <SecondaryWindow {...props} />;
-  const authReport = argument(args, "--legend-auth-report");
-  if (authReport) return <AuthChecks report={authReport} provider={argument(args, "--legend-auth-provider")!} />;
-  const audioReport = argument(args, "--legend-audio-report");
-  if (audioReport) return <AudioChecks report={audioReport} source={argument(args, "--legend-audio-source")!} />;
-  const filesReport = argument(args, "--legend-files-report");
+  const authReport = argument(args, "--frame-auth-report");
+  if (authReport) return <AuthChecks report={authReport} provider={argument(args, "--frame-auth-provider")!} />;
+  const audioReport = argument(args, "--frame-audio-report");
+  if (audioReport) return <AudioChecks report={audioReport} source={argument(args, "--frame-audio-source")!} />;
+  const filesReport = argument(args, "--frame-files-report");
   if (filesReport) return <FileStreamChecks report={filesReport} />;
-  const foundationReport = argument(args, "--legend-foundation-report");
+  const foundationReport = argument(args, "--frame-foundation-report");
   if (foundationReport) return <FoundationChecks report={foundationReport} />;
-  const uiReport = argument(args, "--legend-ui-report");
+  const uiReport = argument(args, "--frame-ui-report");
   if (uiReport) return <NativeControls report={uiReport} />;
-  const apiReport = argument(args, "--legend-api-report");
-  if (apiReport) return <APIChecks report={apiReport} expectedInitial={argument(args, "--legend-api-initial") ?? null} />;
-  const expansionReport = argument(args, "--legend-expansion-report");
+  const apiReport = argument(args, "--frame-api-report");
+  if (apiReport) return <APIChecks report={apiReport} expectedInitial={argument(args, "--frame-api-initial") ?? null} />;
+  const expansionReport = argument(args, "--frame-expansion-report");
   if (expansionReport) return <ExpansionChecks report={expansionReport} />;
   if (report) return <AutomatedChecks report={report} args={args} />;
   return <KitchenSink {...props} />;
@@ -75,10 +75,10 @@ function AutomatedChecks({ report, args }: { report: string; args: string[] }) {
     // Let the main React window mount before opening secondary roots.
     const timer = setTimeout(() => {
       if (started) return; started = true;
-      void (args.includes("--legend-sidecar-probe") ? runSidecarChecks() : runChecks(async result => { setChecks(previous => [...previous, result]); await files.writeText(`${report}.progress`, JSON.stringify(result)); }, testDriver, argument(args, "--legend-isolation-expect") ? { expect: argument(args, "--legend-isolation-expect") as "absent" | "present", cleanup: args.includes("--legend-isolation-cleanup") } : undefined))
+      void (args.includes("--frame-sidecar-probe") ? runSidecarChecks() : runChecks(async result => { setChecks(previous => [...previous, result]); await files.writeText(`${report}.progress`, JSON.stringify(result)); }, testDriver, argument(args, "--frame-isolation-expect") ? { expect: argument(args, "--frame-isolation-expect") as "absent" | "present", cleanup: args.includes("--frame-isolation-cleanup") } : undefined))
         .then(async result => {
           await files.writeText(report, JSON.stringify(result, null, 2));
-          if (args.includes("--legend-test-quit-on-complete")) { await new Promise(resolve => setTimeout(resolve, 2500)); await app.beforeQuit(() => true); await app.quit(); }
+          if (args.includes("--frame-test-quit-on-complete")) { await new Promise(resolve => setTimeout(resolve, 2500)); await app.beforeQuit(() => true); await app.quit(); }
         })
         .catch(error => files.writeText(report, JSON.stringify({ passed: false, error: String(error), results: [] })));
     }, 500);

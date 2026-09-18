@@ -1,5 +1,5 @@
 {
-  "name": "@legend-apps/desktop",
+  "name": "@legendapp/frame",
   "version": "0.1.0-prototype.0",
   "license": "MIT",
   "exports": {
@@ -24,34 +24,47 @@
     "./global-shortcuts": "./global-shortcuts.ts",
     "./drag-drop": "./drag-drop.ts",
     "./webview": "./webview.ts",
-    "./sqlite": "./sqlite.ts"
+    "./sqlite": "./sqlite.ts",
+    "./ui": "./ui.ts",
+    "./ui/uniwind": "./ui-uniwind.ts",
+    "./audio": "./audio.ts",
+    "./auth-session": "./auth-session.ts"
   },
   "files": [
-    "*.ts"
+    "*.ts",
+    "bin"
   ],
   "dependencies": {
-    "@legend-apps/file-dialog": "0.1.0-prototype.0",
-    "@legend-apps/native-menu": "0.1.0-prototype.0",
-    "@legend-apps/desktop-app": "0.1.0-prototype.0",
-    "@legend-apps/desktop-windows": "0.1.0-prototype.0",
-    "@legend-apps/file-system": "0.1.0-prototype.0",
-    "@legend-apps/settings": "0.1.0-prototype.0",
-    "@legend-apps/clipboard": "0.1.0-prototype.0",
-    "@legend-apps/context-menu": "0.1.0-prototype.0",
-    "@legend-apps/desktop-shortcuts": "0.1.0-prototype.0",
-    "@legend-apps/desktop-links": "0.1.0-prototype.0",
-    "@legend-apps/secure-storage": "0.1.0-prototype.0",
-    "@legend-apps/notifications": "0.1.0-prototype.0",
-    "@legend-apps/tray": "0.1.0-prototype.0",
-    "@legend-apps/updates": "0.1.0-prototype.0",
-    "@legend-apps/processes": "0.1.0-prototype.0",
-    "@legend-apps/system": "0.1.0-prototype.0",
-    "@legend-apps/message-dialog": "0.1.0-prototype.0",
-    "@legend-apps/global-shortcuts": "0.1.0-prototype.0",
-    "@legend-apps/drag-drop": "0.1.0-prototype.0",
-    "@legend-apps/webview": "0.1.0-prototype.0",
-    "@legend-apps/sqlite": "0.1.0-prototype.0",
+    "@legendapp/frame-file-dialog": "0.1.0-prototype.0",
+    "@legendapp/frame-native-menu": "0.1.0-prototype.0",
+    "@legendapp/frame-desktop-app": "0.1.0-prototype.0",
+    "@legendapp/frame-desktop-windows": "0.1.0-prototype.0",
+    "@legendapp/frame-file-system": "0.1.0-prototype.0",
+    "@legendapp/frame-settings": "0.1.0-prototype.0",
+    "@legendapp/frame-clipboard": "0.1.0-prototype.0",
+    "@legendapp/frame-context-menu": "0.1.0-prototype.0",
+    "@legendapp/frame-desktop-shortcuts": "0.1.0-prototype.0",
+    "@legendapp/frame-desktop-links": "0.1.0-prototype.0",
+    "@legendapp/frame-secure-storage": "0.1.0-prototype.0",
+    "@legendapp/frame-notifications": "0.1.0-prototype.0",
+    "@legendapp/frame-tray": "0.1.0-prototype.0",
+    "@legendapp/frame-updates": "0.1.0-prototype.0",
+    "@legendapp/frame-processes": "0.1.0-prototype.0",
+    "@legendapp/frame-system": "0.1.0-prototype.0",
+    "@legendapp/frame-message-dialog": "0.1.0-prototype.0",
+    "@legendapp/frame-global-shortcuts": "0.1.0-prototype.0",
+    "@legendapp/frame-drag-drop": "0.1.0-prototype.0",
+    "@legendapp/frame-webview": "0.1.0-prototype.0",
+    "@legendapp/frame-sqlite": "0.1.0-prototype.0",
     "@react-native-runtimes/core": "0.1.0-alpha.2",
-    "react-native-nitro-modules": "0.35.7"
+    "react-native-nitro-modules": "0.35.7",
+    "@legendapp/frame-cli": "0.1.0-prototype.0",
+    "@legendapp/frame-ui": "0.1.0-prototype.0",
+    "@legendapp/frame-audio": "0.1.0-prototype.0",
+    "@legendapp/frame-auth-session": "0.1.0-prototype.0"
+  },
+  "description": "Legend Frame \u2014 native applications with React Native and Expo",
+  "bin": {
+    "frame": "bin/frame.cjs"
   }
 }

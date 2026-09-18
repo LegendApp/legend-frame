@@ -1,1 +1,1 @@
-export * from "@legend-apps/updates";
+export * from "@legendapp/frame-updates";

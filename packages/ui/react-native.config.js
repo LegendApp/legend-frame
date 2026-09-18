@@ -1,5 +1,5 @@
 // Expo Desktop's Apple autolinker runs as ios; its Podfile opts into AppKit.
 module.exports = { dependency: { platforms: {
-  ios: process.env.LEGEND_DESKTOP_AUTOLINK === "macos" ? {} : null,
+  ios: process.env.FRAME_DESKTOP_AUTOLINK === "macos" ? {} : null,
   android: null,
 } } };

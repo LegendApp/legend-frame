@@ -1,6 +1,6 @@
-import * as notifications from "@legend-apps/desktop/notifications";
-import { createTray } from "@legend-apps/desktop/tray";
-import * as updates from "@legend-apps/desktop/updates";
+import * as notifications from "@legendapp/frame/notifications";
+import { createTray } from "@legendapp/frame/tray";
+import * as updates from "@legendapp/frame/updates";
 const delay = (ms: number) => new Promise(resolve => setTimeout(resolve, ms));
 function assert(value: unknown, message: string): asserts value { if (!value) throw new Error(message); }
 async function rejects(action: () => Promise<unknown>, code: string) {

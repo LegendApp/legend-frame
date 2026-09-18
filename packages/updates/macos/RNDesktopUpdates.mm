@@ -1,8 +1,8 @@
 #import "RNDesktopUpdates.h"
-#import <RNDesktopApp/LegendDesktop.h>
+#import <RNDesktopApp/FrameDesktop.h>
 #import <Sparkle/Sparkle.h>
 
-@interface LegendUpdater : NSObject <SPUUpdaterDelegate>
+@interface FrameUpdater : NSObject <SPUUpdaterDelegate>
 @property SPUStandardUpdaterController *controller;
 @property BOOL started;
 + (instancetype)shared;
@@ -10,7 +10,7 @@
 - (BOOL)start:(NSError **)error;
 @end
 static NSString *UnavailableReason(void) {
-  NSString *mode = LegendContext()[@"runtime"][@"mode"];
+  NSString *mode = FrameContext()[@"runtime"][@"mode"];
   if ([mode isEqual:@"go"]) return @"go";
   if (![mode isEqual:@"release"]) return @"development";
   NSURL *url = [NSURL URLWithString:[NSBundle.mainBundle objectForInfoDictionaryKey:@"SUFeedURL"] ?: @""];
@@ -18,8 +18,8 @@ static NSString *UnavailableReason(void) {
   if (![url.scheme isEqual:@"https"] || !url.host.length || url.user.length || url.password.length || key.length != 32) return @"unconfigured";
   return nil;
 }
-@implementation LegendUpdater
-+ (instancetype)shared { static LegendUpdater *updater; static dispatch_once_t once; dispatch_once(&once, ^{ updater = [LegendUpdater new]; }); return updater; }
+@implementation FrameUpdater
++ (instancetype)shared { static FrameUpdater *updater; static dispatch_once_t once; dispatch_once(&once, ^{ updater = [FrameUpdater new]; }); return updater; }
 - (NSDictionary *)status {
   NSString *reason = UnavailableReason();
   NSMutableDictionary *result = [@{ @"available": @(!reason), @"started": @(self.started), @"canCheck": @(self.started && self.controller.updater.canCheckForUpdates), @"automaticallyChecks": @(self.started && self.controller.updater.automaticallyChecksForUpdates) } mutableCopy];
@@ -37,7 +37,7 @@ static NSString *UnavailableReason(void) {
   NSMutableDictionary *event = [@{ @"type": @"update", @"state": state } mutableCopy];
   if (item) event[@"version"] = item.displayVersionString;
   if (error) event[@"message"] = error.localizedDescription;
-  LegendEmit(event);
+  FrameEmit(event);
 }
 - (BOOL)updater:(SPUUpdater *)updater mayPerformUpdateCheck:(SPUUpdateCheck)check error:(NSError **)error { [self event:@"checking" item:nil error:nil]; return YES; }
 - (void)updater:(SPUUpdater *)updater didFindValidUpdate:(SUAppcastItem *)item { [self event:@"available" item:item error:nil]; }
@@ -53,9 +53,9 @@ RCT_EXPORT_MODULE(NativeDesktopUpdates)
 - (void)call:(NSString *)method args:(NSString *)json resolve:(RCTPromiseResolveBlock)resolve reject:(RCTPromiseRejectBlock)reject {
   // Sparkle can enter a modal UI loop; do not hold the main dispatch queue.
   [NSRunLoop.mainRunLoop performBlock:^{
-    LegendUpdater *updater = [LegendUpdater shared];
-    if ([method isEqual:@"status"]) { resolve(LegendJSON([updater status])); return; }
-    if (![@[@"start", @"check", @"automatic"] containsObject:method]) { LegendInvalid(reject, @"Unknown update operation"); return; }
+    FrameUpdater *updater = [FrameUpdater shared];
+    if ([method isEqual:@"status"]) { resolve(FrameJSON([updater status])); return; }
+    if (![@[@"start", @"check", @"automatic"] containsObject:method]) { FrameInvalid(reject, @"Unknown update operation"); return; }
     NSString *reason = UnavailableReason();
     if (reason) { reject(@"E_UPDATES_UNAVAILABLE", [@"Updates require a configured standalone release app; current state: " stringByAppendingString:reason], nil); return; }
     NSError *error = nil;
@@ -64,8 +64,8 @@ RCT_EXPORT_MODULE(NativeDesktopUpdates)
       if (!updater.controller.updater.canCheckForUpdates) { reject(@"E_UPDATES_BUSY", @"An update session is already running", nil); return; }
       [updater.controller checkForUpdates:nil]; resolve(@"null");
     } else if ([method isEqual:@"automatic"]) {
-      updater.controller.updater.automaticallyChecksForUpdates = [LegendArgs(json)[@"enabled"] boolValue]; resolve(@"null");
-    } else resolve(LegendJSON([updater status]));
+      updater.controller.updater.automaticallyChecksForUpdates = [FrameArgs(json)[@"enabled"] boolValue]; resolve(@"null");
+    } else resolve(FrameJSON([updater status]));
   }];
 }
 - (std::shared_ptr<facebook::react::TurboModule>)getTurboModule:(const facebook::react::ObjCTurboModule::InitParams &)params { return std::make_shared<facebook::react::NativeDesktopUpdatesSpecJSI>(params); }

@@ -4,7 +4,7 @@ import os from "node:os";
 import path from "node:path";
 import { fromByteArray } from "base64-js";
 import { startHelper, type Spawn } from "../examples/sidecar/client";
-const directory = mkdtempSync(path.join(os.tmpdir(), 'legend-helper-tests-'));
+const directory = mkdtempSync(path.join(os.tmpdir(), 'frame-helper-tests-'));
 const binary = path.join(directory, 'worker');
 beforeAll(async () => { if (process.platform !== 'win32') { const result = Bun.spawn(['cc', path.resolve('examples/sidecar/worker.c'), '-Wall', '-Wextra', '-Werror', '-o', binary], { stderr: 'pipe' }); if (await result.exited) throw Error(await new Response(result.stderr).text()); } });
 afterAll(() => rmSync(directory, { recursive: true, force: true }));

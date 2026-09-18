@@ -38,7 +38,7 @@ export async function prepareWindows(root: string, mode: "go" | "dev") {
   return runtime;
 }
 export async function buildWindows(root: string, mode: string, force: boolean): Promise<{ app: string; runtime: Runtime }> {
-  if (mode !== "go" && mode !== "dev") throw new Error("Windows currently supports prebuilt runtimes and development builds. Use legend build --dev; production builds and packaging are not implemented.");
+  if (mode !== "go" && mode !== "dev") throw new Error("Windows currently supports prebuilt runtimes and development builds. Use frame build --dev; production builds and packaging are not implemented.");
   if (process.platform !== "win32") throw new Error("Windows native builds require Windows x64 or ARM64. Project generation and Metro bundle checks can run on macOS.");
   for (const tool of ["node", "bun", "pwsh.exe", "dotnet.exe"]) if (!Bun.which(tool)) throw new Error(`Missing ${tool}. See docs/windows-slice.md for the Windows native prerequisites.`);
   const expected = runtimeFor(root, nativePackages(root), mode);
@@ -60,13 +60,13 @@ export async function buildWindows(root: string, mode: string, force: boolean): 
     }
   }
   visit(path.join(root, "windows"));
-  if (products.length !== 1) throw new Error(`Expected one Windows Debug/${target} MyApp.exe; found ${products.length}. Inspect .legend/logs.`);
-  const app = stateFile(root, `products/${runtime.arch}/${mode}/LegendWindows`), pending = `${app}.pending`;
+  if (products.length !== 1) throw new Error(`Expected one Windows Debug/${target} MyApp.exe; found ${products.length}. Inspect .frame/logs.`);
+  const app = stateFile(root, `products/${runtime.arch}/${mode}/FrameWindows`), pending = `${app}.pending`;
   rmSync(pending, { recursive: true, force: true });
   mkdirSync(path.dirname(pending), { recursive: true });
   cpSync(path.dirname(products[0]!), pending, { recursive: true });
-  copyHelpers(root, pending, readAppConfig(root).expo.extra?.legend?.helpers, "windows");
-  writeJson(path.join(pending, "legend-runtime.json"), runtime);
+  copyHelpers(root, pending, readAppConfig(root).expo.extra?.frame?.helpers, "windows");
+  writeJson(path.join(pending, "frame-runtime.json"), runtime);
   rmSync(app, { recursive: true, force: true });
   // Copy only after a complete build, keeping Go and dev products independent.
   const { renameSync } = await import("node:fs"); renameSync(pending, app);

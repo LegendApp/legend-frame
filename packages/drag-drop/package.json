@@ -1,5 +1,5 @@
 {
-  "name": "@legend-apps/drag-drop",
+  "name": "@legendapp/frame-drag-drop",
   "version": "0.1.0-prototype.0",
   "license": "MIT",
   "main": "src/index.tsx",
@@ -25,7 +25,7 @@
       }
     }
   },
-  "legend": {
+  "frame": {
     "sdk": true,
     "nativeModules": [],
     "pod": "RNDesktopDrag",
@@ -34,10 +34,10 @@
       "windows"
     ],
     "requires": [
-      "@legend-apps/desktop-app"
+      "@legendapp/frame-desktop-app"
     ]
   },
   "dependencies": {
-    "@legend-apps/desktop-app": "0.1.0-prototype.0"
+    "@legendapp/frame-desktop-app": "0.1.0-prototype.0"
   }
 }

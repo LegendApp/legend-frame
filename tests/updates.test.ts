@@ -8,7 +8,7 @@ import { verifyUpdateSignature, prepareUpdate, SPARKLE_VERSION } from "../packag
 import { goConfigurationIssues } from "../packages/cli/src/project";
 const { updateConfiguration, updatePlist } = createRequire(import.meta.url)("../packages/config-plugin/updates.cjs");
 const valid = { feedURL: "https://example.com/updates/appcast.xml", publicKey: Buffer.alloc(32).toString("base64") };
-function config(updates: unknown) { return { extra: { legend: { updates } } }; }
+function config(updates: unknown) { return { extra: { frame: { updates } } }; }
 test("update configuration requires HTTPS, an XML feed and a 32-byte Ed25519 public key", () => {
   expect(updateConfiguration({})).toBeUndefined();
   expect(updateConfiguration(config(valid))).toEqual(valid);
@@ -22,7 +22,7 @@ test("CNG pins signed feeds and archives and leaves checks/installations under u
   expect(readFileSync(new URL("../packages/updates/RNDesktopUpdates.podspec", import.meta.url), "utf8")).toContain(`"Sparkle", "${SPARKLE_VERSION}"`);
 });
 test("update signatures verify real bytes and reject tampering and another signing key", () => {
-  const root = mkdtempSync(path.join(os.tmpdir(), "legend-update-signatures-"));
+  const root = mkdtempSync(path.join(os.tmpdir(), "frame-update-signatures-"));
   try {
     const file = path.join(root, "update.zip"); const bytes = Buffer.from("the exact distribution archive"); writeFileSync(file, bytes);
     const { privateKey, publicKey } = generateKeyPairSync("ed25519");
@@ -34,7 +34,7 @@ test("update signatures verify real bytes and reject tampering and another signi
   } finally { rmSync(root, { recursive: true, force: true }); }
 });
 test("ordinary packaging does not download tools or touch update credentials", async () => {
-  const root = mkdtempSync(path.join(os.tmpdir(), "legend-no-updates-"));
+  const root = mkdtempSync(path.join(os.tmpdir(), "frame-no-updates-"));
   try {
     writeFileSync(path.join(root, "app.json"), JSON.stringify({ expo: {} }));
     expect(await prepareUpdate(root, "unused.zip", "1", { run: async () => { throw new Error("unexpected subprocess"); }, tools: async () => { throw new Error("unexpected download"); } })).toBeUndefined();

@@ -1,7 +1,7 @@
 import { Activation } from "./Activation";
 import { memo, useEffect, useMemo, useRef, useState, useContext } from "react";
 import { FlatList, Pressable, SafeAreaView, StyleSheet, TextInput, useWindowDimensions, View } from "react-native";
-import { Button } from "@legend-apps/ui";
+import { Button } from "@legendapp/frame-ui";
 import { io } from "./shared/io";
 import { Lifecycle } from "./shared/Lifecycle";
 import { useModel } from "./shared/useModel";

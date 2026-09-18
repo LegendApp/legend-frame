@@ -4,7 +4,7 @@ import { tmpdir } from "node:os";
 import path from "node:path";
 import net from "node:net";
 if (process.platform !== "darwin") throw new Error("Compile tests/auth-loopback.integration.cpp with the platform C++20 toolchain on Windows.");
-const directory = mkdtempSync(path.join(tmpdir(), "legend-auth-loopback-"));
+const directory = mkdtempSync(path.join(tmpdir(), "frame-auth-loopback-"));
 let child: ReturnType<typeof Bun.spawn> | undefined;
 try {
   const binary = path.join(directory, "receiver");

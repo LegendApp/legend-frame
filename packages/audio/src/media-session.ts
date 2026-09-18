@@ -1,10 +1,10 @@
-import Native from "./NativeLegendAudio";
+import Native from "./NativeFrameAudio";
 import { validateSession, type MediaCommand, type MediaSession, type MediaSessionOptions } from "./media-types";
 let owner: (() => void) | undefined, sequence = 0;
 /** One explicit session owns the app's system media controls, independent of playback. */
 export async function createMediaSession(options: MediaSessionOptions, onCommand: (command: MediaCommand) => void): Promise<MediaSession> {
   validateSession(options);
-  if (!Native) throw Object.assign(new Error("Media sessions require @legend-apps/audio in the native runtime"), { code: "E_UNAVAILABLE" });
+  if (!Native) throw Object.assign(new Error("Media sessions require @legendapp/frame-audio in the native runtime"), { code: "E_UNAVAILABLE" });
   const native = Native, id = `media-${Date.now()}-${++sequence}`;
   let removed = false, timer: ReturnType<typeof setTimeout> | undefined;
   const call = async <T = void>(method: string, args = {}): Promise<T> => JSON.parse(await native.call(method, JSON.stringify({ id, ...args })));

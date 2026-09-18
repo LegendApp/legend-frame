@@ -9,15 +9,15 @@ test("Windows menu contributions merge by title and restore targeted items when 
   ] }]]]);
   const menu = composeWindowsMenus(owners)[0]!;
   expect(menu.items.map(item => item.id)).toEqual(["custom-open", "recent", "save"]);
-  expect(menu.items[0]).toMatchObject({ _legendOwner: "editor", _legendMenu: "editor-file", payload: { path: "x" } });
+  expect(menu.items[0]).toMatchObject({ _frameOwner: "editor", _frameMenu: "editor-file", payload: { path: "x" } });
   expect(base[0]!.items[0]!.title).toBe("Open…");
   owners.delete("editor"); expect(composeWindowsMenus(owners)[0]!.items).toHaveLength(2);
-  expect(composeWindowsMenus(owners)[0]!.items[0]).toMatchObject({ id: "open", title: "Open…", _legendOwner: "base" });
+  expect(composeWindowsMenus(owners)[0]!.items[0]).toMatchObject({ id: "open", title: "Open…", _frameOwner: "base" });
 });
 test("Windows menu paths preserve original actions and patches retain null shortcut removal", () => {
   const owners = new Map<string, NativeMenuConfig[]>([["base", [{ id: "file", title: "File", items: [{ id: "save", title: "Save", payload: { original: true } }] }]],
     ["extension", [{ id: "file2", title: "File", items: [{ id: "bound", targetPath: ["Save"], title: "Save all", checked: true }] }]]]);
-  expect(composeWindowsMenus(owners)[0]!.items[0]).toMatchObject({ id: "save", title: "Save all", checked: true, _legendOwner: "base", payload: { original: true } });
+  expect(composeWindowsMenus(owners)[0]!.items[0]).toMatchObject({ id: "save", title: "Save all", checked: true, _frameOwner: "base", payload: { original: true } });
   const patched = patchWindowsMenus(owners.get("base")!, [{ id: "save", shortcut: null, enabled: false }]);
   expect(patched[0]!.items[0]).toMatchObject({ shortcut: null, enabled: false });
   expect(owners.get("base")![0]!.items[0]!.enabled).toBeUndefined();

@@ -1,8 +1,8 @@
 import { useEffect, useRef, useState } from "react";
 import { StyleSheet, Text, View } from "react-native";
-import { Button, TextInput, Select } from "@legend-apps/ui";
-import { writeText } from "@legend-apps/desktop/files";
-import { quit } from "@legend-apps/desktop/app";
+import { Button, TextInput, Select } from "@legendapp/frame-ui";
+import { writeText } from "@legendapp/frame/files";
+import { quit } from "@legendapp/frame/app";
 import { testDriver } from "./test-driver";
 
 export function NativeControls({ report }: { report?: string }) {

@@ -1,5 +1,5 @@
 {
-  "name": "@legend-apps/desktop-shortcuts",
+  "name": "@legendapp/frame-desktop-shortcuts",
   "version": "0.1.0-prototype.0",
   "license": "MIT",
   "main": "src/index",
@@ -23,7 +23,7 @@
       }
     }
   },
-  "legend": {
+  "frame": {
     "sdk": true,
     "nativeModules": [
       "NativeDesktopShortcuts"
@@ -33,10 +33,10 @@
       "macos"
     ],
     "requires": [
-      "@legend-apps/desktop-app"
+      "@legendapp/frame-desktop-app"
     ]
   },
   "dependencies": {
-    "@legend-apps/desktop-app": "0.1.0-prototype.0"
+    "@legendapp/frame-desktop-app": "0.1.0-prototype.0"
   }
 }

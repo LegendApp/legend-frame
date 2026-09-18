@@ -3,14 +3,14 @@ import { mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import os from "node:os";
 import path from "node:path";
 import { createRequire } from "node:module";
-import { readConfig } from "@legend-apps/desktop-config/config.cjs";
+import { readConfig } from "@legendapp/frame-desktop-config/config.cjs";
 const { initializeTemplate } = createRequire(import.meta.url)("../packages/cli/src/init-template.cjs");
 const templates = path.resolve(import.meta.dir, "../packages/cli/templates");
 for (const folder of ["blank-typescript", "windows", "universal"]) {
   test(`${folder} initializes upstream identity once and preserves edits`, () => {
-    const root = mkdtempSync(path.join(os.tmpdir(), "legend-template-test-"));
-    const previous = process.env.LEGEND_PLATFORM;
-    delete process.env.LEGEND_PLATFORM;
+    const root = mkdtempSync(path.join(os.tmpdir(), "frame-template-test-"));
+    const previous = process.env.FRAME_PLATFORM;
+    delete process.env.FRAME_PLATFORM;
     try {
       const config = JSON.parse(readFileSync(path.join(templates, folder, "desktop.config.json"), "utf8"));
       writeFileSync(path.join(root, "desktop.config.json"), JSON.stringify(config));
@@ -33,7 +33,7 @@ for (const folder of ["blank-typescript", "windows", "universal"]) {
       initializeTemplate(root);
       expect(readFileSync(path.join(root, "desktop.config.json"), "utf8")).toBe(before);
     } finally {
-      if (previous !== undefined) process.env.LEGEND_PLATFORM = previous;
+      if (previous !== undefined) process.env.FRAME_PLATFORM = previous;
       rmSync(root, { recursive: true, force: true });
     }
   });
@@ -46,6 +46,6 @@ test("all templates retain the tested beta matrix", () => {
     expect(pkg.dependencies.expo).toBe("54.0.37");
     expect(pkg.overrides["@expo/cli"]).toBe("54.0.27");
     expect(pkg.dependencies["react-native"]).toBe("0.81.6");
-    expect(pkg.scripts.postinstall).toBe("node node_modules/@legend-apps/cli/src/init-template.cjs");
+    expect(pkg.scripts.postinstall).toBe("node node_modules/@legendapp/frame-cli/src/init-template.cjs");
   }
 });

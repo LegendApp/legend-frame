@@ -1,5 +1,5 @@
 {
-  "name": "@legend-apps/desktop-app",
+  "name": "@legendapp/frame-desktop-app",
   "version": "0.1.0-prototype.0",
   "license": "MIT",
   "main": "src/index",
@@ -24,7 +24,7 @@
       }
     }
   },
-  "legend": {
+  "frame": {
     "sdk": false,
     "nativeModules": [
       "NativeDesktopApp"

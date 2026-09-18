@@ -5,13 +5,13 @@ import { run } from "./commands";
 import { readAppConfig, readJson, stateFile, writeJson } from "./project";
 const knownTypes: Record<string, string[]> = { "public.plain-text": ["txt"], "public.text": ["txt"], "public.json": ["json"], "public.html": ["html", "htm"], "net.daringfireball.markdown": ["md", "markdown"], "public.png": ["png"], "public.jpeg": ["jpg", "jpeg"], "com.adobe.pdf": ["pdf"] };
 export function associationPlan(expo: any, executable: string) {
-  const project = expo.extra?.legend?.projectId;
+  const project = expo.extra?.frame?.projectId;
   if (typeof project !== "string" || !project) throw new Error("Windows associations require project identity");
-  const appId = `Legend.${createHash("sha256").update(project).digest("hex")}`;
+  const appId = `Frame.${createHash("sha256").update(project).digest("hex")}`;
   const protocols: string[] = [...new Set<string>(expo.scheme === undefined ? [] : Array.isArray(expo.scheme) ? expo.scheme : [expo.scheme])];
   for (const scheme of protocols) if (!/^[a-z][a-z0-9+.-]*$/i.test(scheme)) throw new Error("Invalid association scheme");
   const extensions: string[] = [];
-  for (const type of expo.extra?.legend?.documentTypes ?? []) {
+  for (const type of expo.extra?.frame?.documentTypes ?? []) {
     const names = type.extensions ?? type.contentTypes?.flatMap((uti: string) => knownTypes[uti] ?? []);
     if (!names?.length) throw new Error(`Add extensions to document type ${type.name} for Windows; its UTIs have no known extension mapping`);
     for (const name of names) {

@@ -17,11 +17,11 @@ function Find-Control([string]$AutomationId, $Pattern) {
   }
   throw "No native control/pattern for $AutomationId"
 }
-$button = Find-Control 'legend-button' ([System.Windows.Automation.InvokePattern]::Pattern)
+$button = Find-Control 'frame-button' ([System.Windows.Automation.InvokePattern]::Pattern)
 $button.Invoke()
-$input = Find-Control 'legend-input' ([System.Windows.Automation.ValuePattern]::Pattern)
+$input = Find-Control 'frame-input' ([System.Windows.Automation.ValuePattern]::Pattern)
 $input.SetValue('Native edit')
-$combo = Find-Control 'legend-select' ([System.Windows.Automation.ExpandCollapsePattern]::Pattern)
+$combo = Find-Control 'frame-select' ([System.Windows.Automation.ExpandCollapsePattern]::Pattern)
 $combo.Expand()
 $condition = [System.Windows.Automation.AndCondition]::new(
   [System.Windows.Automation.PropertyCondition]::new([System.Windows.Automation.AutomationElement]::ProcessIdProperty, $AppProcess),

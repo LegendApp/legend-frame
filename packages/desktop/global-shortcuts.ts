@@ -1,1 +1,1 @@
-export * from "@legend-apps/global-shortcuts";
+export * from "@legendapp/frame-global-shortcuts";

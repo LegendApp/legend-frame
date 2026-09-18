@@ -11,7 +11,7 @@ const framework = path.resolve(import.meta.dir, "..");
 await run(framework, ["bun", "scripts/pack.ts"]);
 const manifest = path.join(framework, "artifacts/packages/manifest.json");
 const templates = readJson(path.join(path.dirname(manifest), "templates.json"));
-const parent = mkdtempSync(path.join(os.tmpdir(), "Legend Template Checks "));
+const parent = mkdtempSync(path.join(os.tmpdir(), "Frame Template Checks "));
 const roots = [];
 for (const platform of ["macos", "windows"] as const) {
   const root = path.join(parent, platform === "macos" ? "MacSettings" : "WindowsSettings");
@@ -19,10 +19,10 @@ for (const platform of ["macos", "windows"] as const) {
   const config = readJson(path.join(root, "desktop.config.json"));
   if (config.platforms.join() !== platform) throw new Error(`Wrong ${platform} target`);
 }
-// Call the real upstream CLI from an installed consumer: no Legend creation path.
+// Call the real upstream CLI from an installed consumer: no Frame creation path.
 const consumer = roots[0]!;
 const req = createRequire(path.join(consumer, "package.json"));
-const cli = path.dirname(req.resolve("@legend-apps/cli/package.json"));
+const cli = path.dirname(req.resolve("@legendapp/frame-cli/package.json"));
 const direct = path.join(parent, "DirectUniversal");
 await run(consumer, nodeCommand(consumer, "expo-desktop", "expo-desktop", ["create-app", direct,
   "--template", path.join(path.dirname(manifest), templates.universal), "--yes", "--no-agents-md",
@@ -36,7 +36,7 @@ for (const root of roots) {
   if (["macos", "windows", "ios", "android"].some(p => existsSync(path.join(root, p)))) throw new Error("Creation unexpectedly prebuilt a native project");
   if (readdirSync(root).includes("App.windows.tsx")) throw new Error("Template contains the other starter's screen");
   const configBefore = readFileSync(path.join(root, "desktop.config.json"), "utf8");
-  await run(root, ["node", "node_modules/@legend-apps/cli/src/init-template.cjs"]);
+  await run(root, ["node", "node_modules/@legendapp/frame-cli/src/init-template.cjs"]);
   if (readFileSync(path.join(root, "desktop.config.json"), "utf8") !== configBefore) throw new Error("Initializer overwrote configuration");
   await run(root, ["node", "node_modules/typescript/bin/tsc", "--noEmit"], { capture: true });
   console.log(`PASS ${path.basename(root)}: real Expo Desktop extraction, install, identity, and TypeScript`);

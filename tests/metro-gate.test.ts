@@ -8,11 +8,11 @@ const { gate } = createRequire(import.meta.url)(
 );
 
 test("the live gate blocks incompatible or incomplete state before serving application code", () => {
-  const root = mkdtempSync(path.join(os.tmpdir(), "legend-gate-"));
+  const root = mkdtempSync(path.join(os.tmpdir(), "frame-gate-"));
   try {
-    mkdirSync(path.join(root, ".legend"));
+    mkdirSync(path.join(root, ".frame"));
     writeFileSync(path.join(root, "app.json"), JSON.stringify({ expo: { platforms: ["macos"] } }));
-    const session = path.join(root, ".legend/session.json");
+    const session = path.join(root, ".frame/session.json");
     let served = 0;
     const middleware = gate(root, () => served++);
     const response = () => ({ statusCode: 200, end(_body: string) {} });
@@ -39,12 +39,12 @@ test("the live gate blocks incompatible or incomplete state before serving appli
 
 
 test("desktop compatibility is isolated by request platform in one Metro session", () => {
-  const root = mkdtempSync(path.join(os.tmpdir(), "legend-gate-universal-"));
+  const root = mkdtempSync(path.join(os.tmpdir(), "frame-gate-universal-"));
   try {
     writeFileSync(path.join(root, "desktop.config.json"), JSON.stringify({ platforms: ["ios", "android", "web", "macos", "windows"] }));
     for (const platform of ["macos", "windows"]) {
-      mkdirSync(path.join(root, ".legend/platforms", platform), { recursive: true });
-      writeFileSync(path.join(root, ".legend/platforms", platform, "session.json"), JSON.stringify({ compatible: platform === "windows" }));
+      mkdirSync(path.join(root, ".frame/platforms", platform), { recursive: true });
+      writeFileSync(path.join(root, ".frame/platforms", platform, "session.json"), JSON.stringify({ compatible: platform === "windows" }));
     }
     const served: string[] = [];
     const middleware = gate(root, (req: any) => served.push(req.url));
@@ -54,7 +54,7 @@ test("desktop compatibility is isolated by request platform in one Metro session
       expect(response.statusCode).toBe(platform === "macos" ? 409 : 200);
     }
     expect(served).toHaveLength(4);
-    writeFileSync(path.join(root, ".legend/platforms/macos/session.json"), "{");
+    writeFileSync(path.join(root, ".frame/platforms/macos/session.json"), "{");
     const response = { statusCode: 200, end(_body: string) {} };
     middleware({ url: "/index.bundle?platform=ios" }, response);
     expect(response.statusCode).toBe(200);

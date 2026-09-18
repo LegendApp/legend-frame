@@ -1,10 +1,10 @@
 import { useState } from "react";
 import { Uniwind } from "uniwind";
 import { ScrollView, Text, View } from "react-native";
-import { Button, TextInput, Select } from "@legend-apps/ui/uniwind";
-import * as Clipboard from "@legend-apps/clipboard";
-import * as SecureStore from "@legend-apps/secure-storage";
-import * as Linking from "@legend-apps/desktop-links";
+import { Button, TextInput, Select } from "@legendapp/frame-ui/uniwind";
+import * as Clipboard from "@legendapp/frame-clipboard";
+import * as SecureStore from "@legendapp/frame-secure-storage";
+import * as Linking from "@legendapp/frame-desktop-links";
 
 const themes = [{ label: "System", value: "system" }, { label: "Light", value: "light" }, { label: "Dark", value: "dark" }];
 
@@ -48,8 +48,8 @@ export default function Settings() {
           } finally { await SecureStore.deleteItemAsync(key); }
         })}>Check secure storage</Button>
         <Button className="w-full sm:w-56" disabled={busy} onPress={() => void action(async () => {
-          await Linking.openURL("https://legendapp.com"); return "Opened Legend.";
-        })}>Open Legend</Button>
+          await Linking.openURL("https://legendapp.com"); return "Opened the Legend website.";
+        })}>Open Legend website</Button>
       </View>
       <Text accessibilityLiveRegion="polite" className="mt-3 text-sm text-foreground" testID="settings-status">{status}</Text>
     </View>

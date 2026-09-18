@@ -1,26 +1,26 @@
 #import "RNSDKTestDriver.h"
 #import <UniformTypeIdentifiers/UniformTypeIdentifiers.h>
 #import <MediaPlayer/MediaPlayer.h>
-#import <RNDesktopApp/LegendDesktop.h>
+#import <RNDesktopApp/FrameDesktop.h>
 #import <React/RCTView.h>
 #import <React/RCTViewKeyboardEvent.h>
 #import <React/RCTHandledKey.h>
 #import <React/UIView+React.h>
-@interface RCTView (LegendKeyboardTest)
+@interface RCTView (FrameKeyboardTest)
 - (BOOL)handleKeyboardEvent:(NSEvent *)event;
 @end
 // A recording dispatcher keeps the regression independent of the JS event queue.
-@interface LegendKeyboardRecorder : NSObject
+@interface FrameKeyboardRecorder : NSObject
 @property NSMutableArray *events;
 @end
-@implementation LegendKeyboardRecorder
+@implementation FrameKeyboardRecorder
 - (instancetype)init { if ((self = [super init])) _events = [NSMutableArray new]; return self; }
 - (void)sendEvent:(id<RCTEvent>)event { [self.events addObject:event]; }
 @end
 static NSDictionary *CheckKeyboardEvents(void) {
   NSMutableDictionary *checks = [NSMutableDictionary new];
   @try {
-    LegendKeyboardRecorder *recorder = [LegendKeyboardRecorder new];
+    FrameKeyboardRecorder *recorder = [FrameKeyboardRecorder new];
     RCTView *untagged = [[RCTView alloc] initWithEventDispatcher:(id)recorder];
     RCTView *tagged = [[RCTView alloc] initWithEventDispatcher:(id)recorder]; tagged.reactTag = @101;
     RCTView *noDispatcher = [RCTView new]; noDispatcher.reactTag = @102;
@@ -69,12 +69,12 @@ static void PostKey(NSString *key, NSUInteger flags) {
 }
 // Calls the AppKit destination protocol on real mounted Fabric views. This fixture
 // stays outside Go and does not synthesize system input or change the clipboard.
-@interface LegendTestDragInfo : NSObject
+@interface FrameTestDragInfo : NSObject
 @property NSPasteboard *draggingPasteboard;
 @property NSPoint draggingLocation;
 @property NSDragOperation draggingSourceOperationMask;
 @end
-@implementation LegendTestDragInfo
+@implementation FrameTestDragInfo
 @end
 static NSButton *FindButton(NSView *view, NSString *title) {
   if ([view isKindOfClass:NSButton.class] && [((NSButton *)view).title isEqual:title]) return (NSButton *)view;
@@ -96,7 +96,7 @@ static NSButton *FindControlButton(NSView *view, NSString *identifier) {
   for (NSView *child in view.subviews) { NSButton *found = FindControlButton(child, identifier); if (found) return found; }
   return nil;
 }
-@interface NSView (LegendDragTest)
+@interface NSView (FrameDragTest)
 - (NSView *)hitTest:(CGPoint)point withEvent:(id)event;
 - (void)draggingSession:(NSDraggingSession *)session endedAtPoint:(NSPoint)point operation:(NSDragOperation)operation;
 @end
@@ -111,8 +111,8 @@ RCT_EXPORT_MODULE(NativeSDKTestDriver)
 }
 - (void)call:(NSString *)method args:(NSString *)json resolve:(RCTPromiseResolveBlock)resolve reject:(RCTPromiseRejectBlock)reject {
   dispatch_async(dispatch_get_main_queue(), ^{
-    NSDictionary *args = LegendArgs(json);
-    if ([method isEqual:@"keyboardRegression"]) { resolve(LegendJSON(CheckKeyboardEvents())); return; }
+    NSDictionary *args = FrameArgs(json);
+    if ([method isEqual:@"keyboardRegression"]) { resolve(FrameJSON(CheckKeyboardEvents())); return; }
     else if ([method isEqual:@"key"]) PostKey(args[@"key"], [args[@"modifiers"] unsignedIntegerValue]);
     else if ([method isEqual:@"escape"]) {
       dispatch_after(dispatch_time(DISPATCH_TIME_NOW, 300 * NSEC_PER_MSEC), dispatch_get_main_queue(), ^{ PostKey(@"\x1b", 0); resolve(@"null"); }); return;
@@ -120,15 +120,15 @@ RCT_EXPORT_MODULE(NativeSDKTestDriver)
     else if ([method isEqual:@"menu"] || [method isEqual:@"menuState"]) {
       NSMenuItem *item = FindItem(NSApp.mainMenu, args[@"title"]);
       if (!item) { reject(@"E_TEST", @"Menu item not found", nil); return; }
-      if ([method isEqual:@"menuState"]) { resolve(LegendJSON(!item.enabled ? @"disabled" : item.state == NSControlStateValueOn ? @"checked" : @"normal")); return; }
+      if ([method isEqual:@"menuState"]) { resolve(FrameJSON(!item.enabled ? @"disabled" : item.state == NSControlStateValueOn ? @"checked" : @"normal")); return; }
       if (!item.enabled || ![NSApp sendAction:item.action to:item.target from:item]) { reject(@"E_TEST", @"Menu action refused", nil); return; }
     }
     else if ([method isEqual:@"cancelPanel"]) { [self findPanel:resolve reject:reject attempts:100]; return; }
     else if ([method isEqual:@"secondInstance"]) {
       NSTask *task = [NSTask new]; task.executableURL = NSBundle.mainBundle.executableURL;
-      task.arguments = @[@"--legend-second-instance-probe"];
-      task.terminationHandler = ^(NSTask *completed) { resolve(LegendJSON(@(completed.terminationStatus))); };
-      NSError *error; if (![task launchAndReturnError:&error]) LegendReject(reject, error);
+      task.arguments = @[@"--frame-second-instance-probe"];
+      task.terminationHandler = ^(NSTask *completed) { resolve(FrameJSON(@(completed.terminationStatus))); };
+      NSError *error; if (![task launchAndReturnError:&error]) FrameReject(reject, error);
       return;
     }
     else if ([method isEqual:@"openURLs"]) {
@@ -138,13 +138,13 @@ RCT_EXPORT_MODULE(NativeSDKTestDriver)
     }
     else if ([method isEqual:@"mediaInfo"]) {
       NSDictionary *info = MPNowPlayingInfoCenter.defaultCenter.nowPlayingInfo;
-      resolve(LegendJSON(@{ @"title": info[MPMediaItemPropertyTitle] ?: @"", @"artist": info[MPMediaItemPropertyArtist] ?: @"",
+      resolve(FrameJSON(@{ @"title": info[MPMediaItemPropertyTitle] ?: @"", @"artist": info[MPMediaItemPropertyArtist] ?: @"",
         @"position": info[MPNowPlayingInfoPropertyElapsedPlaybackTime] ?: @0,
         @"next": @(MPRemoteCommandCenter.sharedCommandCenter.nextTrackCommand.enabled), @"previous": @(MPRemoteCommandCenter.sharedCommandCenter.previousTrackCommand.enabled) })); return;
     }
     else if ([method isEqual:@"overlayInfo"]) {
       for (NSWindow *window in NSApp.windows) if ([window.identifier isEqual:args[@"identifier"]]) {
-        resolve(LegendJSON(@{ @"panel": @([window isKindOfClass:NSPanel.class]), @"canBecomeKey": @(window.canBecomeKeyWindow), @"borderless": @((window.styleMask & NSWindowStyleMaskTitled) == 0), @"transparent": @(!window.opaque), @"statusLevel": @(window.level == NSStatusWindowLevel) })); return;
+        resolve(FrameJSON(@{ @"panel": @([window isKindOfClass:NSPanel.class]), @"canBecomeKey": @(window.canBecomeKeyWindow), @"borderless": @((window.styleMask & NSWindowStyleMaskTitled) == 0), @"transparent": @(!window.opaque), @"statusLevel": @(window.level == NSStatusWindowLevel) })); return;
       }
       reject(@"E_TEST", @"Overlay window not found", nil); return;
     }
@@ -160,11 +160,11 @@ RCT_EXPORT_MODULE(NativeSDKTestDriver)
       if ([source hitTest:point withEvent:nil] != source || [source hitTest:[source convertPoint:point toView:source.superview]] != source || source.mouseDownCanMoveWindow) {
         reject(@"E_TEST", @"Drag source does not own hit testing over its child", nil); return;
       }
-      LegendTestDragInfo *info = [LegendTestDragInfo new];
+      FrameTestDragInfo *info = [FrameTestDragInfo new];
       info.draggingPasteboard = [NSPasteboard pasteboardWithUniqueName];
       info.draggingSourceOperationMask = [args[@"operation"] isEqual:@"move"] ? NSDragOperationMove : NSDragOperationCopy;
       if ([args[@"custom"] boolValue]) {
-        NSPasteboardItem *item = [NSPasteboardItem new]; [item setString:@"{\"id\":42}" forType:[UTType typeWithMIMEType:@"application/x-legend-test-item"].identifier];
+        NSPasteboardItem *item = [NSPasteboardItem new]; [item setString:@"{\"id\":42}" forType:[UTType typeWithMIMEType:@"application/x-frame-test-item"].identifier];
         [info.draggingPasteboard writeObjects:@[item]];
       } else [info.draggingPasteboard writeObjects:@[@"Native drag regression"]];
       info.draggingLocation = [destination convertPoint:NSMakePoint(12, 14) toView:nil];
@@ -189,7 +189,7 @@ RCT_EXPORT_MODULE(NativeSDKTestDriver)
       if ([method isEqual:@"buttonClick"]) [button performClick:nil];
       NSPoint center = NSMakePoint(NSMidX(button.frame), NSMidY(button.frame));
       BOOL hit = [button.superview hitTest:center withEvent:nil] == button;
-      resolve(LegendJSON(@{ @"enabled": @(button.enabled), @"title": button.title, @"native": @YES,
+      resolve(FrameJSON(@{ @"enabled": @(button.enabled), @"title": button.title, @"native": @YES,
         @"width": @(button.bounds.size.width), @"height": @(button.bounds.size.height), @"hit": @(hit) })); return;
     }
     else if ([method isEqual:@"fieldState"] || [method isEqual:@"fieldEdit"] || [method isEqual:@"selectState"] || [method isEqual:@"selectChange"]) {
@@ -202,7 +202,7 @@ RCT_EXPORT_MODULE(NativeSDKTestDriver)
           field.stringValue = args[@"value"];
           [field.delegate controlTextDidChange:[NSNotification notificationWithName:NSControlTextDidChangeNotification object:field]];
         }
-        resolve(LegendJSON(@{ @"value": field.stringValue, @"width": @(field.bounds.size.width), @"height": @(field.bounds.size.height) })); return;
+        resolve(FrameJSON(@{ @"value": field.stringValue, @"width": @(field.bounds.size.width), @"height": @(field.bounds.size.height) })); return;
       }
       if ([control isKindOfClass:NSPopUpButton.class]) {
         NSPopUpButton *select = (NSPopUpButton *)control;
@@ -210,7 +210,7 @@ RCT_EXPORT_MODULE(NativeSDKTestDriver)
           for (NSMenuItem *item in select.itemArray) if ([item.representedObject isEqual:args[@"value"]]) { [select selectItem:item]; break; }
           [select sendAction:select.action to:select.target];
         }
-        resolve(LegendJSON(@{ @"value": select.selectedItem.representedObject ?: @"", @"count": @(select.numberOfItems), @"width": @(select.bounds.size.width), @"height": @(select.bounds.size.height) })); return;
+        resolve(FrameJSON(@{ @"value": select.selectedItem.representedObject ?: @"", @"count": @(select.numberOfItems), @"width": @(select.bounds.size.width), @"height": @(select.bounds.size.height) })); return;
       }
       reject(@"E_TEST", @"Unexpected native control type", nil); return;
     }
@@ -229,7 +229,7 @@ RCT_EXPORT_MODULE(NativeSDKTestDriver)
       if (self.savedClipboard.count) [NSPasteboard.generalPasteboard writeObjects:self.savedClipboard];
       self.savedClipboard = nil;
     }
-    else { LegendInvalid(reject, @"Unknown test driver operation"); return; }
+    else { FrameInvalid(reject, @"Unknown test driver operation"); return; }
     resolve(@"null");
   });
 }

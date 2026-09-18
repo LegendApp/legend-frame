@@ -1,1 +1,1 @@
-export * from "@legend-apps/context-menu";
+export * from "@legendapp/frame-context-menu";

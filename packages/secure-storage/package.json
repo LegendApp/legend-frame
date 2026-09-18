@@ -1,5 +1,5 @@
 {
-  "name": "@legend-apps/secure-storage",
+  "name": "@legendapp/frame-secure-storage",
   "version": "0.1.0-prototype.0",
   "license": "MIT",
   "main": "src/index",
@@ -26,7 +26,7 @@
       }
     }
   },
-  "legend": {
+  "frame": {
     "sdk": true,
     "nativeModules": [
       "NativeDesktopSecureStorage"
@@ -37,11 +37,11 @@
       "windows"
     ],
     "requires": [
-      "@legend-apps/desktop-app"
+      "@legendapp/frame-desktop-app"
     ]
   },
   "dependencies": {
-    "@legend-apps/desktop-app": "0.1.0-prototype.0"
+    "@legendapp/frame-desktop-app": "0.1.0-prototype.0"
   },
   "peerDependenciesMeta": {
     "expo-secure-store": {

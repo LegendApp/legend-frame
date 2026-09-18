@@ -27,16 +27,16 @@ for (const directory of ["packages", "fixtures"]) for (const name of readdirSync
 }
 test("SDK production selection retains host and only the imported capability pods", () => {
   const packages = nativePackages(root);
-  const result = selection(packages, new Set(["@legend-apps/clipboard"]));
-  expect(result.included.map(pkg => pkg.name)).toContain("@legend-apps/desktop-app");
-  expect(result.included.map(pkg => pkg.name)).toContain("@legend-apps/clipboard");
+  const result = selection(packages, new Set(["@legendapp/frame-clipboard"]));
+  expect(result.included.map(pkg => pkg.name)).toContain("@legendapp/frame-desktop-app");
+  expect(result.included.map(pkg => pkg.name)).toContain("@legendapp/frame-clipboard");
   expect(result.excluded.map(pkg => pkg.name)).toContain("react-native-webview");
   expect(result.excluded.map(pkg => pkg.name)).toContain("@op-engineering/op-sqlite");
   for (const name of ["desktop-windows", "desktop-links", "desktop-shortcuts", "file-dialog", "native-menu", "context-menu", "secure-storage", "file-system", "notifications", "tray", "updates", "processes", "system", "global-shortcuts", "message-dialog", "drag-drop"])
-    expect(result.excluded.map(pkg => pkg.name)).toContain(`@legend-apps/${name}`);
+    expect(result.excluded.map(pkg => pkg.name)).toContain(name === "desktop" ? "@legendapp/frame" : `@legendapp/frame-${name}`);
 });
 test("test-only modules cannot leak into Go or distribution binaries", () => {
-  const packages = [{ name: "@legend-apps/sdk-test-driver", json: { legend: { testOnly: true } } }] as any;
+  const packages = [{ name: "@legendapp/frame-sdk-test-driver", json: { frame: { testOnly: true } } }] as any;
   expect(() => validateBuildModules("go", packages)).toThrow("test fixture");
   expect(() => validateBuildModules("release", packages)).toThrow("Test-only");
   expect(() => validateBuildModules("dev", packages)).not.toThrow();

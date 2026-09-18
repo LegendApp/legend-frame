@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState } from "react";
 import { Text, View } from "react-native";
-import { TextInput } from "@legend-apps/ui";
-import { createAuthSession, type AuthSession } from "@legend-apps/auth-session";
+import { TextInput } from "@legendapp/frame-ui";
+import { createAuthSession, type AuthSession } from "@legendapp/frame-auth-session";
 import { ActionButton } from "./ActionButton";
 export function AuthDemo() {
   const session = useRef<AuthSession | undefined>(undefined), active = useRef(false);

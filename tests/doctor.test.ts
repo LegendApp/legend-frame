@@ -6,7 +6,7 @@ import os from "node:os";
 test.skipIf(process.platform !== "darwin" || process.arch !== "arm64")(
   "missing Xcode produces an actionable diagnostic without starting a build",
   async () => {
-    const root = mkdtempSync(path.join(os.tmpdir(), "legend-doctor-"));
+    const root = mkdtempSync(path.join(os.tmpdir(), "frame-doctor-"));
     try {
       for (const command of ["bun", "node", "pod"])
         symlinkSync(

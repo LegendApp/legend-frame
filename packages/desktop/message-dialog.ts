@@ -1,1 +1,1 @@
-export * from "@legend-apps/message-dialog";
+export * from "@legendapp/frame-message-dialog";

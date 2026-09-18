@@ -4,8 +4,8 @@ import os from "node:os";
 import path from "node:path";
 import { readAppConfig, prepareConfig, writeUpdates, projectEnvironment, goConfigurationIssues } from "../packages/cli/src/project";
 import { resolveHelpers, copyHelpers } from "../packages/cli/src/helpers";
-import { toExpo } from "@legend-apps/desktop-config/config.cjs";
-import { validateWindow } from "@legend-apps/window-options";
+import { toExpo } from "@legendapp/frame-desktop-config/config.cjs";
+import { validateWindow } from "@legendapp/frame-window-options";
 const base = { name: "Demo", projectId: "demo", version: "1.0.0", macos: { bundleIdentifier: "com.example.demo" } };
 function fixture(run: (root: string) => void) { const root = mkdtempSync(path.join(os.tmpdir(), "desktop-config-")); try { run(root); } finally { rmSync(root, { recursive: true, force: true }); } }
 test("canonical desktop config drives Go and generated Expo configuration", () => fixture(root => {
@@ -13,7 +13,7 @@ test("canonical desktop config drives Go and generated Expo configuration", () =
   writeFileSync(path.join(root, "desktop.config.json"), JSON.stringify(value));
   writeFileSync(path.join(root, "app.json"), JSON.stringify({ expo: { name: "stale" } }));
   expect(readAppConfig(root).expo.name).toBe("Demo");
-  expect(JSON.parse(projectEnvironment(root).LEGEND_WINDOW_CONFIG!)).toEqual(value.window);
+  expect(JSON.parse(projectEnvironment(root).FRAME_WINDOW_CONFIG!)).toEqual(value.window);
   expect(goConfigurationIssues(readAppConfig(root))).toEqual([]);
   prepareConfig(root);
   expect(JSON.parse(readFileSync(path.join(root, "app.json"), "utf8"))).toEqual(toExpo(value));
@@ -23,7 +23,7 @@ test("updates writes canonical source and leaves generated config to preparation
   writeFileSync(path.join(root, "desktop.config.json"), JSON.stringify(base));
   const updates = { feedURL: "https://example.com/appcast.xml", publicKey: Buffer.alloc(32, 1).toString("base64") };
   writeUpdates(root, updates);
-  expect(readAppConfig(root).expo.extra.legend.updates).toEqual(updates);
+  expect(readAppConfig(root).expo.extra.frame.updates).toEqual(updates);
   expect(goConfigurationIssues(readAppConfig(root)).join(" ")).toContain("Update feed");
 }));
 test("configuration catches unknown keys and invalid window constraints", () => {

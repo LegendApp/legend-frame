@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useState } from "react";
 import { Text, View } from "react-native";
-import { writeText } from "@legend-apps/desktop/files";
-import { Button } from "@legend-apps/ui";
+import { writeText } from "@legendapp/frame/files";
+import { Button } from "@legendapp/frame-ui";
 import { runFileStreamChecks } from "./file-stream-checks";
 export function FileStreamChecks({ report }: { report?: string }) {
   const [result, setResult] = useState("Ready to test streaming I/O and recycle one disposable test file.");

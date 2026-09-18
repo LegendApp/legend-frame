@@ -1,5 +1,5 @@
 const fs = require("node:fs");
-const { readConfig, statePath, supportedPlatforms } = require("@legend-apps/desktop-config/config.cjs");
+const { readConfig, statePath, supportedPlatforms } = require("@legendapp/frame-desktop-config/config.cjs");
 
 exports.nativeConfig = root => {
   const { expo } = readConfig(root);
@@ -20,7 +20,7 @@ exports.nativeConfig = root => {
 
 exports.metroConfig = root => {
   const platform = readConfig(root).expo.platforms[0];
-  if ((process.env.LEGEND_DEV_SESSION !== "1" || !supportedPlatforms(root).some(p => ["macos", "windows"].includes(p))) && ["ios", "android", "web"].includes(platform)) {
+  if ((process.env.FRAME_DEV_SESSION !== "1" || !supportedPlatforms(root).some(p => ["macos", "windows"].includes(p))) && ["ios", "android", "web"].includes(platform)) {
     return require(require.resolve("expo/metro-config", { paths: [root] })).getDefaultConfig(root);
   }
   const config = require(require.resolve("expo-desktop-metro-config", { paths: [root] })).makeMetroConfig(root);

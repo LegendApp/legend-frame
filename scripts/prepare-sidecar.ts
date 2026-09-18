@@ -6,7 +6,7 @@ import { create } from "../packages/cli/src/create";
 import { run } from "../packages/cli/src/commands";
 import { readJson, writeJson } from "../packages/cli/src/project";
 const framework = path.resolve(import.meta.dir, "..");
-const root = path.resolve(process.argv[2] ?? ".legend/examples/HelperDemo");
+const root = path.resolve(process.argv[2] ?? ".frame/examples/HelperDemo");
 if (existsSync(root)) throw Error("Choose a fresh destination; this script does not overwrite apps.");
 if (process.platform !== "darwin" && process.platform !== "win32") throw Error("Create this desktop example on macOS or Windows.");
 const arch = process.platform === "win32" ? windowsArchitecture() : process.arch;
@@ -21,7 +21,7 @@ const directory = path.join(root, "helpers/worker/binaries", target); mkdirSync(
 cpSync(path.join(framework, "examples/sidecar/worker.c"), path.join(root, "helpers/worker/worker.c"));
 const executable = platform === "macos" ? "worker" : "worker.exe";
 await run(directory, platform === "macos" ? ["cc", "../../worker.c", "-o", executable] : ["cl.exe", "/O2", "/MT", "../../worker.c", `/Fe:${executable}`]);
-const pkg = readJson(path.join(root, "package.json")); pkg.dependencies["base64-js"] = "1.5.1"; pkg.dependencies["@legend-apps/ui"] = pkg.overrides["@legend-apps/ui"]; writeJson(path.join(root, "package.json"), pkg);
+const pkg = readJson(path.join(root, "package.json")); pkg.dependencies["base64-js"] = "1.5.1"; pkg.dependencies["@legendapp/frame-ui"] = pkg.overrides["@legendapp/frame-ui"]; writeJson(path.join(root, "package.json"), pkg);
 const config = readJson(path.join(root, "desktop.config.json"));
 config.helpers = { worker: { [target]: { directory: `helpers/worker/binaries/${target}`, executable } } };
 writeJson(path.join(root, "desktop.config.json"), config);

@@ -9,7 +9,7 @@ import { readJson, writeJson } from "../packages/cli/src/project";
 // Maintainer command, never an install/start hook. Generate workspace install-time
 // patches from the same source recipes used for the distributable SDK archives.
 const root = path.resolve(import.meta.dir, "..");
-const cache = path.join(root, ".legend/workspace-patches");
+const cache = path.join(root, ".frame/workspace-patches");
 mkdirSync(cache, { recursive: true });
 const archives: Record<string, string> = { ...await packRuntimes(root, cache), ...await packWindowsLibraries(cache) };
 const pins = readJson(path.join(root, "patches/workspace/upstream.json"));
@@ -29,7 +29,7 @@ for (const [name, pin] of Object.entries(pins) as [string, { version: string; ur
   await run(before, ["tar", "-xzf", download, "--strip-components=1"], { capture: true });
   cpSync(before, after, { recursive: true });
   await run(after, ["tar", "-xzf", path.join(cache, archives[name]!)], { capture: true });
-  for (const dir of [before, after]) rmSync(path.join(dir, ".legend"), { recursive: true, force: true });
+  for (const dir of [before, after]) rmSync(path.join(dir, ".frame"), { recursive: true, force: true });
   const diff = Bun.spawn(["git", "diff", "--no-index", "--binary", "--", "a", "b"], { cwd: work, stdout: "pipe", stderr: "pipe" });
   const [output, error, code] = await Promise.all([new Response(diff.stdout).text(), new Response(diff.stderr).text(), diff.exited]);
   if (code !== 0 && code !== 1) throw new Error(error);
@@ -38,6 +38,6 @@ for (const [name, pin] of Object.entries(pins) as [string, { version: string; ur
   patches[`${name}@${pin.version}`] = file;
 }
 const pkg = readJson(path.join(root, "package.json"));
-pkg.legendWorkspacePatches = patches;
+pkg.frameWorkspacePatches = patches;
 writeJson(path.join(root, "package.json"), pkg);
 console.log("Updated workspace install patches. Run bun install --force to apply them.");

@@ -1,23 +1,23 @@
 #import "RNDesktopWindows.h"
-#import <RNDesktopApp/LegendDesktop.h>
+#import <RNDesktopApp/FrameDesktop.h>
 #import <React-RCTAppDelegate/RCTRootViewFactory.h>
 #import <React/RCTSurfaceHostingView.h>
 
 // Overlay controls accept mouse input without taking keyboard focus from an app.
-@interface LegendOverlayPanel : NSPanel
+@interface FrameOverlayPanel : NSPanel
 @end
-@implementation LegendOverlayPanel
+@implementation FrameOverlayPanel
 - (BOOL)canBecomeKeyWindow { return NO; }
 - (BOOL)canBecomeMainWindow { return NO; }
 @end
 static void Show(NSWindow *window) {
-  if ([window isKindOfClass:LegendOverlayPanel.class]) [window orderFrontRegardless];
+  if ([window isKindOfClass:FrameOverlayPanel.class]) [window orderFrontRegardless];
   else [window makeKeyAndOrderFront:nil];
 }
-@protocol LegendRootFactory
+@protocol FrameRootFactory
 - (RCTRootViewFactory *)rootViewFactory;
 @end
-@interface LegendWindowDelegate : NSObject <NSWindowDelegate>
+@interface FrameWindowDelegate : NSObject <NSWindowDelegate>
 @property NSString *windowID;
 @property BOOL guarded;
 @property BOOL allowingClose;
@@ -26,27 +26,27 @@ static void Show(NSWindow *window) {
 - (void)requestClose;
 @end
 static NSMutableDictionary<NSString *, NSWindow *> *windows;
-static NSMutableDictionary<NSString *, LegendWindowDelegate *> *delegates;
+static NSMutableDictionary<NSString *, FrameWindowDelegate *> *delegates;
 static NSWindow *Window(NSString *key) {
   if (!windows) windows = [NSMutableDictionary new];
   NSWindow *window = windows[key];
   if (!window && [key isEqual:@"main"]) {
     for (NSWindow *candidate in NSApp.windows) {
-      if ([candidate.identifier isEqual:@"legend.main"]) { window = candidate; break; }
+      if ([candidate.identifier isEqual:@"frame.main"]) { window = candidate; break; }
     }
     if (window) windows[key] = window;
   }
   return window;
 }
-static void Event(NSString *type, NSString *key) { LegendEmit(@{ @"type": type, @"windowId": key }); }
-@implementation LegendWindowDelegate
+static void Event(NSString *type, NSString *key) { FrameEmit(@{ @"type": type, @"windowId": key }); }
+@implementation FrameWindowDelegate
 - (void)requestClose {
   if (self.pending) return;
   self.pending = YES; NSUInteger request = ++self.request;
-  LegendEmit(@{ @"type": @"beforeClose", @"windowId": self.windowID, @"requestId": @(request) });
-  __weak LegendWindowDelegate *weakSelf = self;
+  FrameEmit(@{ @"type": @"beforeClose", @"windowId": self.windowID, @"requestId": @(request) });
+  __weak FrameWindowDelegate *weakSelf = self;
   dispatch_after(dispatch_time(DISPATCH_TIME_NOW, 30 * NSEC_PER_SEC), dispatch_get_main_queue(), ^{
-    LegendWindowDelegate *delegate = weakSelf;
+    FrameWindowDelegate *delegate = weakSelf;
     if (delegate.request == request) delegate.pending = NO;
   });
 }
@@ -81,13 +81,13 @@ static void Event(NSString *type, NSString *key) { LegendEmit(@{ @"type": type, 
 static void InstallDelegate(NSWindow *window, NSString *key) {
   if (!delegates) delegates = [NSMutableDictionary new];
   if (delegates[key]) return;
-  LegendWindowDelegate *delegate = [LegendWindowDelegate new];
+  FrameWindowDelegate *delegate = [FrameWindowDelegate new];
   delegate.windowID = key;
   delegates[key] = delegate;
   window.delegate = delegate;
 }
 static void RequestClose(NSWindow *window, NSString *key) {
-  LegendWindowDelegate *delegate = delegates[key];
+  FrameWindowDelegate *delegate = delegates[key];
   if (delegate.guarded && !delegate.allowingClose) { [delegate requestClose]; return; }
   if (window.sheetParent) [window.sheetParent endSheet:window];
   [window close];
@@ -96,7 +96,7 @@ static NSDictionary *Frame(NSRect frame) {
   return @{ @"x": @(frame.origin.x), @"y": @(frame.origin.y), @"width": @(frame.size.width), @"height": @(frame.size.height) };
 }
 static NSDictionary *Info(NSString *key, NSWindow *window) {
-  return @{ @"id": key, @"kind": [window isKindOfClass:LegendOverlayPanel.class] ? @"overlay" : @"window", @"title": window.title, @"visible": @(window.visible), @"focused": @(window.keyWindow),
+  return @{ @"id": key, @"kind": [window isKindOfClass:FrameOverlayPanel.class] ? @"overlay" : @"window", @"title": window.title, @"visible": @(window.visible), @"focused": @(window.keyWindow),
     @"resizable": @((window.styleMask & NSWindowStyleMaskResizable) != 0), @"alwaysOnTop": @(window.level >= NSFloatingWindowLevel),
     @"minWidth": @(window.contentMinSize.width), @"maxWidth": @(window.contentMaxSize.width),
     @"minimized": @(window.miniaturized), @"fullscreen": @((window.styleMask & NSWindowStyleMaskFullScreen) != 0), @"frame": Frame(window.frame) };
@@ -106,7 +106,7 @@ RCT_EXPORT_MODULE(NativeDesktopWindowManager)
 + (BOOL)requiresMainQueueSetup { return YES; }
 - (void)call:(NSString *)method args:(NSString *)json resolve:(RCTPromiseResolveBlock)resolve reject:(RCTPromiseRejectBlock)reject {
   dispatch_async(dispatch_get_main_queue(), ^{
-    NSDictionary *args = LegendArgs(json);
+    NSDictionary *args = FrameArgs(json);
     NSString *key = [args[@"id"] isKindOfClass:NSString.class] ? args[@"id"] : @"main";
     NSWindow *main = Window(@"main");
     if (main) InstallDelegate(main, @"main");
@@ -114,19 +114,19 @@ RCT_EXPORT_MODULE(NativeDesktopWindowManager)
       NSMutableArray *result = [NSMutableArray new];
       for (NSScreen *screen in NSScreen.screens) [result addObject:@{ @"id": [screen.deviceDescription[@"NSScreenNumber"] stringValue],
         @"name": screen.localizedName, @"frame": Frame(screen.frame), @"workArea": Frame(screen.visibleFrame), @"scale": @(screen.backingScaleFactor) }];
-      resolve(LegendJSON(result)); return;
+      resolve(FrameJSON(result)); return;
     }
     if ([method isEqual:@"list"]) {
       NSMutableArray *result = [NSMutableArray new];
       for (NSString *windowID in windows) [result addObject:Info(windowID, windows[windowID])];
-      resolve(LegendJSON(result)); return;
+      resolve(FrameJSON(result)); return;
     }
     NSWindow *window = Window(key);
     if ([method isEqual:@"open"]) {
-      if (!key.length || [key isEqual:@"main"]) { LegendInvalid(reject, @"Secondary windows need a non-main id"); return; }
+      if (!key.length || [key isEqual:@"main"]) { FrameInvalid(reject, @"Secondary windows need a non-main id"); return; }
       NSWindow *parent = args[@"parentId"] ? Window(args[@"parentId"]) : nil;
       if (args[@"parentId"] && !parent) { reject(@"E_NOT_FOUND", @"Parent window not found", nil); return; }
-      if (parent && parent == window) { LegendInvalid(reject, @"Invalid parent window"); return; }
+      if (parent && parent == window) { FrameInvalid(reject, @"Invalid parent window"); return; }
       if ([args[@"modal"] boolValue] && (!parent || parent.attachedSheet)) { reject(@"E_BUSY", @"Modal window requires an available parent", nil); return; }
       if (!window) {
         id delegate = NSApp.delegate;
@@ -134,8 +134,8 @@ RCT_EXPORT_MODULE(NativeDesktopWindowManager)
         CGFloat width = args[@"width"] ? [args[@"width"] doubleValue] : 640;
         CGFloat height = args[@"height"] ? [args[@"height"] doubleValue] : 480;
         BOOL overlay = [args[@"kind"] isEqual:@"overlay"];
-        if (overlay && [args[@"modal"] boolValue]) { LegendInvalid(reject, @"An overlay cannot be modal"); return; }
-        window = [[(overlay ? LegendOverlayPanel.class : NSWindow.class) alloc] initWithContentRect:NSMakeRect(0, 0, width, height)
+        if (overlay && [args[@"modal"] boolValue]) { FrameInvalid(reject, @"An overlay cannot be modal"); return; }
+        window = [[(overlay ? FrameOverlayPanel.class : NSWindow.class) alloc] initWithContentRect:NSMakeRect(0, 0, width, height)
           styleMask:NSWindowStyleMaskTitled | NSWindowStyleMaskClosable | NSWindowStyleMaskMiniaturizable | NSWindowStyleMaskResizable | (overlay ? NSWindowStyleMaskNonactivatingPanel : 0)
           backing:NSBackingStoreBuffered defer:NO];
         if (overlay) {
@@ -143,34 +143,34 @@ RCT_EXPORT_MODULE(NativeDesktopWindowManager)
           window.collectionBehavior = NSWindowCollectionBehaviorCanJoinAllSpaces | NSWindowCollectionBehaviorFullScreenAuxiliary;
         }
         window.releasedWhenClosed = NO;
-        window.identifier = [@"legend." stringByAppendingString:key];
-        window.title = args[@"title"] ?: LegendContext()[@"name"];
-        window.contentView = [(id<LegendRootFactory>)delegate rootViewFactory] ? [[(id<LegendRootFactory>)delegate rootViewFactory]
-          viewWithModuleName:@"main" initialProperties:LegendInitialProps(key, args[@"props"])] : nil;
-        window.contentView = LegendWindowContent(window.contentView);
-        LegendApplyWindowOptions(window, args);
-        LegendRestoreWindow(window, key, args);
+        window.identifier = [@"frame." stringByAppendingString:key];
+        window.title = args[@"title"] ?: FrameContext()[@"name"];
+        window.contentView = [(id<FrameRootFactory>)delegate rootViewFactory] ? [[(id<FrameRootFactory>)delegate rootViewFactory]
+          viewWithModuleName:@"main" initialProperties:FrameInitialProps(key, args[@"props"])] : nil;
+        window.contentView = FrameWindowContent(window.contentView);
+        FrameApplyWindowOptions(window, args);
+        FrameRestoreWindow(window, key, args);
         windows[key] = window;
         InstallDelegate(window, key);
         Event(@"opened", key);
       }
       if ([args[@"modal"] boolValue]) [parent beginSheet:window completionHandler:nil];
       else { NSInteger level = window.level; if (parent) [parent addChildWindow:window ordered:NSWindowAbove]; Show(window); window.level = level; }
-      resolve(LegendJSON(Info(key, window))); return;
+      resolve(FrameJSON(Info(key, window))); return;
     }
     if (!window) { reject(@"E_NOT_FOUND", @"Window does not exist", nil); return; }
-    if ([method isEqual:@"info"]) { resolve(LegendJSON(Info(key, window))); return; }
+    if ([method isEqual:@"info"]) { resolve(FrameJSON(Info(key, window))); return; }
     if ([method isEqual:@"close"]) RequestClose(window, key);
     else if ([method isEqual:@"closeGuard"]) { delegates[key].guarded = [args[@"enabled"] boolValue]; delegates[key].pending = NO; delegates[key].request++; }
     else if ([method isEqual:@"replyClose"]) {
-      LegendWindowDelegate *delegate = delegates[key];
+      FrameWindowDelegate *delegate = delegates[key];
       if (delegate.pending && delegate.request == [args[@"requestId"] unsignedIntegerValue]) {
         delegate.pending = NO;
         if ([args[@"allow"] boolValue]) { delegate.allowingClose = YES; RequestClose(window, key); delegate.allowingClose = NO; }
       }
     }
     else if ([method isEqual:@"show"]) { [window deminiaturize:nil]; Show(window); }
-    else if ([method isEqual:@"options"]) LegendApplyWindowOptions(window, args[@"options"]);
+    else if ([method isEqual:@"options"]) FrameApplyWindowOptions(window, args[@"options"]);
     else if ([method isEqual:@"maximize"]) { if (!window.zoomed) [window zoom:nil]; }
     else if ([method isEqual:@"unmaximize"]) { if (window.zoomed) [window zoom:nil]; }
     else if ([method isEqual:@"center"]) [window center];
@@ -185,7 +185,7 @@ RCT_EXPORT_MODULE(NativeDesktopWindowManager)
       NSDictionary *frame = args[@"frame"];
       [window setFrame:NSMakeRect([frame[@"x"] doubleValue], [frame[@"y"] doubleValue], [frame[@"width"] doubleValue], [frame[@"height"] doubleValue]) display:YES];
     }
-    else { LegendInvalid(reject, @"Unknown window operation"); return; }
+    else { FrameInvalid(reject, @"Unknown window operation"); return; }
     resolve(@"null");
   });
 }

@@ -10,7 +10,7 @@ type Upstream = { version: string; url: string; integrity: string };
 /** Recreate patched packages from integrity-checked published sources. */
 export async function packCameraPackages(names?: string[]) {
   const upstream: Record<string, Upstream> = readJson(path.join(framework, "patches/camera/upstream.json"));
-  const cache = path.join(framework, ".legend/camera-packages");
+  const cache = path.join(framework, ".frame/camera-packages");
   const output = path.join(framework, "artifacts/camera/packages");
   mkdirSync(cache, { recursive: true }); mkdirSync(output, { recursive: true });
   const manifest: Record<string, string> = {};
@@ -31,7 +31,7 @@ export async function packCameraPackages(names?: string[]) {
     if (existsSync(patch)) await run(stage, ["patch", "--batch", "--fuzz=0", "-p1", "-i", patch], { capture: true });
     const hash = createHash("sha256").update(info.integrity).update(existsSync(patch) ? readFileSync(patch) : "").digest("hex").slice(0, 12);
     const file = `${name}-${info.version}-macos-${hash}.tgz`;
-    await run(stage, ["tar", "--exclude=.legend", "-czf", path.join(output, file), "."], { capture: true });
+    await run(stage, ["tar", "--exclude=.frame", "-czf", path.join(output, file), "."], { capture: true });
     manifest[name] = path.join(output, file);
   }
   writeJson(path.join(output, "manifest.json"), manifest);
@@ -45,7 +45,7 @@ export async function installCameraPackages(root: string, probeOnly = false) {
   await run(probe, ["bun", "pm", "pack", "--filename", output], { capture: true });
   const hash = createHash("sha256").update(readFileSync(output)).digest("hex").slice(0, 12);
   const immutable = output.replace(".tgz", `-${hash}.tgz`); cpSync(output, immutable);
-  packages["@legend-apps/nitro-view-probe"] = immutable;
+  packages["@legendapp/frame-nitro-view-probe"] = immutable;
   const pkg = readJson(path.join(root, "package.json"));
   Object.assign(pkg.dependencies, packages); Object.assign(pkg.overrides, packages);
   writeJson(path.join(root, "package.json"), pkg);

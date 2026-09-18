@@ -1,1 +1,1 @@
-export * from "@legend-apps/webview";
+export * from "@legendapp/frame-webview";

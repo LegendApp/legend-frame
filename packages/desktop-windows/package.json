@@ -1,5 +1,5 @@
 {
-  "name": "@legend-apps/desktop-windows",
+  "name": "@legendapp/frame-desktop-windows",
   "version": "0.1.0-prototype.0",
   "license": "MIT",
   "main": "src/index",
@@ -23,7 +23,7 @@
       }
     }
   },
-  "legend": {
+  "frame": {
     "sdk": true,
     "nativeModules": [
       "NativeDesktopWindowManager"
@@ -33,11 +33,11 @@
       "macos"
     ],
     "requires": [
-      "@legend-apps/desktop-app"
+      "@legendapp/frame-desktop-app"
     ]
   },
   "dependencies": {
-    "@legend-apps/desktop-app": "0.1.0-prototype.0",
-    "@legend-apps/window-options": "0.1.0-prototype.0"
+    "@legendapp/frame-desktop-app": "0.1.0-prototype.0",
+    "@legendapp/frame-window-options": "0.1.0-prototype.0"
   }
 }

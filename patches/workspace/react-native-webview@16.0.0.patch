@@ -7,7 +7,7 @@ index 7310e4e..2dafc1f 100644
      "title": "Webview",
      "type": "Component"
 +  },
-+  "legend": {
++  "frame": {
 +    "sdk": true,
 +    "windowsAdapter": true,
 +    "upstreamIntegrity": "sha512-KIg5Yhy04lQfHdXC1JQPM+0kftMfPnH6AqDH7v6YskQ9kzfUacooofOFRmbaZHASq/0WY87Fx0peiFETFjOcCg=="

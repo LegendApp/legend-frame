@@ -1,1 +1,1 @@
-export * from "@legend-apps/sqlite";
+export * from "@legendapp/frame-sqlite";

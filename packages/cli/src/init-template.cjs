@@ -1,9 +1,9 @@
 const fs = require('node:fs');
 const path = require('node:path');
-const { prepareConfig, toExpo } = require('@legend-apps/desktop-config/config.cjs');
+const { prepareConfig, toExpo } = require('@legendapp/frame-desktop-config/config.cjs');
 
 // Expo Desktop assigns the application names and native IDs. Initialize only
-// Legend-owned configuration, once, after its template dependencies are installed.
+// frame-owned configuration, once, after its template dependencies are installed.
 function initializeTemplate(root) {
   const file = path.join(root, 'desktop.config.json');
   if (!fs.existsSync(file)) return;

@@ -1,5 +1,5 @@
 {
-  "name": "@legend-apps/file-system",
+  "name": "@legendapp/frame-file-system",
   "version": "0.1.0-prototype.0",
   "license": "MIT",
   "main": "src/index.ts",
@@ -25,7 +25,7 @@
       }
     }
   },
-  "legend": {
+  "frame": {
     "sdk": true,
     "nativeModules": [
       "NativeDesktopFileSystem"
@@ -36,11 +36,11 @@
       "windows"
     ],
     "requires": [
-      "@legend-apps/desktop-app"
+      "@legendapp/frame-desktop-app"
     ]
   },
   "dependencies": {
-    "@legend-apps/desktop-app": "0.1.0-prototype.0",
+    "@legendapp/frame-desktop-app": "0.1.0-prototype.0",
     "base64-js": "1.5.1"
   }
 }

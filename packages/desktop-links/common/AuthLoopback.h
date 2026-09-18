@@ -19,7 +19,7 @@
 #include <stdexcept>
 #include <algorithm>
 #include <cctype>
-namespace legend {
+namespace frame {
 #ifdef _WIN32
 using AuthSocket = SOCKET;
 static constexpr AuthSocket InvalidSocket = INVALID_SOCKET;

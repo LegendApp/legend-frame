@@ -5,9 +5,9 @@
 #include <vector>
 #include <optional>
 #include <winrt/Microsoft.ReactNative.Composition.h>
-namespace LegendWin {
+namespace FrameWin {
 namespace Composition = winrt::Microsoft::ReactNative::Composition;
-static React::ReactPropertyId<bool> secondaryProperty{L"Legend", L"SecondaryRuntime"};
+static React::ReactPropertyId<bool> secondaryProperty{L"Frame", L"SecondaryRuntime"};
 struct Worker {
   std::string name, kind;
   React::ReactNativeHost host{nullptr}; React::ReactContext context;
@@ -125,25 +125,25 @@ static void RegisterRuntimeSurface(React::IReactPackageBuilder const &package) {
   });
 }
 }
-REACT_MODULE(LegendThreadedRuntime, L"ThreadedRuntime")
-struct LegendThreadedRuntime {
+REACT_MODULE(FrameThreadedRuntime, L"ThreadedRuntime")
+struct FrameThreadedRuntime {
   using Promise = winrt::Microsoft::ReactNative::ReactPromise<void>;
   winrt::Microsoft::ReactNative::ReactContext context; std::shared_ptr<bool> owner;
-  REACT_INIT(Initialize) void Initialize(winrt::Microsoft::ReactNative::ReactContext const &value) noexcept { context = value; if (!LegendWin::IsSecondary(context)) { owner = std::make_shared<bool>(true); context.UIDispatcher().Post([token = owner]() { LegendWin::StopWorkers(); LegendWin::runtimeOwner = token; }); } }
-  ~LegendThreadedRuntime() { if (owner) context.UIDispatcher().Post([token = owner]() { if (LegendWin::runtimeOwner == token) { LegendWin::StopWorkers(); LegendWin::runtimeOwner.reset(); } }); }
+  REACT_INIT(Initialize) void Initialize(winrt::Microsoft::ReactNative::ReactContext const &value) noexcept { context = value; if (!FrameWin::IsSecondary(context)) { owner = std::make_shared<bool>(true); context.UIDispatcher().Post([token = owner]() { FrameWin::StopWorkers(); FrameWin::runtimeOwner = token; }); } }
+  ~FrameThreadedRuntime() { if (owner) context.UIDispatcher().Post([token = owner]() { if (FrameWin::runtimeOwner == token) { FrameWin::StopWorkers(); FrameWin::runtimeOwner.reset(); } }); }
   template<typename F> void UI(F action, Promise promise) { context.UIDispatcher().Post([action, promise]() { try { action(); promise.Resolve(); } catch (winrt::hresult_error const &error) { promise.Reject(winrt::Microsoft::ReactNative::ReactError{"E_RUNTIME", winrt::to_string(error.message())}); } catch (std::exception const &error) { promise.Reject(error.what()); } }); }
   REACT_METHOD(prewarmRuntime) void prewarmRuntime(std::string name, Promise promise) noexcept { prewarmRuntimeWithOptions(name, "threaded-runtime", false, promise); }
   REACT_METHOD(prewarmRuntimeWithOptions) void prewarmRuntimeWithOptions(std::string name, std::string kind, bool useMainNativeModules, Promise promise) noexcept {
     if (useMainNativeModules) { promise.Reject(winrt::Microsoft::ReactNative::ReactError{"E_RUNTIME_OPTIONS", "Windows workers own independent native module instances; useMainNativeModules is not supported"}); return; }
-    context.UIDispatcher().Post([name, kind, promise]() { try { auto worker = LegendWin::GetWorker(name, kind); LegendWin::WhenReady(worker, [promise](std::string const &error) { if (error.empty()) promise.Resolve(); else promise.Reject(error.c_str()); }); } catch (winrt::hresult_error const &error) { promise.Reject(winrt::to_string(error.message()).c_str()); } });
+    context.UIDispatcher().Post([name, kind, promise]() { try { auto worker = FrameWin::GetWorker(name, kind); FrameWin::WhenReady(worker, [promise](std::string const &error) { if (error.empty()) promise.Resolve(); else promise.Reject(error.c_str()); }); } catch (winrt::hresult_error const &error) { promise.Reject(winrt::to_string(error.message()).c_str()); } });
   }
   REACT_METHOD(notifyRuntimeReady) void notifyRuntimeReady(std::string, Promise promise) noexcept { promise.Resolve(); /* InstanceLoaded gates calls after the complete worker bundle. */ }
   REACT_METHOD(dispatchHeadlessTask) void dispatchHeadlessTask(std::string name, std::string task, std::string payload, Promise promise) noexcept {
-    context.UIDispatcher().Post([name, task, payload, promise]() { try { auto worker = LegendWin::GetWorker(name); LegendWin::WhenReady(worker, [worker, task, payload, promise](std::string const &error) { if (!error.empty()) { promise.Reject(error.c_str()); return; } worker->context.CallJSFunction(L"ThreadedRuntimeHeadlessTaskRunner", L"run", task, payload, worker->name); promise.Resolve(); }); } catch (winrt::hresult_error const &error) { promise.Reject(winrt::to_string(error.message()).c_str()); } });
+    context.UIDispatcher().Post([name, task, payload, promise]() { try { auto worker = FrameWin::GetWorker(name); FrameWin::WhenReady(worker, [worker, task, payload, promise](std::string const &error) { if (!error.empty()) { promise.Reject(error.c_str()); return; } worker->context.CallJSFunction(L"ThreadedRuntimeHeadlessTaskRunner", L"run", task, payload, worker->name); promise.Resolve(); }); } catch (winrt::hresult_error const &error) { promise.Reject(winrt::to_string(error.message()).c_str()); } });
   }
   REACT_METHOD(callRuntimeFunction) void callRuntimeFunction(std::string name, std::string function, std::string args, winrt::Microsoft::ReactNative::ReactPromise<std::string> promise) noexcept {
     auto dispatcher = context.UIDispatcher(); dispatcher.Post([name, function, args, promise, dispatcher]() {
-      using namespace LegendWin;
+      using namespace FrameWin;
       try {
         if (runtimeCalls.size() >= 1000) throw winrt::hresult_error(E_FAIL, L"Too many runtime calls");
         auto worker = GetWorker(name); auto id = std::to_string(++runtimeCallSequence);
@@ -154,9 +154,9 @@ struct LegendThreadedRuntime {
     });
   }
   REACT_METHOD(completeRuntimeFunctionCall) void completeRuntimeFunctionCall(std::string id, std::optional<std::string> result, std::optional<std::string> error, Promise promise) noexcept {
-    UI([id, result, error]() { auto found = LegendWin::runtimeCalls.find(id); if (found == LegendWin::runtimeCalls.end()) return; if (error) found->second.promise.Reject(error->c_str()); else found->second.promise.Resolve(result.value_or("null")); LegendWin::runtimeCalls.erase(found); }, promise);
+    UI([id, result, error]() { auto found = FrameWin::runtimeCalls.find(id); if (found == FrameWin::runtimeCalls.end()) return; if (error) found->second.promise.Reject(error->c_str()); else found->second.promise.Resolve(result.value_or("null")); FrameWin::runtimeCalls.erase(found); }, promise);
   }
-  REACT_METHOD(destroyRuntime) void destroyRuntime(std::string name, Promise promise) noexcept { UI([name]() { LegendWin::StopWorker(name, "Runtime was destroyed"); }, promise); }
-  REACT_METHOD(destroyAllRuntimes) void destroyAllRuntimes(Promise promise) noexcept { UI([]() { LegendWin::StopWorkers(); }, promise); }
-  REACT_METHOD(getRuntimeNames) void getRuntimeNames(winrt::Microsoft::ReactNative::ReactPromise<std::vector<std::string>> promise) noexcept { context.UIDispatcher().Post([promise]() { std::vector<std::string> names; for (auto const &[name, worker] : LegendWin::workers) names.push_back(name); promise.Resolve(names); }); }
+  REACT_METHOD(destroyRuntime) void destroyRuntime(std::string name, Promise promise) noexcept { UI([name]() { FrameWin::StopWorker(name, "Runtime was destroyed"); }, promise); }
+  REACT_METHOD(destroyAllRuntimes) void destroyAllRuntimes(Promise promise) noexcept { UI([]() { FrameWin::StopWorkers(); }, promise); }
+  REACT_METHOD(getRuntimeNames) void getRuntimeNames(winrt::Microsoft::ReactNative::ReactPromise<std::vector<std::string>> promise) noexcept { context.UIDispatcher().Post([promise]() { std::vector<std::string> names; for (auto const &[name, worker] : FrameWin::workers) names.push_back(name); promise.Resolve(names); }); }
 };

@@ -1,1 +1,1 @@
-export * from "@legend-apps/file-system";
+export * from "@legendapp/frame-file-system";

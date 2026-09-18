@@ -1,21 +1,21 @@
 {
-  "name": "legend-template-blank-typescript",
+  "name": "frame-template-blank-typescript",
   "version": "0.0.1",
   "private": true,
   "main": "index.ts",
   "scripts": {
-    "start": "legend dev",
-    "macos": "legend dev",
-    "dev": "legend dev",
-    "build": "legend build",
-    "package": "legend package",
-    "doctor": "legend doctor",
-    "postinstall": "node node_modules/@legend-apps/cli/src/init-template.cjs"
+    "start": "frame dev",
+    "macos": "frame dev",
+    "dev": "frame dev",
+    "build": "frame build",
+    "package": "frame package",
+    "doctor": "frame doctor",
+    "postinstall": "node node_modules/@legendapp/frame-cli/src/init-template.cjs"
   },
   "dependencies": {
-    "@legend-apps/cli": "0.1.0-prototype.0",
-    "@legend-apps/desktop": "0.1.0-prototype.0",
-    "@legend-apps/desktop-config": "0.1.0-prototype.0",
+    "@legendapp/frame-cli": "0.1.0-prototype.0",
+    "@legendapp/frame": "0.1.0-prototype.0",
+    "@legendapp/frame-desktop-config": "0.1.0-prototype.0",
     "expo": "54.0.37",
     "expo-desktop": "1.0.0-beta.6",
     "expo-desktop-prebuild-config": "1.1.0-beta.1",

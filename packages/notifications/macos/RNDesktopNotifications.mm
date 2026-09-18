@@ -1,8 +1,8 @@
 #import "RNDesktopNotifications.h"
-#import <RNDesktopApp/LegendDesktop.h>
+#import <RNDesktopApp/FrameDesktop.h>
 #import <UserNotifications/UserNotifications.h>
 
-static NSString * const NamespaceKey = @"legendProject";
+static NSString * const NamespaceKey = @"frameProject";
 static NSString *Permission(UNNotificationSettings *settings) {
   switch (settings.authorizationStatus) {
     case UNAuthorizationStatusNotDetermined: return @"notDetermined";
@@ -12,24 +12,24 @@ static NSString *Permission(UNNotificationSettings *settings) {
     default: return @"unknown";
   }
 }
-static NSString *Identifier(NSString *value) { return [NSString stringWithFormat:@"%@:%@", LegendNamespace(), value]; }
-static BOOL Owns(UNNotificationRequest *request) { return [request.content.userInfo[NamespaceKey] isEqual:LegendNamespace()]; }
-@interface LegendNotificationCenter : NSObject <UNUserNotificationCenterDelegate>
+static NSString *Identifier(NSString *value) { return [NSString stringWithFormat:@"%@:%@", FrameNamespace(), value]; }
+static BOOL Owns(UNNotificationRequest *request) { return [request.content.userInfo[NamespaceKey] isEqual:FrameNamespace()]; }
+@interface FrameNotificationCenter : NSObject <UNUserNotificationCenterDelegate>
 @property NSMutableArray *responses;
 @property (weak) id<UNUserNotificationCenterDelegate> previous;
 + (instancetype)shared;
 @end
-@implementation LegendNotificationCenter
+@implementation FrameNotificationCenter
 + (instancetype)shared {
-  static LegendNotificationCenter *instance;
+  static FrameNotificationCenter *instance;
   static dispatch_once_t once;
   dispatch_once(&once, ^{
-    instance = [LegendNotificationCenter new]; instance.responses = [NSMutableArray new];
+    instance = [FrameNotificationCenter new]; instance.responses = [NSMutableArray new];
     UNUserNotificationCenter *center = UNUserNotificationCenter.currentNotificationCenter;
     instance.previous = center.delegate; center.delegate = instance;
     [center getNotificationCategoriesWithCompletionHandler:^(NSSet<UNNotificationCategory *> *categories) {
       NSMutableSet *combined = [categories mutableCopy];
-      [combined addObject:[UNNotificationCategory categoryWithIdentifier:@"legend.desktop.default" actions:@[] intentIdentifiers:@[] options:UNNotificationCategoryOptionCustomDismissAction]];
+      [combined addObject:[UNNotificationCategory categoryWithIdentifier:@"frame.desktop.default" actions:@[] intentIdentifiers:@[] options:UNNotificationCategoryOptionCustomDismissAction]];
       [center setNotificationCategories:combined];
     }];
   });
@@ -52,11 +52,11 @@ static BOOL Owns(UNNotificationRequest *request) { return [request.content.userI
   }
   NSDictionary *info = response.notification.request.content.userInfo;
   NSDictionary *event = @{ @"type": @"notificationResponse", @"id": NSUUID.UUID.UUIDString,
-    @"notificationId": info[@"legendId"] ?: @"", @"data": info[@"legendData"] ?: @{},
+    @"notificationId": info[@"frameId"] ?: @"", @"data": info[@"frameData"] ?: @{},
     @"action": [response.actionIdentifier isEqual:UNNotificationDismissActionIdentifier] ? @"dismiss" : @"open" };
   dispatch_async(dispatch_get_main_queue(), ^{
     [self.responses addObject:event]; if (self.responses.count > 100) [self.responses removeObjectAtIndex:0];
-    LegendEmit(event); completion();
+    FrameEmit(event); completion();
   });
 }
 @end
@@ -66,25 +66,25 @@ RCT_EXPORT_MODULE(NativeDesktopNotifications)
 + (BOOL)requiresMainQueueSetup { return YES; }
 - (void)call:(NSString *)method args:(NSString *)json resolve:(RCTPromiseResolveBlock)resolve reject:(RCTPromiseRejectBlock)reject {
   dispatch_async(dispatch_get_main_queue(), ^{
-    LegendNotificationCenter *delegate = [LegendNotificationCenter shared];
+    FrameNotificationCenter *delegate = [FrameNotificationCenter shared];
     UNUserNotificationCenter *center = UNUserNotificationCenter.currentNotificationCenter;
-    NSDictionary *args = LegendArgs(json);
+    NSDictionary *args = FrameArgs(json);
     if ([method isEqual:@"permission"] || [method isEqual:@"requestPermission"]) {
-      void (^read)(void) = ^{ [center getNotificationSettingsWithCompletionHandler:^(UNNotificationSettings *settings) { resolve(LegendJSON(Permission(settings))); }]; };
+      void (^read)(void) = ^{ [center getNotificationSettingsWithCompletionHandler:^(UNNotificationSettings *settings) { resolve(FrameJSON(Permission(settings))); }]; };
       if ([method isEqual:@"permission"]) read();
-      else [center requestAuthorizationWithOptions:UNAuthorizationOptionAlert | UNAuthorizationOptionSound completionHandler:^(BOOL granted, NSError *error) { if (error) LegendReject(reject, error); else read(); }];
+      else [center requestAuthorizationWithOptions:UNAuthorizationOptionAlert | UNAuthorizationOptionSound completionHandler:^(BOOL granted, NSError *error) { if (error) FrameReject(reject, error); else read(); }];
     } else if ([method isEqual:@"show"]) {
-      if (![args[@"id"] isKindOfClass:NSString.class] || ![args[@"title"] isKindOfClass:NSString.class]) { LegendInvalid(reject, @"Notification needs an id and title"); return; }
+      if (![args[@"id"] isKindOfClass:NSString.class] || ![args[@"title"] isKindOfClass:NSString.class]) { FrameInvalid(reject, @"Notification needs an id and title"); return; }
       UNMutableNotificationContent *content = [UNMutableNotificationContent new];
-      content.categoryIdentifier = @"legend.desktop.default";
+      content.categoryIdentifier = @"frame.desktop.default";
       content.title = args[@"title"]; content.body = args[@"body"] ?: @""; content.subtitle = args[@"subtitle"] ?: @"";
       if ([args[@"sound"] boolValue]) content.sound = UNNotificationSound.defaultSound;
-      content.userInfo = @{ NamespaceKey: LegendNamespace(), @"legendId": args[@"id"], @"legendData": args[@"data"] ?: @{} };
+      content.userInfo = @{ NamespaceKey: FrameNamespace(), @"frameId": args[@"id"], @"frameData": args[@"data"] ?: @{} };
       UNNotificationTrigger *trigger = args[@"delay"] ? [UNTimeIntervalNotificationTrigger triggerWithTimeInterval:[args[@"delay"] doubleValue] repeats:NO] : nil;
       UNNotificationRequest *request = [UNNotificationRequest requestWithIdentifier:Identifier(args[@"id"]) content:content trigger:trigger];
       [center getNotificationSettingsWithCompletionHandler:^(UNNotificationSettings *settings) {
         if (settings.authorizationStatus != UNAuthorizationStatusAuthorized && settings.authorizationStatus != UNAuthorizationStatusProvisional) { reject(@"E_NOTIFICATION_PERMISSION", @"Request notification permission from a user action before showing notifications", nil); return; }
-        [center addNotificationRequest:request withCompletionHandler:^(NSError *error) { if (error) LegendReject(reject, error); else resolve(@"null"); }];
+        [center addNotificationRequest:request withCompletionHandler:^(NSError *error) { if (error) FrameReject(reject, error); else resolve(@"null"); }];
       }];
     } else if ([method isEqual:@"cancel"]) {
       [center removePendingNotificationRequestsWithIdentifiers:@[Identifier(args[@"id"])]];
@@ -93,18 +93,18 @@ RCT_EXPORT_MODULE(NativeDesktopNotifications)
       BOOL clear = [method isEqual:@"clear"];
       if ([method isEqual:@"pending"] || clear) [center getPendingNotificationRequestsWithCompletionHandler:^(NSArray<UNNotificationRequest *> *requests) {
         NSMutableArray *ids = [NSMutableArray new]; NSMutableArray *nativeIds = [NSMutableArray new];
-        for (UNNotificationRequest *request in requests) if (Owns(request)) { [ids addObject:request.content.userInfo[@"legendId"]]; [nativeIds addObject:request.identifier]; }
-        if (clear) [center removePendingNotificationRequestsWithIdentifiers:nativeIds]; else resolve(LegendJSON(ids));
+        for (UNNotificationRequest *request in requests) if (Owns(request)) { [ids addObject:request.content.userInfo[@"frameId"]]; [nativeIds addObject:request.identifier]; }
+        if (clear) [center removePendingNotificationRequestsWithIdentifiers:nativeIds]; else resolve(FrameJSON(ids));
         if (clear) [center getDeliveredNotificationsWithCompletionHandler:^(NSArray<UNNotification *> *notifications) {
           NSMutableArray *delivered = [NSMutableArray new]; for (UNNotification *notification in notifications) if (Owns(notification.request)) [delivered addObject:notification.request.identifier];
           [center removeDeliveredNotificationsWithIdentifiers:delivered]; resolve(@"null");
         }];
       }];
       else [center getDeliveredNotificationsWithCompletionHandler:^(NSArray<UNNotification *> *notifications) {
-        NSMutableArray *ids = [NSMutableArray new]; for (UNNotification *notification in notifications) if (Owns(notification.request)) [ids addObject:notification.request.content.userInfo[@"legendId"]]; resolve(LegendJSON(ids));
+        NSMutableArray *ids = [NSMutableArray new]; for (UNNotification *notification in notifications) if (Owns(notification.request)) [ids addObject:notification.request.content.userInfo[@"frameId"]]; resolve(FrameJSON(ids));
       }];
-    } else if ([method isEqual:@"responses"]) resolve(LegendJSON([delegate.responses copy]));
-    else LegendInvalid(reject, @"Unknown notification operation");
+    } else if ([method isEqual:@"responses"]) resolve(FrameJSON([delegate.responses copy]));
+    else FrameInvalid(reject, @"Unknown notification operation");
   });
 }
 - (std::shared_ptr<facebook::react::TurboModule>)getTurboModule:(const facebook::react::ObjCTurboModule::InitParams &)params { return std::make_shared<facebook::react::NativeDesktopNotificationsSpecJSI>(params); }

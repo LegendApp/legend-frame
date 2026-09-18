@@ -1,5 +1,5 @@
 {
-  "name": "@legend-apps/desktop-host",
+  "name": "@legendapp/frame-desktop-host",
   "version": "0.1.0-prototype.0",
   "license": "MIT",
   "files": [
@@ -7,6 +7,6 @@
     "windows"
   ],
   "dependencies": {
-    "@legend-apps/desktop-app": "0.1.0-prototype.0"
+    "@legendapp/frame-desktop-app": "0.1.0-prototype.0"
   }
 }

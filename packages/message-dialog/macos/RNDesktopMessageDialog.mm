@@ -1,5 +1,5 @@
 #import "RNDesktopMessageDialog.h"
-#import <RNDesktopApp/LegendDesktop.h>
+#import <RNDesktopApp/FrameDesktop.h>
 @interface RNDesktopMessageDialog ()
 @property NSAlert *alert;
 @end
@@ -7,11 +7,11 @@
 RCT_EXPORT_MODULE(NativeDesktopMessageDialog)
 - (void)call:(NSString *)method args:(NSString *)json resolve:(RCTPromiseResolveBlock)resolve reject:(RCTPromiseRejectBlock)reject {
   [NSRunLoop.mainRunLoop performBlock:^{
-    if (![method isEqual:@"show"]) { LegendInvalid(reject, @"Unknown dialog operation"); return; }
+    if (![method isEqual:@"show"]) { FrameInvalid(reject, @"Unknown dialog operation"); return; }
     if (self.alert) { reject(@"E_BUSY", @"A message dialog is already open", nil); return; }
-    NSDictionary *args = LegendArgs(json); NSWindow *parent;
+    NSDictionary *args = FrameArgs(json); NSWindow *parent;
     if (args[@"windowId"]) {
-      for (NSWindow *window in NSApp.windows) if ([window.identifier isEqual:[@"legend." stringByAppendingString:args[@"windowId"]]]) parent = window;
+      for (NSWindow *window in NSApp.windows) if ([window.identifier isEqual:[@"frame." stringByAppendingString:args[@"windowId"]]]) parent = window;
       if (!parent) { reject(@"E_NOT_FOUND", @"Dialog parent does not exist", nil); return; }
       if (parent.attachedSheet) { reject(@"E_BUSY", @"Parent already has a sheet", nil); return; }
     }
@@ -26,7 +26,7 @@ RCT_EXPORT_MODULE(NativeDesktopMessageDialog)
     if (args[@"checkbox"]) { alert.showsSuppressionButton = YES; alert.suppressionButton.title = args[@"checkbox"][@"label"]; alert.suppressionButton.state = [args[@"checkbox"][@"checked"] boolValue] ? NSControlStateValueOn : NSControlStateValueOff; }
     void (^complete)(NSModalResponse) = ^(NSModalResponse response) {
       self.alert = nil;
-      resolve(LegendJSON(@{ @"button": @(response >= NSAlertFirstButtonReturn ? response - NSAlertFirstButtonReturn : -1), @"checked": @(alert.suppressionButton.state == NSControlStateValueOn) }));
+      resolve(FrameJSON(@{ @"button": @(response >= NSAlertFirstButtonReturn ? response - NSAlertFirstButtonReturn : -1), @"checked": @(alert.suppressionButton.state == NSControlStateValueOn) }));
     };
     if (parent) [alert beginSheetModalForWindow:parent completionHandler:complete]; else complete([alert runModal]);
   }];

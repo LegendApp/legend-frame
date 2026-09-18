@@ -1,4 +1,4 @@
-import { openFileDialog } from "@legend-apps/file-dialog";
+import { openFileDialog } from "@legendapp/frame-file-dialog";
 import type { Track } from "./model";
 export async function importTracks(): Promise<Track[]> {
   const paths = await openFileDialog({ allowedFileTypes: ["mp3", "m4a", "wav", "aac", "flac", "ogg"], allowsMultipleSelection: true });

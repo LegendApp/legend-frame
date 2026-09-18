@@ -322,7 +322,7 @@ index b1cee79..4b98442 100644
        ]
      ]
 +  },
-+  "legend": {
++  "frame": {
 +    "sdk": true,
 +    "windowsAdapter": true,
 +    "upstreamIntegrity": "sha512-3EiU27EmnxTlD3pAXR2OBWeDg7+9tdjKrNQOPX08rFX5hJPNIT/h1i2PjvTUieOypCGTEi9nW/SNBtK3F+4HYg=="
@@ -338,7 +338,7 @@ index 3fdf8ea..0d98711 100644
  }
 +
 +module.exports.dependency ??= {}; module.exports.dependency.platforms ??= {};
-+module.exports.dependency.platforms.windows = {"sourceDir":"windows","solutionFile":"LegendNitro.sln","projects":[{"projectFile":"LegendNitro/LegendNitro.vcxproj","directDependency":true}]};
++module.exports.dependency.platforms.windows = {"sourceDir":"windows","solutionFile":"FrameNitro.sln","projects":[{"projectFile":"FrameNitro/FrameNitro.vcxproj","directDependency":true}]};
 diff --git a/windows/.gitignore b/windows/.gitignore
 new file mode 100644
 index 0000000..0fd0acf
@@ -461,28 +461,28 @@ index 0000000..b4f554e
 +LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 +OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 +SOFTWARE.
-diff --git a/windows/LegendNitro/LegendNitro.cpp b/windows/LegendNitro/LegendNitro.cpp
+diff --git a/windows/FrameNitro/FrameNitro.cpp b/windows/FrameNitro/FrameNitro.cpp
 new file mode 100644
 index 0000000..0c9f64f
 --- /dev/null
-+++ b/windows/LegendNitro/LegendNitro.cpp
++++ b/windows/FrameNitro/FrameNitro.cpp
 @@ -0,0 +1,2 @@
 +#include "pch.h"
-+#include "LegendNitro.h"
-diff --git a/windows/LegendNitro/LegendNitro.def b/windows/LegendNitro/LegendNitro.def
++#include "FrameNitro.h"
+diff --git a/windows/FrameNitro/FrameNitro.def b/windows/FrameNitro/FrameNitro.def
 new file mode 100644
 index 0000000..24e7c12
 --- /dev/null
-+++ b/windows/LegendNitro/LegendNitro.def
++++ b/windows/FrameNitro/FrameNitro.def
 @@ -0,0 +1,3 @@
 +﻿EXPORTS
 +DllCanUnloadNow = WINRT_CanUnloadNow                    PRIVATE
 +DllGetActivationFactory = WINRT_GetActivationFactory    PRIVATE
-diff --git a/windows/LegendNitro/LegendNitro.h b/windows/LegendNitro/LegendNitro.h
+diff --git a/windows/FrameNitro/FrameNitro.h b/windows/FrameNitro/FrameNitro.h
 new file mode 100644
 index 0000000..eb2d6db
 --- /dev/null
-+++ b/windows/LegendNitro/LegendNitro.h
++++ b/windows/FrameNitro/FrameNitro.h
 @@ -0,0 +1,23 @@
 +#pragma once
 +#include "NativeModules.h"
@@ -491,8 +491,8 @@ index 0000000..eb2d6db
 +#include <CallInvokerDispatcher.hpp>
 +#include <optional>
 +namespace margelo::nitro { void SetWindowsUIDispatcher(winrt::Microsoft::ReactNative::ReactDispatcher const &); }
-+REACT_MODULE(LegendNitroModule, L"NitroModules")
-+struct LegendNitroModule {
++REACT_MODULE(FrameNitroModule, L"NitroModules")
++struct FrameNitroModule {
 +  winrt::Microsoft::ReactNative::ReactContext context;
 +  REACT_INIT(Initialize) void Initialize(winrt::Microsoft::ReactNative::ReactContext const &value) noexcept { context = value; margelo::nitro::SetWindowsUIDispatcher(context.UIDispatcher()); }
 +  REACT_SYNC_METHOD(install) std::optional<std::string> install() noexcept {
@@ -507,20 +507,20 @@ index 0000000..eb2d6db
 +    catch (winrt::hresult_error const &error) { return winrt::to_string(error.message()); }
 +  }
 +};
-diff --git a/windows/LegendNitro/LegendNitro.rc b/windows/LegendNitro/LegendNitro.rc
+diff --git a/windows/FrameNitro/FrameNitro.rc b/windows/FrameNitro/FrameNitro.rc
 new file mode 100644
 index 0000000..23aece1
 --- /dev/null
-+++ b/windows/LegendNitro/LegendNitro.rc
++++ b/windows/FrameNitro/FrameNitro.rc
 @@ -0,0 +1,3 @@
 +// Microsoft Visual C++ generated resource script.
 +//
 +#include "resource.h"
-diff --git a/windows/LegendNitro/LegendNitro.vcxproj b/windows/LegendNitro/LegendNitro.vcxproj
+diff --git a/windows/FrameNitro/FrameNitro.vcxproj b/windows/FrameNitro/FrameNitro.vcxproj
 new file mode 100644
 index 0000000..9149a89
 --- /dev/null
-+++ b/windows/LegendNitro/LegendNitro.vcxproj
++++ b/windows/FrameNitro/FrameNitro.vcxproj
 @@ -0,0 +1,148 @@
 +<?xml version="1.0" encoding="utf-8"?>
 +<!-- This project was created with react-native-windows 0.81.35 -->
@@ -530,9 +530,9 @@ index 0000000..9149a89
 +    <CppWinRTOptimized>true</CppWinRTOptimized>
 +    <MinimalCoreWin>true</MinimalCoreWin>
 +    <ProjectGuid>{6A8C5C24-E759-4E69-AE60-36A65693573D}</ProjectGuid>
-+    <ProjectName>LegendNitro</ProjectName>
++    <ProjectName>FrameNitro</ProjectName>
 +    <Keyword>Win32Proj</Keyword>
-+    <RootNamespace>LegendNitro</RootNamespace>
++    <RootNamespace>FrameNitro</RootNamespace>
 +    <WindowsTargetPlatformVersion>10.0</WindowsTargetPlatformVersion>
 +    <DefaultLanguage>en-US</DefaultLanguage>
 +    <MinimumVisualStudioVersion>17.0</MinimumVisualStudioVersion>
@@ -613,7 +613,7 @@ index 0000000..9149a89
 +      <AdditionalDependencies>shell32.lib;user32.lib;windowsapp.lib;%(AdditionalDependencies)</AdditionalDependencies>
 +      <SubSystem>Console</SubSystem>
 +      <GenerateWindowsMetadata>true</GenerateWindowsMetadata>
-+      <ModuleDefinitionFile>LegendNitro.def</ModuleDefinitionFile>
++      <ModuleDefinitionFile>FrameNitro.def</ModuleDefinitionFile>
 +    </Link>
 +  </ItemDefinitionGroup>
 +  <ItemDefinitionGroup Condition="'$(Configuration)'=='Debug'">
@@ -628,7 +628,7 @@ index 0000000..9149a89
 +  </ItemDefinitionGroup>
 +  <PropertyGroup Label="UserMacros" />
 +  <ItemGroup>
-+    <ClInclude Include="LegendNitro.h" />
++    <ClInclude Include="FrameNitro.h" />
 +    <ClInclude Include="ReactPackageProvider.h">
 +      <DependentUpon>ReactPackageProvider.idl</DependentUpon>
 +    </ClInclude>
@@ -637,7 +637,7 @@ index 0000000..9149a89
 +    <ClInclude Include="targetver.h" />
 +  </ItemGroup>
 +  <ItemGroup>
-+    <ClCompile Include="LegendNitro.cpp" />
++    <ClCompile Include="FrameNitro.cpp" />
 +    <ClCompile Include="pch.cpp">
 +      <PrecompiledHeader>Create</PrecompiledHeader>
 +    </ClCompile>
@@ -650,7 +650,7 @@ index 0000000..9149a89
 +    <Midl Include="ReactPackageProvider.idl" />
 +  </ItemGroup>
 +  <ItemGroup>
-+    <ResourceCompile Include="LegendNitro.rc" />
++    <ResourceCompile Include="FrameNitro.rc" />
 +  </ItemGroup>
 +  <ItemGroup>
 +<ClCompile Include="$(MSBuildThisFileDirectory)..\..\cpp\**\*.cpp"><PrecompiledHeader>NotUsing</PrecompiledHeader></ClCompile>
@@ -671,11 +671,11 @@ index 0000000..9149a89
 +  </Target>
 +</Project>
 \ No newline at end of file
-diff --git a/windows/LegendNitro/LegendNitro.vcxproj.filters b/windows/LegendNitro/LegendNitro.vcxproj.filters
+diff --git a/windows/FrameNitro/FrameNitro.vcxproj.filters b/windows/FrameNitro/FrameNitro.vcxproj.filters
 new file mode 100644
 index 0000000..3dcf2c5
 --- /dev/null
-+++ b/windows/LegendNitro/LegendNitro.vcxproj.filters
++++ b/windows/FrameNitro/FrameNitro.vcxproj.filters
 @@ -0,0 +1,44 @@
 +﻿<?xml version="1.0" encoding="utf-8"?>
 +<Project ToolsVersion="4.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
@@ -700,7 +700,7 @@ index 0000000..3dcf2c5
 +    <ClInclude Include="resource.h">
 +      <Filter>Header Files</Filter>
 +    </ClInclude>
-+    <ClInclude Include="LegendNitro.h">
++    <ClInclude Include="FrameNitro.h">
 +      <Filter>Header Files</Filter>
 +    </ClInclude>
 +    <ClInclude Include="pch.h">
@@ -708,7 +708,7 @@ index 0000000..3dcf2c5
 +    </ClInclude>
 +  </ItemGroup>
 +  <ItemGroup>
-+    <ClCompile Include="LegendNitro.cpp">
++    <ClCompile Include="FrameNitro.cpp">
 +      <Filter>Source Files</Filter>
 +    </ClCompile>
 +    <ClCompile Include="pch.cpp">
@@ -716,17 +716,17 @@ index 0000000..3dcf2c5
 +    </ClCompile>
 +  </ItemGroup>
 +  <ItemGroup>
-+    <ResourceCompile Include="LegendNitro.rc">
++    <ResourceCompile Include="FrameNitro.rc">
 +      <Filter>Resource Files</Filter>
 +    </ResourceCompile>
 +  </ItemGroup>
 +</Project>
 \ No newline at end of file
-diff --git a/windows/LegendNitro/Platform.cpp b/windows/LegendNitro/Platform.cpp
+diff --git a/windows/FrameNitro/Platform.cpp b/windows/FrameNitro/Platform.cpp
 new file mode 100644
 index 0000000..f88ac62
 --- /dev/null
-+++ b/windows/LegendNitro/Platform.cpp
++++ b/windows/FrameNitro/Platform.cpp
 @@ -0,0 +1,23 @@
 +#include "pch.h"
 +#include <ThreadUtils.hpp>
@@ -751,11 +751,11 @@ index 0000000..f88ac62
 +std::shared_ptr<Dispatcher> ThreadUtils::createUIThreadDispatcher() { return std::make_shared<WindowsUIDispatcher>(); }
 +void Logger::nativeLog(LogLevel, char const *tag, std::string const &text) { OutputDebugStringA((std::string(tag) + ": " + text + "\n").c_str()); }
 +}
-diff --git a/windows/LegendNitro/ReactPackageProvider.cpp b/windows/LegendNitro/ReactPackageProvider.cpp
+diff --git a/windows/FrameNitro/ReactPackageProvider.cpp b/windows/FrameNitro/ReactPackageProvider.cpp
 new file mode 100644
 index 0000000..78bd465
 --- /dev/null
-+++ b/windows/LegendNitro/ReactPackageProvider.cpp
++++ b/windows/FrameNitro/ReactPackageProvider.cpp
 @@ -0,0 +1,20 @@
 +#include "pch.h"
 +
@@ -764,11 +764,11 @@ index 0000000..78bd465
 +#include "ReactPackageProvider.g.cpp"
 +#endif
 +
-+#include "LegendNitro.h"
++#include "FrameNitro.h"
 +
 +using namespace winrt::Microsoft::ReactNative;
 +
-+namespace winrt::LegendNitro::implementation
++namespace winrt::FrameNitro::implementation
 +{
 +
 +void ReactPackageProvider::CreatePackage(IReactPackageBuilder const &packageBuilder) noexcept
@@ -776,12 +776,12 @@ index 0000000..78bd465
 +  AddAttributedModules(packageBuilder, true);
 +}
 +
-+} // namespace winrt::LegendNitro::implementation
-diff --git a/windows/LegendNitro/ReactPackageProvider.h b/windows/LegendNitro/ReactPackageProvider.h
++} // namespace winrt::FrameNitro::implementation
+diff --git a/windows/FrameNitro/ReactPackageProvider.h b/windows/FrameNitro/ReactPackageProvider.h
 new file mode 100644
 index 0000000..02136a0
 --- /dev/null
-+++ b/windows/LegendNitro/ReactPackageProvider.h
++++ b/windows/FrameNitro/ReactPackageProvider.h
 @@ -0,0 +1,24 @@
 +#pragma once
 +
@@ -789,7 +789,7 @@ index 0000000..02136a0
 +
 +using namespace winrt::Microsoft::ReactNative;
 +
-+namespace winrt::LegendNitro::implementation
++namespace winrt::FrameNitro::implementation
 +{
 +
 +struct ReactPackageProvider : ReactPackageProviderT<ReactPackageProvider>
@@ -799,21 +799,21 @@ index 0000000..02136a0
 +  void CreatePackage(IReactPackageBuilder const &packageBuilder) noexcept;
 +};
 +
-+} // namespace winrt::LegendNitro::implementation
++} // namespace winrt::FrameNitro::implementation
 +
-+namespace winrt::LegendNitro::factory_implementation
++namespace winrt::FrameNitro::factory_implementation
 +{
 +
 +struct ReactPackageProvider : ReactPackageProviderT<ReactPackageProvider, implementation::ReactPackageProvider> {};
 +
-+} // namespace winrt::LegendNitro::factory_implementation
-diff --git a/windows/LegendNitro/ReactPackageProvider.idl b/windows/LegendNitro/ReactPackageProvider.idl
++} // namespace winrt::FrameNitro::factory_implementation
+diff --git a/windows/FrameNitro/ReactPackageProvider.idl b/windows/FrameNitro/ReactPackageProvider.idl
 new file mode 100644
 index 0000000..52bdb4c
 --- /dev/null
-+++ b/windows/LegendNitro/ReactPackageProvider.idl
++++ b/windows/FrameNitro/ReactPackageProvider.idl
 @@ -0,0 +1,9 @@
-+namespace LegendNitro
++namespace FrameNitro
 +{
 +  [webhosthidden]
 +  [default_interface]
@@ -822,18 +822,18 @@ index 0000000..52bdb4c
 +    ReactPackageProvider();
 +  };
 +}
-diff --git a/windows/LegendNitro/pch.cpp b/windows/LegendNitro/pch.cpp
+diff --git a/windows/FrameNitro/pch.cpp b/windows/FrameNitro/pch.cpp
 new file mode 100644
 index 0000000..1d9f38c
 --- /dev/null
-+++ b/windows/LegendNitro/pch.cpp
++++ b/windows/FrameNitro/pch.cpp
 @@ -0,0 +1 @@
 +#include "pch.h"
-diff --git a/windows/LegendNitro/pch.h b/windows/LegendNitro/pch.h
+diff --git a/windows/FrameNitro/pch.h b/windows/FrameNitro/pch.h
 new file mode 100644
 index 0000000..61d356d
 --- /dev/null
-+++ b/windows/LegendNitro/pch.h
++++ b/windows/FrameNitro/pch.h
 @@ -0,0 +1,30 @@
 +// pch.h : include file for standard system include files,
 +// or project specific include files that are used frequently, but
@@ -865,22 +865,22 @@ index 0000000..61d356d
 +#include <tchar.h>
 +
 +// Reference additional headers your project requires here
-diff --git a/windows/LegendNitro/resource.h b/windows/LegendNitro/resource.h
+diff --git a/windows/FrameNitro/resource.h b/windows/FrameNitro/resource.h
 new file mode 100644
 index 0000000..2d86653
 --- /dev/null
-+++ b/windows/LegendNitro/resource.h
++++ b/windows/FrameNitro/resource.h
 @@ -0,0 +1,5 @@
 +//
 +// Microsoft Visual C++ generated include file.
-+// Used by LegendNitro.rc
++// Used by FrameNitro.rc
 +
 +#pragma once
-diff --git a/windows/LegendNitro/targetver.h b/windows/LegendNitro/targetver.h
+diff --git a/windows/FrameNitro/targetver.h b/windows/FrameNitro/targetver.h
 new file mode 100644
 index 0000000..87c0086
 --- /dev/null
-+++ b/windows/LegendNitro/targetver.h
++++ b/windows/FrameNitro/targetver.h
 @@ -0,0 +1,8 @@
 +#pragma once
 +
@@ -890,18 +890,18 @@ index 0000000..87c0086
 +// set the _WIN32_WINNT macro to the platform you wish to support before including SDKDDKVer.h.
 +
 +#include <SDKDDKVer.h>
-diff --git a/windows/LegendNitro.sln b/windows/LegendNitro.sln
+diff --git a/windows/FrameNitro.sln b/windows/FrameNitro.sln
 new file mode 100644
 index 0000000..a591174
 --- /dev/null
-+++ b/windows/LegendNitro.sln
++++ b/windows/FrameNitro.sln
 @@ -0,0 +1,43 @@
 +﻿
 +Microsoft Visual Studio Solution File, Format Version 12.00
 +# Visual Studio Version 17
 +VisualStudioVersion = 17.3.32929.385
 +MinimumVisualStudioVersion = 10.0.40219.1
-+Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "LegendNitro", "LegendNitro\LegendNitro.vcxproj", "{6A8C5C24-E759-4E69-AE60-36A65693573D}"
++Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "FrameNitro", "FrameNitro\FrameNitro.vcxproj", "{6A8C5C24-E759-4E69-AE60-36A65693573D}"
 +EndProject
 +Global
 +	GlobalSection(SolutionConfigurationPlatforms) = preSolution

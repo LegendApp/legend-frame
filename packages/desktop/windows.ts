@@ -1,1 +1,1 @@
-export * from "@legend-apps/desktop-windows";
+export * from "@legendapp/frame-desktop-windows";

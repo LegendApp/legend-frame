@@ -10,7 +10,7 @@ const {
 const { identity } = require("./identity.cjs");
 const { resolveEntitlements } = require("./entitlements.cjs");
 
-module.exports = function withLegendDesktop(config) {
+module.exports = function withFrameDesktop(config) {
   if (config.platforms?.length === 1 && config.platforms[0] === "windows") return require("./windows.plugin.cjs")(config);
   // The upstream base mod merges template entitlements into config before
   // callbacks run. Capture the declared values before that mutation.
@@ -28,7 +28,7 @@ module.exports = function withLegendDesktop(config) {
   config = withAppDelegate(config, (mod) => {
     // Own this adapter; application customizations belong in configuration/plugins.
     mod.modResults.contents = fs.readFileSync(
-      require.resolve("@legend-apps/desktop-host/AppDelegate.mm"),
+      require.resolve("@legendapp/frame-desktop-host/AppDelegate.mm"),
       "utf8",
     );
     return mod;
@@ -38,7 +38,7 @@ module.exports = function withLegendDesktop(config) {
     for (const key of ["SUFeedURL", "SUPublicEDKey", "SUEnableAutomaticChecks", "SUAutomaticallyUpdate", "SUAllowsAutomaticUpdates", "SUEnableSystemProfiling", "SURequireSignedFeed", "SUVerifyUpdateBeforeExtraction"])
       if (!(key in generated)) delete mod.modResults[key];
     Object.assign(mod.modResults, generated);
-    mod.modResults.LegendFrameworkVersion = "0.1.0-prototype.0";
+    mod.modResults.FrameFrameworkVersion = "0.1.0-prototype.0";
     mod.modResults.NSAppTransportSecurity = { NSAllowsLocalNetworking: true };
     return mod;
   });
@@ -53,20 +53,20 @@ module.exports = function withLegendDesktop(config) {
     );
     const selectionFile = statePath(mod.modRequest.projectRoot, "native-selection.json", "macos");
     const included = fs.existsSync(selectionFile) ? JSON.parse(fs.readFileSync(selectionFile, "utf8")).included : [];
-    const updatePackage = included.find(pkg => pkg.name === "@legend-apps/updates");
+    const updatePackage = included.find(pkg => pkg.name === "@legendapp/frame-updates");
     // Pin the spec and archive with the SDK, avoiding a mutable CocoaPods index.
-    const sparkleMarker = "# Legend: Sparkle pod";
-    mod.modResults.contents = mod.modResults.contents.replace(/^.*# Legend: Sparkle pod\n/gm, "");
+    const sparkleMarker = "# frame: Sparkle pod";
+    mod.modResults.contents = mod.modResults.contents.replace(/^.*# frame: Sparkle pod\n/gm, "");
     if (updatePackage) {
       const spec = path.join(updatePackage.root, "Sparkle.podspec.json");
       const rubyPath = JSON.stringify(spec).replace(/#\{/g, "\\#{");
       mod.modResults.contents += `\npod 'Sparkle', :podspec => ${rubyPath} ${sparkleMarker}\n`;
     }
-    const autolinkMarker = "# Legend: macOS autolinking";
+    const autolinkMarker = "# frame: macOS autolinking";
     if (!mod.modResults.contents.includes(autolinkMarker)) {
-      mod.modResults.contents = `${autolinkMarker}\nENV['LEGEND_DESKTOP_AUTOLINK'] = 'macos'\n${mod.modResults.contents}`;
+      mod.modResults.contents = `${autolinkMarker}\nENV['FRAME_DESKTOP_AUTOLINK'] = 'macos'\n${mod.modResults.contents}`;
     }
-    const marker = "# Legend: Fabric enabled";
+    const marker = "# frame: Fabric enabled";
     if (!mod.modResults.contents.includes(marker)) {
       mod.modResults.contents = `${marker}\nENV['RCT_NEW_ARCH_ENABLED'] = '1'\n${mod.modResults.contents}`;
     }

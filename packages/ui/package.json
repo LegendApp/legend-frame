@@ -1,5 +1,5 @@
 {
-  "name": "@legend-apps/ui",
+  "name": "@legendapp/frame-ui",
   "version": "0.1.0-prototype.0",
   "license": "MIT",
   "main": "src/index",
@@ -28,21 +28,21 @@
     }
   },
   "codegenConfig": {
-    "name": "RNLegendUISpec",
+    "name": "RNFrameUISpec",
     "type": "components",
     "jsSrcsDir": "src",
     "ios": {
       "componentProvider": {
-        "LegendButton": "RNLegendButton",
-        "LegendTextInput": "RNLegendTextInput",
-        "LegendSelect": "RNLegendSelect"
+        "FrameButton": "RNFrameButton",
+        "FrameTextInput": "RNFrameTextInput",
+        "FrameSelect": "RNFrameSelect"
       }
     }
   },
-  "legend": {
+  "frame": {
     "sdk": true,
     "nativeModules": [],
-    "pod": "RNLegendUI",
+    "pod": "RNFrameUI",
     "platforms": [
       "macos",
       "windows"

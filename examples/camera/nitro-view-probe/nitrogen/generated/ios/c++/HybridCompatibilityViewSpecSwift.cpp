@@ -7,5 +7,5 @@
 
 #include "HybridCompatibilityViewSpecSwift.hpp"
 
-namespace margelo::nitro::legendprobe {
-} // namespace margelo::nitro::legendprobe
+namespace margelo::nitro::frameprobe {
+} // namespace margelo::nitro::frameprobe

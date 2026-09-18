@@ -1,2 +1,2 @@
-export * from "@legend-apps/file-dialog";
-export * from "@legend-apps/message-dialog";
+export * from "@legendapp/frame-file-dialog";
+export * from "@legendapp/frame-message-dialog";

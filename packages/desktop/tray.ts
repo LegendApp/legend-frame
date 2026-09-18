@@ -1,1 +1,1 @@
-export * from "@legend-apps/tray";
+export * from "@legendapp/frame-tray";

@@ -183,7 +183,7 @@ index b30a29d..32e5a36 100644
    },
 -  "packageManager": "yarn@4.11.0"
 +  "packageManager": "yarn@4.11.0",
-+  "legend": {
++  "frame": {
 +    "sdk": true,
 +    "windowsAdapter": true,
 +    "upstreamIntegrity": "sha512-atVOtXyFzO0e454eVS27AMwRs515URCKrkvLLG+mGKcyiF5UPfC53oukpNp2UmVzlLebyTEXNkTYs6n0dVGd0g=="
@@ -198,7 +198,7 @@ index 0000000..ee8ee91
 +module.exports = {};
 +
 +module.exports.dependency ??= {}; module.exports.dependency.platforms ??= {};
-+module.exports.dependency.platforms.windows = {"sourceDir":"windows","solutionFile":"LegendOPSQLite.sln","projects":[{"projectFile":"LegendOPSQLite/LegendOPSQLite.vcxproj","directDependency":true}]};
++module.exports.dependency.platforms.windows = {"sourceDir":"windows","solutionFile":"FrameOPSQLite.sln","projects":[{"projectFile":"FrameOPSQLite/FrameOPSQLite.vcxproj","directDependency":true}]};
 diff --git a/windows/.gitignore b/windows/.gitignore
 new file mode 100644
 index 0000000..0fd0acf
@@ -321,28 +321,28 @@ index 0000000..b4f554e
 +LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 +OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 +SOFTWARE.
-diff --git a/windows/LegendOPSQLite/LegendOPSQLite.cpp b/windows/LegendOPSQLite/LegendOPSQLite.cpp
+diff --git a/windows/FrameOPSQLite/FrameOPSQLite.cpp b/windows/FrameOPSQLite/FrameOPSQLite.cpp
 new file mode 100644
 index 0000000..c75ead2
 --- /dev/null
-+++ b/windows/LegendOPSQLite/LegendOPSQLite.cpp
++++ b/windows/FrameOPSQLite/FrameOPSQLite.cpp
 @@ -0,0 +1,2 @@
 +#include "pch.h"
-+#include "LegendOPSQLite.h"
-diff --git a/windows/LegendOPSQLite/LegendOPSQLite.def b/windows/LegendOPSQLite/LegendOPSQLite.def
++#include "FrameOPSQLite.h"
+diff --git a/windows/FrameOPSQLite/FrameOPSQLite.def b/windows/FrameOPSQLite/FrameOPSQLite.def
 new file mode 100644
 index 0000000..24e7c12
 --- /dev/null
-+++ b/windows/LegendOPSQLite/LegendOPSQLite.def
++++ b/windows/FrameOPSQLite/FrameOPSQLite.def
 @@ -0,0 +1,3 @@
 +﻿EXPORTS
 +DllCanUnloadNow = WINRT_CanUnloadNow                    PRIVATE
 +DllGetActivationFactory = WINRT_GetActivationFactory    PRIVATE
-diff --git a/windows/LegendOPSQLite/LegendOPSQLite.h b/windows/LegendOPSQLite/LegendOPSQLite.h
+diff --git a/windows/FrameOPSQLite/FrameOPSQLite.h b/windows/FrameOPSQLite/FrameOPSQLite.h
 new file mode 100644
 index 0000000..d3cbb51
 --- /dev/null
-+++ b/windows/LegendOPSQLite/LegendOPSQLite.h
++++ b/windows/FrameOPSQLite/FrameOPSQLite.h
 @@ -0,0 +1,48 @@
 +#pragma once
 +#include "NativeModules.h"
@@ -353,19 +353,19 @@ index 0000000..d3cbb51
 +#include <winrt/Windows.Security.Cryptography.h>
 +#include <winrt/Windows.Security.Cryptography.Core.h>
 +#pragma comment(lib, "Shell32.lib")
-+REACT_MODULE(LegendOPSQLiteModule, L"OPSQLite")
-+struct LegendOPSQLiteModule {
++REACT_MODULE(FrameOPSQLiteModule, L"OPSQLite")
++struct FrameOPSQLiteModule {
 +  winrt::Microsoft::ReactNative::ReactContext context;
 +  std::shared_ptr<std::atomic<bool>> generation;
 +  REACT_INIT(Initialize) void Initialize(winrt::Microsoft::ReactNative::ReactContext const &value) noexcept { context = value; }
-+  ~LegendOPSQLiteModule() { if (generation) opsqlite::invalidate(generation); }
++  ~FrameOPSQLiteModule() { if (generation) opsqlite::invalidate(generation); }
 +  static std::filesystem::path Directory() {
-+    wchar_t project[32768]{}; if (!GetEnvironmentVariableW(L"LEGEND_PROJECT_ID", project, 32768)) throw winrt::hresult_invalid_argument(L"Missing project identity");
++    wchar_t project[32768]{}; if (!GetEnvironmentVariableW(L"FRAME_PROJECT_ID", project, 32768)) throw winrt::hresult_invalid_argument(L"Missing project identity");
 +    using namespace winrt::Windows::Security::Cryptography;
 +    auto hash = Core::HashAlgorithmProvider::OpenAlgorithm(Core::HashAlgorithmNames::Sha256());
 +    auto id = CryptographicBuffer::EncodeToHexString(hash.HashData(CryptographicBuffer::ConvertStringToBinary(project, BinaryStringEncoding::Utf8)));
 +    PWSTR raw = nullptr; winrt::check_hresult(SHGetKnownFolderPath(FOLDERID_LocalAppData, 0, nullptr, &raw)); std::filesystem::path path(raw); CoTaskMemFree(raw);
-+    path /= L"Legend"; path /= id.c_str(); path /= L"data"; std::filesystem::create_directories(path); return path;
++    path /= L"Frame"; path /= id.c_str(); path /= L"data"; std::filesystem::create_directories(path); return path;
 +  }
 +  REACT_SYNC_METHOD(getConstants) winrt::Microsoft::ReactNative::JSValueObject getConstants() { return {{"WINDOWS_DATABASE_PATH", winrt::to_string(Directory().wstring())}}; }
 +  REACT_SYNC_METHOD(install) bool install() {
@@ -392,20 +392,20 @@ index 0000000..d3cbb51
 +    return winrt::to_string((std::filesystem::path(executable).parent_path() / (file.wstring() + L".dll")).wstring());
 +  }
 +};
-diff --git a/windows/LegendOPSQLite/LegendOPSQLite.rc b/windows/LegendOPSQLite/LegendOPSQLite.rc
+diff --git a/windows/FrameOPSQLite/FrameOPSQLite.rc b/windows/FrameOPSQLite/FrameOPSQLite.rc
 new file mode 100644
 index 0000000..23aece1
 --- /dev/null
-+++ b/windows/LegendOPSQLite/LegendOPSQLite.rc
++++ b/windows/FrameOPSQLite/FrameOPSQLite.rc
 @@ -0,0 +1,3 @@
 +// Microsoft Visual C++ generated resource script.
 +//
 +#include "resource.h"
-diff --git a/windows/LegendOPSQLite/LegendOPSQLite.vcxproj b/windows/LegendOPSQLite/LegendOPSQLite.vcxproj
+diff --git a/windows/FrameOPSQLite/FrameOPSQLite.vcxproj b/windows/FrameOPSQLite/FrameOPSQLite.vcxproj
 new file mode 100644
 index 0000000..c2b75ad
 --- /dev/null
-+++ b/windows/LegendOPSQLite/LegendOPSQLite.vcxproj
++++ b/windows/FrameOPSQLite/FrameOPSQLite.vcxproj
 @@ -0,0 +1,148 @@
 +<?xml version="1.0" encoding="utf-8"?>
 +<!-- This project was created with react-native-windows 0.81.35 -->
@@ -415,9 +415,9 @@ index 0000000..c2b75ad
 +    <CppWinRTOptimized>true</CppWinRTOptimized>
 +    <MinimalCoreWin>true</MinimalCoreWin>
 +    <ProjectGuid>{96CE5E20-C675-425D-B566-7D0C8263959F}</ProjectGuid>
-+    <ProjectName>LegendOPSQLite</ProjectName>
++    <ProjectName>FrameOPSQLite</ProjectName>
 +    <Keyword>Win32Proj</Keyword>
-+    <RootNamespace>LegendOPSQLite</RootNamespace>
++    <RootNamespace>FrameOPSQLite</RootNamespace>
 +    <WindowsTargetPlatformVersion>10.0</WindowsTargetPlatformVersion>
 +    <DefaultLanguage>en-US</DefaultLanguage>
 +    <MinimumVisualStudioVersion>17.0</MinimumVisualStudioVersion>
@@ -498,7 +498,7 @@ index 0000000..c2b75ad
 +      <AdditionalDependencies>shell32.lib;user32.lib;windowsapp.lib;%(AdditionalDependencies)</AdditionalDependencies>
 +      <SubSystem>Console</SubSystem>
 +      <GenerateWindowsMetadata>true</GenerateWindowsMetadata>
-+      <ModuleDefinitionFile>LegendOPSQLite.def</ModuleDefinitionFile>
++      <ModuleDefinitionFile>FrameOPSQLite.def</ModuleDefinitionFile>
 +    </Link>
 +  </ItemDefinitionGroup>
 +  <ItemDefinitionGroup Condition="'$(Configuration)'=='Debug'">
@@ -513,7 +513,7 @@ index 0000000..c2b75ad
 +  </ItemDefinitionGroup>
 +  <PropertyGroup Label="UserMacros" />
 +  <ItemGroup>
-+    <ClInclude Include="LegendOPSQLite.h" />
++    <ClInclude Include="FrameOPSQLite.h" />
 +    <ClInclude Include="ReactPackageProvider.h">
 +      <DependentUpon>ReactPackageProvider.idl</DependentUpon>
 +    </ClInclude>
@@ -522,7 +522,7 @@ index 0000000..c2b75ad
 +    <ClInclude Include="targetver.h" />
 +  </ItemGroup>
 +  <ItemGroup>
-+    <ClCompile Include="LegendOPSQLite.cpp" />
++    <ClCompile Include="FrameOPSQLite.cpp" />
 +    <ClCompile Include="pch.cpp">
 +      <PrecompiledHeader>Create</PrecompiledHeader>
 +    </ClCompile>
@@ -535,7 +535,7 @@ index 0000000..c2b75ad
 +    <Midl Include="ReactPackageProvider.idl" />
 +  </ItemGroup>
 +  <ItemGroup>
-+    <ResourceCompile Include="LegendOPSQLite.rc" />
++    <ResourceCompile Include="FrameOPSQLite.rc" />
 +  </ItemGroup>
 +  <ItemGroup>
 +<ClCompile Include="$(MSBuildThisFileDirectory)..\..\cpp\*.cpp"><PrecompiledHeader>NotUsing</PrecompiledHeader></ClCompile>
@@ -556,11 +556,11 @@ index 0000000..c2b75ad
 +  </Target>
 +</Project>
 \ No newline at end of file
-diff --git a/windows/LegendOPSQLite/LegendOPSQLite.vcxproj.filters b/windows/LegendOPSQLite/LegendOPSQLite.vcxproj.filters
+diff --git a/windows/FrameOPSQLite/FrameOPSQLite.vcxproj.filters b/windows/FrameOPSQLite/FrameOPSQLite.vcxproj.filters
 new file mode 100644
 index 0000000..8696a66
 --- /dev/null
-+++ b/windows/LegendOPSQLite/LegendOPSQLite.vcxproj.filters
++++ b/windows/FrameOPSQLite/FrameOPSQLite.vcxproj.filters
 @@ -0,0 +1,44 @@
 +﻿<?xml version="1.0" encoding="utf-8"?>
 +<Project ToolsVersion="4.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
@@ -585,7 +585,7 @@ index 0000000..8696a66
 +    <ClInclude Include="resource.h">
 +      <Filter>Header Files</Filter>
 +    </ClInclude>
-+    <ClInclude Include="LegendOPSQLite.h">
++    <ClInclude Include="FrameOPSQLite.h">
 +      <Filter>Header Files</Filter>
 +    </ClInclude>
 +    <ClInclude Include="pch.h">
@@ -593,7 +593,7 @@ index 0000000..8696a66
 +    </ClInclude>
 +  </ItemGroup>
 +  <ItemGroup>
-+    <ClCompile Include="LegendOPSQLite.cpp">
++    <ClCompile Include="FrameOPSQLite.cpp">
 +      <Filter>Source Files</Filter>
 +    </ClCompile>
 +    <ClCompile Include="pch.cpp">
@@ -601,17 +601,17 @@ index 0000000..8696a66
 +    </ClCompile>
 +  </ItemGroup>
 +  <ItemGroup>
-+    <ResourceCompile Include="LegendOPSQLite.rc">
++    <ResourceCompile Include="FrameOPSQLite.rc">
 +      <Filter>Resource Files</Filter>
 +    </ResourceCompile>
 +  </ItemGroup>
 +</Project>
 \ No newline at end of file
-diff --git a/windows/LegendOPSQLite/ReactPackageProvider.cpp b/windows/LegendOPSQLite/ReactPackageProvider.cpp
+diff --git a/windows/FrameOPSQLite/ReactPackageProvider.cpp b/windows/FrameOPSQLite/ReactPackageProvider.cpp
 new file mode 100644
 index 0000000..ab1d2c6
 --- /dev/null
-+++ b/windows/LegendOPSQLite/ReactPackageProvider.cpp
++++ b/windows/FrameOPSQLite/ReactPackageProvider.cpp
 @@ -0,0 +1,20 @@
 +#include "pch.h"
 +
@@ -620,11 +620,11 @@ index 0000000..ab1d2c6
 +#include "ReactPackageProvider.g.cpp"
 +#endif
 +
-+#include "LegendOPSQLite.h"
++#include "FrameOPSQLite.h"
 +
 +using namespace winrt::Microsoft::ReactNative;
 +
-+namespace winrt::LegendOPSQLite::implementation
++namespace winrt::FrameOPSQLite::implementation
 +{
 +
 +void ReactPackageProvider::CreatePackage(IReactPackageBuilder const &packageBuilder) noexcept
@@ -632,12 +632,12 @@ index 0000000..ab1d2c6
 +  AddAttributedModules(packageBuilder, true);
 +}
 +
-+} // namespace winrt::LegendOPSQLite::implementation
-diff --git a/windows/LegendOPSQLite/ReactPackageProvider.h b/windows/LegendOPSQLite/ReactPackageProvider.h
++} // namespace winrt::FrameOPSQLite::implementation
+diff --git a/windows/FrameOPSQLite/ReactPackageProvider.h b/windows/FrameOPSQLite/ReactPackageProvider.h
 new file mode 100644
 index 0000000..d3c820c
 --- /dev/null
-+++ b/windows/LegendOPSQLite/ReactPackageProvider.h
++++ b/windows/FrameOPSQLite/ReactPackageProvider.h
 @@ -0,0 +1,24 @@
 +#pragma once
 +
@@ -645,7 +645,7 @@ index 0000000..d3c820c
 +
 +using namespace winrt::Microsoft::ReactNative;
 +
-+namespace winrt::LegendOPSQLite::implementation
++namespace winrt::FrameOPSQLite::implementation
 +{
 +
 +struct ReactPackageProvider : ReactPackageProviderT<ReactPackageProvider>
@@ -655,21 +655,21 @@ index 0000000..d3c820c
 +  void CreatePackage(IReactPackageBuilder const &packageBuilder) noexcept;
 +};
 +
-+} // namespace winrt::LegendOPSQLite::implementation
++} // namespace winrt::FrameOPSQLite::implementation
 +
-+namespace winrt::LegendOPSQLite::factory_implementation
++namespace winrt::FrameOPSQLite::factory_implementation
 +{
 +
 +struct ReactPackageProvider : ReactPackageProviderT<ReactPackageProvider, implementation::ReactPackageProvider> {};
 +
-+} // namespace winrt::LegendOPSQLite::factory_implementation
-diff --git a/windows/LegendOPSQLite/ReactPackageProvider.idl b/windows/LegendOPSQLite/ReactPackageProvider.idl
++} // namespace winrt::FrameOPSQLite::factory_implementation
+diff --git a/windows/FrameOPSQLite/ReactPackageProvider.idl b/windows/FrameOPSQLite/ReactPackageProvider.idl
 new file mode 100644
 index 0000000..ebd494a
 --- /dev/null
-+++ b/windows/LegendOPSQLite/ReactPackageProvider.idl
++++ b/windows/FrameOPSQLite/ReactPackageProvider.idl
 @@ -0,0 +1,9 @@
-+namespace LegendOPSQLite
++namespace FrameOPSQLite
 +{
 +  [webhosthidden]
 +  [default_interface]
@@ -678,18 +678,18 @@ index 0000000..ebd494a
 +    ReactPackageProvider();
 +  };
 +}
-diff --git a/windows/LegendOPSQLite/pch.cpp b/windows/LegendOPSQLite/pch.cpp
+diff --git a/windows/FrameOPSQLite/pch.cpp b/windows/FrameOPSQLite/pch.cpp
 new file mode 100644
 index 0000000..1d9f38c
 --- /dev/null
-+++ b/windows/LegendOPSQLite/pch.cpp
++++ b/windows/FrameOPSQLite/pch.cpp
 @@ -0,0 +1 @@
 +#include "pch.h"
-diff --git a/windows/LegendOPSQLite/pch.h b/windows/LegendOPSQLite/pch.h
+diff --git a/windows/FrameOPSQLite/pch.h b/windows/FrameOPSQLite/pch.h
 new file mode 100644
 index 0000000..61d356d
 --- /dev/null
-+++ b/windows/LegendOPSQLite/pch.h
++++ b/windows/FrameOPSQLite/pch.h
 @@ -0,0 +1,30 @@
 +// pch.h : include file for standard system include files,
 +// or project specific include files that are used frequently, but
@@ -721,22 +721,22 @@ index 0000000..61d356d
 +#include <tchar.h>
 +
 +// Reference additional headers your project requires here
-diff --git a/windows/LegendOPSQLite/resource.h b/windows/LegendOPSQLite/resource.h
+diff --git a/windows/FrameOPSQLite/resource.h b/windows/FrameOPSQLite/resource.h
 new file mode 100644
 index 0000000..f58c207
 --- /dev/null
-+++ b/windows/LegendOPSQLite/resource.h
++++ b/windows/FrameOPSQLite/resource.h
 @@ -0,0 +1,5 @@
 +//
 +// Microsoft Visual C++ generated include file.
-+// Used by LegendOPSQLite.rc
++// Used by FrameOPSQLite.rc
 +
 +#pragma once
-diff --git a/windows/LegendOPSQLite/targetver.h b/windows/LegendOPSQLite/targetver.h
+diff --git a/windows/FrameOPSQLite/targetver.h b/windows/FrameOPSQLite/targetver.h
 new file mode 100644
 index 0000000..87c0086
 --- /dev/null
-+++ b/windows/LegendOPSQLite/targetver.h
++++ b/windows/FrameOPSQLite/targetver.h
 @@ -0,0 +1,8 @@
 +#pragma once
 +
@@ -746,18 +746,18 @@ index 0000000..87c0086
 +// set the _WIN32_WINNT macro to the platform you wish to support before including SDKDDKVer.h.
 +
 +#include <SDKDDKVer.h>
-diff --git a/windows/LegendOPSQLite.sln b/windows/LegendOPSQLite.sln
+diff --git a/windows/FrameOPSQLite.sln b/windows/FrameOPSQLite.sln
 new file mode 100644
 index 0000000..ef4ed11
 --- /dev/null
-+++ b/windows/LegendOPSQLite.sln
++++ b/windows/FrameOPSQLite.sln
 @@ -0,0 +1,43 @@
 +﻿
 +Microsoft Visual Studio Solution File, Format Version 12.00
 +# Visual Studio Version 17
 +VisualStudioVersion = 17.3.32929.385
 +MinimumVisualStudioVersion = 10.0.40219.1
-+Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "LegendOPSQLite", "LegendOPSQLite\LegendOPSQLite.vcxproj", "{96CE5E20-C675-425D-B566-7D0C8263959F}"
++Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "FrameOPSQLite", "FrameOPSQLite\FrameOPSQLite.vcxproj", "{96CE5E20-C675-425D-B566-7D0C8263959F}"
 +EndProject
 +Global
 +	GlobalSection(SolutionConfigurationPlatforms) = preSolution

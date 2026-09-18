@@ -1,15 +1,15 @@
 import { useRef, useState } from "react";
 import { Text, View } from "react-native";
-import { Button } from "@legend-apps/ui";
-import { showMessage } from "@legend-apps/message-dialog";
-import { showContextMenu } from "@legend-apps/context-menu";
-import { DragDropView } from "@legend-apps/drag-drop";
-import * as notifications from "@legend-apps/notifications";
-import * as system from "@legend-apps/system";
-import { createTray } from "@legend-apps/tray";
-import { registerGlobalShortcut } from "@legend-apps/global-shortcuts";
-import { configureMenus, clearMenus, addNativeMenuActionListener, updateMenuItems, commandModifier } from "@legend-apps/native-menu";
-import { getWindow, openWindow, closeWindow, onWindowEvent } from "@legend-apps/desktop-windows";
+import { Button } from "@legendapp/frame-ui";
+import { showMessage } from "@legendapp/frame-message-dialog";
+import { showContextMenu } from "@legendapp/frame-context-menu";
+import { DragDropView } from "@legendapp/frame-drag-drop";
+import * as notifications from "@legendapp/frame-notifications";
+import * as system from "@legendapp/frame-system";
+import { createTray } from "@legendapp/frame-tray";
+import { registerGlobalShortcut } from "@legendapp/frame-global-shortcuts";
+import { configureMenus, clearMenus, addNativeMenuActionListener, updateMenuItems, commandModifier } from "@legendapp/frame-native-menu";
+import { getWindow, openWindow, closeWindow, onWindowEvent } from "@legendapp/frame-desktop-windows";
 import { assertContract } from "./contract-cases";
 
 async function requireError(action: () => Promise<unknown>, code: string) {
@@ -59,7 +59,7 @@ export default function DesktopInteractionChecks({ check, onError, onBusy }: {
     setInstruction("Open the app icon in the tray/menu bar and choose Checks → Continue. On Windows it may be in the hidden-icons overflow.");
     let selected!: () => void;
     const action = new Promise<void>(resolve => { selected = resolve; });
-    const item = await createTray({ id: "contract-tray", title: "Check", tooltip: "Legend tray acceptance" }, event => { if (event.type === "trayAction" && event.itemId === "continue") selected(); });
+    const item = await createTray({ id: "contract-tray", title: "Check", tooltip: "frame tray acceptance" }, event => { if (event.type === "trayAction" && event.itemId === "continue") selected(); });
     try {
       await requireError(() => createTray({ id: "contract-tray", title: "Duplicate" }), "E_TRAY_EXISTS");
       await item.update({ menu: [{ id: "checks", title: "Checks", items: [
@@ -99,14 +99,14 @@ export default function DesktopInteractionChecks({ check, onError, onBusy }: {
   }
   async function advancedMenus() {
     setInstruction("Use Command+Shift+Y (macOS) or Control+Shift+Y (Windows) to activate the Parity → Continue item.");
-    let selected!: (event: import("@legend-apps/native-menu").NativeMenuAction) => void;
-    const action = new Promise<import("@legend-apps/native-menu").NativeMenuAction>(resolve => { selected = resolve; });
+    let selected!: (event: import("@legendapp/frame-native-menu").NativeMenuAction) => void;
+    const action = new Promise<import("@legendapp/frame-native-menu").NativeMenuAction>(resolve => { selected = resolve; });
     const sub = addNativeMenuActionListener(event => { if (event.ownerId === "contract-binding") selected(event); });
     configureMenus("contract-base", [{ id: "parity", title: "Parity", items: [{ id: "base", title: "Original" }, { id: "after", title: "After" }] }]);
     configureMenus("contract-binding", [{ id: "bound", title: "Parity", items: [{ id: "continue", targetTitle: "Original", title: "Continue", placement: { after: "After" }, shortcut: { key: "y", modifiers: commandModifier | (1 << 17) }, payload: { token: "acceptance" } }] }]);
     updateMenuItems("contract-binding", [{ id: "continue", checked: true }]);
     try {
-      let received: import("@legend-apps/native-menu").NativeMenuAction | undefined;
+      let received: import("@legendapp/frame-native-menu").NativeMenuAction | undefined;
       await within(action.then(value => { received = value; }), 45000);
       assertContract(received?.itemId === "continue" && received.menuId === "bound" && received.payload?.token === "acceptance", "Menu action lost semantic identity or payload");
     } finally { sub.remove(); clearMenus("contract-binding"); clearMenus("contract-base"); }
@@ -124,8 +124,8 @@ export default function DesktopInteractionChecks({ check, onError, onBusy }: {
       assertContract((await notifications.getPendingNotifications()).includes(id), "Scheduled notification is missing");
       await notifications.cancelNotification(id);
       assertContract(!(await notifications.getPendingNotifications()).includes(id), "Cancellation left a scheduled notification");
-      setInstruction("Click the Legend notification to continue within 45 seconds. If hidden, open Notification Center.");
-      await notifications.showNotification({ id, title: "Click to continue", body: "Legend notification acceptance", data: { token: id }, sound: false });
+      setInstruction("Click the Frame notification to continue within 45 seconds. If hidden, open Notification Center.");
+      await notifications.showNotification({ id, title: "Click to continue", body: "frame notification acceptance", data: { token: id }, sound: false });
       await within(response.then(value => { assertContract(value.action === "open" && value.data.token === id, "Notification response lost its action or data"); }), 45000);
     } finally { sub.remove(); await notifications.cancelNotification(id); }
     setInstruction("Scheduling, cancellation, and notification click passed. Cold launch and OS delivery after exit require the separate native lifecycle checks.");
@@ -152,13 +152,13 @@ export default function DesktopInteractionChecks({ check, onError, onBusy }: {
   return <View style={{ gap: 8 }}>
     <Text>{instruction}</Text>
     <Text>{dragFeedback}</Text>
-    <DragDropView source={{ text: "legend-drag-contract" }} onDragEnd={event => {
+    <DragDropView source={{ text: "frame-drag-contract" }} onDragEnd={event => {
       if (event.accepted && drag.current.dropped && drag.current.entered) run("desktop.drag-drop", async () => {});
       else setDragFeedback("Drag was cancelled or did not reach the target. Try again.");
       drag.current = { entered: false, dropped: false };
     }} style={{ padding: 12, borderWidth: 1 }}><Text>Drag source</Text><Button onPress={() => setDragFeedback("Child button received a press; now drag the source text.")}>Child button</Button></DragDropView>
     <DragDropView onDragEnter={() => { drag.current.entered = true; }} onDragLeave={() => setDragFeedback("Drag left target")} onDrop={event => {
-      drag.current.dropped = event.text === "legend-drag-contract" && event.x >= 0 && event.y >= 0;
+      drag.current.dropped = event.text === "frame-drag-contract" && event.x >= 0 && event.y >= 0;
       setDragFeedback(JSON.stringify(event));
     }} style={{ padding: 12, borderWidth: 1, minHeight: 70 }}><Text>Drop target</Text></DragDropView>
     <Button disabled={busy} onPress={() => run("desktop.notifications", notificationChecks)}>Check notifications</Button>
@@ -167,9 +167,9 @@ export default function DesktopInteractionChecks({ check, onError, onBusy }: {
     <Button disabled={busy} onPress={() => run("desktop.advanced-menus", advancedMenus)}>Check menu accelerators</Button>
     <Button disabled={busy} onPress={() => run("desktop.tray", tray)}>Check tray</Button>
     <Button disabled={busy} onPress={() => run("desktop.global-shortcuts", globalShortcut)}>Check global shortcut</Button>
-    <Button testID="legend-message-dialog" disabled={busy} onPress={() => run("desktop.message-dialog", dialogs)}>Check message dialogs</Button>
+    <Button testID="frame-message-dialog" disabled={busy} onPress={() => run("desktop.message-dialog", dialogs)}>Check message dialogs</Button>
     <View ref={anchor} collapsable={false}>
-      <Button testID="legend-context-menu" disabled={busy} onPress={() => anchor.current?.measureInWindow((x, y, _width, height) => run("desktop.context-menu", () => menus({ x, y: y + height })))}>Check context menus</Button>
+      <Button testID="frame-context-menu" disabled={busy} onPress={() => anchor.current?.measureInWindow((x, y, _width, height) => run("desktop.context-menu", () => menus({ x, y: y + height })))}>Check context menus</Button>
     </View>
   </View>;
 }

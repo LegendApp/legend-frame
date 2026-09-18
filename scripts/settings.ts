@@ -4,4 +4,4 @@ import { run } from "../packages/cli/src/commands";
 import { hostPlatform } from "../packages/cli/src/platform";
 const framework = path.resolve(import.meta.dir, "..");
 await run(framework, ["bun", "scripts/pack.ts"]);
-await create(path.resolve(process.argv[2] ?? ".legend/examples/Settings"), path.join(framework, "artifacts/packages/manifest.json"), hostPlatform(), true);
+await create(path.resolve(process.argv[2] ?? ".frame/examples/Settings"), path.join(framework, "artifacts/packages/manifest.json"), hostPlatform(), true);

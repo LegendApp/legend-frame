@@ -1,5 +1,5 @@
 {
-  "name": "@legend-apps/audio",
+  "name": "@legendapp/frame-audio",
   "version": "0.1.0-prototype.0",
   "license": "MIT",
   "main": "src/index",
@@ -21,21 +21,21 @@
     }
   },
   "codegenConfig": {
-    "name": "RNLegendAudioSpec",
+    "name": "RNFrameAudioSpec",
     "type": "modules",
     "jsSrcsDir": "src",
     "ios": {
       "modulesProvider": {
-        "NativeLegendAudio": "RNLegendAudio"
+        "NativeFrameAudio": "RNFrameAudio"
       }
     }
   },
-  "legend": {
+  "frame": {
     "sdk": true,
     "nativeModules": [
-      "NativeLegendAudio"
+      "NativeFrameAudio"
     ],
-    "pod": "RNLegendAudio",
+    "pod": "RNFrameAudio",
     "platforms": [
       "macos",
       "windows",

@@ -1,8 +1,11 @@
 node_modules/
 .DS_Store
-.legend/
+.frame/
 artifacts/
 dist/
 docs/evidence/
 /macos/
 *.tgz
+
+# Legacy prototype build artifacts (not migrated automatically).
+.legend/

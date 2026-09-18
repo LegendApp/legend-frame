@@ -8,7 +8,7 @@ import { readJson, writeJson } from "../packages/cli/src/project";
 
 // One real Expo process serves all five graphs. No native toolchains/devices required.
 const framework = path.resolve(import.meta.dir, "..");
-const root = path.resolve(process.argv[2] ?? `.legend/universal-dev/Settings${Date.now()}`);
+const root = path.resolve(process.argv[2] ?? `.frame/universal-dev/Settings${Date.now()}`);
 await run(framework, ["bun", "scripts/pack.ts"], { capture: true });
 await create(root, path.join(framework, "artifacts/packages/manifest.json"), "macos", true);
 const sourceFiles = ["desktop.config.json", "package.json", "App.tsx", "app.config.js", "metro.config.js", "react-native.config.js"];
@@ -16,16 +16,16 @@ const original = sourceFiles.map(file => readFileSync(path.join(root, file), "ut
 const configFile = path.join(root, "desktop.config.json");
 const config = readJson(configFile);
 // Deterministic incompatible desktop state, independent of the local Go registry.
-writeJson(configFile, { ...config, scheme: "legend-session-test" });
+writeJson(configFile, { ...config, scheme: "frame-session-test" });
 const port = await availablePort();
 const base = `http://127.0.0.1:${port}`;
-const logFile = path.join(root, ".legend/universal-dev.log");
+const logFile = path.join(root, ".frame/universal-dev.log");
 const file = Bun.file(logFile);
 const log = openSync(logFile, "a");
-const session = Bun.spawn(["bun", "node_modules/@legend-apps/cli/src/index.ts", "dev", "--platform", "ios", "--no-open", "--go", "--offline", "--clear", "-p", String(port), "--max-workers", "2"], {
+const session = Bun.spawn(["bun", "node_modules/@legendapp/frame-cli/src/index.ts", "dev", "--platform", "ios", "--no-open", "--go", "--offline", "--clear", "-p", String(port), "--max-workers", "2"], {
   cwd: root, env: { ...process.env, CI: "false" }, stdin: "ignore", stdout: log, stderr: log,
 });
-const sessionFile = path.join(root, ".legend/platforms", process.platform === "win32" ? "windows" : "macos", "session.json");
+const sessionFile = path.join(root, ".frame/platforms", process.platform === "win32" ? "windows" : "macos", "session.json");
 const desktop = process.platform === "win32" ? "windows" : "macos";
 async function until(check: () => Promise<boolean>, label: string, timeout = 60000) {
   const deadline = Date.now() + timeout;
@@ -54,11 +54,11 @@ try {
     const map = await mapResponse.json() as { sources: string[] };
     const sources = map.sources;
     const adapter = platform === "macos" ? "index.tsx" : `index.${platform}.tsx`;
-    assert.ok(sources.some(source => source.includes(`@legend-apps/ui/src/${adapter}`)), `${platform} UI adapter`);
+    assert.ok(sources.some(source => source.includes(`@legendapp/frame-ui/src/${adapter}`)), `${platform} UI adapter`);
     assert.ok(sources.some(source => source.includes(platform === "web" ? "uniwind/dist/module/core/config/config.js" : "uniwind/src/core/config/config.native.ts")), `${platform} Uniwind runtime`);
     const rn = platform === "macos" ? "react-native-macos" : platform === "windows" ? "react-native-windows" : platform === "web" ? "react-native-web" : "react-native";
     assert.ok(sources.some(source => source.includes(`/node_modules/${rn}/`)), `${platform} React Native backend`);
-    if (["ios", "android", "web"].includes(platform)) assert.ok(!sources.some(source => /Legend(?:Button|TextInput|Select)NativeComponent|NativeDesktop/.test(source)), `${platform} AppKit exclusion`);
+    if (["ios", "android", "web"].includes(platform)) assert.ok(!sources.some(source => /Frame(?:Button|TextInput|Select)NativeComponent|NativeDesktop/.test(source)), `${platform} AppKit exclusion`);
     if (["macos", "windows", "web"].includes(platform)) assert.ok(!sources.some(source => source.includes("@expo/ui/")), `${platform} mobile UI exclusion`);
     results.push({ platform, status: bundle.status, modules: sources.length });
     console.log(`PASS ${platform} on the same Metro port: ${sources.length} modules, HTTP ${bundle.status}`);
@@ -74,8 +74,8 @@ try {
     await until(async () => clients.every(c => c.messages.some(m => m.type === "bundle-registered")), "iOS and web HMR registration");
     for (const client of clients) client.messages.length = 0;
     const appFile = path.join(root, "App.tsx");
-    writeFileSync(appFile, readFileSync(appFile, "utf8") + '\nexport const sharedSessionProbe = "legend-shared-session-hmr";\n');
-    await until(async () => clients.every(c => c.messages.some(m => m.type === "update" && JSON.stringify(m.body.modified).includes("legend-shared-session-hmr"))), "shared source edit reaches both HMR clients");
+    writeFileSync(appFile, readFileSync(appFile, "utf8") + '\nexport const sharedSessionProbe = "frame-shared-session-hmr";\n');
+    await until(async () => clients.every(c => c.messages.some(m => m.type === "update" && JSON.stringify(m.body.modified).includes("frame-shared-session-hmr"))), "shared source edit reaches both HMR clients");
     console.log("PASS one source edit reaches iOS and web HMR clients while desktop is blocked");
   } finally { for (const client of clients) client.socket.close(); }
   const beforeLog = await file.text();
@@ -83,7 +83,7 @@ try {
   assert.ok(beforeLog.includes("Networking has been disabled"));
   assert.ok(beforeLog.includes("Bundler cache is empty"));
   // Native config changes must restart the shared server even if desktop stays incompatible.
-  writeJson(configFile, { ...config, scheme: "legend-session-test-changed" });
+  writeJson(configFile, { ...config, scheme: "frame-session-test-changed" });
   await until(async () => (await file.text()).split("Starting Metro Bundler").length - 1 === 2, "Metro restart while desktop is blocked");
   await until(async () => { try { return (await request("/status")).ok; } catch { return false; } }, "restarted server ready");
   for (const platform of ["ios", "android", "web"]) {
@@ -92,7 +92,7 @@ try {
     await response.arrayBuffer();
   }
   console.log("PASS Expo clear/offline/Go/port forwarding and restart with incompatible desktop");
-  writeJson(path.join(root, ".legend/universal-dev-report.json"), { results, port, passed: true, scope: "Live Metro graphs, forwarding, gate isolation, restart, cleanup; no native execution" });
+  writeJson(path.join(root, ".frame/universal-dev-report.json"), { results, port, passed: true, scope: "Live Metro graphs, forwarding, gate isolation, restart, cleanup; no native execution" });
 } finally {
   session.kill("SIGTERM");
   await session.exited;
@@ -104,4 +104,4 @@ try {
 }
 assert.ok(!existsSync(sessionFile), "session state removed on exit");
 await assert.rejects(fetch(`${base}/status`, { signal: AbortSignal.timeout(2000) }), "Metro stopped on exit");
-console.log(`PASS preserved configuration and clean shutdown. Report: ${root}/.legend/universal-dev-report.json`);
+console.log(`PASS preserved configuration and clean shutdown. Report: ${root}/.frame/universal-dev-report.json`);

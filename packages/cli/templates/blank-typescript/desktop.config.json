@@ -1,5 +1,5 @@
 {
-  "$schema": "./node_modules/@legend-apps/desktop-config/schema.json",
+  "$schema": "./node_modules/@legendapp/frame-desktop-config/schema.json",
   "name": "HelloWorld",
   "version": "0.0.1",
   "window": {
@@ -8,7 +8,7 @@
     "restoreFrame": true
   },
   "macos": {
-    "bundleIdentifier": "so.legend.prototype.helloworld"
+    "bundleIdentifier": "so.legend.frame.prototype.helloworld"
   },
   "platforms": [
     "macos"

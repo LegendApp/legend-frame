@@ -1,11 +1,11 @@
 function updateConfiguration(expo) {
-  const updates = expo.extra?.legend?.updates;
+  const updates = expo.extra?.frame?.updates;
   if (updates === undefined) return undefined;
-  if (!updates || typeof updates !== "object" || Array.isArray(updates)) throw new Error("extra.legend.updates must be an object");
+  if (!updates || typeof updates !== "object" || Array.isArray(updates)) throw new Error("extra.frame.updates must be an object");
   let url;
   try { url = new URL(updates.feedURL); } catch { throw new Error("Updates need an HTTPS feedURL"); }
   if (url.protocol !== "https:" || !url.hostname || url.username || url.password || url.search || url.hash || !url.pathname.endsWith(".xml")) throw new Error("Update feedURL must be an HTTPS .xml URL without credentials, query or fragment");
-  if (typeof updates.publicKey !== "string" || !/^[A-Za-z0-9+/]{43}=$/.test(updates.publicKey) || Buffer.from(updates.publicKey, "base64").length !== 32) throw new Error("Updates need a base64 Ed25519 publicKey; run legend updates init <feedURL>");
+  if (typeof updates.publicKey !== "string" || !/^[A-Za-z0-9+/]{43}=$/.test(updates.publicKey) || Buffer.from(updates.publicKey, "base64").length !== 32) throw new Error("Updates need a base64 Ed25519 publicKey; run frame updates init <feedURL>");
   return { feedURL: url.href, publicKey: updates.publicKey };
 }
 function updatePlist(expo) {

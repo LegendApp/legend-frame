@@ -1,10 +1,10 @@
 import { useCallback, useMemo } from "react";
 import type { NativeSyntheticEvent } from "react-native";
-import NativeTextInput from "./LegendTextInputNativeComponent";
-import NativeSelect from "./LegendSelectNativeComponent";
+import NativeTextInput from "./FrameTextInputNativeComponent";
+import NativeSelect from "./FrameSelectNativeComponent";
 import { selectionIndex } from "./select";
 import { StyleSheet } from "react-native";
-import NativeButton from "./LegendButtonNativeComponent";
+import NativeButton from "./FrameButtonNativeComponent";
 import type { ButtonProps, TextInputProps, SelectProps } from "./types";
 export type { ButtonProps, TextInputProps, SelectProps } from "./types";
 

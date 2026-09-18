@@ -1,1 +1,1 @@
-export * from "@legend-apps/settings";
+export * from "@legendapp/frame-settings";

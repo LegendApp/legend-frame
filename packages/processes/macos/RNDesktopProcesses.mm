@@ -1,11 +1,11 @@
 #import "RNDesktopProcesses.h"
-#import <RNDesktopApp/LegendDesktop.h>
+#import <RNDesktopApp/FrameDesktop.h>
 #import <signal.h>
 #import <AppKit/AppKit.h>
 #import <spawn.h>
 #import <sys/wait.h>
 #import <vector>
-@interface LegendProcess : NSObject
+@interface FrameProcess : NSObject
 @property pid_t pid;
 @property BOOL running;
 @property NSFileHandle *input;
@@ -14,10 +14,10 @@
 @property BOOL ended;
 @property dispatch_queue_t inputQueue;
 @end
-@implementation LegendProcess
+@implementation FrameProcess
 @end
 @interface RNDesktopProcesses ()
-@property NSMutableDictionary<NSString *, LegendProcess *> *processes;
+@property NSMutableDictionary<NSString *, FrameProcess *> *processes;
 @property BOOL invalidated;
 @end
 @implementation RNDesktopProcesses
@@ -30,10 +30,10 @@ RCT_EXPORT_MODULE(NativeDesktopProcesses)
   }
   return self;
 }
-- (void)stopAll { for (LegendProcess *process in self.processes.allValues) if (process.running) kill(-process.pid, SIGKILL); }
+- (void)stopAll { for (FrameProcess *process in self.processes.allValues) if (process.running) kill(-process.pid, SIGKILL); }
 - (void)dealloc { [[NSNotificationCenter defaultCenter] removeObserver:self]; }
 
-- (void)terminate:(LegendProcess *)process {
+- (void)terminate:(FrameProcess *)process {
   if (process.running) {
     kill(-process.pid, SIGTERM);
     dispatch_after(dispatch_time(DISPATCH_TIME_NOW, 2 * NSEC_PER_SEC), dispatch_get_main_queue(), ^{
@@ -44,26 +44,26 @@ RCT_EXPORT_MODULE(NativeDesktopProcesses)
 
 - (void)call:(NSString *)method args:(NSString *)json resolve:(RCTPromiseResolveBlock)resolve reject:(RCTPromiseRejectBlock)reject {
   dispatch_async(dispatch_get_main_queue(), ^{
-    NSDictionary *args = LegendArgs(json); NSString *key = args[@"id"];
+    NSDictionary *args = FrameArgs(json); NSString *key = args[@"id"];
     if (self.invalidated) { reject(@"E_CLOSED", @"Process module is closed", nil); return; }
-    LegendProcess *process = self.processes[key];
+    FrameProcess *process = self.processes[key];
     if ([method isEqual:@"spawn"]) {
       if (process) { reject(@"E_EXISTS", @"Process id already exists", nil); return; }
       NSString *executable = args[@"executable"];
       if ([executable hasPrefix:@"helper:"]) {
         NSString *name = [executable substringFromIndex:7];
-        if (!name.length || [name rangeOfCharacterFromSet:[[NSCharacterSet characterSetWithCharactersInString:@"abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789_-"] invertedSet]].location != NSNotFound) { LegendInvalid(reject, @"Invalid helper name"); return; }
+        if (!name.length || [name rangeOfCharacterFromSet:[[NSCharacterSet characterSetWithCharactersInString:@"abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789_-"] invertedSet]].location != NSNotFound) { FrameInvalid(reject, @"Invalid helper name"); return; }
         NSString *helpers = [NSBundle.mainBundle.bundlePath stringByAppendingPathComponent:@"Contents/Helpers"];
         NSString *bundle = [helpers stringByAppendingPathComponent:[name stringByAppendingString:@".helper"]];
         executable = [helpers stringByAppendingPathComponent:name];
         if ([NSFileManager.defaultManager fileExistsAtPath:bundle]) {
-          NSString *entry = [NSString stringWithContentsOfFile:[bundle stringByAppendingPathComponent:@".legend-entry"] encoding:NSUTF8StringEncoding error:nil];
-          if (!entry.length || [entry hasPrefix:@"/"] || [entry containsString:@"\\"] || [[entry componentsSeparatedByString:@"/"] containsObject:@".."] || [entry containsString:@"\0"]) { LegendInvalid(reject, @"Invalid helper bundle entry"); return; }
+          NSString *entry = [NSString stringWithContentsOfFile:[bundle stringByAppendingPathComponent:@".frame-entry"] encoding:NSUTF8StringEncoding error:nil];
+          if (!entry.length || [entry hasPrefix:@"/"] || [entry containsString:@"\\"] || [[entry componentsSeparatedByString:@"/"] containsObject:@".."] || [entry containsString:@"\0"]) { FrameInvalid(reject, @"Invalid helper bundle entry"); return; }
           executable = [bundle stringByAppendingPathComponent:entry];
         }
       }
-      if (![executable hasPrefix:@"/"]) { LegendInvalid(reject, @"Executable path must be absolute"); return; }
-      process = [LegendProcess new];
+      if (![executable hasPrefix:@"/"]) { FrameInvalid(reject, @"Executable path must be absolute"); return; }
+      process = [FrameProcess new];
       process.inputQueue = dispatch_queue_create("desktop.process.input", DISPATCH_QUEUE_SERIAL);
       NSMutableDictionary *environment = [NSProcessInfo.processInfo.environment mutableCopy]; [environment addEntriesFromDictionary:args[@"env"] ?: @{}];
       NSPipe *input = [NSPipe pipe], *output = [NSPipe pipe], *errorPipe = [NSPipe pipe];
@@ -88,7 +88,7 @@ RCT_EXPORT_MODULE(NativeDesktopProcesses)
       int error = posix_spawn(&pid, executable.fileSystemRepresentation, &actions, &attributes, argv.data(), envp.data());
       posix_spawn_file_actions_destroy(&actions); posix_spawnattr_destroy(&attributes);
       [input.fileHandleForReading closeFile]; [output.fileHandleForWriting closeFile]; [errorPipe.fileHandleForWriting closeFile];
-      if (error) { [process.input closeFile]; [output.fileHandleForReading closeFile]; [errorPipe.fileHandleForReading closeFile]; LegendReject(reject, [NSError errorWithDomain:NSPOSIXErrorDomain code:error userInfo:nil]); return; }
+      if (error) { [process.input closeFile]; [output.fileHandleForReading closeFile]; [errorPipe.fileHandleForReading closeFile]; FrameReject(reject, [NSError errorWithDomain:NSPOSIXErrorDomain code:error userInfo:nil]); return; }
       process.pid = pid; process.running = YES;
       self.processes[key] = process;
       NSMutableData *stdoutData = [NSMutableData new], *stderrData = [NSMutableData new];
@@ -107,7 +107,7 @@ RCT_EXPORT_MODULE(NativeDesktopProcesses)
               if (count <= 0) break;
               NSData *data = [NSData dataWithBytes:bytes length:(NSUInteger)count];
               @synchronized(process) { NSUInteger remaining = 8 * 1024 * 1024 - buffer.length; if (data.length > remaining) process.truncated = YES; [buffer appendData:[data subdataWithRange:NSMakeRange(0, MIN(remaining, data.length))]]; }
-              if ([args[@"streamOutput"] boolValue]) dispatch_sync(dispatch_get_main_queue(), ^{ if (!self.invalidated) LegendEmit(@{ @"type": @"processOutput", @"processId": key, @"stream": stream, @"base64": [data base64EncodedStringWithOptions:0] }); });
+              if ([args[@"streamOutput"] boolValue]) dispatch_sync(dispatch_get_main_queue(), ^{ if (!self.invalidated) FrameEmit(@{ @"type": @"processOutput", @"processId": key, @"stream": stream, @"base64": [data base64EncodedStringWithOptions:0] }); });
             }
           } @catch (NSException *exception) { /* Closing the runtime interrupts pipe reads. */ }
           [handle closeFile];
@@ -123,7 +123,7 @@ RCT_EXPORT_MODULE(NativeDesktopProcesses)
           int terminationStatus = status;
           process.ended = YES;
           dispatch_async(process.inputQueue, ^{ @try { [process.input closeFile]; } @catch (NSException *exception) {} });
-          if (!self.invalidated) LegendEmit(@{ @"type": @"processExit", @"processId": key, @"result": @{
+          if (!self.invalidated) FrameEmit(@{ @"type": @"processExit", @"processId": key, @"result": @{
             @"exitCode": @(WIFEXITED(terminationStatus) ? WEXITSTATUS(terminationStatus) : WTERMSIG(terminationStatus)), @"signal": @(WIFSIGNALED(terminationStatus)),
             @"stdout": [[NSString alloc] initWithData:stdoutData encoding:NSUTF8StringEncoding] ?: @"", @"stderr": [[NSString alloc] initWithData:stderrData encoding:NSUTF8StringEncoding] ?: @"",
             @"stdoutBase64": [stdoutData base64EncodedStringWithOptions:0], @"stderrBase64": [stderrData base64EncodedStringWithOptions:0],
@@ -143,7 +143,7 @@ RCT_EXPORT_MODULE(NativeDesktopProcesses)
           @try { if ([method isEqual:@"write"]) [process.input writeData:[args[@"text"] dataUsingEncoding:NSUTF8StringEncoding]]; else [process.input closeFile]; resolve(@"null"); }
           @catch (NSException *exception) { reject(@"E_PIPE", @"Process input is closed", nil); }
         }); return;
-      } else { LegendInvalid(reject, @"Unknown process operation"); return; }
+      } else { FrameInvalid(reject, @"Unknown process operation"); return; }
     }
     resolve(@"null");
   });

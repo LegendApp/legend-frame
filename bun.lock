@@ -3,35 +3,35 @@
   "configVersion": 1,
   "workspaces": {
     "": {
-      "name": "legend-framework-workspace",
+      "name": "frame-workspace",
       "devDependencies": {
         "@expo/ui": "0.2.0-beta.9",
-        "@legend-apps/audio": "workspace:*",
-        "@legend-apps/auth-session": "workspace:*",
-        "@legend-apps/clipboard": "workspace:*",
-        "@legend-apps/context-menu": "workspace:*",
-        "@legend-apps/desktop": "workspace:*",
-        "@legend-apps/desktop-app": "workspace:*",
-        "@legend-apps/desktop-config": "workspace:*",
-        "@legend-apps/desktop-links": "workspace:*",
-        "@legend-apps/desktop-shortcuts": "workspace:*",
-        "@legend-apps/desktop-windows": "workspace:*",
-        "@legend-apps/drag-drop": "workspace:*",
-        "@legend-apps/file-dialog": "workspace:*",
-        "@legend-apps/file-system": "workspace:*",
-        "@legend-apps/global-shortcuts": "workspace:*",
-        "@legend-apps/message-dialog": "workspace:*",
-        "@legend-apps/native-menu": "workspace:*",
-        "@legend-apps/notifications": "workspace:*",
-        "@legend-apps/processes": "workspace:*",
-        "@legend-apps/secure-storage": "workspace:*",
-        "@legend-apps/settings": "workspace:*",
-        "@legend-apps/sqlite": "workspace:*",
-        "@legend-apps/system": "workspace:*",
-        "@legend-apps/tray": "workspace:*",
-        "@legend-apps/ui": "workspace:*",
-        "@legend-apps/webview": "workspace:*",
-        "@legend-apps/window-options": "workspace:*",
+        "@legendapp/frame": "workspace:*",
+        "@legendapp/frame-audio": "workspace:*",
+        "@legendapp/frame-auth-session": "workspace:*",
+        "@legendapp/frame-clipboard": "workspace:*",
+        "@legendapp/frame-context-menu": "workspace:*",
+        "@legendapp/frame-desktop-app": "workspace:*",
+        "@legendapp/frame-desktop-config": "workspace:*",
+        "@legendapp/frame-desktop-links": "workspace:*",
+        "@legendapp/frame-desktop-shortcuts": "workspace:*",
+        "@legendapp/frame-desktop-windows": "workspace:*",
+        "@legendapp/frame-drag-drop": "workspace:*",
+        "@legendapp/frame-file-dialog": "workspace:*",
+        "@legendapp/frame-file-system": "workspace:*",
+        "@legendapp/frame-global-shortcuts": "workspace:*",
+        "@legendapp/frame-message-dialog": "workspace:*",
+        "@legendapp/frame-native-menu": "workspace:*",
+        "@legendapp/frame-notifications": "workspace:*",
+        "@legendapp/frame-processes": "workspace:*",
+        "@legendapp/frame-secure-storage": "workspace:*",
+        "@legendapp/frame-settings": "workspace:*",
+        "@legendapp/frame-sqlite": "workspace:*",
+        "@legendapp/frame-system": "workspace:*",
+        "@legendapp/frame-tray": "workspace:*",
+        "@legendapp/frame-ui": "workspace:*",
+        "@legendapp/frame-webview": "workspace:*",
+        "@legendapp/frame-window-options": "workspace:*",
         "@react-native-async-storage/async-storage": "2.2.0",
         "@react-native-runtimes/core": "0.1.0-alpha.2",
         "@types/bun": "1.3.14",
@@ -58,36 +58,36 @@
       },
     },
     "examples/kitchen-sink": {
-      "name": "@legend-examples/kitchen-sink",
+      "name": "@frame-examples/kitchen-sink",
       "version": "0.1.0",
       "dependencies": {
         "@babel/parser": "7.28.5",
         "@babel/traverse": "7.28.5",
         "@expo/ui": "0.2.0-beta.9",
-        "@legend-apps/audio": "workspace:*",
-        "@legend-apps/auth-session": "workspace:*",
-        "@legend-apps/cli": "workspace:*",
-        "@legend-apps/clipboard": "workspace:*",
-        "@legend-apps/context-menu": "workspace:*",
-        "@legend-apps/desktop": "workspace:*",
-        "@legend-apps/desktop-app": "workspace:*",
-        "@legend-apps/desktop-config": "workspace:*",
-        "@legend-apps/desktop-links": "workspace:*",
-        "@legend-apps/desktop-windows": "workspace:*",
-        "@legend-apps/drag-drop": "workspace:*",
-        "@legend-apps/file-system": "workspace:*",
-        "@legend-apps/global-shortcuts": "workspace:*",
-        "@legend-apps/message-dialog": "workspace:*",
-        "@legend-apps/native-menu": "workspace:*",
-        "@legend-apps/notifications": "workspace:*",
-        "@legend-apps/processes": "workspace:*",
-        "@legend-apps/secure-storage": "workspace:*",
-        "@legend-apps/settings": "workspace:*",
-        "@legend-apps/sqlite": "workspace:*",
-        "@legend-apps/system": "workspace:*",
-        "@legend-apps/tray": "workspace:*",
-        "@legend-apps/ui": "workspace:*",
-        "@legend-apps/webview": "workspace:*",
+        "@legendapp/frame": "workspace:*",
+        "@legendapp/frame-audio": "workspace:*",
+        "@legendapp/frame-auth-session": "workspace:*",
+        "@legendapp/frame-cli": "workspace:*",
+        "@legendapp/frame-clipboard": "workspace:*",
+        "@legendapp/frame-context-menu": "workspace:*",
+        "@legendapp/frame-desktop-app": "workspace:*",
+        "@legendapp/frame-desktop-config": "workspace:*",
+        "@legendapp/frame-desktop-links": "workspace:*",
+        "@legendapp/frame-desktop-windows": "workspace:*",
+        "@legendapp/frame-drag-drop": "workspace:*",
+        "@legendapp/frame-file-system": "workspace:*",
+        "@legendapp/frame-global-shortcuts": "workspace:*",
+        "@legendapp/frame-message-dialog": "workspace:*",
+        "@legendapp/frame-native-menu": "workspace:*",
+        "@legendapp/frame-notifications": "workspace:*",
+        "@legendapp/frame-processes": "workspace:*",
+        "@legendapp/frame-secure-storage": "workspace:*",
+        "@legendapp/frame-settings": "workspace:*",
+        "@legendapp/frame-sqlite": "workspace:*",
+        "@legendapp/frame-system": "workspace:*",
+        "@legendapp/frame-tray": "workspace:*",
+        "@legendapp/frame-ui": "workspace:*",
+        "@legendapp/frame-webview": "workspace:*",
         "@react-native-async-storage/async-storage": "2.2.0",
         "@react-native-community/cli": "20.1.3",
         "@react-native-community/cli-platform-apple": "20.1.3",
@@ -117,7 +117,7 @@
       },
     },
     "fixtures/native-greeting": {
-      "name": "@legend-apps/native-greeting",
+      "name": "@legendapp/frame-native-greeting",
       "version": "0.1.0-prototype.0",
       "peerDependencies": {
         "react": "19.1.4",
@@ -125,10 +125,10 @@
       },
     },
     "fixtures/sdk-test-driver": {
-      "name": "@legend-apps/sdk-test-driver",
+      "name": "@legendapp/frame-sdk-test-driver",
       "version": "0.1.0-prototype.0",
       "dependencies": {
-        "@legend-apps/desktop-app": "0.1.0-prototype.0",
+        "@legendapp/frame-desktop-app": "0.1.0-prototype.0",
       },
       "peerDependencies": {
         "react": "19.1.4",
@@ -136,7 +136,7 @@
       },
     },
     "packages/audio": {
-      "name": "@legend-apps/audio",
+      "name": "@legendapp/frame-audio",
       "version": "0.1.0-prototype.0",
       "peerDependencies": {
         "expo-audio": "1.1.1",
@@ -148,10 +148,10 @@
       ],
     },
     "packages/auth-session": {
-      "name": "@legend-apps/auth-session",
+      "name": "@legendapp/frame-auth-session",
       "version": "0.1.0-prototype.0",
       "dependencies": {
-        "@legend-apps/desktop-links": "0.1.0-prototype.0",
+        "@legendapp/frame-desktop-links": "0.1.0-prototype.0",
         "base64-js": "1.5.1",
       },
       "peerDependencies": {
@@ -165,13 +165,13 @@
       ],
     },
     "packages/cli": {
-      "name": "@legend-apps/cli",
+      "name": "@legendapp/frame-cli",
       "version": "0.1.0-prototype.0",
       "bin": {
-        "legend": "src/index.ts",
+        "frame": "src/index.ts",
       },
       "dependencies": {
-        "@legend-apps/desktop-config": "0.1.0-prototype.0",
+        "@legendapp/frame-desktop-config": "0.1.0-prototype.0",
         "expo-desktop": "1.0.0-beta.6",
         "npm": "11.11.0",
         "typescript": "5.9.3",
@@ -179,10 +179,10 @@
       },
     },
     "packages/clipboard": {
-      "name": "@legend-apps/clipboard",
+      "name": "@legendapp/frame-clipboard",
       "version": "0.1.0-prototype.0",
       "dependencies": {
-        "@legend-apps/desktop-app": "0.1.0-prototype.0",
+        "@legendapp/frame-desktop-app": "0.1.0-prototype.0",
       },
       "peerDependencies": {
         "expo-clipboard": "~8.0.8",
@@ -194,20 +194,20 @@
       ],
     },
     "packages/config-plugin": {
-      "name": "@legend-apps/desktop-config",
+      "name": "@legendapp/frame-desktop-config",
       "version": "0.1.0-prototype.0",
       "dependencies": {
         "@expo/config-plugins": "54.0.5",
-        "@legend-apps/desktop-host": "0.1.0-prototype.0",
-        "@legend-apps/window-options": "0.1.0-prototype.0",
+        "@legendapp/frame-desktop-host": "0.1.0-prototype.0",
+        "@legendapp/frame-window-options": "0.1.0-prototype.0",
         "expo-desktop-config-plugins": "1.2.0-beta.1",
       },
     },
     "packages/context-menu": {
-      "name": "@legend-apps/context-menu",
+      "name": "@legendapp/frame-context-menu",
       "version": "0.1.0-prototype.0",
       "dependencies": {
-        "@legend-apps/desktop-app": "0.1.0-prototype.0",
+        "@legendapp/frame-desktop-app": "0.1.0-prototype.0",
       },
       "peerDependencies": {
         "react": "19.1.4",
@@ -215,36 +215,43 @@
       },
     },
     "packages/desktop": {
-      "name": "@legend-apps/desktop",
+      "name": "@legendapp/frame",
       "version": "0.1.0-prototype.0",
+      "bin": {
+        "frame": "bin/frame.cjs",
+      },
       "dependencies": {
-        "@legend-apps/clipboard": "0.1.0-prototype.0",
-        "@legend-apps/context-menu": "0.1.0-prototype.0",
-        "@legend-apps/desktop-app": "0.1.0-prototype.0",
-        "@legend-apps/desktop-links": "0.1.0-prototype.0",
-        "@legend-apps/desktop-shortcuts": "0.1.0-prototype.0",
-        "@legend-apps/desktop-windows": "0.1.0-prototype.0",
-        "@legend-apps/drag-drop": "0.1.0-prototype.0",
-        "@legend-apps/file-dialog": "0.1.0-prototype.0",
-        "@legend-apps/file-system": "0.1.0-prototype.0",
-        "@legend-apps/global-shortcuts": "0.1.0-prototype.0",
-        "@legend-apps/message-dialog": "0.1.0-prototype.0",
-        "@legend-apps/native-menu": "0.1.0-prototype.0",
-        "@legend-apps/notifications": "0.1.0-prototype.0",
-        "@legend-apps/processes": "0.1.0-prototype.0",
-        "@legend-apps/secure-storage": "0.1.0-prototype.0",
-        "@legend-apps/settings": "0.1.0-prototype.0",
-        "@legend-apps/sqlite": "0.1.0-prototype.0",
-        "@legend-apps/system": "0.1.0-prototype.0",
-        "@legend-apps/tray": "0.1.0-prototype.0",
-        "@legend-apps/updates": "0.1.0-prototype.0",
-        "@legend-apps/webview": "0.1.0-prototype.0",
+        "@legendapp/frame-audio": "0.1.0-prototype.0",
+        "@legendapp/frame-auth-session": "0.1.0-prototype.0",
+        "@legendapp/frame-cli": "0.1.0-prototype.0",
+        "@legendapp/frame-clipboard": "0.1.0-prototype.0",
+        "@legendapp/frame-context-menu": "0.1.0-prototype.0",
+        "@legendapp/frame-desktop-app": "0.1.0-prototype.0",
+        "@legendapp/frame-desktop-links": "0.1.0-prototype.0",
+        "@legendapp/frame-desktop-shortcuts": "0.1.0-prototype.0",
+        "@legendapp/frame-desktop-windows": "0.1.0-prototype.0",
+        "@legendapp/frame-drag-drop": "0.1.0-prototype.0",
+        "@legendapp/frame-file-dialog": "0.1.0-prototype.0",
+        "@legendapp/frame-file-system": "0.1.0-prototype.0",
+        "@legendapp/frame-global-shortcuts": "0.1.0-prototype.0",
+        "@legendapp/frame-message-dialog": "0.1.0-prototype.0",
+        "@legendapp/frame-native-menu": "0.1.0-prototype.0",
+        "@legendapp/frame-notifications": "0.1.0-prototype.0",
+        "@legendapp/frame-processes": "0.1.0-prototype.0",
+        "@legendapp/frame-secure-storage": "0.1.0-prototype.0",
+        "@legendapp/frame-settings": "0.1.0-prototype.0",
+        "@legendapp/frame-sqlite": "0.1.0-prototype.0",
+        "@legendapp/frame-system": "0.1.0-prototype.0",
+        "@legendapp/frame-tray": "0.1.0-prototype.0",
+        "@legendapp/frame-ui": "0.1.0-prototype.0",
+        "@legendapp/frame-updates": "0.1.0-prototype.0",
+        "@legendapp/frame-webview": "0.1.0-prototype.0",
         "@react-native-runtimes/core": "0.1.0-alpha.2",
         "react-native-nitro-modules": "0.35.7",
       },
     },
     "packages/desktop-app": {
-      "name": "@legend-apps/desktop-app",
+      "name": "@legendapp/frame-desktop-app",
       "version": "0.1.0-prototype.0",
       "peerDependencies": {
         "react": "19.1.4",
@@ -252,17 +259,17 @@
       },
     },
     "packages/desktop-host": {
-      "name": "@legend-apps/desktop-host",
+      "name": "@legendapp/frame-desktop-host",
       "version": "0.1.0-prototype.0",
       "dependencies": {
-        "@legend-apps/desktop-app": "0.1.0-prototype.0",
+        "@legendapp/frame-desktop-app": "0.1.0-prototype.0",
       },
     },
     "packages/desktop-links": {
-      "name": "@legend-apps/desktop-links",
+      "name": "@legendapp/frame-desktop-links",
       "version": "0.1.0-prototype.0",
       "dependencies": {
-        "@legend-apps/desktop-app": "0.1.0-prototype.0",
+        "@legendapp/frame-desktop-app": "0.1.0-prototype.0",
       },
       "peerDependencies": {
         "expo-linking": "~8.0.12",
@@ -274,10 +281,10 @@
       ],
     },
     "packages/desktop-shortcuts": {
-      "name": "@legend-apps/desktop-shortcuts",
+      "name": "@legendapp/frame-desktop-shortcuts",
       "version": "0.1.0-prototype.0",
       "dependencies": {
-        "@legend-apps/desktop-app": "0.1.0-prototype.0",
+        "@legendapp/frame-desktop-app": "0.1.0-prototype.0",
       },
       "peerDependencies": {
         "react": "19.1.4",
@@ -285,11 +292,11 @@
       },
     },
     "packages/desktop-windows": {
-      "name": "@legend-apps/desktop-windows",
+      "name": "@legendapp/frame-desktop-windows",
       "version": "0.1.0-prototype.0",
       "dependencies": {
-        "@legend-apps/desktop-app": "0.1.0-prototype.0",
-        "@legend-apps/window-options": "0.1.0-prototype.0",
+        "@legendapp/frame-desktop-app": "0.1.0-prototype.0",
+        "@legendapp/frame-window-options": "0.1.0-prototype.0",
       },
       "peerDependencies": {
         "react": "19.1.4",
@@ -297,10 +304,10 @@
       },
     },
     "packages/drag-drop": {
-      "name": "@legend-apps/drag-drop",
+      "name": "@legendapp/frame-drag-drop",
       "version": "0.1.0-prototype.0",
       "dependencies": {
-        "@legend-apps/desktop-app": "0.1.0-prototype.0",
+        "@legendapp/frame-desktop-app": "0.1.0-prototype.0",
       },
       "peerDependencies": {
         "react": "19.1.4",
@@ -308,7 +315,7 @@
       },
     },
     "packages/file-dialog": {
-      "name": "@legend-apps/file-dialog",
+      "name": "@legendapp/frame-file-dialog",
       "version": "0.1.0-prototype.0",
       "peerDependencies": {
         "react": "19.1.4",
@@ -316,10 +323,10 @@
       },
     },
     "packages/file-system": {
-      "name": "@legend-apps/file-system",
+      "name": "@legendapp/frame-file-system",
       "version": "0.1.0-prototype.0",
       "dependencies": {
-        "@legend-apps/desktop-app": "0.1.0-prototype.0",
+        "@legendapp/frame-desktop-app": "0.1.0-prototype.0",
         "base64-js": "1.5.1",
       },
       "peerDependencies": {
@@ -328,10 +335,10 @@
       },
     },
     "packages/global-shortcuts": {
-      "name": "@legend-apps/global-shortcuts",
+      "name": "@legendapp/frame-global-shortcuts",
       "version": "0.1.0-prototype.0",
       "dependencies": {
-        "@legend-apps/desktop-app": "0.1.0-prototype.0",
+        "@legendapp/frame-desktop-app": "0.1.0-prototype.0",
       },
       "peerDependencies": {
         "react": "19.1.4",
@@ -339,10 +346,10 @@
       },
     },
     "packages/message-dialog": {
-      "name": "@legend-apps/message-dialog",
+      "name": "@legendapp/frame-message-dialog",
       "version": "0.1.0-prototype.0",
       "dependencies": {
-        "@legend-apps/desktop-app": "0.1.0-prototype.0",
+        "@legendapp/frame-desktop-app": "0.1.0-prototype.0",
       },
       "peerDependencies": {
         "react": "19.1.4",
@@ -350,7 +357,7 @@
       },
     },
     "packages/native-menu": {
-      "name": "@legend-apps/native-menu",
+      "name": "@legendapp/frame-native-menu",
       "version": "0.1.0-prototype.0",
       "peerDependencies": {
         "react": "19.1.4",
@@ -358,10 +365,10 @@
       },
     },
     "packages/notifications": {
-      "name": "@legend-apps/notifications",
+      "name": "@legendapp/frame-notifications",
       "version": "0.1.0-prototype.0",
       "dependencies": {
-        "@legend-apps/desktop-app": "0.1.0-prototype.0",
+        "@legendapp/frame-desktop-app": "0.1.0-prototype.0",
       },
       "peerDependencies": {
         "react": "19.1.4",
@@ -369,10 +376,10 @@
       },
     },
     "packages/processes": {
-      "name": "@legend-apps/processes",
+      "name": "@legendapp/frame-processes",
       "version": "0.1.0-prototype.0",
       "dependencies": {
-        "@legend-apps/desktop-app": "0.1.0-prototype.0",
+        "@legendapp/frame-desktop-app": "0.1.0-prototype.0",
       },
       "peerDependencies": {
         "react": "19.1.4",
@@ -380,10 +387,10 @@
       },
     },
     "packages/secure-storage": {
-      "name": "@legend-apps/secure-storage",
+      "name": "@legendapp/frame-secure-storage",
       "version": "0.1.0-prototype.0",
       "dependencies": {
-        "@legend-apps/desktop-app": "0.1.0-prototype.0",
+        "@legendapp/frame-desktop-app": "0.1.0-prototype.0",
       },
       "peerDependencies": {
         "expo-secure-store": "~15.0.8",
@@ -395,26 +402,26 @@
       ],
     },
     "packages/settings": {
-      "name": "@legend-apps/settings",
+      "name": "@legendapp/frame-settings",
       "version": "0.1.0-prototype.0",
       "dependencies": {
-        "@legend-apps/file-system": "0.1.0-prototype.0",
+        "@legendapp/frame-file-system": "0.1.0-prototype.0",
       },
     },
     "packages/sqlite": {
-      "name": "@legend-apps/sqlite",
+      "name": "@legendapp/frame-sqlite",
       "version": "0.1.0-prototype.0",
       "dependencies": {
-        "@legend-apps/desktop-app": "0.1.0-prototype.0",
-        "@legend-apps/file-system": "0.1.0-prototype.0",
+        "@legendapp/frame-desktop-app": "0.1.0-prototype.0",
+        "@legendapp/frame-file-system": "0.1.0-prototype.0",
         "@op-engineering/op-sqlite": "18.2.1",
       },
     },
     "packages/system": {
-      "name": "@legend-apps/system",
+      "name": "@legendapp/frame-system",
       "version": "0.1.0-prototype.0",
       "dependencies": {
-        "@legend-apps/desktop-app": "0.1.0-prototype.0",
+        "@legendapp/frame-desktop-app": "0.1.0-prototype.0",
       },
       "peerDependencies": {
         "react": "19.1.4",
@@ -422,10 +429,10 @@
       },
     },
     "packages/tray": {
-      "name": "@legend-apps/tray",
+      "name": "@legendapp/frame-tray",
       "version": "0.1.0-prototype.0",
       "dependencies": {
-        "@legend-apps/desktop-app": "0.1.0-prototype.0",
+        "@legendapp/frame-desktop-app": "0.1.0-prototype.0",
       },
       "peerDependencies": {
         "react": "19.1.4",
@@ -433,7 +440,7 @@
       },
     },
     "packages/ui": {
-      "name": "@legend-apps/ui",
+      "name": "@legendapp/frame-ui",
       "version": "0.1.0-prototype.0",
       "peerDependencies": {
         "@expo/ui": "0.2.0-beta.9",
@@ -447,10 +454,10 @@
       ],
     },
     "packages/updates": {
-      "name": "@legend-apps/updates",
+      "name": "@legendapp/frame-updates",
       "version": "0.1.0-prototype.0",
       "dependencies": {
-        "@legend-apps/desktop-app": "0.1.0-prototype.0",
+        "@legendapp/frame-desktop-app": "0.1.0-prototype.0",
       },
       "peerDependencies": {
         "react": "19.1.4",
@@ -458,15 +465,15 @@
       },
     },
     "packages/webview": {
-      "name": "@legend-apps/webview",
+      "name": "@legendapp/frame-webview",
       "version": "0.1.0-prototype.0",
       "dependencies": {
-        "@legend-apps/desktop-app": "0.1.0-prototype.0",
+        "@legendapp/frame-desktop-app": "0.1.0-prototype.0",
         "react-native-webview": "16.0.0",
       },
     },
     "packages/window-options": {
-      "name": "@legend-apps/window-options",
+      "name": "@legendapp/frame-window-options",
       "version": "0.1.0-prototype.0",
     },
   },
@@ -736,6 +743,8 @@
 
     "@expo/xcpretty": ["@expo/xcpretty@4.4.5", "", { "dependencies": { "@babel/code-frame": "^7.20.0", "chalk": "^4.1.0", "js-yaml": "^4.1.0" }, "bin": { "excpretty": "build/cli.js" } }, "sha512-J3eL4n4h5QTwfD0SIz8OIk6/+sOL/hFZAMacgCM07UNlxBQfJipEpIC2AQxvGkbYeStByJ0TVhQAJo+DeNgaSQ=="],
 
+    "@frame-examples/kitchen-sink": ["@frame-examples/kitchen-sink@workspace:examples/kitchen-sink"],
+
     "@hapi/hoek": ["@hapi/hoek@9.3.0", "", {}, "sha512-/c6rf4UJlmHlC9b5BaNvzAcFv7HZ2QHaV0D4/HNlBdvFnvQq8RI4kYdhyPCl7Xj+oWvTWQ8ujhqS53LIgAe6KQ=="],
 
     "@hapi/topo": ["@hapi/topo@5.1.0", "", { "dependencies": { "@hapi/hoek": "^9.0.0" } }, "sha512-foQZKJig7Ob0BMAYBfcJk8d77QtOe7Wo4ox7ff1lQYoNNAb6jwcY1ncdoy2e9wQZzvNy7ODZCYJkK8kzmcAnAg=="],
@@ -774,69 +783,67 @@
 
     "@jridgewell/trace-mapping": ["@jridgewell/trace-mapping@0.3.31", "", { "dependencies": { "@jridgewell/resolve-uri": "^3.1.0", "@jridgewell/sourcemap-codec": "^1.4.14" } }, "sha512-zzNR+SdQSDJzc8joaeP8QQoCQr8NuYx2dIIytl1QeBEZHJ9uW6hebsrYgbz8hJwUQao3TWCMtmfV8Nu1twOLAw=="],
 
-    "@legend-apps/audio": ["@legend-apps/audio@workspace:packages/audio"],
+    "@legendapp/frame": ["@legendapp/frame@workspace:packages/desktop"],
 
-    "@legend-apps/auth-session": ["@legend-apps/auth-session@workspace:packages/auth-session"],
+    "@legendapp/frame-audio": ["@legendapp/frame-audio@workspace:packages/audio"],
 
-    "@legend-apps/cli": ["@legend-apps/cli@workspace:packages/cli"],
+    "@legendapp/frame-auth-session": ["@legendapp/frame-auth-session@workspace:packages/auth-session"],
 
-    "@legend-apps/clipboard": ["@legend-apps/clipboard@workspace:packages/clipboard"],
+    "@legendapp/frame-cli": ["@legendapp/frame-cli@workspace:packages/cli"],
 
-    "@legend-apps/context-menu": ["@legend-apps/context-menu@workspace:packages/context-menu"],
+    "@legendapp/frame-clipboard": ["@legendapp/frame-clipboard@workspace:packages/clipboard"],
 
-    "@legend-apps/desktop": ["@legend-apps/desktop@workspace:packages/desktop"],
+    "@legendapp/frame-context-menu": ["@legendapp/frame-context-menu@workspace:packages/context-menu"],
 
-    "@legend-apps/desktop-app": ["@legend-apps/desktop-app@workspace:packages/desktop-app"],
+    "@legendapp/frame-desktop-app": ["@legendapp/frame-desktop-app@workspace:packages/desktop-app"],
 
-    "@legend-apps/desktop-config": ["@legend-apps/desktop-config@workspace:packages/config-plugin"],
+    "@legendapp/frame-desktop-config": ["@legendapp/frame-desktop-config@workspace:packages/config-plugin"],
 
-    "@legend-apps/desktop-host": ["@legend-apps/desktop-host@workspace:packages/desktop-host"],
+    "@legendapp/frame-desktop-host": ["@legendapp/frame-desktop-host@workspace:packages/desktop-host"],
 
-    "@legend-apps/desktop-links": ["@legend-apps/desktop-links@workspace:packages/desktop-links"],
+    "@legendapp/frame-desktop-links": ["@legendapp/frame-desktop-links@workspace:packages/desktop-links"],
 
-    "@legend-apps/desktop-shortcuts": ["@legend-apps/desktop-shortcuts@workspace:packages/desktop-shortcuts"],
+    "@legendapp/frame-desktop-shortcuts": ["@legendapp/frame-desktop-shortcuts@workspace:packages/desktop-shortcuts"],
 
-    "@legend-apps/desktop-windows": ["@legend-apps/desktop-windows@workspace:packages/desktop-windows"],
+    "@legendapp/frame-desktop-windows": ["@legendapp/frame-desktop-windows@workspace:packages/desktop-windows"],
 
-    "@legend-apps/drag-drop": ["@legend-apps/drag-drop@workspace:packages/drag-drop"],
+    "@legendapp/frame-drag-drop": ["@legendapp/frame-drag-drop@workspace:packages/drag-drop"],
 
-    "@legend-apps/file-dialog": ["@legend-apps/file-dialog@workspace:packages/file-dialog"],
+    "@legendapp/frame-file-dialog": ["@legendapp/frame-file-dialog@workspace:packages/file-dialog"],
 
-    "@legend-apps/file-system": ["@legend-apps/file-system@workspace:packages/file-system"],
+    "@legendapp/frame-file-system": ["@legendapp/frame-file-system@workspace:packages/file-system"],
 
-    "@legend-apps/global-shortcuts": ["@legend-apps/global-shortcuts@workspace:packages/global-shortcuts"],
+    "@legendapp/frame-global-shortcuts": ["@legendapp/frame-global-shortcuts@workspace:packages/global-shortcuts"],
 
-    "@legend-apps/message-dialog": ["@legend-apps/message-dialog@workspace:packages/message-dialog"],
+    "@legendapp/frame-message-dialog": ["@legendapp/frame-message-dialog@workspace:packages/message-dialog"],
 
-    "@legend-apps/native-greeting": ["@legend-apps/native-greeting@workspace:fixtures/native-greeting"],
+    "@legendapp/frame-native-greeting": ["@legendapp/frame-native-greeting@workspace:fixtures/native-greeting"],
 
-    "@legend-apps/native-menu": ["@legend-apps/native-menu@workspace:packages/native-menu"],
+    "@legendapp/frame-native-menu": ["@legendapp/frame-native-menu@workspace:packages/native-menu"],
 
-    "@legend-apps/notifications": ["@legend-apps/notifications@workspace:packages/notifications"],
+    "@legendapp/frame-notifications": ["@legendapp/frame-notifications@workspace:packages/notifications"],
 
-    "@legend-apps/processes": ["@legend-apps/processes@workspace:packages/processes"],
+    "@legendapp/frame-processes": ["@legendapp/frame-processes@workspace:packages/processes"],
 
-    "@legend-apps/sdk-test-driver": ["@legend-apps/sdk-test-driver@workspace:fixtures/sdk-test-driver"],
+    "@legendapp/frame-sdk-test-driver": ["@legendapp/frame-sdk-test-driver@workspace:fixtures/sdk-test-driver"],
 
-    "@legend-apps/secure-storage": ["@legend-apps/secure-storage@workspace:packages/secure-storage"],
+    "@legendapp/frame-secure-storage": ["@legendapp/frame-secure-storage@workspace:packages/secure-storage"],
 
-    "@legend-apps/settings": ["@legend-apps/settings@workspace:packages/settings"],
+    "@legendapp/frame-settings": ["@legendapp/frame-settings@workspace:packages/settings"],
 
-    "@legend-apps/sqlite": ["@legend-apps/sqlite@workspace:packages/sqlite"],
+    "@legendapp/frame-sqlite": ["@legendapp/frame-sqlite@workspace:packages/sqlite"],
 
-    "@legend-apps/system": ["@legend-apps/system@workspace:packages/system"],
+    "@legendapp/frame-system": ["@legendapp/frame-system@workspace:packages/system"],
 
-    "@legend-apps/tray": ["@legend-apps/tray@workspace:packages/tray"],
+    "@legendapp/frame-tray": ["@legendapp/frame-tray@workspace:packages/tray"],
 
-    "@legend-apps/ui": ["@legend-apps/ui@workspace:packages/ui"],
+    "@legendapp/frame-ui": ["@legendapp/frame-ui@workspace:packages/ui"],
 
-    "@legend-apps/updates": ["@legend-apps/updates@workspace:packages/updates"],
+    "@legendapp/frame-updates": ["@legendapp/frame-updates@workspace:packages/updates"],
 
-    "@legend-apps/webview": ["@legend-apps/webview@workspace:packages/webview"],
+    "@legendapp/frame-webview": ["@legendapp/frame-webview@workspace:packages/webview"],
 
-    "@legend-apps/window-options": ["@legend-apps/window-options@workspace:packages/window-options"],
-
-    "@legend-examples/kitchen-sink": ["@legend-examples/kitchen-sink@workspace:examples/kitchen-sink"],
+    "@legendapp/frame-window-options": ["@legendapp/frame-window-options@workspace:packages/window-options"],
 
     "@microsoft/1ds-core-js": ["@microsoft/1ds-core-js@4.4.4", "", { "dependencies": { "@microsoft/applicationinsights-core-js": "3.4.4", "@microsoft/applicationinsights-shims": "3.0.1", "@microsoft/dynamicproto-js": "^2.0.3", "@nevware21/ts-async": ">= 0.5.5 < 0.6.0", "@nevware21/ts-utils": ">= 0.14.0 < 2.x" } }, "sha512-rXWefMBlDfkdYsIfrifw30Yq2s5PD4iU1VbifL8AWPB94S/CKKaUg+Zy4rZPLmCTocONalrs8GrcpaPxN/KXrg=="],
 
@@ -1940,7 +1947,7 @@
 
     "sucrase": ["sucrase@3.35.1", "", { "dependencies": { "@jridgewell/gen-mapping": "^0.3.2", "commander": "^4.0.0", "lines-and-columns": "^1.1.6", "mz": "^2.7.0", "pirates": "^4.0.1", "tinyglobby": "^0.2.11", "ts-interface-checker": "^0.1.9" }, "bin": { "sucrase": "bin/sucrase", "sucrase-node": "bin/sucrase-node" } }, "sha512-DhuTmvZWux4H1UOnWMB3sk0sbaCVOoQZjv8u1rDoTV0HTdGem9hkAZtl4JZy8P2z4Bg0nT+YMeOFyVr4zcG5Tw=="],
 
-    "supports-color": ["supports-color@7.2.0", "", { "dependencies": { "has-flag": "^4.0.0" } }, "sha512-qpCAvRl9stuOHveKsn7HncJRvv501qIacKzQlO/+Lwxc9+0q2wLyv4Dfvt80/DPn2pqOBsJdDiogXGR9+OvwRw=="],
+    "supports-color": ["supports-color@10.2.2", "", {}, "sha512-SS+jx45GF1QjgEXQx4NJZV9ImqmO2NPz5FNsIHrsDjh2YsHnawpan7SNQ1o8NuhrbHZy9AZhIoCUiCeaW/C80g=="],
 
     "supports-hyperlinks": ["supports-hyperlinks@2.3.0", "", { "dependencies": { "has-flag": "^4.0.0", "supports-color": "^7.0.0" } }, "sha512-RpsAZlpWcDwOPQA22aCH4J0t7L8JmAvsCxfOSEwm7cQs3LshN36QaTkwd70DnBOXDWGssw2eUoc8CaRWT0XunA=="],
 
@@ -2271,6 +2278,8 @@
     "better-opn/open": ["open@8.4.2", "", { "dependencies": { "define-lazy-prop": "^2.0.0", "is-docker": "^2.1.1", "is-wsl": "^2.2.0" } }, "sha512-7x81NCL719oNbsq/3mh+hVrAWmFuEYUqrq/Iw3kUzH8ReypT9QQ0BLoJS7/G9k6N81XjW4qHWtjWwe/9eLy1EQ=="],
 
     "chalk/ansi-styles": ["ansi-styles@4.3.0", "", { "dependencies": { "color-convert": "^2.0.1" } }, "sha512-zbB9rCJAT1rbjiVDb2hqKFHNYLxgtk8NURxZ3IZwD3F6NtxbXZQCnnSi1Lkx+IDohdPlFp222wVALIheZJQSEg=="],
+
+    "chalk/supports-color": ["supports-color@7.2.0", "", { "dependencies": { "has-flag": "^4.0.0" } }, "sha512-qpCAvRl9stuOHveKsn7HncJRvv501qIacKzQlO/+Lwxc9+0q2wLyv4Dfvt80/DPn2pqOBsJdDiogXGR9+OvwRw=="],
 
     "chrome-launcher/is-wsl": ["is-wsl@2.2.0", "", { "dependencies": { "is-docker": "^2.0.0" } }, "sha512-fKzAra0rGJUUBwGBgNkHZuToZcn+TtXHpeCgmkMJMMYx1sQDYaCSyjJBSCa2nH1DGm7s3n1oBnohoVTBaN7Lww=="],
 
@@ -2711,6 +2720,8 @@
     "strip-ansi/ansi-regex": ["ansi-regex@4.1.1", "", {}, "sha512-ILlv4k/3f6vfQ4OoP2AGvirOktlQ98ZEL1k9FaQjxa3L1abBgbuTDAdPOpvbGncC0BTVQrl+OM8xZGK6tWXt7g=="],
 
     "sucrase/commander": ["commander@4.1.1", "", {}, "sha512-NOKm8xhkzAjzFx8B2v5OAHT+u5pRQc2UCa2Vq9jYL/31o2wi9mxBA7LIFs3sV5VSC49z6pEhfbMULvShKj26WA=="],
+
+    "supports-hyperlinks/supports-color": ["supports-color@7.2.0", "", { "dependencies": { "has-flag": "^4.0.0" } }, "sha512-qpCAvRl9stuOHveKsn7HncJRvv501qIacKzQlO/+Lwxc9+0q2wLyv4Dfvt80/DPn2pqOBsJdDiogXGR9+OvwRw=="],
 
     "terser/commander": ["commander@2.20.3", "", {}, "sha512-GpVkmM8vF2vQUkj2LvZmD35JxeJOLCwJ9cUkugyk2nuhbv3+mJvpLYYt+0+USMxE+oj+ey/lJEnhZw75x/OMcQ=="],
 

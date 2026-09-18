@@ -16,7 +16,7 @@ function mergeEntitlements(...sources) {
 function resolveEntitlements(config, packages) {
   const expo = config.expo ?? config;
   return mergeEntitlements(
-    ...packages.map((pkg) => pkg.legend?.entitlements?.macos ?? {}),
+    ...packages.map((pkg) => pkg.frame?.entitlements?.macos ?? {}),
     expo.macos?.entitlements ?? {},
   );
 }

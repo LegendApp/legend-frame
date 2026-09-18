@@ -1,5 +1,5 @@
 import Native from "./NativeDesktopTray";
-import { onDesktopEvent } from "@legend-apps/desktop-app";
+import { onDesktopEvent } from "@legendapp/frame-desktop-app";
 
 export type TrayMenuItem = { id: string; title: string; enabled?: boolean; checked?: boolean; items?: TrayMenuItem[] } | { separator: true };
 export type TrayOptions = { id: string; title?: string; /** SF Symbol name. */ symbol?: string; tooltip?: string; menu?: TrayMenuItem[] };

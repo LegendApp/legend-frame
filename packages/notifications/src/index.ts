@@ -1,6 +1,6 @@
 import Native from "./NativeDesktopNotifications";
 import { Platform } from "react-native";
-import { onDesktopEvent, callApp } from "@legend-apps/desktop-app";
+import { onDesktopEvent, callApp } from "@legendapp/frame-desktop-app";
 
 export type NotificationPermission = "notDetermined" | "denied" | "authorized" | "provisional" | "unknown";
 export type DesktopNotification = {

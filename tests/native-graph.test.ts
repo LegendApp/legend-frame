@@ -75,7 +75,7 @@ test("a runtime superset is compatible but missing or modified native code is no
   ).toEqual(["dialogs"]);
 });
 test("native source content changes invalidate hashes without build-directory noise", () => {
-  const root = mkdtempSync(path.join(os.tmpdir(), "legend-hash-"));
+  const root = mkdtempSync(path.join(os.tmpdir(), "frame-hash-"));
   try {
     mkdirSync(path.join(root, "ios/build"), { recursive: true });
     writeFileSync(path.join(root, "ios/Module.mm"), "one");
@@ -96,7 +96,7 @@ test("Go permits ordinary identity but rejects app-specific native configuration
           bundleIdentifier: "example.app",
           infoPlist: { CFBundleName: "App" },
         },
-        plugins: ["@legend-apps/desktop-config"],
+        plugins: ["@legendapp/frame-desktop-config"],
       },
     }),
   ).toEqual([]);
@@ -111,28 +111,28 @@ test("Go permits ordinary identity but rejects app-specific native configuration
 });
 
 test("host-only and CNG-only edits invalidate the Go compatibility signature", () => {
-  const root = mkdtempSync(path.join(os.tmpdir(), "legend-host-hash-"));
+  const root = mkdtempSync(path.join(os.tmpdir(), "frame-host-hash-"));
   try {
-    writeFileSync(path.join(root, "package.json"), JSON.stringify({ dependencies: { "@legend-apps/desktop-app": "1", "@legend-apps/desktop-host": "1", "@legend-apps/desktop-config": "1" } }));
+    writeFileSync(path.join(root, "package.json"), JSON.stringify({ dependencies: { "@legendapp/frame-desktop-app": "1", "@legendapp/frame-desktop-host": "1", "@legendapp/frame-desktop-config": "1" } }));
     for (const name of ["desktop-app", "desktop-host", "desktop-config"]) {
-      const dir = path.join(root, "node_modules/@legend-apps", name); mkdirSync(dir, { recursive: true });
-      writeFileSync(path.join(dir, "package.json"), JSON.stringify({ name: `@legend-apps/${name}`, version: "1", ...(name === "desktop-app" ? { legend: { nativeModules: ["NativeDesktopApp"] } } : {}) }));
+      const dir = path.join(root, "node_modules/@legendapp", name === "desktop" ? "frame" : `frame-${name}`); mkdirSync(dir, { recursive: true });
+      writeFileSync(path.join(dir, "package.json"), JSON.stringify({ name: name === "desktop" ? "@legendapp/frame" : `@legendapp/frame-${name}`, version: "1", ...(name === "desktop-app" ? { frame: { nativeModules: ["NativeDesktopApp"] } } : {}) }));
     }
     const initial = nativePackages(root)[0]!.signature;
-    writeFileSync(path.join(root, "node_modules/@legend-apps/desktop-host/AppDelegate.mm"), "changed native host");
+    writeFileSync(path.join(root, "node_modules/@legendapp/frame-desktop-host/AppDelegate.mm"), "changed native host");
     const hostChanged = nativePackages(root)[0]!.signature; expect(hostChanged).not.toBe(initial);
-    writeFileSync(path.join(root, "node_modules/@legend-apps/desktop-config/app.plugin.cjs"), "changed native config");
+    writeFileSync(path.join(root, "node_modules/@legendapp/frame-desktop-config/app.plugin.cjs"), "changed native config");
     expect(nativePackages(root)[0]!.signature).not.toBe(hostChanged);
   } finally { rmSync(root, { recursive: true, force: true }); }
 });
 
 test("Go launch identity is explicit, validated, and optional for opening a standalone binary", () => {
-  const root = mkdtempSync(path.join(os.tmpdir(), "legend-project-env-"));
+  const root = mkdtempSync(path.join(os.tmpdir(), "frame-project-env-"));
   try {
     expect(projectEnvironment(root)).toEqual({});
-    writeFileSync(path.join(root, "app.json"), JSON.stringify({ expo: { name: "Demo", version: "2.3.4", extra: { legend: { projectId: "stable-id" } } } }));
-    expect(projectEnvironment(root)).toEqual({ LEGEND_WINDOW_CONFIG: "{}", LEGEND_PROJECT_ID: "stable-id", LEGEND_PROJECT_NAME: "Demo", LEGEND_PROJECT_VERSION: "2.3.4" });
-    writeFileSync(path.join(root, "app.json"), JSON.stringify({ expo: { extra: { legend: { projectId: {} } } } }));
+    writeFileSync(path.join(root, "app.json"), JSON.stringify({ expo: { name: "Demo", version: "2.3.4", extra: { frame: { projectId: "stable-id" } } } }));
+    expect(projectEnvironment(root)).toEqual({ FRAME_WINDOW_CONFIG: "{}", FRAME_PROJECT_ID: "stable-id", FRAME_PROJECT_NAME: "Demo", FRAME_PROJECT_VERSION: "2.3.4" });
+    writeFileSync(path.join(root, "app.json"), JSON.stringify({ expo: { extra: { frame: { projectId: {} } } } }));
     expect(() => projectEnvironment(root)).toThrow("stable project identifier");
   } finally { rmSync(root, { recursive: true, force: true }); }
 });
@@ -148,7 +148,7 @@ test("optional native peers do not force unused integrations into production", (
 });
 
 test("an optional peer in a parent workspace is not a native requirement unless the app declares it", () => {
-  const workspace = mkdtempSync(path.join(os.tmpdir(), "legend-optional-parent-"));
+  const workspace = mkdtempSync(path.join(os.tmpdir(), "frame-optional-parent-"));
   const root = path.join(workspace, "apps/consumer");
   const adapter = path.join(root, "node_modules/adapter");
   const optional = path.join(workspace, "node_modules/mobile-backend");
