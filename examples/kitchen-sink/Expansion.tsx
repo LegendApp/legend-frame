@@ -17,7 +17,7 @@ import * as windows from "@legend-apps/desktop/windows";
 import { openDatabase } from "@legend-apps/desktop/sqlite";
 import { WebView } from "@legend-apps/desktop/webview";
 const DragDropView = withUniwind(NativeDragDropView);
-const webHTML = `<html><body style="font:16px system-ui;padding:16px"><h3>Embedded WebView</h3><button onclick="window.ReactNativeWebView.postMessage('Hello from WebView')">Send a message to React Native</button></body></html>`;
+const webHTML = `<html><body style="font:16px system-ui;padding:16px"><h3>Embedded WebView</h3><input aria-label="WebView keyboard test" placeholder="Type here to test keyboard handling"><button onclick="window.ReactNativeWebView.postMessage('Hello from WebView')">Send a message to React Native</button></body></html>`;
 const dragSource = { text: "Hello from the desktop kitchen sink" };
 const dockItems = [{ id: "show", title: "Show kitchen sink" }, { id: "checked", title: "Checked item", checked: true }];
 type Removable = { remove(): unknown };

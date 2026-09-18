@@ -66,6 +66,21 @@ three full React Native reloads with ten immediate window-close cycles per JS
 session. See the
 [dated macOS report](macos-readiness-2026-09-18.md#fix-and-regression-evidence).
 
+## RN macOS keyboard compatibility patch
+
+The config plugin also patches `react-native-macos@0.81.7` keyboard event handling.
+An internal legacy `RCTView` hosted inside Fabric (including WebView) can lack a
+React tag. Untagged keyboard events now return nil rather than constructing an
+invalid event. `RCTView` only marks JS delivery complete when an event and
+its dispatcher exist, preserving propagation and native key filters.
+
+`keyboard-events.cjs` validates both source edits before applying them, rejects
+unexpected versions/source, and replaces installed files atomically to preserve
+package cache hardlinks. It ships with desktop-config and participates in runtime
+compatibility. Existing runtimes need a native rebuild. Review/remove this patch
+when upgrading RN macOS. `bun scripts/test-keyboard-events.ts` builds and exercises
+the native regression; see [macOS evidence](macos-readiness-2026-09-18.md#webview-keyboard-follow-up).
+
 ## Expo development terminal patch
 
 `legend dev` launches the app's installed `expo start` under Node, inheriting stdin/stdout/stderr. Its Bun supervisor retains desktop runtime discovery, compatibility enforcement, native builds and owned app processes. It has no keyboard interface. Desktop actions and results travel over a private JSON IPC channel; no HTTP command endpoint is exposed.

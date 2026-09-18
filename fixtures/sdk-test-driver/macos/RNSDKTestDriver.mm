@@ -2,6 +2,53 @@
 #import <UniformTypeIdentifiers/UniformTypeIdentifiers.h>
 #import <MediaPlayer/MediaPlayer.h>
 #import <RNDesktopApp/LegendDesktop.h>
+#import <React/RCTView.h>
+#import <React/RCTViewKeyboardEvent.h>
+#import <React/RCTHandledKey.h>
+#import <React/UIView+React.h>
+@interface RCTView (LegendKeyboardTest)
+- (BOOL)handleKeyboardEvent:(NSEvent *)event;
+@end
+// A recording dispatcher keeps the regression independent of the JS event queue.
+@interface LegendKeyboardRecorder : NSObject
+@property NSMutableArray *events;
+@end
+@implementation LegendKeyboardRecorder
+- (instancetype)init { if ((self = [super init])) _events = [NSMutableArray new]; return self; }
+- (void)sendEvent:(id<RCTEvent>)event { [self.events addObject:event]; }
+@end
+static NSDictionary *CheckKeyboardEvents(void) {
+  NSMutableDictionary *checks = [NSMutableDictionary new];
+  @try {
+    LegendKeyboardRecorder *recorder = [LegendKeyboardRecorder new];
+    RCTView *untagged = [[RCTView alloc] initWithEventDispatcher:(id)recorder];
+    RCTView *tagged = [[RCTView alloc] initWithEventDispatcher:(id)recorder]; tagged.reactTag = @101;
+    RCTView *noDispatcher = [RCTView new]; noDispatcher.reactTag = @102;
+    for (NSNumber *type in @[@(NSEventTypeKeyDown), @(NSEventTypeKeyUp)]) {
+      NSString *name = type.integerValue == NSEventTypeKeyDown ? @"down" : @"up";
+      NSString *key = [NSString stringWithFormat:@"%C", (unichar)NSF12FunctionKey];
+      NSEvent *event = [NSEvent keyEventWithType:(NSEventType)type.integerValue location:NSZeroPoint
+        modifierFlags:NSEventModifierFlagCommand | NSEventModifierFlagShift timestamp:0
+        windowNumber:0 context:nil characters:key charactersIgnoringModifiers:key isARepeat:NO keyCode:111];
+      [recorder.events removeAllObjects];
+      checks[[name stringByAppendingString:@"UntaggedFactory"]] = @([RCTViewKeyboardEvent keyEventFromEvent:event reactTag:nil] == nil);
+      checks[[name stringByAppendingString:@"NativeHandling"]] = @(![untagged handleKeyboardEvent:event] && ![noDispatcher handleKeyboardEvent:event] && recorder.events.count == 0);
+      [tagged handleKeyboardEvent:event]; [tagged handleKeyboardEvent:event];
+      id<RCTEvent> emitted = recorder.events.firstObject;
+      NSDictionary *body = emitted.arguments.lastObject;
+      checks[[name stringByAppendingString:@"TaggedDeliveryOnce"]] = @(recorder.events.count == 1 && [emitted.viewTag isEqual:@101]
+        && [emitted.eventName isEqual:(type.integerValue == NSEventTypeKeyDown ? @"topKeyDown" : @"topKeyUp")]
+        && [body[@"key"] isEqual:@"F12"] && [body[@"metaKey"] boolValue] && [body[@"shiftKey"] boolValue]);
+      if (type.integerValue == NSEventTypeKeyDown) tagged.keyDownEvents = @[[[RCTHandledKey alloc] initWithKey:@"F12"]];
+      else tagged.keyUpEvents = @[[[RCTHandledKey alloc] initWithKey:@"F12"]];
+      checks[[name stringByAppendingString:@"NativeFilter"]] = @([tagged handleKeyboardEvent:event]);
+    }
+    NSEvent *dead = [NSEvent keyEventWithType:NSEventTypeKeyDown location:NSZeroPoint modifierFlags:0 timestamp:0 windowNumber:0 context:nil characters:@"" charactersIgnoringModifiers:@"" isARepeat:NO keyCode:0];
+    NSUInteger count = recorder.events.count;
+    checks[@"deadKey"] = @([RCTViewKeyboardEvent keyEventFromEvent:dead reactTag:@101] == nil && ![tagged handleKeyboardEvent:dead] && recorder.events.count == count);
+  } @catch (NSException *exception) { checks[@"exception"] = exception.description; }
+  return checks;
+}
 @interface RNSDKTestDriver ()
 @property NSArray<NSPasteboardItem *> *savedClipboard;
 @end
@@ -65,7 +112,8 @@ RCT_EXPORT_MODULE(NativeSDKTestDriver)
 - (void)call:(NSString *)method args:(NSString *)json resolve:(RCTPromiseResolveBlock)resolve reject:(RCTPromiseRejectBlock)reject {
   dispatch_async(dispatch_get_main_queue(), ^{
     NSDictionary *args = LegendArgs(json);
-    if ([method isEqual:@"key"]) PostKey(args[@"key"], [args[@"modifiers"] unsignedIntegerValue]);
+    if ([method isEqual:@"keyboardRegression"]) { resolve(LegendJSON(CheckKeyboardEvents())); return; }
+    else if ([method isEqual:@"key"]) PostKey(args[@"key"], [args[@"modifiers"] unsignedIntegerValue]);
     else if ([method isEqual:@"escape"]) {
       dispatch_after(dispatch_time(DISPATCH_TIME_NOW, 300 * NSEC_PER_MSEC), dispatch_get_main_queue(), ^{ PostKey(@"\x1b", 0); resolve(@"null"); }); return;
     }

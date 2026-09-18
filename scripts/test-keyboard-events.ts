@@ -1,0 +1,59 @@
+// Native RN macOS regression. The test driver is included only in this custom runtime.
+import path from "node:path";
+import { existsSync, readFileSync, writeFileSync, rmSync, mkdirSync } from "node:fs";
+import { build } from "../packages/cli/src/build";
+import { availablePort } from "../packages/cli/src/local";
+import { nodeCommand } from "../packages/cli/src/windows";
+import { projectEnvironment } from "../packages/cli/src/project";
+if (process.platform !== "darwin") throw Error("This regression targets RN macOS; use the manual acceptance checklist on Windows.");
+const root = path.resolve("examples/kitchen-sink");
+const directory = path.resolve(".legend/keyboard-tests");
+mkdirSync(directory, { recursive: true });
+const manifest = path.join(root, "package.json");
+const original = readFileSync(manifest, "utf8");
+let executable: string;
+try {
+  const pkg = JSON.parse(original);
+  pkg.devDependencies = { ...pkg.devDependencies, "@legend-apps/sdk-test-driver": "workspace:*" };
+  writeFileSync(manifest, JSON.stringify(pkg, null, 2) + "\n");
+  executable = path.join((await build(root, "dev")).app, "Contents/MacOS/KitchenSink");
+} finally { writeFileSync(manifest, original); }
+const entry = path.join(root, "KeyboardNativeRegression.tsx");
+if (existsSync(entry)) throw Error(`Temporary entry already exists: ${entry}`);
+const report = path.join(directory, "report.json");
+rmSync(report, { force: true });
+writeFileSync(entry, `import {registerRootComponent} from 'expo';
+import {useEffect} from 'react'; import {Text} from 'react-native';
+import driver from '@legend-apps/sdk-test-driver'; import {writeText} from '@legend-apps/desktop/files';
+function App(){useEffect(()=>{void driver.call('keyboardRegression','{}').then(async raw=>{
+const checks=JSON.parse(raw); await writeText(${JSON.stringify(report)},JSON.stringify({passed:Object.keys(checks).length===9&&Object.values(checks).every(v=>v===true),checks}));
+});},[]);return <Text>Native keyboard regression</Text>;}registerRootComponent(App);`);
+const port = await availablePort();
+const metroLog = Bun.file(path.join(directory, "metro.log"));
+const metro = Bun.spawn(nodeCommand(root, "expo", "expo", ["start", "--localhost", "--port", String(port), "--max-workers", "2"]), {
+  cwd: root, env: { ...process.env, CI: "1", LEGEND_PLATFORM: "macos" }, stdout: metroLog, stderr: metroLog,
+});
+let app: ReturnType<typeof Bun.spawn> | undefined;
+try {
+  const deadline = Date.now() + 60000;
+  while (!await fetch(`http://127.0.0.1:${port}/status`, { signal: AbortSignal.timeout(1000) }).then(r => r.ok, () => false)) {
+    if (Date.now() > deadline || metro.exitCode !== null || metro.signalCode !== null) throw Error(`Metro failed; see ${directory}`);
+    await Bun.sleep(250);
+  }
+  const log = Bun.file(path.join(directory, "app.log"));
+  app = Bun.spawn([executable, "-RCT_jsLocation", `127.0.0.1:${port}`], {
+    cwd: root, env: { ...process.env, ...projectEnvironment(root), LEGEND_BUNDLE_URL: `http://127.0.0.1:${port}/KeyboardNativeRegression.bundle?platform=macos&dev=true&minify=false` }, stdout: log, stderr: log,
+  });
+  const deadlineReport = Date.now() + 90000;
+  while (!existsSync(report)) {
+    if (Date.now() > deadlineReport || app.exitCode !== null || app.signalCode !== null) throw Error(`Native regression did not report; see ${directory}`);
+    await Bun.sleep(250);
+  }
+  const result = JSON.parse(readFileSync(report, "utf8"));
+  console.log(JSON.stringify(result, null, 2));
+  if (!result.passed) throw Error("Native keyboard regression failed");
+} finally {
+  app?.kill(); if (app) await app.exited;
+  metro.kill(); await metro.exited;
+  rmSync(entry, { force: true });
+}

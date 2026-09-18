@@ -121,7 +121,8 @@ lifecycle. No filesystem implementation change was necessary.
 
 ## Still unresolved or outside the run
 
-- The September 14 [desktop expansion report](desktop-expansion-validation.md#kitchen-sink-event-feedback--2026-09-14) records a separate native keyboard-event crash with an embedded WebView focused (Command+Shift+F12). Its cause/fix remains unverified. This session tested WebView load and messaging, not that keyboard path; it must not be treated as resolved by the Fabric lifecycle fix.
+- The September 14 WebView keyboard crash is now reproduced and fixed; see the
+  follow-up below. Physical global-shortcut callback delivery remains unaccepted.
 
 - The global shortcut interaction timed out after synthetic input while trying to
   focus Finder. Registration is not proof of delivery; repeat with physical input.
@@ -151,3 +152,30 @@ The two fresh platform consumer directories occupy approximately 1.0 GiB and
 
 They are disposable test artifacts, retained for inspection; no cleanup was
 performed. Focused copied application bundles were removed by their test runners.
+
+## WebView keyboard follow-up
+
+The old runtime reproduced the Command+Shift+F12 crash with a focused WebView
+input (`KitchenSink-2026-09-18-145036.ips`, SIGABRT). `RNCWebViewImpl` inherits
+`RCTView`, but its internal Fabric-hosted view has no legacy React tag. An
+unhandled WebKit key reaches `RCTView.handleKeyboardEvent`; constructing the React
+event inserts that nil tag into `RCTComponentEvent`'s argument array.
+
+The config plugin now guards keyboard event construction for untagged views and
+only marks an event emitted when a valid event and dispatcher exist. Native key
+filters still run, and untagged subviews do not suppress delivery at a later React
+ancestor. The patch is pinned to RN macOS 0.81.7, idempotent, source-checked and
+installed without modifying hardlinked package caches.
+
+After a successful native rebuild, `bun scripts/test-keyboard-events.ts` passed
+all nine native assertions. The same focused-WebView shortcut no longer crashed;
+20 additional repetitions (and another 20 on a fresh launch), WebView typing/selection/arrows/Tab/Escape, WebView to
+React message delivery, and subsequent native input editing passed through UI
+automation. Normal quit exited 0. Remote shortcut injection did not deliver the
+global callback, so this verifies crash prevention, not physical global-hotkey
+delivery. TypeScript and 249 unit tests passed.
+
+Evidence: `.legend/keyboard-tests/report.json`, `.legend/keyboard-crash-before.log`,
+`.legend/keyboard-after-app.log`. The temporary UI probe was removed. Windows was not
+run; this patch affects macOS only. Follow the [manual acceptance checklist](desktop-manual-acceptance.md)
+on both machines, including the remaining OS interaction checks.
