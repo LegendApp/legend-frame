@@ -2,6 +2,10 @@
 
 The framework has one case catalog and shared API assertions, with execution on each real platform. A successful bundle is build evidence only. A native control placeholder does not satisfy its interaction case. This test system is an inventory and execution foundation, not a claim that every framework API already has an automated test.
 
+For the hands-on sequence on both desktop machines, including rebuilding native
+fixes, WebView keyboard checks and OS interactions, follow the
+[manual desktop acceptance checklist](desktop-manual-acceptance.md).
+
 ## Run a shared consumer
 
 From the framework checkout:

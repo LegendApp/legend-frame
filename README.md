@@ -269,6 +269,9 @@ bun run test:all
 
 ## Validation and limitations
 
+Use the [Mac and Windows manual acceptance checklist](docs/desktop-manual-acceptance.md)
+to validate a checkout on real machines, including runtime rebuilds and OS interactions.
+
 The macOS prebuilt → custom runtime → reduced standalone workflow has recorded native validation. Desktop API expansion and integrated background runtimes have their own dated reports. Test counts and feature coverage change; consult the specific report rather than treating an old count as the current suite size.
 
 | Evidence | What it covers |
