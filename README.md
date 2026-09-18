@@ -6,12 +6,15 @@ Application JavaScript runs in **Hermes**. Node and Bun are development tools; n
 
 **Current scope:** macOS 14+ on Apple Silicon. The packages, CLI, and native runtime are prototypes. A [transferable SDK with optional prebuilt runtimes](docs/sdk-distribution.md) works outside the checkout; public npm packages and hosted prebuilt releases are not available. Windows x64/ARM64 prebuilt and custom development builds are integrated, with native verification still pending; see the [Windows development guide](docs/windows-slice.md). Mobile/web development delegates to Expo. Intel macOS, Linux, and Mac App Store distribution are not supported by this framework's current workflow.
 
+The checkout currently targets Expo SDK 54 / React Native 0.81 and pins **Expo Desktop 1.0.0-beta.6**. Expo Desktop owns template creation and native project generation; Expo CLI owns Metro and the development terminal. Legend adds desktop actions, runtime compatibility checks, native capabilities, and build orchestration. See the [integration boundary](docs/expo-desktop-integration.md) for the remaining upstream launch requirements.
+
 ## Start here
 
 - **Build an app:** follow the [quick start](#quick-start) and [development guide](docs/development.md).
 - **Add desktop to an existing Expo app:** use [the integration guide](docs/add-desktop.md) to preserve its entry point and mobile/web setup.
 - **Test Windows development:** use the [integrated Windows workflow](docs/windows-slice.md) and `bun run test:windows`.
 - **Use desktop APIs:** see the [SDK guide](docs/sdk.md) and [expanded API reference](docs/desktop-api-expansion.md).
+- **Try an application:** explore [Kitchen Sink](#explore-the-kitchen-sink), [Notes/Music/Diff Lite](#small-application-examples), or the [native helper example](#native-helper-example).
 - **Understand or change the framework:** read [ARCHITECTURE.md](ARCHITECTURE.md), including its source map and implementation invariants.
 - **Work on Expo Desktop integration:** start with the [integration handoff](docs/expo-desktop-integration.md).
 - **Check what has actually been tested:** see [validation and limitations](#validation-and-limitations). Implementation and recorded acceptance are different things.
@@ -132,11 +135,13 @@ Framework-owned capabilities are imported from `@legend-apps/desktop/<feature>`.
 | Area | Entry points and capabilities |
 | --- | --- |
 | Application and windows | `app`, `windows`: identity, lifecycle, single-instance forwarding, secondary React roots, window styles, frame restoration, close/quit guards |
-| Files and persistence | `files`, `settings`, `secure-storage`: filesystem operations and watches, JSON settings, project-scoped Keychain values |
+| Files and persistence | `files`, `settings`, `secure-storage`: filesystem operations, bounded binary streaming and positional I/O, recursive watches, Trash/Recycle Bin, JSON settings, project-scoped Keychain values |
 | Desktop commands | `menus`, `context-menu`, `shortcuts`, `global-shortcuts`: menus, command handling, focused and system-wide shortcuts |
 | User interaction | `dialogs`, `message-dialog`, `clipboard`, `drag-drop`: file panels, alerts, clipboard formats, drag sources and drop targets |
 | OS integration | `links`, `notifications`, `tray`, `system`: URLs/documents, local notifications, menu-bar items, Dock/startup/power integration |
-| Processes and distribution | `processes`, `updates`: child process IO and bundled helpers, signed whole-app update integration |
+| Processes and distribution | `processes`, `updates`: child process I/O, timeouts and managed target-specific helper bundles, signed whole-app update integration |
+| Native controls and styling | `@legend-apps/ui`: native buttons, text inputs and selects; optional Uniwind bindings and system/light/dark themes |
+| Audio and authentication | `@legend-apps/audio`, `@legend-apps/auth-session`: playback and system media controls, external-browser authentication callback transport |
 | External libraries | React Native WebView, OP-SQLite, and Margelo Runtimes; see [integrated external libraries](docs/external-libraries.md) |
 
 For example, application code can use project-scoped storage without a Node filesystem API:
@@ -151,6 +156,14 @@ await settings.set('theme', 'dark');
 ```
 
 The SDK guide documents error behavior, disposal, event delivery, and platform-specific coordinate systems. Project-scoped storage separates app identities; it is not an OS security sandbox.
+
+For large files, `readChunks` and `writeChunks` transfer bounded `Uint8Array`
+chunks without loading the entire file into JavaScript. `openFile` exposes
+positional reads/writes and explicit flush/close. Iteration closes its handle on
+completion, cancellation, errors, or an early loop exit. `trash(path)` moves an
+item to the OS Trash/Recycle Bin and rejects if recycling is unavailable; it does
+not fall back to permanent deletion. See [streaming files and Trash](docs/file-streams.md)
+for limits, partial-write behavior, and platform acceptance.
 
 For external libraries, prefer their upstream imports and documentation. Legend supplies integration, native setup, tested pins, and supported production pruning. For example, background work uses `@react-native-runtimes/core` directly. It runs in independent Hermes heaps inside the application process and ends when the app quits. Read the [Runtimes guide](docs/runtimes.md) for serialization, cleanup, native-module restrictions, and production reachability.
 
@@ -211,7 +224,7 @@ startup options.
 `bun run kitchen-sink:prepare` remains a separate packed-SDK consumer test. It does
 not modify the checked-in app's manifest, configuration, or native projects.
 
-The example exercises desktop APIs with windows, an editor, menus, persistence, and an event log. Its actions use native buttons and show progress, results, and errors beneath the button; each demo also shows its recent callback events, and the event log retains detailed output. The header theme button cycles System → Light → Dark → System, starting with the system appearance; Uniwind tokens theme the screen and React Native Appearance updates native controls.
+The example exercises desktop APIs with windows, an editor, menus, persistence, and an event log. **Test streaming files and Trash** runs binary file checks and recycles one clearly named disposable test file; it does not touch user-selected files. Its actions use native buttons and show progress, results, and errors beneath the button; each demo also shows its recent callback events, and the event log retains detailed output. The header theme button cycles System → Light → Dark → System, starting with the system appearance; Uniwind tokens theme the screen and React Native Appearance updates native controls.
 
 ## Commands and tests
 
@@ -244,11 +257,15 @@ Native integration checks are separate and require Xcode, CocoaPods, and an unlo
 bun run test:native
 bun run test:expansion
 bun run test:runtimes:all
+# Streaming/Trash checks; builds a Kitchen Sink development runtime:
+bun scripts/test-file-streams.ts
+# Helper checks; reuses that development runtime:
+bun scripts/test-sidecars.ts
 # Complete configured suite, including native builds:
 bun run test:all
 ```
 
-`test:all` is substantial: it includes packaging/update tests, desktop integration tests, native application builds, and the Runtimes matrix. See [SDK tests](docs/sdk.md#tests), [Runtimes tests](docs/runtimes.md), and the root [package.json](package.json) for the current commands and prerequisites. Use an external packed consumer to verify distribution behavior; workspace symlinks alone cannot prove the CLI archive is complete.
+`test:all` does not include every standalone probe above; run the file and helper probes separately when changing those APIs. `test:all` is substantial: it includes packaging/update tests, desktop integration tests, native application builds, and the Runtimes matrix. See [SDK tests](docs/sdk.md#tests), [Runtimes tests](docs/runtimes.md), and the root [package.json](package.json) for the current commands and prerequisites. Use an external packed consumer to verify distribution behavior; workspace symlinks alone cannot prove the CLI archive is complete.
 
 ## Validation and limitations
 
@@ -261,6 +278,8 @@ The macOS prebuilt → custom runtime → reduced standalone workflow has record
 | [Desktop expansion validation](docs/desktop-expansion-validation.md) | Expanded APIs, native pruning, and interactive acceptance limits |
 | [Integration validation](docs/integrations-validation.md) | Notifications, tray, updater startup and signing tooling |
 | [Runtimes validation](docs/runtimes-validation.md) | Direct upstream imports, worker behavior, reload, and pruned Release builds |
+| [Streaming files and Trash](docs/file-streams.md#acceptance) | Native macOS binary I/O, handle cleanup and Trash; Windows acceptance pending |
+| [Helper-process example](examples/sidecar/README.md#complete-requestresponse-example) | Framed requests, deadlines, crash/restart and native macOS process/quit cleanup |
 | [Windows development](docs/windows-slice.md) | Integrated CLI, generation and bundle checks; native acceptance pending |
 | [Packaging status](docs/packaging.md#validation-status) | Simulated notarization pipeline versus real distribution acceptance |
 
@@ -270,7 +289,7 @@ Public SDK/prebuilt distribution, real Developer ID/notarization acceptance, pro
 
 The main boundaries are `packages/cli` for orchestration, `packages/config-plugin` for configuration/native generation, `packages/desktop-host` for application startup, and feature packages for desktop APIs. `packages/desktop` provides the public framework entry points. `scripts`, `fixtures`, and `examples` provide packaging and validation workflows.
 
-[ARCHITECTURE.md](ARCHITECTURE.md) explains these boundaries, runtime compatibility, production pruning, generated artifacts, and where to change code. It also documents the integrated Windows adapter and the work remaining beyond the development slice. The [Expo Desktop handoff](docs/expo-desktop-integration.md) separates integration available today from the proposed upstream `--binary` launch contract.
+[ARCHITECTURE.md](ARCHITECTURE.md) explains these boundaries, runtime compatibility, production pruning, generated artifacts, and where to change code. It also documents the integrated Windows adapter and the work remaining beyond the development slice. The [Expo Desktop handoff](docs/expo-desktop-integration.md) documents the beta.6 `--binary` implementation and the remaining session/build contracts needed to delegate desktop launching.
 
 The [Expo API adapters](docs/expo-api-adapters.md) document the current clipboard, secure-storage, and linking migration and its kitchen-sink checks. [Native UI](docs/ui.md) starts with an AppKit button and Expo UI mobile adapters. The [API ownership policy](docs/external-libraries.md#public-contracts-and-replaceable-implementations) describes stable framework contracts with replaceable native, Expo, or community implementations. Router integration and the broader UI catalog remain deferred.
 
@@ -292,6 +311,10 @@ CLI examples, created with `legend create MyApp --example notes-lite` (or
 platform files for native lifecycle, selected-file access, and playback. Source
 ships with the CLI and depends only on public package imports.
 
+Notes Lite includes search, import/export, recoverable deletion, appearance settings,
+and desktop window/session restoration. See its [acceptance checklist](docs/notes-lite-acceptance.md)
+for save failures, recovery, and multiwindow behavior.
+
 The examples use upstream AsyncStorage with project-scoped keys and recoverable
 snapshots. The unpackaged Windows host configures its supported database-path
 override. The small [audio contract](docs/audio.md) delegates to Expo Audio on
@@ -305,6 +328,31 @@ forwarding. Native compilation and acceptance remain tracked in
 [known Windows issues](docs/windows-issues.md); generated bundles do not prove them.
 See [extension development](docs/extensions.md) for adding a native library or
 replacing a backend while preserving a framework contract.
+
+## Native helper example
+
+Use an app-supplied executable for work outside Hermes. The framework packages
+helpers by OS/architecture and manages process I/O and lifetime; it does not
+bundle Node. The [complete C helper example](examples/sidecar/README.md#complete-requestresponse-example)
+includes a React screen, binary request/response framing, readiness, concurrent
+requests, timeouts, crash handling, explicit restart, and shutdown cleanup.
+
+From the framework checkout, with the native toolchain installed:
+
+```sh
+bun run pack:local
+bun scripts/prepare-sidecar.ts /absolute/path/to/HelperDemo
+cd /absolute/path/to/HelperDemo
+bun run macos
+# On Windows, use a fresh Windows path and run bun run windows instead.
+```
+
+The preparer compiles the worker and creates an independent consumer app. On
+Windows, run it in a Visual Studio developer shell targeting the native architecture.
+Choose **Build** in the development terminal: app-owned helpers require a custom
+runtime and are not included in the generic prebuilt runtime. Later JavaScript
+edits use Fast Refresh; helper binary changes require rebuilding. A helper is not
+a persistent background service. See [sidecar lifecycle limits](docs/sidecars.md).
 
 ## Cross-platform acceptance
 
