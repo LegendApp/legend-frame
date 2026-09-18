@@ -7,7 +7,7 @@ workspace patches, tests and documentation were renamed together.
 
 Verified on Apple Silicon macOS:
 
-- Workspace TypeScript and **251 unit tests** (1,250 assertions).
+- Workspace TypeScript and **252 unit tests** (1,434 assertions).
 - Node entry point in the public package starts the Bun CLI and prints Legend Frame
   help with `frame` commands; package exports resolve for UI, audio, auth, files and
   windows.
@@ -18,7 +18,8 @@ Verified on Apple Silicon macOS:
   Its installed public executable works, and the consumer typechecks after refreshing
   to the final SDK archives.
 - Windows ARM64 feature-project generation and JavaScript bundle; all 18 renamed
-  Windows solution project paths resolve. This is preparation evidence, not MSBuild
+  Windows solution project paths resolve. A regression also checks local compile,
+  header, IDL and resource references, including renamed UTF-16 resource scripts. This is preparation evidence, not MSBuild
   or Windows runtime execution.
 - Fresh native macOS Debug compilation, launch, and **nine native keyboard checks**.
 - Full Kitchen Sink bundle and **six native UI checks**: button hit target/layout,

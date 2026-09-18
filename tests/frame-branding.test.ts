@@ -29,3 +29,21 @@ test("framework packages and generated commands use frame names", () => {
     expect(pkg.scripts.postinstall).toContain("@legendapp/frame-cli");
   }
 });
+
+test("renamed Windows projects reference existing local source and resource files", () => {
+  let projects = 0;
+  for (const base of ["packages", "fixtures", "patches"]) {
+    for (const file of new Bun.Glob("**/*.vcxproj").scanSync({ cwd: path.join(root, base), onlyFiles: true })) {
+      if (file.includes("node_modules/")) continue;
+      projects++;
+      const project = path.join(root, base, file);
+      const source = readFileSync(project, "utf8");
+      for (const match of source.matchAll(/<(?:ClCompile|ClInclude|ResourceCompile|Midl) Include="([^"]+)"/g)) {
+        const relative = match[1]!;
+        if (relative.includes("$") || relative.includes("*")) continue;
+        expect(existsSync(path.resolve(path.dirname(project), relative.replaceAll("\\", "/")))).toBe(true);
+      }
+    }
+  }
+  expect(projects).toBeGreaterThanOrEqual(18);
+});
