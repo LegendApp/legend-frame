@@ -1,3 +1,4 @@
+import { macOSReleaseSettings } from "./macos-release.ts";
 import { projectPlatform, architecture, type DesktopPlatform } from "./platform.ts";
 import { resolveHelpers } from "./helpers.ts";
 import { readConfig as readAppConfig, prepareConfig, writeUpdates, statePath, isUniversal, isExpoProject } from "@legend-apps/desktop-config/config.cjs";
@@ -288,6 +289,7 @@ export function runtimeFor(
     fingerprint: digest(
       JSON.stringify({
         ...(platform === "windows" ? { arch: architecture(platform) } : {}),
+        ...(platform === "macos" && mode === "release" ? { releaseSettings: macOSReleaseSettings } : {}),
         modules,
         pins,
         config: readAppConfig(root),

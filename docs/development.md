@@ -40,6 +40,13 @@ bun run build
 
 It produces a standalone `.app` and prints its location. `legend open` opens the last standalone product without requiring its path.
 
+macOS releases target ARM64 and enable dead-code stripping, ThinLTO, and `-Oz`
+for the app and source-built Pods. Release postprocessing strips distribution
+symbols; prebuilt Hermes symbols are stripped separately before ad-hoc signing.
+The compiler settings participate in the release cache fingerprint, so changing
+them rebuilds existing products. Debug-based prebuilt, dev, and preview modes
+and Windows builds are unaffected.
+
 To prepare a signed, notarized distribution archive, run `bun run package` in a new starter, or `bunx --no-install legend package` in an existing app. First use discovers signing identities and configures a notarization Keychain profile. See [packaging](packaging.md) for setup, CI, and retry behavior.
 
 ## Prepare the local SDK (framework maintainers)

@@ -1,3 +1,4 @@
+import { macOSReleaseSettings } from "./macos-release.ts";
 import { projectPlatform } from "./platform.ts";
 import { isUniversal, isExpoProject } from "@legend-apps/desktop-config/config.cjs";
 import { buildWindows } from "./windows.ts";
@@ -294,6 +295,7 @@ async function buildUnlocked(
       "ARCHS=arm64",
       "ONLY_ACTIVE_ARCH=YES",
       "CODE_SIGNING_ALLOWED=NO",
+      ...(mode === "release" ? macOSReleaseSettings : []),
       "-jobs",
       "8",
       "build",
@@ -329,6 +331,12 @@ async function buildUnlocked(
     result.runtime,
   );
   copyHelpers(root, destination, readAppConfig(root).expo?.extra?.legend?.helpers);
+  if (mode === "release") {
+    // Hermes is prebuilt, so Xcode's app/Pod compiler settings cannot strip it.
+    const hermes = path.join(destination, "Contents/Frameworks/hermes.framework/Versions/Current/hermes");
+    if (existsSync(hermes))
+      await run(root, ["strip", "-S", "-x", hermes], { capture: true });
+  }
   // Local standalone outputs remain ad-hoc. `legend package` signs a separate
   // staging copy with Developer ID for distribution.
   await run(
