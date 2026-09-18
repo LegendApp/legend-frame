@@ -273,6 +273,7 @@ The macOS prebuilt → custom runtime → reduced standalone workflow has record
 
 | Evidence | What it covers |
 | --- | --- |
+| [macOS readiness — September 18](docs/macos-readiness-2026-09-18.md) | Current native/UI checks, rapid-window-close fix, and unresolved acceptance cases |
 | [Prototype status](docs/prototype-status.md) | Original workflow, milestones, and remaining release gates |
 | [SDK validation](docs/sdk-validation.md) | Initial desktop SDK and project isolation |
 | [Desktop expansion validation](docs/desktop-expansion-validation.md) | Expanded APIs, native pruning, and interactive acceptance limits |

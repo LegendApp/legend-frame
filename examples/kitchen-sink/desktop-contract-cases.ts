@@ -40,7 +40,7 @@ export async function filesystemLifecycle(files: typeof FileSystem, token: strin
     await files.copy(`${root}/nested`, `${root}/tree-copy`);
     assertContract(await files.readText(`${root}/tree-copy/child/value`) === "recursive", "Directory copy failed");
     const names = await files.list(root);
-    assertContract(names.includes("space ü.txt") && names.every(name => !name.includes("/") && !name.includes("\\")), "Directory listing must return names");
+    assertContract(names.some(name => name.normalize("NFC") === "space ü.txt") && names.every(name => !name.includes("/") && !name.includes("\\")), "Directory listing must return names");
     await rejectsCode(() => files.readText(`${root}/absent`), "E_NOT_FOUND");
     assertContract(!await files.exists(`${root}/absent`), "Missing file exists");
     await rejectsCode(() => files.remove(`${root}/nested`), "E_NOT_EMPTY");
@@ -48,12 +48,12 @@ export async function filesystemLifecycle(files: typeof FileSystem, token: strin
     assertContract(await files.remove(`${root}/empty`) && !await files.remove(`${root}/empty`), "Deletion must be idempotent");
     // Wait for distinct changes across two atomic replacements of the same path.
     let notifications = 0, invalidWatchPath = false;
-    watch = await files.watch(file, observed => { invalidWatchPath ||= observed.replaceAll("\\", "/") !== file.replaceAll("\\", "/"); notifications++; });
+    watch = await files.watch(file, observed => { invalidWatchPath ||= observed.replaceAll("\\", "/").normalize("NFC") !== file.replaceAll("\\", "/").normalize("NFC"); notifications++; });
     for (const text of ["replacement one", "replacement two"]) {
       const before = notifications; await files.writeText(file, text);
       const deadline = Date.now() + 5000;
       while (notifications === before && Date.now() < deadline) await new Promise(resolve => setTimeout(resolve, 25));
-      assertContract(!invalidWatchPath && notifications > before && await files.readText(file) === text, "Watch did not survive atomic replacement");
+      assertContract(!invalidWatchPath && notifications > before && await files.readText(file) === text, `Watch did not survive atomic replacement (invalidPath=${invalidWatchPath}, notifications=${notifications}, before=${before})`);
     }
     await watch.remove(); await watch.remove(); watch = undefined;
     const stopped = notifications; await files.writeText(file, "after unwatch");
