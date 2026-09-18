@@ -27,7 +27,7 @@ These results establish source, link, and camera-free runtime compatibility for 
 
 ## Try the standalone app
 
-The deliverable is `artifacts/camera/legend-camera-macos-arm64-test-kit.zip`. Extract it on an Apple Silicon Mac running macOS 14 or later and open `LegendCameraKitchenSink.app`. It embeds its JavaScript; it needs neither Metro nor Xcode nor Bun. It is a local test build, not a signed and notarized distribution release.
+The deliverable is `artifacts/camera/frame-camera-macos-arm64-test-kit.zip`. Extract it on an Apple Silicon Mac running macOS 14 or later and open `FrameCameraKitchenSink.app`. It embeds its JavaScript; it needs neither Metro nor Xcode nor Bun. It is a local test build, not a signed and notarized distribution release.
 
 1. Open **Camera prototype**. The automatic checks should all pass. With no camera, the example explicitly reports that hardware checks remain pending.
 2. On a Mac with a camera, allow camera access, select the camera, and press **Start camera**. Check that the preview is live, upright, and correctly sized; resize the window.
@@ -44,19 +44,19 @@ Requires the framework's normal macOS build prerequisites: Xcode, CocoaPods, Nod
 
 ```sh
 # Reproduce just the RN/Fabric/Nitro compatibility gate.
-bun run test:camera /tmp/LegendNitroProbe --probe-only
+bun run test:camera /tmp/FrameNitroProbe --probe-only
 
 # Prepare, build, launch, and run the complete camera-free proof.
-bun run test:camera /tmp/LegendCameraKitchenSink
+bun run test:camera /tmp/FrameCameraKitchenSink
 
 # Build a standalone Release app and run the same proof without Metro.
-bun run test:camera /tmp/LegendCameraKitchenSink --release
+bun run test:camera /tmp/FrameCameraKitchenSink --release
 
 # Open an already-built app for manual testing.
-bun run test:camera /tmp/LegendCameraKitchenSink --run-only --interactive
+bun run test:camera /tmp/FrameCameraKitchenSink --run-only --interactive
 ```
 
-Use `--release --run-only --interactive` for the existing Release app. `--prepare-only` generates the consumer without building. Generated consumers have the usual kitchen-sink managed-directory marker; the script refuses to overwrite an unrelated app. Reports are written under the consumer's `.legend/camera-proof/`. The exact built app path is printed after a successful run. A successful full Release run also creates the test-kit ZIP and its SHA-256 checksum in `artifacts/camera/`.
+Use `--release --run-only --interactive` for the existing Release app. `--prepare-only` generates the consumer without building. Generated consumers have the usual kitchen-sink managed-directory marker; the script refuses to overwrite an unrelated app. Reports are written under the consumer's `.frame/camera-proof/`. The exact built app path is printed after a successful run. A successful full Release run also creates the test-kit ZIP and its SHA-256 checksum in `artifacts/camera/`.
 
 For this machine, builds were staged under `/tmp` because Bun file reads in the Documents checkout stalled. All camera source changes and patches are saved in the workspace paths below; temporary working copies are not required to reproduce them.
 

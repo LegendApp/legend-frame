@@ -5,9 +5,9 @@ beta template as Settings. Source ships inside the CLI; there are no dependencie
 on `legend-apps`, `legend-notes`, or another checkout.
 
 ```sh
-legend create MyNotes --example notes-lite
-legend create MyMusic --example music-lite
-legend create MyDiff --example diff-lite
+frame create MyNotes --example notes-lite
+frame create MyMusic --example music-lite
+frame create MyDiff --example diff-lite
 ```
 
 Inside each project, run `bun run web`, `bun run ios`, `bun run android`,
@@ -40,11 +40,11 @@ web imports are retained as blobs in IndexedDB. Desktop imports retain original
 file paths, so moving/removing the source produces an error on subsequent use.
 Audio-format support comes from the platform decoder.
 
-`@legend-apps/audio` provides the small player contract. It uses Expo Audio 1.1.1
+`@legendapp/frame-audio` provides the small player contract. It uses Expo Audio 1.1.1
 on iOS/Android, AVPlayer on macOS, MediaPlayer on Windows, and HTML audio on web.
 Mobile enables background playback through Expo's config plugin. Platform media
 controls are connected to the active player. The example owns its queue and
-persistence; the module owns player resources. This is not the full Legend Music
+persistence; the module owns player resources. This is not the full frame Music
 library scanner, metadata index, or visualizer.
 
 ## Diff Lite

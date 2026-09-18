@@ -1,7 +1,7 @@
 # Desktop integrations validation — 2026-09-11
 
 Notifications, tray/menu-bar support, and Sparkle updates are implemented in
-`legend-framework`, with kitchen sink controls and separate native packages.
+`frame`, with kitchen sink controls and separate native packages.
 
 | Check | Result |
 | --- | --- |
@@ -30,5 +30,5 @@ Release startup and signed-feed tests does not prove a production update install
 
 Commands and API examples are in [desktop integrations](desktop-integrations.md).
 Generated evidence is in `docs/evidence/integrations-2026-09-11/` (ignored). Tests
-ran from `/tmp/legend-sdk-validation` because Bun file access stalls in this Mac's
+ran from `/tmp/frame-sdk-validation` because Bun file access stalls in this Mac's
 Documents checkout. Source, the lockfile, package archives and Go were synced back.

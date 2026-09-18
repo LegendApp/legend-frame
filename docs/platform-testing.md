@@ -18,7 +18,7 @@ bun run test:platform --platform android --device <adb-serial>
 bun run test:platform --platform web
 ```
 
-Each run creates a fresh, disposable universal consumer from packed SDK archives. It uses the same `PlatformChecks` screen and assertions on all five platforms. Expo Desktop stays on the pinned beta template. Legend owns desktop compilation; Expo owns mobile compilation/install/launch and the Metro/web server. Windows automatically selects x64 or ARM64, with the existing `LEGEND_WINDOWS_ARCH` override.
+Each run creates a fresh, disposable universal consumer from packed SDK archives. It uses the same `PlatformChecks` screen and assertions on all five platforms. Expo Desktop stays on the pinned beta template. frame owns desktop compilation; Expo owns mobile compilation/install/launch and the Metro/web server. Windows automatically selects x64 or ARM64, with the existing `FRAME_WINDOWS_ARCH` override.
 
 The runner automatically executes clipboard, secure-storage, and URL assertions where applicable. Press the native/browser button, replace the input text with `Native edit`, select `Second`, then press **Finish run**. Assertions are recorded from the React callbacks. Merely mounting the controls does not pass them. The screen shows its in-app results; build and launch evidence is added by the host runner to the JSON report.
 
@@ -41,7 +41,7 @@ These runners now use the shared contract assertions and also emit the common re
 
 ```sh
 bun run test:api-adapters
-bun run test:windows:features --project C:\dev\LegendWindowsFeatures
+bun run test:windows:features --project C:\dev\FrameWindowsFeatures
 ```
 
 The macOS runner retains its stronger HTML/legacy API and cold/warm URL checks. Its shared case results are mapped explicitly; the remaining assertions stay in its original detailed report. The Windows feature runner retains its real UI Automation, window geometry, Appearance, simultaneous-launch, and owner-recovery checks. It emits shared API results as they arrive, preserving failures during later phases.
@@ -49,24 +49,24 @@ The macOS runner retains its stronger HTML/legacy API and cold/warm URL checks. 
 On macOS, Windows source generation and bundling can be checked with:
 
 ```sh
-LEGEND_WINDOWS_ARCH=arm64 bun run test:windows:features --prepare-only
+FRAME_WINDOWS_ARCH=arm64 bun run test:windows:features --prepare-only
 ```
 
 Other existing suites (`test:ui`, `test:native`, `test:integrations`, `test:runtimes`, packaging tests, and the full Windows development-session verifier) remain available. Their results are **not** automatically represented as feature passes in the common report until they are mapped to exact cases. Migrating those suites and filling uncovered assertions is remaining work.
 
 ## Read and combine results
 
-The shared runner writes `.legend/test-results/<run-id>.json` before setup and checkpoints partial failures. The migrated legacy runners start their common reports after consumer setup. Keep these as CI artifacts or copy them between machines. Each report includes:
+The shared runner writes `.frame/test-results/<run-id>.json` before setup and checkpoints partial failures. The migrated legacy runners start their common reports after consumer setup. Keep these as CI artifacts or copy them between machines. Each report includes:
 
 - Git commit, dirty flag, and a content fingerprint of tracked and unignored source files.
 - Target platform, architecture when known, device selection, runtime mode, and build-only/runtime scope.
 - Host platform, installed framework versions, runtime identity when available, start/end times, and execution outcome.
 - Every catalog case, its status, failure detail, duration when measured, and evidence references when available.
 
-Build logs and older runner-specific reports remain in the generated project's `.legend` directory. Copy those alongside the common JSON report when investigating a failure; local evidence paths alone are not portable attachments.
+Build logs and older runner-specific reports remain in the generated project's `.frame` directory. Copy those alongside the common JSON report when investigating a failure; local evidence paths alone are not portable attachments.
 
 ```sh
-bun run test:report --output .legend/platform-coverage.md
+bun run test:report --output .frame/platform-coverage.md
 bun run test:report ./reports-from-mac ./reports-from-windows --output coverage.md
 bun run test:report ./reports --strict --output coverage.md
 ```

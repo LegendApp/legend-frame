@@ -62,10 +62,10 @@ Local validation reports, production selection, clean generation hashes, and nat
 
 ## Local artifacts
 
-- Go runtime: `artifacts/runtimes/LegendGo.app`
-- Standalone demonstration: `artifacts/demo/LegendHello.app`
+- Go runtime: `artifacts/runtimes/FramePrebuilt.app`
+- Standalone demonstration: `artifacts/demo/FrameHello.app`
 - Framework package archives and manifest: `artifacts/packages/`
-- External integration projects: `/tmp/LegendFrameworkGoProbe`, `/tmp/LegendFrameworkHello`, `/tmp/LegendFrameworkFreshSmoke`
+- External integration projects: `/tmp/FrameFrameworkGoProbe`, `/tmp/FrameFrameworkHello`, `/tmp/FrameFrameworkFreshSmoke`
 
 Artifacts are ignored by Git and can be regenerated using the development instructions. Saved command logs in `docs/evidence/` remain available in the original development checkout.
 
@@ -86,7 +86,7 @@ Artifacts are ignored by Git and can be regenerated using the development instru
 
 This is a local prototype, not the MVP or public beta. Runtime downloads/caching, public package releases, real Developer ID/notarization acceptance, production update-install acceptance and a real product-app migration remain the next milestones. Local ad-hoc signing is used for the test binaries.
 
-The `legend package` command now implements credential setup, signing, resumable notarization, stapling, and ZIP validation. Simulated end-to-end tests and real ad-hoc signature verification pass; no real Developer ID identity or notarization submission has been used. See [packaging validation limits](packaging.md#validation-status).
+The `frame package` command now implements credential setup, signing, resumable notarization, stapling, and ZIP validation. Simulated end-to-end tests and real ad-hoc signature verification pass; no real Developer ID identity or notarization submission has been used. See [packaging validation limits](packaging.md#validation-status).
 
 The prototype supports static `desktop.config.json` (with legacy `app.json` fallback), one JS application entry, and framework-owned module pruning. It also prunes the explicitly supported WebView and SQLite packages; other third-party native packages are retained conservatively. Dynamic app configuration, disconnected JS entrypoints, arbitrary runtime module lookup, and wider platform support are not claimed as implemented. Secondary windows now mount separate React roots from the same application entry.
 

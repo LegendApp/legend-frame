@@ -1,7 +1,7 @@
 # Desktop SDK
 
 The first SDK targets macOS 14+ on Apple Silicon. Import capabilities through
-`@legend-apps/desktop/<feature>`. There is no Node runtime inside the app.
+`@legendapp/frame/<feature>`. There is no Node runtime inside the app.
 Each native capability is independently linked so production builds can remove
 unused SDK pods. The small app-context pod is required by the host.
 
@@ -49,7 +49,7 @@ directly, including Uniwind CSS, for Fast Refresh. `--refresh` forces setup;
 `--prepare-only` stops before Metro. Dev options such as `--port 8082` pass through.
 
 If no compatible runtime is available, prepare the app with
-`bun run kitchen-sink --prepare-only`, then run `bun run legend sdk build-prebuilt` with the native build
+`bun run kitchen-sink --prepare-only`, then run `bun run frame sdk build-prebuilt` with the native build
 prerequisites installed. This builds the reusable runtime. Ordinary app edits need
 no native rebuild. `g` switches the desktop runtime; `b` explicitly builds a custom
 runtime. Native source and checked host configuration changes require a rebuilt
@@ -57,7 +57,7 @@ binary, and the CLI checks compatibility before serving desktop JS.
 
 For a copied consumer that validation scripts can modify independently, run
 `bun run kitchen-sink:prepare`. It always packs/installs and exits without Metro;
-its directory is `.legend/examples/KitchenSinkPackaged`. Integration runners retain
+its directory is `.frame/examples/KitchenSinkPackaged`. Integration runners retain
 that isolated preparation behavior through `prepareKitchenSink`.
 
 The example is in `examples/kitchen-sink`. It includes a small document editor,
@@ -68,8 +68,8 @@ an unsaved editor buffer. Demo secrets are never printed in the event log.
 
 ## App identity and storage
 
-`legend create` assigns `projectId` in `desktop.config.json` a UUID. Legacy
-`app.json` projects use `expo.extra.legend.projectId`. Keep it stable across
+`frame create` assigns `projectId` in `desktop.config.json` a UUID. Legacy
+`app.json` projects use `expo.extra.frame.projectId`. Keep it stable across
 renames, builds and transfers of the same app. Give independently cloned apps a
 new ID. Older projects fall back to `expo.macos.bundleIdentifier`.
 
@@ -83,9 +83,9 @@ Keychain values use the normal macOS access policy; changing the app's signing
 identity can cause a Keychain access prompt.
 
 ```ts
-import { getDirectory, writeText } from "@legend-apps/desktop/files";
-import { settings } from "@legend-apps/desktop/settings";
-import { secureStorage } from "@legend-apps/desktop/secure-storage";
+import { getDirectory, writeText } from "@legendapp/frame/files";
+import { settings } from "@legendapp/frame/settings";
+import { secureStorage } from "@legendapp/frame/secure-storage";
 
 const data = await getDirectory("data");
 await writeText(`${data}/draft.txt`, "Hello");
@@ -121,8 +121,8 @@ component state. Closing a secondary window explicitly stops its React surface.
 The main window stays mounted when closed so reopening it restores the app.
 
 ```ts
-import { beforeQuit } from "@legend-apps/desktop/app";
-import { openWindow, beforeWindowClose } from "@legend-apps/desktop/windows";
+import { beforeQuit } from "@legendapp/frame/app";
+import { openWindow, beforeWindowClose } from "@legendapp/frame/windows";
 
 await openWindow({
   id: "preferences", title: "Preferences", width: 640, height: 480,
@@ -155,7 +155,7 @@ Duplicate registrations in the same scope reject with `E_SHORTCUT_CONFLICT`.
 Dispose registrations when the owning component unmounts.
 
 ```ts
-import { registerShortcut } from "@legend-apps/desktop/shortcuts";
+import { registerShortcut } from "@legendapp/frame/shortcuts";
 const shortcut = await registerShortcut("CommandOrControl+Shift+K", openPalette);
 await shortcut.remove();
 ```
@@ -182,7 +182,7 @@ Declare existing UTIs and URL schemes in `app.json`:
   "expo": {
     "scheme": "mydesktopapp",
     "extra": {
-      "legend": {
+      "frame": {
         "projectId": "keep-the-id-created-for-your-app",
         "documentTypes": [
           { "name": "Text document", "contentTypes": ["public.plain-text"], "role": "Editor" }
@@ -213,9 +213,9 @@ bun run test:all
 The native suite needs an Apple Silicon Mac, Xcode, CocoaPods, and a logged-in
 macOS GUI session, and a working XCTest service. The UI test project uses the
 `xcodeproj` Ruby gem installed with CocoaPods (`ruby -e 'require "xcodeproj"'`).
-It creates its own app under `.legend/native-tests`, starts
+It creates its own app under `.frame/native-tests`, starts
 its own Metro on an available port, and owns/cleans up its app processes. Reports
-and per-check progress live in that app's `.legend/test-results` directory.
+and per-check progress live in that app's `.frame/test-results` directory.
 A path argument selects a separate scratch directory, for example:
 
 ```sh
@@ -243,7 +243,7 @@ behavior, and the packaging workflow. Tests exercise the macOS implementation;
 this SDK does not yet claim Windows, Linux, mobile, App Store sandbox, or Intel
 support.
 
-For an agent or another accessibility driver, `LEGEND_TEST_UI_DRIVER=external`
+For an agent or another accessibility driver, `FRAME_TEST_UI_DRIVER=external`
 launches the same custom native checks without XCTest. That driver must wait for
 the Save panel whose filename is `accepted.txt` and press Save. The runner still
 requires the real native callback and successful guarded termination. This mode

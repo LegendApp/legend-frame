@@ -7,7 +7,7 @@ The Kitchen Sink's **Desktop foundations** section demonstrates all three.
 ## Nonactivating overlays
 
 ```ts
-import { openWindow } from '@legend-apps/desktop/windows';
+import { openWindow } from '@legendapp/frame/windows';
 
 await openWindow({
   id: 'status', kind: 'overlay', width: 340, height: 140,
@@ -36,7 +36,7 @@ platform-specific.
 ## Recursive directory invalidation
 
 ```ts
-import { watch } from '@legend-apps/desktop/files';
+import { watch } from '@legendapp/frame/files';
 
 const subscription = await watch(libraryPath, () => scheduleRescan(), {
   recursive: true,
@@ -102,7 +102,7 @@ bun scripts/test-desktop-foundations.ts
 The final command builds a disposable macOS development runtime with the native
 test driver, verifies recursive watching and focus preservation, inspects the
 AppKit overlay, and exercises custom payload/hover/move/rejection on mounted
-Fabric views. Its report is `.legend/desktop-foundation-tests/report.json`.
+Fabric views. Its report is `.frame/desktop-foundation-tests/report.json`.
 It invokes native destination callbacks; it does not replace an OS-driven
 external drag acceptance test.
 
@@ -112,6 +112,6 @@ runtime. Check background transparency over another app, pointer actions without
 focus changes, hide/show, multiple monitors/DPI, nested writes and root replacement,
 and custom move/rejection plus external text/file drops. The portable automated
 checks can also run by launching Kitchen Sink with
-`--legend-foundation-report <absolute-report-path>`; the AppKit-specific driver
+`--frame-foundation-report <absolute-report-path>`; the AppKit-specific driver
 checks are skipped there. Windows compilation and native acceptance are still
 pending; implementation alone is not evidence that those checks passed.

@@ -1,6 +1,6 @@
 # App-supplied helper processes
 
-Legend packages and launches executables supplied by the application. It does not
+frame packages and launches executables supplied by the application. It does not
 include Node, choose a backend language, download binaries, or compile helper
 projects. A Rust, Go, C/C++, or self-contained executable can use the same API.
 A runtime-dependent executable must bring its runtime and dependent files.
@@ -20,15 +20,15 @@ A runtime-dependent executable must bring its runtime and dependent files.
 ```
 
 Put this under `desktop.config.json`. Existing Expo-owned projects use the same
-Legend overlay. Selection uses the **build target**, including
-`LEGEND_WINDOWS_ARCH`, rather than the architecture of the running CLI process.
+frame overlay. Selection uses the **build target**, including
+`FRAME_WINDOWS_ARCH`, rather than the architecture of the running CLI process.
 A missing target fails the build. macOS currently builds arm64; accepting a
 `macos-x64` declaration does not add x64 app-build support.
 
 `directory` is relative to the project; `executable` is relative to that directory.
 Keep assets, shared libraries, and child executables in the bundle. Entries must
 be plain files/directories, with no symlinks, traversal, or special files. Helper
-names are case-insensitively unique. `.legend-entry` is reserved metadata.
+names are case-insensitively unique. `.frame-entry` is reserved metadata.
 Legacy `"helpers": { "tool": "bin/tool" }` declarations still copy one file.
 
 The layout is `Contents/Helpers/backend.helper/...` on macOS and
@@ -46,7 +46,7 @@ at JavaScript startup. Fast Refresh still handles JavaScript-only edits.
 ## API and ownership
 
 ```ts
-import { spawn } from '@legend-apps/desktop/processes';
+import { spawn } from '@legendapp/frame/processes';
 
 const child = await spawn({ executable: 'helper:backend', args: ['--stdio'] }, chunk => {
   // chunk.stream is stdout or stderr; chunk.base64 contains bytes.
@@ -109,13 +109,13 @@ feature does not claim to implement that pipeline.
 See [the standalone C example](../examples/sidecar/README.md). On macOS:
 
 ```sh
-bun run legend build --dev --project examples/kitchen-sink
+bun run frame build --dev --project examples/kitchen-sink
 bun scripts/test-sidecars.ts
 ```
 
 The probe copies the built app, installs the compiled example bundle, ad-hoc signs
 it, runs real React Native API checks, and removes the disposable app. Logs and
-`report.json` stay under `.legend/sidecar-tests`. It tests helper lookup, failures,
+`report.json` stay under `.frame/sidecar-tests`. It tests helper lookup, failures,
 Unicode input, binary output beyond the capture cap, timeout, window ownership,
 macOS descendant cleanup, prompt readiness delivery, and cleanup of a live helper
 on normal application quit. It does not validate Developer ID notarization or
@@ -123,8 +123,8 @@ abrupt macOS crash cleanup.
 
 On Windows, compile `echo.c` and `worker.c` for the host target, add both to Kitchen Sink's helpers
 configuration using the example, build a **custom development app**, and launch
-its executable with `--legend-test-report <absolute-report-path>
---legend-sidecar-probe` while Metro is running. The portable probe covers lookup,
+its executable with `--frame-test-report <absolute-report-path>
+--frame-sidecar-probe` while Metro is running. The portable probe covers lookup,
 I/O, failures, timeout, window ownership, and the worker readiness/request protocol. Separately verify Job Object cleanup
 by closing/reloading the host and by killing the host while helpers and their
 children are running. These native Windows results are pending.

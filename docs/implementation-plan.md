@@ -1,4 +1,4 @@
-# Legend Framework implementation plan
+# Legend Frame implementation plan
 
 Date: 2026-09-10
 
@@ -12,7 +12,7 @@ The first prototype proves that complete path locally on Apple Silicon macOS, us
 
 ## Decisions made
 
-- Develop in `../legend-framework`, independently of `legend-apps`.
+- Develop in `../frame`, independently of `legend-apps`.
 - Extracted framework modules have one source of truth here. Existing apps eventually consume them as dependencies. App-specific modules can remain in `legend-apps`.
 - macOS is the first public-beta platform. The prototype targets Apple Silicon only. Intel support requires separate validation before it is advertised; Windows comes later.
 - Do not package Node or Bun in the application. Hermes executes application JavaScript; JS and native build tooling remain development dependencies.
@@ -22,7 +22,7 @@ The first prototype proves that complete path locally on Apple Silicon macOS, us
 - Go is built locally once for the prototype. A starter launches that binary without invoking native build tools. Downloading is tested before MVP.
 - Custom development builds contain the SDK superset plus the app's additional native dependencies.
 - The server automatically detects native dependency/configuration changes and explains incompatibilities. Selecting the build/switch action starts setup and compilation.
-- Ordinary package-manager installs must work. A future `legend add` command is a convenience wrapper, not a required installation mechanism.
+- Ordinary package-manager installs must work. A future `frame add` command is a convenience wrapper, not a required installation mechanism.
 - CNG manages native projects. Native changes belong in packages and config plugins, not manual edits to generated Xcode files.
 - Automatic production pruning initially applies only to framework-owned SDK modules. Keep third-party native dependencies conservatively and support explicit inclusion for native-only behavior.
 - The beta must let someone build and distribute a small real desktop app, including signing, notarization, and updates.
@@ -62,7 +62,7 @@ Known integration points to recheck:
 Proposed workspace layout:
 
 ```text
-legend-framework/
+frame/
   packages/
     cli/                  development session, doctor, builds, packaging
     desktop/              SDK entrypoints and public configuration
@@ -91,7 +91,7 @@ Use explicit SDK subpath entrypoints for the prototype so importing dialogs does
 
 ## Development session behavior
 
-`legend dev` starts a managed Metro session using expo-desktop's configuration and presents the active target, compatibility status, and actions to open, reload, debug, and switch targets. Reuse upstream integration where possible; validate the available integration surface before committing to internal Expo CLI APIs. Do not scrape terminal output as a control protocol.
+`frame dev` starts a managed Metro session using expo-desktop's configuration and presents the active target, compatibility status, and actions to open, reload, debug, and switch targets. Reuse upstream integration where possible; validate the available integration surface before committing to internal Expo CLI APIs. Do not scrape terminal output as a control protocol.
 
 Target states:
 
@@ -167,7 +167,7 @@ Acceptance: after Go is built, a fresh external consumer launches and uses both 
 ### P2 — Prove automatic detection and switching to a custom build
 
 - Implement the native-greeting fixture as an independently installable packed package with one native method.
-- Install it using ordinary `bun add`; do not implement `legend add` first.
+- Install it using ordinary `bun add`; do not implement `frame add` first.
 - Detect the native graph change and report that Go lacks the module before executing incompatible JS.
 - On the switch action, check prerequisites, generate the app-specific project, install native dependencies, build, and launch against the current server.
 - Cache the successful binary and native inputs. Relaunch unchanged inputs without recompiling.
@@ -190,7 +190,7 @@ Acceptance: the standalone app works with Metro stopped, greeting/dialogs remain
 
 - Run the full external-consumer scenario from packed artifacts and save concise evidence for each acceptance gate.
 - Document local Go creation, consumer launch, custom-build switching, prerequisites, known limitations, and production selection.
-- Establish `legend-framework` as the canonical owner of successfully extracted modules. Migrate one appropriate app/package consumer in `legend-apps` in a scoped follow-up; keep all other app behavior intact.
+- Establish `frame` as the canonical owner of successfully extracted modules. Migrate one appropriate app/package consumer in `legend-apps` in a scoped follow-up; keep all other app behavior intact.
 - Do not leave permanently divergent copies of extracted modules. A short-lived extraction copy is acceptable while proving portability, but record and complete the cutover.
 
 Prototype completion requires P0–P3 plus reproducible evidence/documentation. An existing app migration is the next real-world integration gate and must not expand the Hello World prototype into a broad app rewrite.
@@ -240,7 +240,7 @@ Public package naming, GitHub release destination, signing identities, and updat
 - Intel validation, Windows implementation, and mobile/Linux support.
 - Hosted native builds and remote build caches.
 - Dynamic loading of arbitrary downloaded native libraries.
-- `legend add` convenience installer and broad third-party plugin automation.
+- `frame add` convenience installer and broad third-party plugin automation.
 - Broad Electron API compatibility, DOM/Node compatibility, and heavy specialized SDK modules.
 - Preserving hand-edited generated native projects.
 - Arbitrary third-party native pruning or method-level native elimination.

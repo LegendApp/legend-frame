@@ -1,8 +1,8 @@
-# Legend Music framework fit audit
+# frame Music framework fit audit
 
 Source audit, 2026-09-16. Inspected `../legend-apps/apps/music` and its native
 packages against this framework's working tree, including the new sidecar work.
-Legend Apps HEAD: `6c311300`; framework base HEAD: `089f740` with working changes.
+frame Apps HEAD: `6c311300`; framework base HEAD: `089f740` with working changes.
 No app migration or native runtime acceptance was performed for this audit.
 
 ## Conclusion
@@ -25,7 +25,7 @@ established by this source audit.
 
 | Area | Music actually uses | Framework today | Work and ownership |
 | --- | --- | --- | --- |
-| Playback | Load, play/pause/stop, seek, volume; completion/progress/error events; next/previous remote commands; title/artist/album/artwork and playback state | `@legend-apps/audio` exposes create/play/pause/seek/status/remove. macOS has native play/pause remote handlers and basic Now Playing; Windows enables basic transport controls. No public volume, full metadata, or remote next/previous event contract | Extend the replaceable audio/media-session adapter. Queue/shuffle/repeat remain app logic. Polling can implement some progress/completion behavior, but does not supply the missing controls |
+| Playback | Load, play/pause/stop, seek, volume; completion/progress/error events; next/previous remote commands; title/artist/album/artwork and playback state | `@legendapp/frame-audio` exposes create/play/pause/seek/status/remove. macOS has native play/pause remote handlers and basic Now Playing; Windows enables basic transport controls. No public volume, full metadata, or remote next/previous event contract | Extend the replaceable audio/media-session adapter. Queue/shuffle/repeat remain app logic. Polling can implement some progress/completion behavior, but does not supply the missing controls |
 | Library indexing | Batched recursive scans, extension filtering, incremental skips/progress, metadata extraction and artwork cache, library change observation | General file I/O/listing exists. `watch` explicitly provides nonrecursive invalidation. No media tags or scanner package | Recursive watcher/traversal belongs in reusable file infrastructure. Media parsing/scanning orchestration/artwork belong in a separate optional media library; reuse the existing packages first on macOS |
 | Song overlay | Transparent borderless nonactivating panel, status window level, no shadow, animated native frame changes | Normal multiple windows, frame changes, always-on-top and several macOS appearance options exist. No nonactivating panel/status-level/frame-animation API. Windows rejects transparency/titlebar/material/shadow options | Add portable overlay/focus semantics to windows, with explicit platform capabilities. Always-on-top alone does not reproduce the overlay |
 | Drag/drop | File drops and native structured track payloads; continuous drag-hover positions for insertion indicators and reorder | Files/text/URLs, enter/leave/drop/end; no continuous hover event or typed custom payload surface | Add generic drag-over positions and custom data formats/operation semantics. Keep track objects and queue behavior in Music. Text encoding can carry IDs but does not replace hover support |
@@ -34,7 +34,7 @@ established by this source audit.
 | Spotify playback | Hidden WebView running Spotify Web Playback SDK with token messages, media autoplay and real audio | Framework re-exports react-native-webview; Windows adapter remains unverified | Real account/device playback acceptance is required on both platforms. HTML/JavaScript/message smoke tests are not proof of protected streaming playback |
 | Apple Music | Nitro Swift MusicKit authorization, catalog/library requests and native player | No corresponding framework adapter. Existing Music package is Apple-specific | Keep this as an optional provider library. Reuse its macOS implementation; Windows needs a different supported provider backend, not just a wrapper around the Swift module |
 | Native UI fidelity | AppKit split views/sidebar, native search input, SF Symbols, glass effects, window controls and settings window composition | Small UI foundation and window-level materials; no equivalent complete set | Put these in the proposed desktop component library. Most are optional for equivalent functionality, but required for exact native visual/interaction parity. Preserve host integration where needed |
-| Persistence/playlists | Legend State observable files, synchronous storage reads, cached artwork, M3U files, quit-time flush | Async files/settings, SQLite, secure storage, lifecycle guards | Generally migration work, not a missing storage engine. Adapt persistence and startup sequencing; preserve existing paths/identity or migrate user data deliberately |
+| Persistence/playlists | frame State observable files, synchronous storage reads, cached artwork, M3U files, quit-time flush | Async files/settings, SQLite, secure storage, lifecycle guards | Generally migration work, not a missing storage engine. Adapt persistence and startup sequencing; preserve existing paths/identity or migrate user data deliberately |
 | AI playlist extension | Availability/discovery and prompt execution through installed Codex/Claude tooling, JSON/protocol handling | Process spawn, text stdin, binary stdout/stderr, timeout and helper bundles | Framework provides the transport. Discovery, agent protocol and result parsing stay in an optional integration library. Existing Nitro wrapper still needs integration/Windows work; no reason to bundle Node into framework |
 | Distribution | Sparkle and existing app identifiers | macOS signing/update pipeline exists; Windows release pipeline remains incomplete | Map configuration and preserve identity. Windows packaging/signing/updates are a release gap independent of Music |
 
@@ -56,7 +56,7 @@ Music source below is relative to `../legend-apps/`:
 
 Framework evidence:
 
-- [Audio contract](../packages/audio/src/types.ts), [macOS audio](../packages/audio/macos/RNLegendAudio.mm), [Windows audio](../packages/audio/windows/LegendAudio/LegendAudio.h).
+- [Audio contract](../packages/audio/src/types.ts), [macOS audio](../packages/audio/macos/RNFrameAudio.mm), [Windows audio](../packages/audio/windows/FrameAudio/FrameAudio.h).
 - [Filesystem/watch contract](../packages/file-system/src/index.ts).
 - [Window contract](../packages/window-options/index.d.ts), [Windows exclusions](../packages/desktop-windows/src/windows-options.ts).
 - [Drag/drop contract](../packages/drag-drop/src/index.tsx), [shortcuts](../packages/desktop-shortcuts/src/api.ts).
@@ -66,12 +66,12 @@ Framework evidence:
 ## Integration constraints that are not new framework features
 
 Several dependency names collide across repositories, including
-`@legend-apps/drag-drop`, `native-menu`, `context-menu`, `file-dialog`, and
+`@legendapp/frame-drag-drop`, `native-menu`, `context-menu`, `file-dialog`, and
 `secure-storage`. They have different versions and, in places, different APIs.
 Migrate those callers or give retained legacy libraries distinct names; installing
 both trees under the same names is not a clean compatibility strategy.
 
-The Legend Apps packages also use workspace/catalog dependencies, private package
+The frame Apps packages also use workspace/catalog dependencies, private package
 metadata, and their own host/configuration conventions. A migration needs usable
 package manifests, compatible native codegen/Nitro pins, and integration with the
 framework host. Register native settings through Expo/Desktop configuration and

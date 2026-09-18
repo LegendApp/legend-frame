@@ -6,12 +6,12 @@ A developer can install this SDK without the framework checkout. The distributio
 
 ```sh
 bun run pack:local
-bun run legend sdk build-prebuilt
-bun run legend sdk export /path/to/LegendSDK \
-  --runtime /path/to/LegendGo.app
+bun run frame sdk build-prebuilt
+bun run frame sdk export /path/to/FrameSDK \
+  --runtime /path/to/FramePrebuilt.app
 ```
 
-On Windows, build the prebuilt runtime with `legend sdk build-prebuilt --platform windows`, then pass its entire `LegendWindows` product directory to `sdk export --runtime`. Keep all DLLs beside `MyApp.exe`. The runtime option can repeat to include clients for both platforms. Exports refuse to overwrite existing output and publish the destination only after checksums and metadata pass.
+On Windows, build the prebuilt runtime with `frame sdk build-prebuilt --platform windows`, then pass its entire `FrameWindows` product directory to `sdk export --runtime`. Keep all DLLs beside `MyApp.exe`. The runtime option can repeat to include clients for both platforms. Exports refuse to overwrite existing output and publish the destination only after checksums and metadata pass.
 
 The maintained prebuilt profile includes `/ui`, Clipboard, SecureStore, Linking, and file dialogs. On macOS it also contains the broader desktop starter SDK and Expo JSON utilities used in universal development dependency graphs. Explicit `sdk build-prebuilt --project ...` builds preserve the supplied project’s chosen module set.
 
@@ -19,17 +19,17 @@ The SDK uses the existing pinned Expo Desktop beta matrix. Package dependencies 
 
 ## Install on another machine
 
-Transfer the directory while preserving file contents, executable permissions, and symlinks. On macOS, archive it with `ditto -c -k --sequesterRsrc --keepParent LegendSDK LegendSDK.zip`; extract before installing. Download and transfer through your existing trusted internal channel.
+Transfer the directory while preserving file contents, executable permissions, and symlinks. On macOS, archive it with `ditto -c -k --sequesterRsrc --keepParent FrameSDK FrameSDK.zip`; extract before installing. Download and transfer through your existing trusted internal channel.
 
 With Bun 1.3.14 or later and Node installed:
 
 ```sh
-cd /path/to/LegendSDK
+cd /path/to/FrameSDK
 bun install.ts
 # The installer prints the exact installed CLI command:
-bun .cli/node_modules/@legend-apps/cli/src/index.ts create /path/to/MyApp --universal
+bun .cli/node_modules/@legendapp/frame-cli/src/index.ts create /path/to/MyApp --universal
 # Or create the complete example:
-bun .cli/node_modules/@legend-apps/cli/src/index.ts create /path/to/MyEditor --example document-editor
+bun .cli/node_modules/@legendapp/frame-cli/src/index.ts create /path/to/MyEditor --example document-editor
 ```
 
 The installer verifies package/client contents before installing its isolated CLI and registering the SDK and prebuilt runtimes. It still needs network access for pinned third-party npm dependencies. Checksums detect corruption; they are not a publisher signature.
@@ -42,4 +42,4 @@ Prebuilt clients are development executables, not signed production releases. A 
 
 ## Recorded checks
 
-A freshly exported SDK was moved to a different directory, installed under a separate Legend registry, and used to create an app outside the checkout. Its dependencies point exclusively to the recipient SDK. Unit tests cover relocation, altered archives, and escaping symlinks. A current macOS prebuilt runtime was built, exported, registered from the transferred SDK, and used to launch the recipient app in Hermes without a native build. The installed SDK also created the complete document-editor example, whose consumer TypeScript check passed.
+A freshly exported SDK was moved to a different directory, installed under a separate frame registry, and used to create an app outside the checkout. Its dependencies point exclusively to the recipient SDK. Unit tests cover relocation, altered archives, and escaping symlinks. A current macOS prebuilt runtime was built, exported, registered from the transferred SDK, and used to launch the recipient app in Hermes without a native build. The installed SDK also created the complete document-editor example, whose consumer TypeScript check passed.

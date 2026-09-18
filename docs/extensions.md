@@ -17,11 +17,11 @@ not forward every feature of every backend.
    feature belongs in shared screens. Unsupported native operations should reject
    with `E_UNAVAILABLE`; unavailable controls should show a labeled placeholder.
 4. Run the selected target. A missing or changed native module requires a custom
-   development build (`legend build --dev --platform macos`, or `windows`). The
+   development build (`frame build --dev --platform macos`, or `windows`). The
    development session checks native signatures before loading JS. Do not disable
    the compatibility gate to make a library appear to work in an older prebuilt runtime.
 
-See `@legend-apps/audio` for a real adapter with mobile Expo delegation, HTML on
+See `@legendapp/frame-audio` for a real adapter with mobile Expo delegation, HTML on
 web, and native desktop backends. See AsyncStorage in the examples for a library
 that keeps its own import and implementation. No framework wrapper is necessary
 merely to rename an external package.
@@ -35,10 +35,10 @@ has a podspec and Objective-C++ provider; a Windows implementation has an RNW
 library project and `ReactPackageProvider`. The new `packages/audio` demonstrates
 both using the pinned RNW Composition target.
 
-Declare real native dependencies in `dependencies` and in `legend.requires` where
-needed for desktop selection. `legend.platforms` describes implementations; it is
-not proof of platform acceptance. `legend.nativeModules` names actual native
-bindings. Internal curated packages set `legend.sdk`; third-party packages should
+Declare real native dependencies in `dependencies` and in `frame.requires` where
+needed for desktop selection. `frame.platforms` describes implementations; it is
+not proof of platform acceptance. `frame.nativeModules` names actual native
+bindings. Internal curated packages set `frame.sdk`; third-party packages should
 not claim that flag just to bypass a custom build. Native libraries also need to
 be included in the package's `files` list so installed consumers receive source.
 

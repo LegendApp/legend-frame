@@ -1,9 +1,9 @@
 # Native UI
 
-`@legend-apps/ui` defines only the three controls used by the [shared Settings starter](universal-settings.md): `Button`, `TextInput`, and `Select`. It owns their small contracts and selects replaceable implementations. Buttons are actual native controls, with no React Native `Pressable` implementation.
+`@legendapp/frame-ui` defines only the three controls used by the [shared Settings starter](universal-settings.md): `Button`, `TextInput`, and `Select`. It owns their small contracts and selects replaceable implementations. Buttons are actual native controls, with no React Native `Pressable` implementation.
 
 ```tsx
-import { Button, TextInput, Select } from '@legend-apps/ui';
+import { Button, TextInput, Select } from '@legendapp/frame-ui';
 
 <TextInput defaultValue="" onChangeText={setName} accessibilityLabel="Display name" />
 <Select options={themes} value={theme} onValueChange={setTheme} accessibilityLabel="Appearance" />
@@ -45,7 +45,7 @@ see [Windows issues](windows-issues.md#foundation-work--2026-09-15).
 
 ## Optional Uniwind bindings
 
-Import the same three controls from `@legend-apps/ui/uniwind` to add `className` through upstream `withUniwind` on native platforms and `useResolveClassNames` on web. Classes map to the existing layout `style`, with explicit styles taking precedence. The base entry has no Uniwind dependency at runtime. See [styling setup, themes, and limitations](styling.md).
+Import the same three controls from `@legendapp/frame-ui/uniwind` to add `className` through upstream `withUniwind` on native platforms and `useResolveClassNames` on web. Classes map to the existing layout `style`, with explicit styles taking precedence. The base entry has no Uniwind dependency at runtime. See [styling setup, themes, and limitations](styling.md).
 
 ## Integration and verification
 
@@ -60,7 +60,7 @@ bun test tests
 
 `test:ui` builds a packed kitchen-sink consumer with the test-only driver. It checks a mounted NSButton hit target, dispatches AppKit actions, and verifies React updates. Text/selection checks invoke the native delegate/action paths, including changed defaults and reordered options with duplicate labels. This is in-app native verification; it does not replace real pointer/keyboard and accessibility testing.
 
-`test:universal` generates real mobile/Windows projects and bundles the shared Settings entry for all five targets. It verifies that shared files and existing generated projects survive target switching and that platform bundles select the expected UI backend. Reports live under the consumer's `.legend` directory.
+`test:universal` generates real mobile/Windows projects and bundles the shared Settings entry for all five targets. It verifies that shared files and existing generated projects survive target switching and that platform bundles select the expected UI backend. Reports live under the consumer's `.frame` directory.
 
 Native Android and Windows execution remain pending. Windows uses WinUI controls hosted through RNW ContentIsland, with labeled, disabled placeholders if the UI module is absent or native initialization fails. Placeholders preserve layout/test IDs, do not attach action handlers, and do not load unavailable native bindings. Remaining implementations are tracked in [known Windows issues](windows-issues.md). Router, declarative windows, and a larger UI catalog remain deferred.
 
@@ -72,6 +72,6 @@ Native Android and Windows execution remain pending. Windows uses WinUI controls
 - Web typing, selection, copying, and unavailable secure storage behavior passed through the browser UI.
 - All five shared-screen bundles passed. Real iOS/Android/Windows generation preserved shared files and earlier native projects. A separate check also preserved the already-built macOS project and build record while generating Android/Windows.
 
-Bun execution used the synchronized `/tmp/legend-api-clean` checkout because Bun stalled in Documents on this host. Native Android/Windows execution and macOS pointer/keyboard inspection remain unverified; native Mac UI automation was blocked by the locked desktop. These checks do not establish mobile production distribution or Windows UI support.
+Bun execution used the synchronized `/tmp/frame-api-clean` checkout because Bun stalled in Documents on this host. Native Android/Windows execution and macOS pointer/keyboard inspection remain unverified; native Mac UI automation was blocked by the locked desktop. These checks do not establish mobile production distribution or Windows UI support.
 
 The new Windows implementations are source-complete for the three contracts but await native compilation and UI acceptance. Run `bun run test:windows:features` on an interactive Windows machine. These are WinUI controls, not Pressable wrappers.

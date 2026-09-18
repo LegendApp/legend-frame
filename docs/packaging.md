@@ -1,6 +1,6 @@
 # Packaging a macOS app
 
-`legend package` builds a standalone release, signs it with your Developer ID Application identity, submits it to Apple for notarization, staples the ticket, and verifies the final ZIP. It writes the verified archive to `dist/`. It does not publish artifacts. Apps configured for updates also get a signed Sparkle feed; see [desktop updates](desktop-integrations.md#signed-application-updates).
+`frame package` builds a standalone release, signs it with your Developer ID Application identity, submits it to Apple for notarization, staples the ticket, and verifies the final ZIP. It writes the verified archive to `dist/`. It does not publish artifacts. Apps configured for updates also get a signed Sparkle feed; see [desktop updates](desktop-integrations.md#signed-application-updates).
 
 In a newly created app:
 
@@ -11,7 +11,7 @@ bun run package
 In an existing app that does not yet have the package script:
 
 ```sh
-bunx --no-install legend package
+bunx --no-install frame package
 ```
 
 `bun run build` continues to produce an ad-hoc-signed standalone app for local testing. Packaging signs a staging copy and leaves that build output untouched.
@@ -20,28 +20,28 @@ bunx --no-install legend package
 
 Install a Developer ID Application certificate and its private key through Xcode or Keychain Access. Packaging requires Apple Silicon macOS, the native build prerequisites, and access to Apple's notarization service. Mac App Store signing is a separate, unsupported distribution target.
 
-On first use, Legend discovers available Developer ID identities. It uses the only matching identity automatically or presents a numbered choice. It then asks for an existing notarization Keychain profile or offers to create one using Apple's interactive `notarytool store-credentials` command. That tool handles secret input directly; Legend does not capture it. Credentials are validated before a native build begins.
+On first use, frame discovers available Developer ID identities. It uses the only matching identity automatically or presents a numbered choice. It then asks for an existing notarization Keychain profile or offers to create one using Apple's interactive `notarytool store-credentials` command. That tool handles secret input directly; frame does not capture it. Credentials are validated before a native build begins.
 
 Repeat or change the setup with:
 
 ```sh
-bunx --no-install legend credentials
+bunx --no-install frame credentials
 ```
 
-Legend remembers the certificate fingerprint, team, and Keychain profile in `.legend/signing.json`. This file contains references, not private keys or passwords, and is ignored by Git. Secret values do not belong in `app.json`.
+frame remembers the certificate fingerprint, team, and Keychain profile in `.frame/signing.json`. This file contains references, not private keys or passwords, and is ignored by Git. Secret values do not belong in `app.json`.
 
 ## CI and explicit credential selection
 
 The same package command works without prompts when credentials are already installed and selected:
 
-- `LEGEND_DEVELOPER_ID_APPLICATION`: certificate fingerprint or full Developer ID Application identity name.
-- `LEGEND_TEAM_ID`: optional team filter.
-- `LEGEND_NOTARY_KEYCHAIN_PROFILE`: existing, validated notarization profile name.
-- `LEGEND_SIGNING_KEYCHAIN`: optional path to a keychain containing both the signing identity and notarization profile.
+- `FRAME_DEVELOPER_ID_APPLICATION`: certificate fingerprint or full Developer ID Application identity name.
+- `FRAME_TEAM_ID`: optional team filter.
+- `FRAME_NOTARY_KEYCHAIN_PROFILE`: existing, validated notarization profile name.
+- `FRAME_SIGNING_KEYCHAIN`: optional path to a keychain containing both the signing identity and notarization profile.
 
-CI should import its signing identity into a temporary keychain and populate a notarization profile using Apple's tools. Legend does not export certificates or store raw secrets in project files. Its command runner redacts password/token arguments and explicitly marked sensitive values from command logs, output, and errors.
+CI should import its signing identity into a temporary keychain and populate a notarization profile using Apple's tools. frame does not export certificates or store raw secrets in project files. Its command runner redacts password/token arguments and explicitly marked sensitive values from command logs, output, and errors.
 
-Optional non-secret identity selectors can also be declared under `expo.extra.legend.signing.macos.identity` and `.teamId`. Environment variables take precedence over project selectors and remembered choices.
+Optional non-secret identity selectors can also be declared under `expo.extra.frame.signing.macos.identity` and `.teamId`. Environment variables take precedence over project selectors and remembered choices.
 
 ## Entitlements and native modules
 
@@ -59,13 +59,13 @@ Declare app capabilities in `expo.macos.entitlements`:
 }
 ```
 
-Native packages may declare requirements in their `package.json` under `legend.entitlements.macos`. CNG combines these requirements with the app's declarations. Arrays are combined; conflicting scalar requirements fail rather than silently dropping a requirement.
+Native packages may declare requirements in their `package.json` under `frame.entitlements.macos`. CNG combines these requirements with the app's declarations. Arrays are combined; conflicting scalar requirements fail rather than silently dropping a requirement.
 
 The framework owns the generated entitlements file. It does not inherit the desktop template's sandbox defaults. Custom config plugins should express entitlement requirements through the same app declarations or native-package metadata. Capabilities requiring provisioning-profile generation/embedding are not implemented by this packaging command.
 
 Packaging resolves requirements from the release binary's actual native module set. An unused SDK module cannot contribute entitlements merely because it was present in an earlier development build. Development-only `get-task-allow` privileges and unresolved Xcode variables are rejected for distribution. Electron-specific JIT or library-validation exceptions are not enabled by default.
 
-For an embedded helper process, declare an exact bundle-relative target under `expo.extra.legend.signing.macos.entitlementsByPath`, for example:
+For an embedded helper process, declare an exact bundle-relative target under `expo.extra.frame.signing.macos.entitlementsByPath`, for example:
 
 ```json
 {
@@ -79,19 +79,19 @@ Unknown targets fail. Helpers use their own entitlements; libraries receive no p
 
 ## Notarization and retries
 
-The command saves the signed upload and submission ID under `.legend/packaging/`. It polls Apple for up to two minutes. If processing is still pending, it exits with code **2** and prints instructions to run `legend package` again. Unchanged inputs reuse the build and submission. A successful completed package exits with code **0**; failures exit with code **1**.
+The command saves the signed upload and submission ID under `.frame/packaging/`. It polls Apple for up to two minutes. If processing is still pending, it exits with code **2** and prints instructions to run `frame package` again. Unchanged inputs reuse the build and submission. A successful completed package exits with code **0**; failures exit with code **1**.
 
-If Apple rejects the app, Legend saves the notarization log and reports its path. Fix the reported issue and package a new build. Repeating an unchanged rejected submission does not upload it again.
+If Apple rejects the app, frame saves the notarization log and reports its path. Fix the reported issue and package a new build. Repeating an unchanged rejected submission does not upload it again.
 
-If a connection drops before Apple returns the submission ID, Legend records the uncertainty and will not submit the same artifact again automatically. Find the ID with `notarytool history`, then recover it with:
+If a connection drops before Apple returns the submission ID, frame records the uncertainty and will not submit the same artifact again automatically. Find the ID with `notarytool history`, then recover it with:
 
 ```sh
-bunx --no-install legend package --submission-id <submission-id>
+bunx --no-install frame package --submission-id <submission-id>
 ```
 
-Recovery checks the unique upload filename, and acceptance checks Apple's recorded SHA-256 against the exact uploaded ZIP. Keep the `.legend/packaging/` artifacts while a submission is pending. A changed staged artifact is rejected.
+Recovery checks the unique upload filename, and acceptance checks Apple's recorded SHA-256 against the exact uploaded ZIP. Keep the `.frame/packaging/` artifacts while a submission is pending. A changed staged artifact is rejected.
 
-After acceptance, Legend staples a fresh final copy. The original signed upload stays immutable so an interrupted staple or validation can be retried safely. Final validation checks bundle metadata, arm64 architecture, nested Developer ID signatures, signing team, hardened runtime, secure timestamps, exact entitlements, stapling, and Gatekeeper. The ZIP is extracted and validated again before it appears in `dist/`.
+After acceptance, frame staples a fresh final copy. The original signed upload stays immutable so an interrupted staple or validation can be retried safely. Final validation checks bundle metadata, arm64 architecture, nested Developer ID signatures, signing team, hardened runtime, secure timestamps, exact entitlements, stapling, and Gatekeeper. The ZIP is extracted and validated again before it appears in `dist/`.
 
 ## Validation status
 

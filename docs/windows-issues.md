@@ -13,7 +13,7 @@ need implementation or explicit contract decisions as well as native testing.
 ## Confirmed Nitro integration blocker (2026-09-16)
 
 The current Nitro adapter calls `ReactContext.JSRuntime()` in
-`patches/windows/nitro/windows/LegendNitro/LegendNitro.h`. The pinned RNW
+`patches/windows/nitro/windows/FrameNitro/FrameNitro.h`. The pinned RNW
 `IReactContext.cpp` explicitly fail-fasts for that call in Debug Fabric builds.
 This is a source-confirmed incompatibility, not merely missing runtime evidence.
 Replace the installation entry point before expecting Nitro acceptance to pass.
@@ -67,15 +67,15 @@ native verification; macOS probe results do not establish Windows acceptance.
 ```powershell
 bun install
 bun run test:platform --platform windows --timeout 600
-bun run test:windows:features --project C:\dev\LegendWindowsFeatures
-bun run test:windows --project C:\dev\LegendWindowsVerification
+bun run test:windows:features --project C:\dev\FrameWindowsFeatures
+bun run test:windows --project C:\dev\FrameWindowsVerification
 ```
 
 Use a fresh directory for each explicit `--project`. Run in an interactive desktop
 session. The shared platform screen runs API checks and provides native interaction
 checks for dialogs, menus, tray, shortcuts, notifications, drag/drop, modal windows,
 system/taskbar APIs and WebView. Choose **Finish run** afterward. `--api-only`
-leaves interactive cases untested. Reports live in `.legend/test-results`;
+leaves interactive cases untested. Reports live in `.frame/test-results`;
 `bun run test:report` summarizes them. See [platform-testing.md](platform-testing.md).
 Clipboard checks temporarily replace content; use a disposable test session.
 
@@ -84,7 +84,7 @@ concurrent launch forwarding, abandoned-owner recovery, appearance and restart
 persistence. A shared project mutex prevents simultaneous clients writing the same
 project state. A forwarding timeout reports failure rather than starting a second
 owner. The platform runner's prepare-only mode is available on macOS, including
-`LEGEND_WINDOWS_ARCH=arm64`, and never marks native checks passed.
+`FRAME_WINDOWS_ARCH=arm64`, and never marks native checks passed.
 
 ## Platform differences and limits
 

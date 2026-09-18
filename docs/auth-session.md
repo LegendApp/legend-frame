@@ -1,13 +1,13 @@
 # Browser authentication sessions
 
-`@legend-apps/auth-session` supplies browser launch and callback transport. OAuth
+`@legendapp/frame-auth-session` supplies browser launch and callback transport. OAuth
 request construction, PKCE, code exchange, refresh, token validation and storage
 remain in your authentication library/application. It does not bundle Node or
 embed a login WebView. Native browser authorization follows the external-browser
 approach described in [RFC 8252](https://www.rfc-editor.org/rfc/rfc8252.html).
 
 ```ts
-import { createAuthSession } from '@legend-apps/auth-session';
+import { createAuthSession } from '@legendapp/frame-auth-session';
 
 // Desktop: binds 127.0.0.1 on an available port before opening the browser.
 const session = await createAuthSession({ timeoutMs: 120_000 });
@@ -100,7 +100,7 @@ request size, callback delivery and socket cleanup. The macOS app test opens the
 system browser against a local test provider, verifies a real redirect to the
 native listener, checks the SHA-256 known vector, and exercises cancellation and
 timeout. It uses no real account and does not exchange tokens. Its report lives in
-`.legend/auth-tests/report.json`. Kitchen Sink also has a provider-configurable
+`.frame/auth-tests/report.json`. Kitchen Sink also has a provider-configurable
 browser-authentication demonstration that avoids displaying callback credentials.
 
 Windows source is included, but compilation and native browser acceptance remain

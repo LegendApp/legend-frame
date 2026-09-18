@@ -10,7 +10,7 @@ unused native modules and removes Sparkle when updates are unused.
 import {
   requestNotificationPermission, showNotification, onNotificationResponse,
   cancelNotification,
-} from "@legend-apps/desktop/notifications";
+} from "@legendapp/frame/notifications";
 
 // In an Enable Notifications button handler:
 const permission = await requestNotificationPermission();
@@ -50,8 +50,8 @@ standalone app. No remote push/APNs service is included.
 ## Tray / menu-bar items
 
 ```ts
-import { createTray } from "@legend-apps/desktop/tray";
-import { showWindow } from "@legend-apps/desktop/windows";
+import { createTray } from "@legendapp/frame/tray";
+import { showWindow } from "@legendapp/frame/windows";
 
 const tray = await createTray({
   id: "main",
@@ -79,7 +79,7 @@ reload also removes its status items. Duplicate tray IDs reject with
 For an app that starts in the menu bar with no Dock icon or visible main window:
 
 ```json
-{ "expo": { "extra": { "legend": { "menuBarOnly": true } } } }
+{ "expo": { "extra": { "frame": { "menuBarOnly": true } } } }
 ```
 
 This requires a custom build. Create the tray from the mounted React root and use
@@ -97,12 +97,12 @@ JavaScript OTA update mechanism.
 In the application project:
 
 ```sh
-bunx --no-install legend updates init https://example.com/updates/appcast.xml
+bunx --no-install frame updates init https://example.com/updates/appcast.xml
 ```
 
 The command downloads checksum-pinned Sparkle tools, creates or reuses a
 project-specific signing key in the login Keychain, and writes only `feedURL` and
-`publicKey` into `expo.extra.legend.updates`. Back up the signing key using
+`publicKey` into `expo.extra.frame.updates`. Back up the signing key using
 Sparkle's documented export/import process; keep private keys out of the repo and
 out of the update server. An existing configured key is never silently replaced.
 
@@ -112,7 +112,7 @@ Import and start the updater once your app is ready:
 import {
   startUpdates, getUpdateStatus, checkForUpdates,
   setAutomaticUpdateChecks, onUpdateEvent,
-} from "@legend-apps/desktop/updates";
+} from "@legendapp/frame/updates";
 
 const events = onUpdateEvent(event => console.log(event.state));
 const status = await getUpdateStatus();

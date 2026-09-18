@@ -16,7 +16,7 @@ the checked-in Kitchen Sink development runtime. Release-build work was happenin
 concurrently in the checkout; no claim is made about that work here.
 
 The shared platform report is
-`.legend/test-results/47b6dd3a-9a0c-4a59-889c-98a267dce255.json`.
+`.frame/test-results/47b6dd3a-9a0c-4a59-889c-98a267dce255.json`.
 It retains **27 passed, 3 failed, 1 not applicable, 16 not tested**, and an
 interrupted execution status. It was stopped after notification permission failed
 to present an actionable prompt in this remote session. Later focused rechecks
@@ -51,10 +51,10 @@ below supplement that report; they do not erase its original failures.
 
 Focused reports:
 
-- `.legend/file-stream-tests/report.json`
-- `.legend/filesystem-recheck-2026-09-18.json`
-- `.legend/desktop-foundation-tests/report.json`
-- `.legend/lifecycle-recheck-2026-09-18.json`
+- `.frame/file-stream-tests/report.json`
+- `.frame/filesystem-recheck-2026-09-18.json`
+- `.frame/desktop-foundation-tests/report.json`
+- `.frame/lifecycle-recheck-2026-09-18.json`
 
 ## Native crash found and fixed
 
@@ -96,7 +96,7 @@ The sidecar regression now performs 50 immediate open/close cycles using the sam
 window ID, without a delay, and checks registry cleanup after every close. Two
 consecutive rebuilt-native runs passed all nine helper checks: **100 immediate
 open/close cycles**, helper survival, binary streaming, failure/deadline handling,
-and cleanup on normal app quit. `.legend/sidecar-tests/report.json` now contains
+and cleanup on normal app quit. `.frame/sidecar-tests/report.json` now contains
 an unmodified post-fix stress-run result. Streaming/Trash and the native overlay/drag callbacks also passed again. A separate
 `bun scripts/test-fabric-reload.ts` probe passed three full React Native reloads
 and another 40 immediate window-close cycles. TypeScript and all 247 unit tests
@@ -147,8 +147,8 @@ not be used to imply completion of these acceptance gaps.
 The two fresh platform consumer directories occupy approximately 1.0 GiB and
 4.6 GiB respectively:
 
-- `.legend/platform-tests/Platformmacos1789723747074` (initial bundle failure)
-- `.legend/platform-tests/Platformmacos1789723802516` (native acceptance consumer)
+- `.frame/platform-tests/Platformmacos1789723747074` (initial bundle failure)
+- `.frame/platform-tests/Platformmacos1789723802516` (native acceptance consumer)
 
 They are disposable test artifacts, retained for inspection; no cleanup was
 performed. Focused copied application bundles were removed by their test runners.
@@ -175,7 +175,7 @@ automation. Normal quit exited 0. Remote shortcut injection did not deliver the
 global callback, so this verifies crash prevention, not physical global-hotkey
 delivery. TypeScript and 249 unit tests passed.
 
-Evidence: `.legend/keyboard-tests/report.json`, `.legend/keyboard-crash-before.log`,
-`.legend/keyboard-after-app.log`. The temporary UI probe was removed. Windows was not
+Evidence: `.frame/keyboard-tests/report.json`, `.frame/keyboard-crash-before.log`,
+`.frame/keyboard-after-app.log`. The temporary UI probe was removed. Windows was not
 run; this patch affects macOS only. Follow the [manual acceptance checklist](desktop-manual-acceptance.md)
 on both machines, including the remaining OS interaction checks.
