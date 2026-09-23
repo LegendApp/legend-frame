@@ -1,3 +1,4 @@
+import { packArchive } from "../packages/cli/src/pack-archive.ts";
 import { createRequire } from "node:module";
 import { existsSync, mkdirSync, readFileSync, rmSync, writeFileSync, cpSync } from "node:fs";
 import path from "node:path";
@@ -45,6 +46,6 @@ export async function packRuntimes(root: string, output: string) {
   pkg.dependencies = { ...pkg.dependencies, "@babel/parser": "7.28.5", "@babel/traverse": "7.28.5", "react-native-nitro-modules": "0.35.7" };
   writeJson(path.join(core, "package.json"), pkg);
   const file = `runtimes-${hash.slice(0, 12)}.tgz`;
-  await run(core, ["tar", "--exclude=.spark", "-czf", path.join(output, file), "."], { capture: true, env: { COPYFILE_DISABLE: "1" } });
+  await packArchive(core, path.join(output, file));
   return { [pkg.name]: file };
 }

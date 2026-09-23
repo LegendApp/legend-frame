@@ -85,7 +85,7 @@ the native regression; see [macOS evidence](macos-readiness-2026-09-18.md#webvie
 
 `spark dev` launches the app's installed `expo start` under Node, inheriting stdin/stdout/stderr. Its Node supervisor retains desktop runtime discovery, compatibility enforcement, native builds and owned app processes. It has no keyboard interface. Desktop actions and results travel over a private JSON IPC channel; no HTTP command endpoint is exposed.
 
-spark consumes its own `--project`, `--platform`, `--runner-binary`, and `--no-open` options and forwards the remaining arguments to Expo. Expo retains `--go`/`--dev-client`, networking, cache clearing, validation, and port selection. Its readiness message supplies the actual port and bundle options.
+frame consumes its own `--project`, `--platform`, `--runner-binary`, and `--no-open` options and forwards the remaining arguments to Expo. Expo retains `--go`/`--dev-client`, networking, cache clearing, validation, and port selection. Its readiness message supplies the actual port and bundle options.
 
 The shared development config advertises all declared platforms and omits native build overlays. Expo Desktop supplies multi-platform Metro defaults; the desktop runtime gate is selected per request and does not block mobile/web. `desktop.config.json` remains separate. Native builds keep target-specific config and state.
 

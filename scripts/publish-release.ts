@@ -1,3 +1,4 @@
+import { spawnProcess } from "../packages/cli/src/process.ts";
 import { createHash } from "node:crypto";
 import { readFileSync } from "node:fs";
 import path from "node:path";
@@ -27,7 +28,7 @@ if (commit.type !== "commit" || commit.sha !== revision) throw new Error("Releas
 let existing: any;
 try { existing = JSON.parse(await run(root, ["gh", "release", "view", tag, "--repo", repo, "--json", "isDraft,assets"], { capture: true })); }
 catch {
-  await run(root, ["gh", "release", "create", tag, "--repo", repo, "--verify-tag", "--draft", "--prerelease", "--title", `Frame ${VERSION}`, "--notes", "Frame preview for macOS Apple Silicon. Requires Node 24.19.0 or newer. Runner downloads automatically on first desktop launch. Windows native acceptance remains pending."]);
+  await run(root, ["gh", "release", "create", tag, "--repo", repo, "--verify-tag", "--draft", "--prerelease", "--title", `Spark ${VERSION}`, "--notes", "Spark preview for macOS Apple Silicon. Requires Node 24.19.0 or newer. Runner downloads automatically on first desktop launch. Windows native acceptance remains pending."]);
   await run(root, ["gh", "release", "upload", tag, "--repo", repo, ...Object.keys(release.sha256).map(name => path.join(folder, name)), path.join(folder, "checksums.txt"), path.join(folder, "release.json")]);
   existing = { isDraft: true };
 }
@@ -48,5 +49,8 @@ for (const [name, expected] of Object.entries(release.sha256)) {
   if (!asset || asset.digest !== `sha256:${expected}`) throw new Error(`GitHub asset is missing or has a different digest: ${name}. Preserve the release and repair the upload explicitly.`);
 }
 if (existing.isDraft) await run(root, ["gh", "release", "edit", tag, "--repo", repo, "--draft=false", "--prerelease"]);
-await run(root, ["npm", "publish", path.join(folder, release.npm), "--access", "public", "--tag", "next"]);
+// npm web authentication needs the terminal; piping output disables its prompt.
+const publish = spawnProcess(["npm", "publish", path.join(folder, release.npm), "--access", "public", "--tag", "next"], { cwd: root, stdin: "inherit", stdout: "inherit", stderr: "inherit" });
+const publishCode = await publish.exited;
+if (publishCode) throw new Error(`npm publish exited ${publishCode}`);
 console.log(`Published ${tag}. Run clean-machine acceptance with npx @legendapp/spark@next create MyApp before promoting latest.`);

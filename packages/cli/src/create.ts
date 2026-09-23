@@ -67,7 +67,7 @@ export async function create(root: string, archiveManifest: string | undefined, 
     const child = spawnProcess(nodeCommand(path.resolve(import.meta.dirname, ".."), "expo-desktop", "expo-desktop", [
       "create-app", root, "--template", `file:${templateFile}`, "--yes", "--no-agents-md",
       "--display-name", name, "--rdns", `so.legend.spark.prototype.${name.toLowerCase()}`,
-    ]), { cwd: process.cwd(), env: { ...process.env, PATH: `${npmBin}${path.delimiter}${process.env.PATH ?? ""}`, npm_config_user_agent: `${manager}/frame`, CI: "1", ...(manager === "yarn" ? { YARN_ENABLE_IMMUTABLE_INSTALLS: "false" } : {}) }, stdout: "inherit", stderr: "inherit" });
+    ]), { cwd: process.cwd(), env: { ...process.env, PATH: `${npmBin}${path.delimiter}${process.env.PATH ?? ""}`, npm_config_user_agent: `${manager}/spark`, CI: "1", ...(manager === "yarn" ? { YARN_ENABLE_IMMUTABLE_INSTALLS: "false" } : {}) }, stdout: "inherit", stderr: "inherit" });
     if (await child.exited) throw new Error("Expo Desktop could not create the app. See its output above.");
   } finally { rmSync(temporary, { recursive: true, force: true }); }
   // Upstream can report success after an install failure. Require a usable CLI.

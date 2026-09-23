@@ -71,7 +71,7 @@ test("a missing Go install differs from missing native modules and stale custom 
   expect(missing.compatible).toBe(false);
   expect(missing.canBuild).toBe(false);
   expect(missing.message).toContain("isn’t installed");
-  const custom = sessionStatus("go", true, ["Greeting isn’t included in the Frame Runner."]);
+  const custom = sessionStatus("go", true, ["Greeting isn’t included in the Spark Runner."]);
   expect(custom.canBuild).toBe(true);
   expect(custom.actions).toContain("b  Build and open");
   expect(sessionStatus("dev", true, ["changed"]).actions).toContain("Rebuild and open");

@@ -119,8 +119,8 @@ export async function signApp(root: string, app: string, credentials: SigningCre
 export async function validateApp(root: string, app: string, credentials: SigningCredentials, expected: { runner?: boolean; bundleId: string; version: string; buildVersion: string; entitlements: Entitlements; byPath: Record<string, Entitlements> }, notarized: boolean, execute: Runner = run) {
   app = realpathSync(app);
   if (expected.runner) {
-    const runtime = readJson(path.join(app, "Contents/Resources/frame-runtime.json"));
-    if (runtime.mode !== "go" || runtime.platform !== "macos" || runtime.arch !== "arm64") throw new Error("Distribution app is not a macOS Frame Runner.");
+    const runtime = readJson(path.join(app, "Contents/Resources/spark-runtime.json"));
+    if (runtime.mode !== "go" || runtime.platform !== "macos" || runtime.arch !== "arm64") throw new Error("Distribution app is not a macOS Spark Runner.");
   } else if (!existsSync(path.join(app, "Contents/Resources/main.jsbundle"))) throw new Error("Distribution app is missing its JavaScript bundle.");
   const info = JSON.parse(await execute(root, ["plutil", "-convert", "json", "-o", "-", path.join(app, "Contents/Info.plist")], { capture: true }));
   for (const [key, value] of Object.entries({ CFBundleIdentifier: expected.bundleId, CFBundleShortVersionString: expected.version, CFBundleVersion: expected.buildVersion })) {

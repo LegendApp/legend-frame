@@ -23,6 +23,6 @@ export function prepareWindowsGeometry(root: string) {
   const rnw = path.dirname(manifest), source = path.join(rnw, "Microsoft.ReactNative/Fabric/ComponentView.h");
   const original = readFileSync(source, "utf8"); const patched = patchWindowsGeometry(original);
   if (patched !== original) writeFileSync(source, patched);
-  const header = readFileSync(createRequire(req.resolve("@legendapp/spark/package.json")).resolve("@legendapp/spark-desktop-host/windows/SparkComponentGeometry.h"), "utf8");
+  const header = readFileSync(createRequire(import.meta.url).resolve("@legendapp/spark-desktop-host/windows/SparkComponentGeometry.h"), "utf8");
   writeFileSync(path.join(rnw, "Microsoft.ReactNative.Cxx/SparkComponentGeometry.h"), header);
 }

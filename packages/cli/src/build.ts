@@ -321,9 +321,9 @@ async function buildUnlocked(
     app: destination,
     runtime: runtimeFor(root, chosen.included, mode),
   };
-  if (mode === "go" && process.env.FRAME_RELEASE_REVISION) {
-    if (!/^[a-f0-9]{40}$/.test(process.env.FRAME_RELEASE_REVISION)) throw new Error("Invalid release source revision");
-    result.runtime.sourceRevision = process.env.FRAME_RELEASE_REVISION;
+  if (mode === "go" && process.env.SPARK_RELEASE_REVISION) {
+    if (!/^[a-f0-9]{40}$/.test(process.env.SPARK_RELEASE_REVISION)) throw new Error("Invalid release source revision");
+    result.runtime.sourceRevision = process.env.SPARK_RELEASE_REVISION;
   }
   if (productionHash)
     result.runtime.fingerprint = digest(

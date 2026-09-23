@@ -1,6 +1,6 @@
 {
   "name": "@legendapp/spark-native-greeting",
-  "version": "0.0.1-next.1",
+  "version": "0.0.1-next.2",
   "license": "MIT",
   "main": "src/index.ts",
   "react-native": "src/index.ts",
@@ -25,8 +25,8 @@
       }
     },
     "windows": {
-      "namespace": "FrameWindowsGreetingCodegen",
-      "outputDirectory": "windows/FrameWindowsGreeting/codegen",
+      "namespace": "SparkWindowsGreetingCodegen",
+      "outputDirectory": "windows/SparkWindowsGreeting/codegen",
       "separateDataTypes": true
     }
   },

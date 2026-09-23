@@ -33,9 +33,9 @@ npx --no-install spark build --dev --platform windows
 npm run windows
 ```
 
-If a `macos` or `windows` script already exists, it is preserved and the added script is named `spark:macos` or `spark:windows`. Direct spark commands can also select the target with `--platform`. A compatible registered Spark Runner can be used through the existing development session; the initial native build is only necessary when no compatible binary is available.
+If a `macos` or `windows` script already exists, it is preserved and the added script is named `frame:macos` or `frame:windows`. Direct spark commands can also select the target with `--platform`. A compatible registered Spark Runner can be used through the existing development session; the initial native build is only necessary when no compatible binary is available.
 
-For one shared session, run `npx --no-install spark dev --no-open`, then use `i`, `a`, `w`, and `d`. The existing Expo scripts stay unchanged; they remain available for standalone Expo workflows. Standard Expo start options pass through spark.
+For one shared session, run `npx --no-install spark dev --no-open`, then use `i`, `a`, `w`, and `d`. The existing Expo scripts stay unchanged; they remain available for standalone Expo workflows. Standard Expo start options pass through frame.
 
 ## Configuration composition
 

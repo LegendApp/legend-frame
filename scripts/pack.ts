@@ -1,5 +1,5 @@
 import { packArchive } from "../packages/cli/src/pack-archive.ts";
-import { packFrame } from "./pack-frame.ts";
+import { packSpark } from "./pack-spark.ts";
 import { packWindowsLibraries } from "./prepare-windows-libraries.ts";
 import { packTemplates } from "./pack-templates.ts";
 import { packRuntimes } from "./prepare-runtimes.ts";
@@ -18,7 +18,7 @@ const packages = [
 ];
 const manifest: Record<string, string> = await packRuntimes(root, output);
 Object.assign(manifest, await packWindowsLibraries(output));
-manifest["@legendapp/frame"] = await packFrame(root, output);
+manifest["@legendapp/spark"] = await packSpark(root, output);
 for (const dir of packages) {
   const pkg = readJson(path.join(root, dir, "package.json"));
   const file = `${pkg.name.replace(/^@/, "").replaceAll("/", "-")}-${pkg.version}.tgz`;

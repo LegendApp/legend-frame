@@ -96,7 +96,7 @@ The persisted runtime mode (`"go"`), registry entries, saved settings, and exist
 The local fixture is distributed in `artifacts/packages/` after packing. Use its content-hashed filename from `artifacts/packages/manifest.json` (the stable alias below is also available for a first installation). Install its tarball with your package manager:
 
 ```sh
-npm install /absolute/path/to/spark/artifacts/packages/legendapp-spark-native-greeting-0.1.0-prototype.0.tgz
+npm install /absolute/path/to/frame/artifacts/packages/legendapp-spark-native-greeting-0.1.0-prototype.0.tgz
 ```
 
 Import `getGreeting` from `@legendapp/spark-native-greeting` and render its returned string. The running CLI detects that the Spark Runner lacks the native module and offers a custom build. Press `b` to build and switch. Future JavaScript edits Fast Refresh; native source/configuration changes need another build.

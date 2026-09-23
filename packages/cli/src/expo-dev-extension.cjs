@@ -7,8 +7,8 @@ function commands(platform = process.env.SPARK_PLATFORM, host = process.platform
   if (!name) return [];
   const disabled = platform === 'macos' ? host !== 'darwin' : host !== 'win32';
   return [
-    { key: 'd', msg: `open ${name} (${current.target === 'go' ? 'Frame Runner' : 'development build'})`, disabled },
-    { key: 'g', msg: `switch desktop to ${current.target === 'go' ? 'development build' : 'Frame Runner'}`, disabled },
+    { key: 'd', msg: `open ${name} (${current.target === 'go' ? 'Spark Runner' : 'development build'})`, disabled },
+    { key: 'g', msg: `switch desktop to ${current.target === 'go' ? 'development build' : 'Spark Runner'}`, disabled },
     { key: 'b', msg: `build and open ${name} development build`, disabled: disabled || !current.canBuild },
   ];
 }

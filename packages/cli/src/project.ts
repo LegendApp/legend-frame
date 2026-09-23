@@ -16,7 +16,7 @@ import {
 } from "node:fs";
 import path from "node:path";
 
-export const VERSION = "0.0.1-next.1";
+export const VERSION = "0.0.1-next.2";
 export type Package = { name: string; root: string; json: any };
 export type NativePackage = Package & {
   signature: string;
@@ -68,8 +68,8 @@ export function installedPackages(root: string): Package[] {
   const visited = new Set<string>();
   while (queue.length) {
     const current = queue.shift()!;
-    const req = createRequire(path.join(current.root, "package.json"));
-    const bundled = current.json.bundledDependencies ?? current.json.bundleDependencies;
+    const req = createRequire(path.join(current.root, current.json.spark?.bundledModuleRoot ?? ".", "package.json"));
+    const bundled = current.json.spark?.bundledModules ?? current.json.bundledDependencies ?? current.json.bundleDependencies;
     const names = Object.keys({
       ...Object.fromEntries((Array.isArray(bundled) ? bundled : []).map(name => [name, true])),
       ...current.json.dependencies,

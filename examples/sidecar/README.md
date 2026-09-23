@@ -35,7 +35,7 @@ add this to `desktop.config.json` (include only targets you actually build):
 }
 ```
 
-Use a development build of your app; the shared Frame Runner cannot include
+Use a development build of your app; the shared Spark Runner cannot include
 an app-specific helper. Then call the existing process API:
 
 ```ts

@@ -273,7 +273,7 @@ test("Runner packaging preserves development mode, needs no embedded JS, and ski
     h.state.status = "Accepted";
     rmSync(path.join(h.source, "Contents/Resources/main.jsbundle"));
     const runtime: Runtime = { schema: 1, framework: VERSION, platform: "macos", arch: "arm64", mode: "go", fingerprint: "runner", modules: {} };
-    writeJson(path.join(h.source, "Contents/Resources/frame-runtime.json"), runtime);
+    writeJson(path.join(h.source, "Contents/Resources/spark-runtime.json"), runtime);
     let mode: string | undefined;
     const result = await packageApp(h.root, { runner: true }, { ...h.dependencies,
       build: async (_root, selected) => { mode = selected; return { app: h.source, runtime }; },

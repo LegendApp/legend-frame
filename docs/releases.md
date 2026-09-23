@@ -75,6 +75,25 @@ under `next`. It never overwrites existing assets or moves tags. Resuming upload
 missing draft assets without replacing existing files. A checksum mismatch stops
 for explicit repair; rerunning cannot replace released bytes.
 
+Run the publisher in an interactive terminal so npm can open its browser
+authentication prompt. The package also defaults to `next` through `publishConfig`.
+Check registry tags after publication: npm may assign `latest` to a first release
+and refuses to remove it. Changing that tag is an explicit release decision;
+`--tag next` does not guarantee that a new package has no `latest` tag.
+
+## Packaging compatibility
+
+The archive contains private implementation modules, but its registry dependency
+list contains only third-party packages. Frame records native discovery in
+`frame.bundledModules` and stores implementations under `vendor/node_modules`,
+with public wrappers and native discovery resolving from that anchor. Yarn 4
+replaces top-level `node_modules` during linking. Do not retain npm bundle
+metadata in the final archive.
+npm normalizes that metadata into private registry dependencies, which breaks
+Yarn Classic installs. Patched dependencies use the same npm archive writer as other
+packages, including a single `package/` prefix required by Yarn 4 extraction.
+Validate normalized registry metadata as well as tarball installation.
+
 ## Acceptance before promotion
 
 On another Apple Silicon Mac without the checkout, registered SDK, cached Runner,

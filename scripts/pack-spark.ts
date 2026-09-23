@@ -2,7 +2,7 @@ import { validateRelease, type ReleaseManifest } from "../packages/cli/src/relea
 // @ts-ignore JavaScript build utility shared with the Node launcher.
 import { buildCLI } from "./build-node.mjs";
 import { spawnProcess } from "../packages/cli/src/process.ts";
-import { cpSync, existsSync, mkdirSync, mkdtempSync, readFileSync, readdirSync, rmSync, writeFileSync } from "node:fs";
+import { cpSync, existsSync, mkdirSync, mkdtempSync, readFileSync, readdirSync, renameSync, rmSync, writeFileSync } from "node:fs";
 import { createRequire } from "node:module";
 import { createHash } from "node:crypto";
 import path from "node:path";
@@ -71,13 +71,29 @@ export async function packSpark(root: string, output: string, release?: ReleaseM
     manifest.peerDependenciesMeta = Object.fromEntries(Object.keys(peers).filter(name => !requiredPeers.has(name)).map(name => [name, { optional: true }]));
     writeFileSync(path.join(stage, "package.json"), JSON.stringify(manifest, null, 2) + "\n");
     const archive = await pack(stage);
-    // npm needs dependency edges to collect bundled files, but Bun attempts to
-    // fetch those private names when installing. Keep the bundle list and files
-    // while exposing only third-party registry dependencies in the final archive.
+    // npm needs dependency edges to collect private modules. Remove standard
+    // bundle metadata afterward: npm publish normalizes it back into registry
+    // dependencies, which Yarn tries to fetch. Spark owns native discovery;
+    // package managers see only the public SDK and third-party dependencies.
     const final = path.join(temporary, "final");
     const contents = path.join(final, "package");
     await unpack(archive, contents);
     manifest.dependencies = external;
+    manifest.spark = { ...manifest.spark, bundledModules: manifest.bundledDependencies, bundledModuleRoot: "vendor" };
+    delete manifest.bundledDependencies;
+    delete manifest.bundleDependencies;
+    // Yarn replaces top-level node_modules during linking. Keep implementation
+    // modules under a vendor anchor so their normal sibling resolution survives.
+    mkdirSync(path.join(contents, "vendor"));
+    renameSync(path.join(contents, "node_modules"), path.join(contents, "vendor/node_modules"));
+    for (const file of [...readdirSync(contents).filter(name => /\.(?:[cm]?ts|cjs)$/.test(name)), "bin/spark.cjs"]) {
+      const location = path.join(contents, file);
+      const source = readFileSync(location, "utf8").replace(/(["'])(@legendapp\/spark-[^"']+)\1/g, (_match, quote, specifier) => {
+        const target = path.posix.relative(path.posix.dirname(file), `vendor/node_modules/${specifier}`);
+        return `${quote}${target.startsWith(".") ? target : `./${target}`}${quote}`;
+      });
+      writeFileSync(location, source);
+    }
     writeFileSync(path.join(contents, "package.json"), JSON.stringify(manifest, null, 2) + "\n");
     await command(["tar", "-czf", archive, "-C", final, "package"], root);
     const bytes = readFileSync(archive);

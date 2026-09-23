@@ -27,6 +27,6 @@ test("legacy binary override aliases prebuilt without consuming Expo Go", () => 
 
 test("Runner binary option retains prebuilt and Go aliases", () => {
   for (const flag of ["--runner-binary", "--prebuilt-binary", "--go-binary"]) {
-    expect(devArguments([flag, "/tmp/FrameRunner.app"]).prebuiltBinary).toBe("/tmp/FrameRunner.app");
+    expect(devArguments([flag, "/tmp/SparkRunner.app"]).prebuiltBinary).toBe("/tmp/SparkRunner.app");
   }
 });

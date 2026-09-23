@@ -31,9 +31,9 @@ export async function packCameraPackages(names?: string[]) {
     await run(stage, ["tar", "-xzf", archive, "--strip-components=1"], { capture: true });
     const patch = path.join(framework, "patches/camera", `${name}.patch`);
     if (existsSync(patch)) await run(stage, ["patch", "--batch", "--fuzz=0", "-p1", "-i", patch], { capture: true });
-    const hash = createHash("sha256").update(info.integrity).update(existsSync(patch) ? readFileSync(patch) : "").digest("hex").slice(0, 12);
+    const hash = createHash("sha256").update(info.integrity).update(readFileSync(import.meta.filename)).update(existsSync(patch) ? readFileSync(patch) : "").digest("hex").slice(0, 12);
     const file = `${name}-${info.version}-macos-${hash}.tgz`;
-    await run(stage, ["tar", "--exclude=.spark", "-czf", path.join(output, file), "."], { capture: true, env: { COPYFILE_DISABLE: "1" } });
+    await packArchive(stage, path.join(output, file));
     manifest[name] = path.join(output, file);
   }
   writeJson(path.join(output, "manifest.json"), manifest);

@@ -1,6 +1,6 @@
 # Legend Frame rename validation — 2026-09-18
 
-The public package is `@legendapp/frame`, its executable is `frame`, and internal
+The public package is `@legendapp/spark`, its executable is `frame`, and internal
 packages use `@legendapp/frame-*`. Native names, codegen registrations, Windows
 projects, templates, configuration helpers, environment variables, runtime files,
 workspace patches, tests and documentation were renamed together.

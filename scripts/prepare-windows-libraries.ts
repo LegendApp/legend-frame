@@ -1,3 +1,4 @@
+import { packArchive } from "../packages/cli/src/pack-archive.ts";
 import { createRequire } from "node:module";
 import { createHash } from "node:crypto";
 import { cpSync, existsSync, mkdirSync, readdirSync, readFileSync, rmSync, writeFileSync } from "node:fs";
@@ -90,7 +91,7 @@ export async function packWindowsLibraries(output: string) {
     for (const script of ["prepare", "prepack", "prepublish", "prepublishOnly"]) if (pkg.scripts) delete pkg.scripts[script];
     pkg.spark = { ...pkg.spark, sdk: true, windowsAdapter: true, upstreamIntegrity: pin.integrity }; writeJson(path.join(stage, "package.json"), pkg);
     const temporary = path.join(output, "windows-library.tgz");
-    await run(stage, ["tar", "--exclude=.spark", "-czf", temporary, "."], { capture: true, env: { COPYFILE_DISABLE: "1" } });
+    await packArchive(stage, temporary);
     const hash = createHash("sha256").update(readFileSync(temporary)).digest("hex").slice(0, 12);
     const file = `${name.replace(/^@/, "").replaceAll("/", "-")}-${pin.version}-${hash}.tgz`; cpSync(temporary, path.join(output, file)); rmSync(temporary); result[name] = file;
   }
