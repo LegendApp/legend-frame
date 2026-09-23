@@ -50,7 +50,7 @@ struct FrameAppearance : std::enable_shared_from_this<FrameAppearance> {
   // Synchronous state update is intentional: RN calls getColorScheme immediately
   // after setColorScheme. XAML work and change events still run on the UI thread.
   REACT_SYNC_METHOD(setColorScheme)
-  bool setColorScheme(std::string const &style) noexcept {
+  bool setColorScheme(std::string style) noexcept {
     context.Properties().Set(ThemePreference(), style == "dark" ? 1 : style == "light" ? 0 : -1);
     Notify();
     return true;

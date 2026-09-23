@@ -59,5 +59,5 @@ struct NativeFrameRuntime {
   REACT_SYNC_METHOD(server)
   std::string server() noexcept { return "http://127.0.0.1:" + std::to_string(FrameMetroPort()); }
   REACT_SYNC_METHOD(session)
-  std::string session() { return winrt::to_string(FrameWindowsEnv(L"FRAME_SESSION_TOKEN")); }
+  std::string session() noexcept { return winrt::to_string(FrameWindowsEnv(L"FRAME_SESSION_TOKEN")); }
 };
