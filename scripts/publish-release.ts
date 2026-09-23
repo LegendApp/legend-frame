@@ -1,3 +1,4 @@
+import { spawnProcess } from "../packages/cli/src/process.ts";
 import { createHash } from "node:crypto";
 import { readFileSync } from "node:fs";
 import path from "node:path";
@@ -48,5 +49,8 @@ for (const [name, expected] of Object.entries(release.sha256)) {
   if (!asset || asset.digest !== `sha256:${expected}`) throw new Error(`GitHub asset is missing or has a different digest: ${name}. Preserve the release and repair the upload explicitly.`);
 }
 if (existing.isDraft) await run(root, ["gh", "release", "edit", tag, "--repo", repo, "--draft=false", "--prerelease"]);
-await run(root, ["npm", "publish", path.join(folder, release.npm), "--access", "public", "--tag", "next"]);
+// npm web authentication needs the terminal; piping output disables its prompt.
+const publish = spawnProcess(["npm", "publish", path.join(folder, release.npm), "--access", "public", "--tag", "next"], { cwd: root, stdin: "inherit", stdout: "inherit", stderr: "inherit" });
+const publishCode = await publish.exited;
+if (publishCode) throw new Error(`npm publish exited ${publishCode}`);
 console.log(`Published ${tag}. Run clean-machine acceptance with npx @legendapp/frame@next create MyApp before promoting latest.`);

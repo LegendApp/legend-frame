@@ -1,6 +1,6 @@
 {
   "name": "@legendapp/frame-webview",
-  "version": "0.0.1-next.1",
+  "version": "0.0.1-next.2",
   "license": "MIT",
   "main": "src/index.ts",
   "react-native": "src/index.ts",
@@ -9,7 +9,7 @@
   ],
   "dependencies": {
     "react-native-webview": "16.0.0",
-    "@legendapp/frame-desktop-app": "0.0.1-next.1"
+    "@legendapp/frame-desktop-app": "0.0.1-next.2"
   },
   "private": true
 }

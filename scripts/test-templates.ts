@@ -22,7 +22,8 @@ for (const platform of ["macos", "windows"] as const) {
 // Call the real upstream CLI from an installed consumer: no Frame creation path.
 const consumer = roots[0]!;
 const req = createRequire(path.join(consumer, "package.json"));
-const cli = path.dirname(createRequire(req.resolve("@legendapp/frame/package.json")).resolve("@legendapp/frame-cli/package.json"));
+const sdk = req.resolve("@legendapp/frame/package.json");
+const cli = path.dirname(createRequire(path.join(path.dirname(sdk), req("@legendapp/frame/package.json").frame?.bundledModuleRoot ?? ".", "package.json")).resolve("@legendapp/frame-cli/package.json"));
 const direct = path.join(parent, "DirectUniversal");
 await run(consumer, nodeCommand(consumer, "expo-desktop", "expo-desktop", ["create-app", direct,
   "--template", path.join(path.dirname(manifest), templates.universal), "--yes", "--no-agents-md",

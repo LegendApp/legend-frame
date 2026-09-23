@@ -31,9 +31,16 @@ test("single Frame archive resolves public exports and preserves private native 
     writeFileSync(path.join(app, "desktop.config.json"), JSON.stringify({ name: "Packed", version: "1.0.0", projectId: "packed-test", macos: { bundleIdentifier: "org.example.packed" }, platforms: ["macos"] }));
     const req = createRequire(path.join(app, "package.json"));
     const manifest = req("@legendapp/frame/package.json");
-    expect(JSON.parse(readFileSync(path.join(destination, "node_modules/@legendapp/frame-cli/dist/release.json"), "utf8"))).toEqual(release);
+    expect(JSON.parse(readFileSync(path.join(destination, "vendor/node_modules/@legendapp/frame-cli/dist/release.json"), "utf8"))).toEqual(release);
     const internal = readdirSync(path.join(framework, "packages")).map(name => JSON.parse(readFileSync(path.join(framework, "packages", name, "package.json"), "utf8"))).filter(pkg => pkg.name !== "@legendapp/frame");
-    expect(manifest.bundledDependencies.sort()).toEqual(internal.map(pkg => pkg.name).sort());
+    const normalized = await createRequire(tooling.resolve("npm/package.json"))("pacote").manifest(path.join(root, file), { cache: path.join(root, "registry-cache") });
+    expect(normalized.bundleDependencies).toBeUndefined();
+    expect(normalized.bundledDependencies).toBeUndefined();
+    expect(Object.keys(normalized.dependencies).some(name => name.startsWith("@legendapp/frame-"))).toBe(false);
+    expect(manifest.frame.bundledModuleRoot).toBe("vendor");
+    expect(existsSync(path.join(destination, "node_modules"))).toBe(false);
+    expect(readFileSync(path.join(destination, "config.d.cts"), "utf8")).toContain("./vendor/node_modules/");
+    expect(manifest.frame.bundledModules.sort()).toEqual(internal.map(pkg => pkg.name).sort());
     expect(Object.keys(manifest.dependencies).some(name => name.startsWith("@legendapp/frame-"))).toBe(false);
     for (const directory of ["native-greeting", "sdk-test-driver"]) {
       const fixture = JSON.parse(readFileSync(path.join(framework, "fixtures", directory, "package.json"), "utf8"));
@@ -41,7 +48,7 @@ test("single Frame archive resolves public exports and preserves private native 
     }
     for (const pkg of internal) {
       expect(pkg.private).toBe(true);
-      expect(existsSync(path.join(destination, "node_modules", pkg.name, "package.json"))).toBe(true);
+      expect(existsSync(path.join(destination, "vendor/node_modules", pkg.name, "package.json"))).toBe(true);
     }
     for (const subpath of Object.keys(manifest.exports)) {
       expect(realpathSync(req.resolve(`@legendapp/frame/${subpath.slice(2)}`)).startsWith(realpathSync(destination) + path.sep)).toBe(true);
@@ -55,7 +62,7 @@ test("single Frame archive resolves public exports and preserves private native 
     expect(graph.filter(pkg => pkg.name.startsWith("@legendapp/frame-")).map(pkg => pkg.name).sort()).toEqual(internal.map(pkg => pkg.name).sort());
     const native = nativePackages(app);
     const menus = native.find(pkg => pkg.name === "@legendapp/frame-native-menu")!;
-    expect(menus.root.startsWith(realpathSync(destination) + "/node_modules/")).toBe(true);
+    expect(menus.root.startsWith(realpathSync(destination) + "/vendor/node_modules/")).toBe(true);
     expect(menus.json.codegenConfig).toBeDefined();
     const selected = selection(native, new Set([menus.name]));
     expect(selected.included.map(pkg => pkg.name)).toContain(menus.name);
@@ -68,7 +75,7 @@ test("single Frame archive resolves public exports and preserves private native 
     const config = req("@legendapp/frame/universal").nativeConfig(app);
     expect(config.dependencies[menus.name].root).toBe(menus.root);
     for (const template of ["blank-typescript", "windows", "universal"]) {
-      const pkg = JSON.parse(readFileSync(path.join(destination, "node_modules/@legendapp/frame-cli/templates", template, "package.json"), "utf8"));
+      const pkg = JSON.parse(readFileSync(path.join(destination, "vendor/node_modules/@legendapp/frame-cli/templates", template, "package.json"), "utf8"));
       expect(Object.keys(pkg.dependencies).filter(name => name.startsWith("@legendapp/frame"))).toEqual(["@legendapp/frame"]);
     }
   } finally {
