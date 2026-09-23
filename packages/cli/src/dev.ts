@@ -144,7 +144,7 @@ export async function dev(
       const actualPort = await Promise.race([
         started,
         child.exited.then(code => { throw new Error(`Expo exited before starting (exit ${code}). See its output above.`); }),
-        new Promise<never>((_, reject) => { timeout = setTimeout(() => reject(new Error("Expo did not become ready.")), 60_000); }),
+        new Promise<never>((_, reject) => { timeout = setTimeout(() => reject(new Error("Expo did not become ready.")), platform === "windows" ? 180_000 : 60_000); }),
       ]);
       if (!Number.isInteger(actualPort) || actualPort < 1) throw new Error("Expo did not provide its Metro port.");
       port = actualPort;

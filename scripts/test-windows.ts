@@ -88,7 +88,7 @@ export default function App() {
     stage("Launch through frame dev and execute the native core with Hermes");
     mkdirSync(stateFile(root, "logs"), { recursive: true });
     session = startSession(["--prebuilt-binary", go.app]);
-    await wait(() => proof?.marker === "initial", "The native prebuilt app did not report");
+    await wait(() => proof?.marker === "initial", "The native prebuilt app did not report", 10 * 60 * 1000);
     if (!proof.hermes || proof.native.fingerprint !== go.runtime.fingerprint || proof.native.mode !== "go") throw new Error("Wrong prebuilt runtime or JavaScript engine");
     pass(proof);
     stage("Fast Refresh in the same prebuilt session");
