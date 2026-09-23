@@ -1,13 +1,13 @@
 {
   "name": "@legendapp/spark-settings",
-  "version": "0.1.0-prototype.0",
+  "version": "0.0.1-next.1",
   "license": "MIT",
   "main": "src/index.ts",
   "files": [
     "src"
   ],
   "dependencies": {
-    "@legendapp/spark-file-system": "0.1.0-prototype.0"
+    "@legendapp/spark-file-system": "0.0.1-next.1"
   },
   "private": true
 }

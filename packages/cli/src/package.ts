@@ -27,7 +27,7 @@ type PackageState = { phase: "signed" | "submitting" | "submitted" | "accepted" 
 type Dependencies = { run: Runner; build: typeof build; credentials: (root: string) => Promise<SigningCredentials>; wait: (ms: number) => Promise<unknown>; prepareUpdate?: typeof prepareUpdate };
 const defaults: Dependencies = { run, build, credentials, wait: (ms) => sleep(ms) };
 
-export async function packageApp(root: string, options: { force?: boolean; submissionId?: string; waitMs?: number } = {}, dependencies: Dependencies = defaults) {
+export async function packageApp(root: string, options: { force?: boolean; submissionId?: string; waitMs?: number; runner?: boolean } = {}, dependencies: Dependencies = defaults) {
   if (options.submissionId && !/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(options.submissionId)) throw new Error("Submission ID must be a UUID returned by Apple.");
   mkdirSync(stateFile(root, "packaging"), { recursive: true });
   const lock = stateFile(root, "package.lock");
@@ -53,17 +53,17 @@ export async function packageApp(root: string, options: { force?: boolean; submi
   finally { rmSync(lock, { force: true }); }
 }
 
-async function packageUnlocked(root: string, options: { force?: boolean; submissionId?: string; waitMs?: number }, deps: Dependencies) {
+async function packageUnlocked(root: string, options: { force?: boolean; submissionId?: string; waitMs?: number; runner?: boolean }, deps: Dependencies) {
   const execute = deps.run;
   const identity = await deps.credentials(root);
   console.log(`Signing identity: ${identity.name}`);
-  const result = await deps.build(root, "release", options.force);
+  const result = await deps.build(root, options.runner ? "go" : "release", options.force);
   const config = readAppConfig(root).expo;
   if (config.extra?.spark?.updates && !result.runtime.modules["@legendapp/spark-updates"]) throw new Error("Updates are configured but the module was pruned. Import @legendapp/spark/updates from the app entry.");
   const entitlements = distributionEntitlements(appEntitlements(root, result.runtime.modules));
   const byPath = config.extra?.spark?.signing?.macos?.entitlementsByPath ?? {};
   const info = JSON.parse(await execute(root, ["plutil", "-convert", "json", "-o", "-", path.join(result.app, "Contents/Info.plist")], { capture: true }));
-  const expected = { bundleId: config.macos.bundleIdentifier, version: config.version, buildVersion: info.CFBundleVersion, entitlements, byPath };
+  const expected = { runner: options.runner, bundleId: config.macos.bundleIdentifier, version: config.version, buildVersion: info.CFBundleVersion, entitlements, byPath };
   if (!expected.bundleId || !expected.version || !expected.buildVersion) throw new Error("Bundle identifier and release version metadata must be configured before packaging.");
   const inputHash = artifactHash(result.app);
   const key = digest(JSON.stringify({ recipe: 1, inputHash, identity: identity.hash, entitlements, byPath }));
@@ -94,7 +94,7 @@ async function packageUnlocked(root: string, options: { force?: boolean; submiss
   // signing failed after notarization. Re-stapling could change the archive.
   if (state.phase === "complete" && state.output && state.outputHash && existsSync(state.output)) {
     if (createHash("sha256").update(readFileSync(state.output)).digest("hex") !== state.outputHash) throw new Error("The completed distribution archive changed. Restore it or package a new build number.");
-    const update = await (deps.prepareUpdate ?? prepareUpdate)(root, state.output, String(expected.buildVersion));
+    const update = await (options.runner ? Promise.resolve(undefined) : (deps.prepareUpdate ?? prepareUpdate)(root, state.output, String(expected.buildVersion)));
     console.log(`Ready: ${state.output}`);
     return { pending: false as const, output: state.output, update, submissionId: state.submissionId };
   }
@@ -170,7 +170,7 @@ async function packageUnlocked(root: string, options: { force?: boolean; submiss
   state.output = output;
   state.outputHash = createHash("sha256").update(readFileSync(output)).digest("hex");
   writeJson(statePath, state);
-  const update = await (deps.prepareUpdate ?? prepareUpdate)(root, output, String(expected.buildVersion));
+  const update = await (options.runner ? Promise.resolve(undefined) : (deps.prepareUpdate ?? prepareUpdate)(root, output, String(expected.buildVersion)));
   console.log(`✓ Notarization ticket attached\n✓ Distribution archive verified\n\nReady: ${output}`);
   return { pending: false as const, output, update, submissionId: state.submissionId };
 }

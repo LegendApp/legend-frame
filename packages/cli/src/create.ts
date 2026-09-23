@@ -1,3 +1,4 @@
+import { packageSources } from "./release.ts";
 import { packageManager, managerCommand, applyOverrides, localArchive, type PackageManager } from "./package-manager.ts";
 import { packArchive } from "./pack-archive.ts";
 import { spawnProcess } from "./process.ts";
@@ -31,7 +32,7 @@ export async function refreshLocalPackages(root: string, manifest: string) {
   upgradeManagedEntry(root);
 }
 
-export async function create(root: string, archiveManifest: string, platform: AppPlatform = hostPlatform(), universal = false, example?: Example, selectedManager?: PackageManager) {
+export async function create(root: string, archiveManifest: string | undefined, platform: AppPlatform = hostPlatform(), universal = false, example?: Example, selectedManager?: PackageManager) {
   const manager = packageManager(process.cwd(), selectedManager);
   await checkExpoDesktopNode(path.resolve(import.meta.dirname, ".."));
   const variant = universal || example ? "universal" : platform === "macos" ? "blank-typescript" : "windows";
@@ -43,14 +44,12 @@ export async function create(root: string, archiveManifest: string, platform: Ap
   try {
     cpSync(source, temporary, { recursive: true });
     const pkg = readJson(path.join(temporary, "package.json"));
-    const archives = readJson(archiveManifest);
+    const archives = packageSources(archiveManifest);
     if (pkg.dependencies["@react-native-runtimes/core"] && !archives["@react-native-runtimes/core"]) throw new Error("This SDK lacks the patched Runtimes archive. Repack or install the complete SDK.");
     const overrides: Record<string, string> = {};
     for (const [name, file] of Object.entries(archives)) {
-      const archive = path.resolve(path.dirname(archiveManifest), file as string).replaceAll("\\", "/");
-      if (!existsSync(archive)) throw new Error(`Missing SDK archive: ${archive}`);
-      overrides[name] = localArchive(archive);
-      if (pkg.dependencies[name]) pkg.dependencies[name] = localArchive(archive);
+      overrides[name] = file;
+      if (pkg.dependencies[name]) pkg.dependencies[name] = file;
     }
     applyOverrides(pkg, overrides, manager);
     writeJson(path.join(temporary, "package.json"), pkg);

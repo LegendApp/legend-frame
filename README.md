@@ -393,3 +393,5 @@ App-supplied backend executables can be packaged as target-specific helper bundl
 See [desktop foundations](docs/desktop-foundations.md) for nonactivating overlay windows, recursive directory watching, and custom drag payloads with hover and copy/move/link negotiation. Kitchen Sink demonstrates these contracts; Windows native acceptance remains pending.
 
 Optional [audio/media sessions](docs/audio.md) and [browser authentication](docs/auth-session.md) provide system media controls and external-browser callback transport. Provider SDKs, queues, and OAuth token exchange remain application/library responsibilities.
+
+Release maintainers: see the [preview release workflow](docs/releases.md) for Runner signing, artifact staging, publishing order, and clean-machine acceptance.

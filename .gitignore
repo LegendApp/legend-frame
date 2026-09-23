@@ -10,3 +10,8 @@ docs/evidence/
 # Legacy prototype build artifacts (not migrated automatically).
 .legend/
 .frame/
+
+# Local release credentials and signing configuration.
+.env
+.env.*
+!.env.example

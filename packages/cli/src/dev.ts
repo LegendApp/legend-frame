@@ -1,3 +1,5 @@
+import { installedRelease } from "./release.ts";
+import { acquireRunner } from "./runner-install.ts";
 import { spawnProcess } from "./process.ts";
 import { windowsMetroPort, stopWindowsMetro } from "./windows-metro.ts";
 import { projectPlatform } from "./platform.ts";
@@ -201,7 +203,7 @@ export async function dev(
       }
       issues.push(...goConfigurationIssues(readAppConfig(root)));
     }
-    const view = sessionStatus(target, !!current, issues, appProcess?.exitCode === null);
+    const view = sessionStatus(target, !!current, issues, appProcess?.exitCode === null, !!installedRelease()?.runners[`${platform}-${platform === "macos" ? "arm64" : process.arch}`]);
     if (view.compatible && current && appProcess?.exitCode === null &&
       (launchedRuntime?.app !== current.app || launchedRuntime.fingerprint !== current.runtime.fingerprint)) {
       // Discovery can find a different compatible binary after a native edit.
@@ -238,6 +240,11 @@ export async function dev(
   async function open() {
     if (platform === "windows" ? process.platform !== "win32" : process.platform !== "darwin") {
       throw new Error(`Open ${platform} on a matching desktop host. Mobile and web remain available.`);
+    }
+    const localRunner = target === "go" ? findGo(nativePackages(root), goApp, platform) : undefined;
+    if (target === "go" && !explicitGo && (!localRunner || incompatible(localRunner.runtime, nativePackages(root), platform).length > 0)) {
+      const downloaded = await acquireRunner(platform);
+      if (downloaded) goApp = downloaded;
     }
     if ((await check(true)) && current) {
       if (restartPending) await startMetro();

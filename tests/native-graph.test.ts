@@ -3,6 +3,7 @@ import { mkdtempSync, mkdirSync, rmSync, writeFileSync } from "node:fs";
 import os from "node:os";
 import path from "node:path";
 import {
+  VERSION,
   goConfigurationIssues,
   hashFiles,
   nativePackages,
@@ -61,7 +62,7 @@ test("explicit native-only inclusions survive pruning and missing metadata fails
 test("a runtime superset is compatible but missing or modified native code is not", () => {
   const runtime: Runtime = {
     schema: 1,
-    framework: "0.1.0-prototype.0",
+    framework: VERSION,
     platform: "macos",
     arch: "arm64",
     mode: "go",

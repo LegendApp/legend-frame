@@ -1,3 +1,4 @@
+import { installedRelease } from "./release.ts";
 import { architecture, type DesktopPlatform } from "./platform.ts";
 import { existsSync, readdirSync } from "node:fs";
 import os from "node:os";
@@ -63,6 +64,10 @@ export function registerPackages(manifest: string) {
     if (readRuntime(savedRunner)?.mode === "go") registerRuntime(savedRunner);
   }
   return manifest;
+}
+
+export function creationManifest(explicit?: string) {
+  return !explicit && installedRelease() ? undefined : packageManifest(explicit);
 }
 
 export function packageManifest(explicit?: string) {
