@@ -2,7 +2,7 @@ import { prepareWindowsGeometry } from "./windows-geometry";
 import { copyHelpers } from "./helpers";
 import { registerWindowsAssociations } from "./windows-associations";
 import { checkExpoDesktopNode } from "./expo-node";
-import { cpSync, existsSync, mkdirSync, readdirSync, rmSync, readFileSync, writeFileSync } from "node:fs";
+import { cpSync, existsSync, mkdirSync, mkdtempSync, readdirSync, renameSync, rmSync, readFileSync, writeFileSync } from "node:fs";
 import path from "node:path";
 import { createRequire } from "node:module";
 import type { WindowsArchitecture } from "./platform.ts";
@@ -14,6 +14,39 @@ export function nodeCommand(root: string, name: string, bin: string, args: strin
   const req = createRequire(path.join(root, "package.json"));
   const file = req.resolve(`${name}/package.json`), pkg = readJson(file);
   return ["node", path.resolve(path.dirname(file), typeof pkg.bin === "string" ? pkg.bin : pkg.bin[bin]), ...args];
+}
+export async function preserveWindowsBuildOutputs(root: string, prepare: () => Promise<void>) {
+  const windows = path.join(root, "windows");
+  const outputs: string[] = [];
+  function visit(directory: string) {
+    for (const entry of readdirSync(directory, { withFileTypes: true })) {
+      if (entry.isDirectory() && entry.name !== "node_modules") {
+        const file = path.join(directory, entry.name);
+        if (/^(arm64|x64|x86|win32)$/i.test(entry.name)) outputs.push(file);
+        else visit(file);
+      }
+    }
+  }
+  if (existsSync(windows)) visit(windows);
+  const moved: { source: string; saved: string }[] = [];
+  let temporary: string | undefined;
+  try {
+    if (outputs.length) {
+      const parent = stateFile(root, "prebuild-cache");
+      mkdirSync(parent, { recursive: true });
+      temporary = mkdtempSync(path.join(parent, "windows-"));
+      for (const source of outputs) {
+        const saved = path.join(temporary, String(moved.length));
+        renameSync(source, saved);
+        moved.push({ source, saved });
+      }
+    }
+    // Expo beta scans existing output folders as templates, including .Xaml directories.
+    await prepare();
+  } finally {
+    for (const { source, saved } of moved) renameSync(saved, source);
+    if (temporary) rmSync(temporary, { recursive: true });
+  }
 }
 export async function prepareWindows(root: string, mode: "go" | "dev") {
   await checkExpoDesktopNode(root);
@@ -30,7 +63,9 @@ export async function prepareWindows(root: string, mode: "go" | "dev") {
   writeJson(stateFile(root, "native-selection.json"), { included: packages.map(pkg => ({ name: pkg.name, root: pkg.root })), excluded: [] });
   const manifest = readFileSync(path.join(root, "package.json"), "utf8");
   try {
-    await run(root, nodeCommand(root, "expo-desktop", "expo-desktop", ["prebuild", "--platform", "windows", "--template", "expo-desktop-template-bare-minimum@54.81.1-beta.6", "--no-install"]), { env: { CI: "1" }, capture: true });
+    await preserveWindowsBuildOutputs(root, async () => {
+      await run(root, nodeCommand(root, "expo-desktop", "expo-desktop", ["prebuild", "--platform", "windows", "--template", "expo-desktop-template-bare-minimum@54.81.1-beta.6", "--no-install"]), { env: { CI: "1" }, capture: true });
+    });
     // The beta template expands all-platform dependencies. Keep the consumer's installed graph.
   } finally {
     writeFileSync(path.join(root, "package.json"), manifest);

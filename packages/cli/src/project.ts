@@ -137,7 +137,7 @@ export function hashFiles(root: string, entries: string[], windows = false): str
       )) {
         if (
           ["node_modules", "build", ".git", "Pods"].includes(child.name) || child.isSymbolicLink() ||
-          (windows && (["Generated Files", "codegen", "x64", "ARM64", "Debug", "Release", ".vs", "packages", "packages.lock.json"].includes(child.name) || child.name.endsWith(".vcxproj.user") || child.name.startsWith("AutolinkedNativeModules.g.")))
+          (windows && (["Generated Files", "codegen", "obj", "x64", "ARM64", "Debug", "Release", ".vs", "packages", "packages.lock.json"].includes(child.name) || child.name.endsWith(".vcxproj.user") || child.name.startsWith("AutolinkedNativeModules.g.")))
         )
           continue;
         visit(path.join(relative, child.name));

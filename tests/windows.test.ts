@@ -1,11 +1,11 @@
 import { test, expect } from "bun:test";
-import { mkdtempSync, rmSync, mkdirSync, writeFileSync, readFileSync } from "node:fs";
+import { mkdtempSync, rmSync, mkdirSync, writeFileSync, readFileSync, existsSync } from "node:fs";
 import os from "node:os";
 import path from "node:path";
 import { nativePackages, runtimeFor, incompatible, writeJson, VERSION } from "../packages/cli/src/project.ts";
 import { readRuntime, findGo, registerRuntime } from "../packages/cli/src/local.ts";
 import { architecture, projectPlatform, windowsArchitecture } from "../packages/cli/src/platform.ts";
-import { buildWindows, isWindowsDebugProduct } from "../packages/cli/src/windows.ts";
+import { buildWindows, isWindowsDebugProduct, preserveWindowsBuildOutputs } from "../packages/cli/src/windows.ts";
 const { patchHost, withoutPackaging, unpackagedApp } = require("../packages/config-plugin/windows.plugin.cjs");
 function fixture() {
   const root = mkdtempSync(path.join(os.tmpdir(), "spark-windows-test-"));
@@ -29,6 +29,7 @@ test("Windows uses the shared graph and runtime identity, including native sourc
     expect(incompatible(baseline, nativePackages(f.root), "windows")).toEqual(["probe"]);
     const custom = runtimeFor(f.root, nativePackages(f.root), "dev");
     writeJson(path.join(f.root, "node_modules/probe/windows/packages.lock.json"), { restored: true });
+    writeJson(path.join(f.root, "node_modules/probe/windows/obj/project.assets.json"), { generated: true });
     expect(incompatible(custom, nativePackages(f.root), "windows")).toEqual([]);
     writeFileSync(source, "second");
     expect(incompatible(custom, nativePackages(f.root), "windows")).toEqual(["probe"]);
@@ -199,4 +200,27 @@ test("Windows cold-launch defaults cannot terminate the embedded C++ string", ()
   expect(output).not.toContain(')spark"; malicious');
   expect(output).toContain('\\u0029spark');
   expect(output).toContain('SparkInitializeEnvironment();');
+});
+
+for (const fail of [false, true]) test(`Windows prebuild preserves native outputs after ${fail ? "failure" : "success"}`, async () => {
+  const f = fixture();
+  const outputs = ["windows/ARM64/Debug/Microsoft.UI.Xaml/resources.pri", "windows/MyApp/ARM64/Debug/MyApp.obj", "windows/x64/Debug/MyApp.exe"];
+  try {
+    for (const output of outputs) {
+      mkdirSync(path.dirname(path.join(f.root, output)), { recursive: true });
+      writeFileSync(path.join(f.root, output), output);
+    }
+    const source = path.join(f.root, "windows/MyApp/MyApp.cpp");
+    writeFileSync(source, "original");
+    const prepare = preserveWindowsBuildOutputs(f.root, async () => {
+      for (const output of outputs) expect(existsSync(path.join(f.root, output))).toBe(false);
+      expect(readFileSync(source, "utf8")).toBe("original");
+      writeFileSync(source, "updated");
+      if (fail) throw new Error("prebuild failed");
+    });
+    if (fail) await expect(prepare).rejects.toThrow("prebuild failed");
+    else await prepare;
+    for (const output of outputs) expect(readFileSync(path.join(f.root, output), "utf8")).toBe(output);
+    expect(readFileSync(source, "utf8")).toBe("updated");
+  } finally { f.close(); }
 });
