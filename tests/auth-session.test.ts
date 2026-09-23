@@ -1,6 +1,7 @@
-import { expect, test } from "bun:test";
-import { authSessions, type AuthTransport } from "../packages/auth-session/src/core";
-import { authorize, callbackMatches } from "../packages/auth-session/src/types";
+import { setTimeout as sleep } from "node:timers/promises";
+import { expect, test } from "vitest";
+import { authSessions, type AuthTransport } from "../packages/auth-session/src/core.ts";
+import { authorize, callbackMatches } from "../packages/auth-session/src/types.ts";
 function fixture(overrides: Partial<AuthTransport> = {}) {
   const closed: string[] = [], opened: string[] = [], callbacks: string[] = [];
   let receive: (url: string) => void = () => {};
@@ -35,7 +36,7 @@ test("auth cancellation releases sockets even while browser launch is unresolved
   expect(await result).toEqual({ type: "cancel" }); expect(f.closed).toHaveLength(1);
 });
 test("prepared auth expires, launch failure cleans up, schemes use matching URL events", async () => {
-  const f = fixture(); const expired = await f.create({ timeoutMs: 5 }); await Bun.sleep(15);
+  const f = fixture(); const expired = await f.create({ timeoutMs: 5 }); await sleep(15);
   expect(await expired.open(authURL(expired.state))).toEqual({ type: "timeout" }); expect(f.closed).toHaveLength(1);
   const broken = fixture({ open: async () => { throw Error("No browser"); } });
   const bad = await broken.create(); await expect(bad.open(authURL(bad.state))).rejects.toThrow("No browser"); expect(broken.closed).toHaveLength(1);

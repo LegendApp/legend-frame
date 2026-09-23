@@ -199,7 +199,7 @@ The kitchen sink includes interactive controls for each area. `bun run
 test:expansion` runs native window/process/shortcut/system/SQLite checks and a
 mounted WebView round-trip in custom and Frame Runner runtimes. A test-only custom-build
 driver also checks mounted drag targeting/event delivery and confirmation sheets;
-this driver is removed before the prebuilt build. `bun test tests` includes
+this driver is removed before the prebuilt build. `npm test` includes
 config, transport, validation, ownership, helper packaging and codegen checks.
 Interactive gestures, OS registration approval and native dialog UI require an
 unlocked desktop and are recorded separately from automated API checks.

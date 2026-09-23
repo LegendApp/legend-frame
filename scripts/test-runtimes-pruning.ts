@@ -1,8 +1,10 @@
+import { spawnProcess, processLog } from "../packages/cli/src/process.ts";
+import { setTimeout as sleep } from "node:timers/promises";
 import { cpSync, existsSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import path from "node:path";
-import { analyze, build } from "../packages/cli/src/build";
-import { readJson, writeJson } from "../packages/cli/src/project";
-import { run } from "../packages/cli/src/commands";
+import { analyze, build } from "../packages/cli/src/build.ts";
+import { readJson, writeJson } from "../packages/cli/src/project.ts";
+import { run } from "../packages/cli/src/commands.ts";
 // Run after test:runtimes --release. The managed fixture deliberately retains
 // tasks.ts and every SDK dependency while its entry stops importing those tasks.
 const root = path.resolve(process.argv[2] ?? "/tmp/SparkRuntimesProbe");
@@ -35,12 +37,12 @@ try {
   const binary = path.join(built.app, "Contents/MacOS", executable);
   const symbols = await run(root, ["nm", binary], { capture: true });
   if (/OBJC_CLASS_\$_ThreadedRuntime|OBJC_CLASS_\$_NitroModules|HybridThreadedRuntimeFunctions/.test(symbols)) throw new Error("Runtime native code survived linking");
-  const log = Bun.file(path.join(proof, "pruned-launch.log"));
-  const child = Bun.spawn([binary], { cwd: root, stdout: log, stderr: log });
+  const log = processLog(path.join(proof, "pruned-launch.log"));
+  const child = spawnProcess([binary], { cwd: root, stdout: log, stderr: log });
   try {
-    await Bun.sleep(5000);
+    await sleep(5000);
     if (child.exitCode !== null || child.signalCode !== null) throw new Error("Pruned Release app exited during startup");
-    const output = await log.text();
+    const output = readFileSync(log.file, "utf8");
     if (/Unhandled JS Exception|RCTFatal|Terminating app due to uncaught exception/.test(output)) throw new Error("Pruned app failed to start its JS");
   } finally { child.kill(); await child.exited; }
   const outcome = { passed: true, workerOnlyNativeDependencyRetained: true, excluded: forbidden, linkedSymbolsAbsent: true, standaloneLaunch: true, app: built.app };

@@ -54,7 +54,7 @@ Mac is locked. See [SDK validation](sdk-validation.md) and [SDK usage](sdk.md).
 | Actual native pruning | Menu pod and generated bindings absent; final executable contains dialog/greeting classes and no menu class |
 | Clean CNG | Two clean prebuild runs produced identical AppDelegate, Info.plist, Podfile, and Xcode-project hashes |
 | Missing-tooling diagnostic | Isolated PATH test reported missing Xcode with retry guidance |
-| CLI defaults | Fresh app created without package flags and opened with `bun dev`; automatic port fallback and separate missing-Go guidance verified |
+| CLI defaults | Fresh app created without package flags and opened with `npm run dev`; automatic port fallback and separate missing-Go guidance verified |
 | Custom build action | `b` reused a compatible custom binary and opened it; bare `build` reused the standalone release product |
 | Focused tests / TypeScript | 24 tests passed; typecheck passed |
 

@@ -1,23 +1,27 @@
+import { spawnProcess, processLog } from "../packages/cli/src/process.ts";
+import { setTimeout as sleep } from "node:timers/promises";
+import { serveTestHTTP } from "./testing/http.ts";
+import { managerCommand, packageManager } from "../packages/cli/src/package-manager.ts";
 import { cpSync, mkdirSync, writeFileSync } from "node:fs";
 import path from "node:path";
-import { create } from "../packages/cli/src/create";
-import { run } from "../packages/cli/src/commands";
-import { buildWindows, nodeCommand, prepareWindows } from "../packages/cli/src/windows";
-import { availablePort } from "../packages/cli/src/local";
-import { readJson, writeJson, stateFile, projectEnvironment } from "../packages/cli/src/project";
-import { createReport, record, saveReport, installedVersions } from "./testing/report";
-import { architecture } from "../packages/cli/src/platform";
-const framework = path.resolve(import.meta.dir, "..");
+import { create } from "../packages/cli/src/create.ts";
+import { run } from "../packages/cli/src/commands.ts";
+import { buildWindows, nodeCommand, prepareWindows } from "../packages/cli/src/windows.ts";
+import { availablePort } from "../packages/cli/src/local.ts";
+import { readJson, writeJson, stateFile, projectEnvironment } from "../packages/cli/src/project.ts";
+import { createReport, record, saveReport, installedVersions } from "./testing/report.ts";
+import { architecture } from "../packages/cli/src/platform.ts";
+const framework = path.resolve(import.meta.dirname, "..");
 const prepareOnly = process.argv.includes("--prepare-only");
 if (!prepareOnly && process.platform !== "win32") throw new Error("Native acceptance requires Windows. Use --prepare-only for generation/bundling.");
 process.env.SPARK_PLATFORM = "windows";
 const at = process.argv.indexOf("--project");
 const root = path.resolve(at < 0 ? `.spark/windows-features/WindowsFeatures${Date.now()}` : process.argv[at + 1]!);
-await run(framework, ["bun", "scripts/pack.ts", "--platform=windows"]);
+await run(framework, [process.execPath, "scripts/pack.ts", "--platform=windows"]);
 await create(root, path.join(framework, "artifacts/packages/manifest.json"), "windows", true);
 const pkg = readJson(path.join(root, "package.json"));
 for (const name of ["@legendapp/spark"]) pkg.dependencies[name] = pkg.overrides[name];
-writeJson(path.join(root, "package.json"), pkg); await run(root, ["bun", "install"]);
+writeJson(path.join(root, "package.json"), pkg); await run(root, managerCommand(packageManager(root), ["install"]));
 for (const file of ["contract-cases.ts", "contract-report.ts", "desktop-contract-cases.ts"]) cpSync(path.join(framework, "examples/kitchen-sink", file), path.join(root, file));
 const coverage = createReport(framework, root, { platform: "windows", arch: architecture("windows"), device: "Windows desktop", mode: "dev" }, prepareOnly ? "prepare" : "runtime");
 const coverageFile = path.join(framework, ".spark/test-results", `${coverage.runId}.json`);
@@ -28,7 +32,7 @@ const token = crypto.randomUUID();
 let finish!: (value: any) => void;
 const result = new Promise<any>(resolve => finish = resolve);
 let latestReport: any;
-const server = Bun.serve({ hostname: "127.0.0.1", port: 0, async fetch(request) {
+const server = await serveTestHTTP({ hostname: "127.0.0.1", port: 0, async fetch(request) {
   if (request.method !== "POST" || new URL(request.url).pathname !== `/${token}`) return new Response("Not found", { status: 404 });
   const report = latestReport = await request.json();
   for (const check of report.contracts ?? []) record(coverage, check);
@@ -118,11 +122,11 @@ function Main() {
  },[api,pressed,text,value,launchURLs]);
  return <View style={{padding:30,gap:20}}><Text>Windows native acceptance</Text><Button testID='spark-button' onPress={()=>setPressed(true)}>Native button</Button><TextInput testID='spark-input' defaultValue='Initial' onChangeText={setText}/><Select testID='spark-select' options={options} value={value} onValueChange={setValue}/><Text>{api?'APIs passed':'Checking APIs'} {text} {value}</Text></View>;
 }`);
-let metro: ReturnType<typeof Bun.spawn> | undefined, app: ReturnType<typeof Bun.spawn> | undefined;
-const clients: ReturnType<typeof Bun.spawn>[] = [];
+let metro: ReturnType<typeof spawnProcess> | undefined, app: ReturnType<typeof spawnProcess> | undefined;
+const clients: ReturnType<typeof spawnProcess>[] = [];
 async function until(check: () => boolean, label: string) {
   const deadline = Date.now() + 90000;
-  while (Date.now() < deadline) { if (latestReport?.error) throw new Error(latestReport.error); if (check()) return; await Bun.sleep(100); }
+  while (Date.now() < deadline) { if (latestReport?.error) throw new Error(latestReport.error); if (check()) return; await sleep(100); }
   throw new Error(`Timed out: ${label}`);
 }
 try {
@@ -136,14 +140,14 @@ try {
     const product = await buildWindows(root, "dev", false), port = await availablePort();
     coverage.runtime = product.runtime; record(coverage, { id: "build.native", status: "passed" }); coverageStage = "runtime.launch";
     writeJson(stateFile(root, "session.json"), { compatible: true, target: "test", port });
-    const log = Bun.file(stateFile(root, "features-metro.log"));
-    metro = Bun.spawn(nodeCommand(root, "expo", "expo", ["start", "--localhost", "--port", String(port), "--max-workers", "2"]), { cwd: root, env: { ...process.env, CI: "1" }, stdout: log, stderr: log });
+    const log = processLog(stateFile(root, "features-metro.log"));
+    metro = spawnProcess(nodeCommand(root, "expo", "expo", ["start", "--localhost", "--port", String(port), "--max-workers", "2"]), { cwd: root, env: { ...process.env, CI: "1" }, stdout: log, stderr: log });
     for (let i = 0; i < 120; i++) {
       if (await fetch(`http://127.0.0.1:${port}/status`).then(r => r.ok, () => false)) break;
-      await Bun.sleep(500);
+      await sleep(500);
     }
     const startClient = (url: string) => {
-      const child = Bun.spawn([path.join(product.app, "MyApp.exe"), url], { cwd: product.app,
+      const child = spawnProcess([path.join(product.app, "MyApp.exe"), url], { cwd: product.app,
         env: { ...process.env, ...projectEnvironment(root), SPARK_METRO_PORT: String(port) }, stdout: "inherit", stderr: "inherit" });
       clients.push(child); return child;
     };
@@ -156,7 +160,7 @@ try {
     record(coverage, { id: "runtime.launch", status: "passed" }); record(coverage, { id: "lifecycle.forwarding", status: "passed" });
     coverageStage = "ui-driver";
     await run(root, ["pwsh.exe", "-NoProfile", "-File", path.join(framework, "scripts/windows-feature-controls.ps1"), "-AppProcess", String(app.pid)], { capture: true });
-    const report = await Promise.race([result, Bun.sleep(60_000).then(() => { throw new Error("Timed out waiting for Windows native callbacks"); })]);
+    const report = await Promise.race([result, sleep(60_000).then(() => { throw new Error("Timed out waiting for Windows native callbacks"); })]);
     if (!report.passed || !report.hermes) throw new Error(JSON.stringify(report));
     for (const id of ["ui.button", "ui.input", "ui.select"]) record(coverage, { id, status: "passed", evidence: "Windows UI Automation and verified React callbacks" });
     coverageStage = "lifecycle.recovery";

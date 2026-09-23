@@ -1,17 +1,18 @@
+import { managerCommand, packageManager } from "../packages/cli/src/package-manager.ts";
 import { existsSync, mkdirSync, readFileSync, writeFileSync, readdirSync, realpathSync } from "node:fs";
 import { createHash } from "node:crypto";
 import path from "node:path";
 import assert from "node:assert/strict";
-import { run } from "../packages/cli/src/commands";
-import { addDesktop } from "../packages/cli/src/add-desktop";
-import { readJson, writeJson } from "../packages/cli/src/project";
-import { nodeCommand } from "../packages/cli/src/windows";
+import { run } from "../packages/cli/src/commands.ts";
+import { addDesktop } from "../packages/cli/src/add-desktop.ts";
+import { readJson, writeJson } from "../packages/cli/src/project.ts";
+import { nodeCommand } from "../packages/cli/src/windows.ts";
 
-const framework = path.resolve(import.meta.dir, "..");
+const framework = path.resolve(import.meta.dirname, "..");
 const root = path.resolve(process.argv[2] ?? `/tmp/ExistingExpo${Date.now()}`);
 if (existsSync(root)) throw new Error("Choose a fresh fixture directory");
 mkdirSync(path.join(root, "src"), { recursive: true });
-writeJson(path.join(root, "package.json"), { name: "existing-expo", version: "1.0.0", private: true, main: "src/bootstrap.ts", packageManager: `bun/${Bun.version}`.replace("/", "@"),
+writeJson(path.join(root, "package.json"), { name: "existing-expo", version: "1.0.0", private: true, main: "src/bootstrap.ts", packageManager: `npm@${(await run(framework, ["npm", "--version"], { capture: true })).trim()}`,
   scripts: { start: "expo start", ios: "expo run:ios", android: "expo run:android", web: "expo start --web", macos: "echo existing script" },
   dependencies: { expo: "54.0.37", react: "19.1.4", "react-native": "0.81.6", "react-dom": "19.1.4", "react-native-web": "0.21.0" },
   devDependencies: { typescript: "5.9.3", "@types/react": "19.1.10" },
@@ -29,7 +30,7 @@ writeJson(path.join(root, "tsconfig.json"), { extends: "expo/tsconfig.base", com
 const originalPkg = readJson(path.join(root, "package.json"));
 const unchanged = ["app.json", "plugin.cjs", "src/bootstrap.ts", "src/App.tsx", "src/label.ts", "tsconfig.json"];
 const before = unchanged.map(file => readFileSync(path.join(root, file), "utf8"));
-await run(root, ["bun", "install"]);
+await run(root, managerCommand(packageManager(root), ["install"]));
 await run(root, nodeCommand(root, "expo", "expo", ["export:embed", "--entry-file", originalPkg.main, "--platform", "ios", "--dev", "true", "--max-workers", "2", "--bundle-output", path.join(root, "baseline.js")]), { capture: true });
 const packageBeforeGeneration = readFileSync(path.join(root, "package.json"), "utf8");
 try {
@@ -48,7 +49,7 @@ function nativeHash(dir: string): string {
 const iosBefore = nativeHash(path.join(root, "ios"));
 const config = async (platform?: string) => JSON.parse(await run(root, nodeCommand(root, "expo", "expo", ["config", "--json"]), { capture: true, env: { SPARK_PLATFORM: platform ?? "", APP_ENV: "integration" } }));
 const mobileBefore = await config();
-await run(framework, ["bun", "scripts/pack.ts"]);
+await run(framework, [process.execPath, "scripts/pack.ts"]);
 const manifest = path.join(framework, "artifacts/packages/manifest.json");
 const customMetro = readFileSync(path.join(root, "metro.config.js"), "utf8");
 writeFileSync(path.join(root, "metro.config.js"), "module.exports = {};\n");
@@ -88,7 +89,7 @@ for (const platform of ["ios", "android", "web", "macos", "windows"]) {
   assert.ok(sources.some(file => file.endsWith("src/label.ts")));
   console.log(`PASS ${platform}: original entry and custom Metro resolver`);
 }
-await run(root, ["bun", "node_modules/@legendapp/spark/bin/spark.cjs", "prebuild", "--platform", "windows"], { capture: true, env: { CI: "1" } });
+await run(root, [process.execPath, "node_modules/@legendapp/spark/bin/spark.cjs", "prebuild", "--platform", "windows"], { capture: true, env: { CI: "1" } });
 assert.equal(nativeHash(path.join(root, "ios")), iosBefore);
 assert.deepEqual(unchanged.map(file => readFileSync(path.join(root, file), "utf8")), before);
 assert.deepEqual(managed.map(file => readFileSync(path.join(root, file), "utf8")), integrated);
@@ -104,7 +105,7 @@ writeJson(path.join(simple, "package.json"), simplePkg);
 writeJson(path.join(simple, "app.json"), { expo: { name: "StaticApp", slug: "static-app", ios: { bundleIdentifier: "org.example.static" } } });
 writeFileSync(path.join(simple, "App.tsx"), 'import { Text } from "react-native";\nexport default function App() { return <Text>Static Expo app</Text>; }\n');
 const simpleConfig = readFileSync(path.join(simple, "app.json"), "utf8");
-await run(simple, ["bun", "install"]);
+await run(simple, managerCommand(packageManager(simple), ["install"]));
 await addDesktop(simple, manifest);
 assert.equal(readFileSync(path.join(simple, "app.json"), "utf8"), simpleConfig);
 assert.equal(readJson(path.join(simple, "package.json")).main, undefined);

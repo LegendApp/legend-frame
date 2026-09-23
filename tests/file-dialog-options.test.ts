@@ -1,5 +1,5 @@
-import { expect, test } from "bun:test";
-import { validateDialogOptions } from "../packages/file-dialog/src/options";
+import { expect, test } from "vitest";
+import { validateDialogOptions } from "../packages/file-dialog/src/options.ts";
 test("file picker preserves mixed selection on macOS and rejects it explicitly on Windows", () => {
   expect(() => validateDialogOptions({ canChooseFiles: true, canChooseDirectories: true }, false)).not.toThrow();
   expect(() => validateDialogOptions({ canChooseDirectories: true }, true)).toThrow("cannot select files and directories together");

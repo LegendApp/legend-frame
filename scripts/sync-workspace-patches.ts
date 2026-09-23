@@ -1,14 +1,15 @@
+import { spawnProcess } from "../packages/cli/src/process.ts";
 import { createHash } from "node:crypto";
 import { cpSync, existsSync, mkdirSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import path from "node:path";
-import { packRuntimes } from "./prepare-runtimes";
-import { packWindowsLibraries } from "./prepare-windows-libraries";
-import { run } from "../packages/cli/src/commands";
-import { readJson, writeJson } from "../packages/cli/src/project";
+import { packRuntimes } from "./prepare-runtimes.ts";
+import { packWindowsLibraries } from "./prepare-windows-libraries.ts";
+import { run } from "../packages/cli/src/commands.ts";
+import { readJson, writeJson } from "../packages/cli/src/project.ts";
 
 // Maintainer command, never an install/start hook. Generate workspace install-time
 // patches from the same source recipes used for the distributable SDK archives.
-const root = path.resolve(import.meta.dir, "..");
+const root = path.resolve(import.meta.dirname, "..");
 const cache = path.join(root, ".spark/workspace-patches");
 mkdirSync(cache, { recursive: true });
 const archives: Record<string, string> = { ...await packRuntimes(root, cache), ...await packWindowsLibraries(cache) };
@@ -30,7 +31,7 @@ for (const [name, pin] of Object.entries(pins) as [string, { version: string; ur
   cpSync(before, after, { recursive: true });
   await run(after, ["tar", "-xzf", path.join(cache, archives[name]!)], { capture: true });
   for (const dir of [before, after]) rmSync(path.join(dir, ".spark"), { recursive: true, force: true });
-  const diff = Bun.spawn(["git", "diff", "--no-index", "--binary", "--", "a", "b"], { cwd: work, stdout: "pipe", stderr: "pipe" });
+  const diff = spawnProcess(["git", "diff", "--no-index", "--binary", "--", "a", "b"], { cwd: work, stdout: "pipe", stderr: "pipe" });
   const [output, error, code] = await Promise.all([new Response(diff.stdout).text(), new Response(diff.stderr).text(), diff.exited]);
   if (code !== 0 && code !== 1) throw new Error(error);
   const file = `patches/workspace/${name.replace(/^@/, "").replaceAll("/", "-")}@${pin.version}.patch`;
@@ -40,4 +41,4 @@ for (const [name, pin] of Object.entries(pins) as [string, { version: string; ur
 const pkg = readJson(path.join(root, "package.json"));
 pkg.sparkWorkspacePatches = patches;
 writeJson(path.join(root, "package.json"), pkg);
-console.log("Updated workspace install patches. Run bun install --force to apply them.");
+console.log("Updated workspace install patches. Run npm run postinstall to apply them.");

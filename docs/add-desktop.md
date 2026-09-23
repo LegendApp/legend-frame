@@ -14,7 +14,7 @@ npm run spark -- sdk pack
 npm run spark -- add desktop --project /absolute/path/to/ExistingExpoApp
 ```
 
-The command uses the app's declared package manager, or its existing lockfile, for installation. Without either it uses Bun. Conflicting lockfiles require an explicit `packageManager` field. Bun is the verified installer in the integration fixture; npm, pnpm, and Yarn follow their respective install/override conventions but have not received equivalent end-to-end verification.
+The command uses the app's declared package manager, or its existing lockfile, for installation. Without either it follows the invoking package manager, then prefers npm. Conflicting lockfiles require an explicit `packageManager` field. The integration fixture runs on Node with npm; installation and override formats follow the selected package manager.
 
 In the integrated app:
 
@@ -46,7 +46,7 @@ The command composes the existing `app.config.js` or `app.config.ts` export with
 Ordinary Expo commands, including commands without `SPARK_PLATFORM`, retain their original configuration. For native builds, `SPARK_PLATFORM=macos` or `windows` applies desktop options and the spark config plugin. A `spark dev` session instead exposes all declared platforms, preserves the original shared Expo config and plugins, and omits desktop build overlays. spark commands supply that environment automatically. For direct Expo Desktop commands, set it explicitly:
 
 ```sh
-SPARK_PLATFORM=macos bunx expo config
+SPARK_PLATFORM=macos npx expo config
 ```
 
 PowerShell uses `$env:SPARK_PLATFORM="windows"`. Keep desktop-specific exclusions and options in `desktop.config.json`; keep mobile/web configuration in the existing Expo files. Previously generated iOS and Android projects stay in place. Native generation/build operations against one checkout must run sequentially.

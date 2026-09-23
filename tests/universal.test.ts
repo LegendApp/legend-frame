@@ -1,9 +1,9 @@
-import { expect, test } from "bun:test";
+import { expect, test } from "vitest";
 import { mkdtempSync, mkdirSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import os from "node:os";
 import path from "node:path";
 import { prepareConfig, readConfig, statePath, toExpo, expoConfig, developmentConfig } from "@legendapp/spark-desktop-config/config.cjs";
-import { selectionIndex } from "../packages/ui/src/select";
+import { selectionIndex } from "../packages/ui/src/select.ts";
 
 const shared = {
   name: "Settings", projectId: "universal-settings", version: "1.0.0",

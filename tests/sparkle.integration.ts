@@ -2,9 +2,9 @@ import { generateKeyPairSync } from "node:crypto";
 import { mkdtempSync, mkdirSync, writeFileSync, readFileSync, rmSync, existsSync, copyFileSync } from "node:fs";
 import os from "node:os";
 import path from "node:path";
-import { prepareUpdate, sparkleTools } from "../packages/cli/src/updates";
-import { run } from "../packages/cli/src/commands";
-import { writeJson } from "../packages/cli/src/project";
+import { prepareUpdate, sparkleTools } from "../packages/cli/src/updates.ts";
+import { run } from "../packages/cli/src/commands.ts";
+import { writeJson } from "../packages/cli/src/project.ts";
 const root = mkdtempSync(path.join(os.tmpdir(), "spark-sparkle-test-"));
 try {
   const bin = await sparkleTools(root);

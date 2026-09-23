@@ -1,11 +1,11 @@
 import { createHash } from "node:crypto";
 import { cpSync, mkdirSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import path from "node:path";
-import { run } from "../packages/cli/src/commands";
+import { run } from "../packages/cli/src/commands.ts";
 
 /** Package the tested, self-contained app for another Apple Silicon Mac. */
 export async function packageCameraApp(app: string, report: string) {
-  const framework = path.resolve(import.meta.dir, "..");
+  const framework = path.resolve(import.meta.dirname, "..");
   const output = path.join(framework, "artifacts/camera");
   const kit = path.join(output, "SparkCamera-macOS-arm64");
   const archive = path.join(output, "spark-camera-macos-arm64-test-kit.zip");

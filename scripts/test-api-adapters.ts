@@ -1,13 +1,16 @@
+import { spawnProcess, processLog } from "../packages/cli/src/process.ts";
+import { setTimeout as sleep } from "node:timers/promises";
+import { managerCommand, packageManager } from "../packages/cli/src/package-manager.ts";
 import { existsSync, mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import path from "node:path";
 import { homedir } from "node:os";
-import { prepareKitchenSink } from "./prepare-kitchen-sink";
-import { build } from "../packages/cli/src/build";
-import { binary, run } from "../packages/cli/src/commands";
-import { availablePort } from "../packages/cli/src/local";
-import { readJson, writeJson, prepareConfig } from "../packages/cli/src/project";
+import { prepareKitchenSink } from "./prepare-kitchen-sink.ts";
+import { build } from "../packages/cli/src/build.ts";
+import { binary, run } from "../packages/cli/src/commands.ts";
+import { availablePort } from "../packages/cli/src/local.ts";
+import { readJson, writeJson, prepareConfig } from "../packages/cli/src/project.ts";
 
-import { createReport, record, saveReport, installedVersions } from "./testing/report";
+import { createReport, record, saveReport, installedVersions } from "./testing/report.ts";
 
 // Focused checks run the actual kitchen-sink screen with a test-only native driver.
 const root = path.resolve(process.argv[2] ?? ".spark/api-tests/KitchenSink");
@@ -16,7 +19,7 @@ const pkgFile = path.join(root, "package.json");
 const pkg = readJson(pkgFile);
 pkg.dependencies["@legendapp/spark-sdk-test-driver"] = pkg.overrides["@legendapp/spark-sdk-test-driver"];
 writeJson(pkgFile, pkg);
-await run(root, ["bun", "install"]);
+await run(root, managerCommand(packageManager(root), ["install"]));
 const configFile = path.join(root, "desktop.config.json");
 const originalConfig = readFileSync(configFile, "utf8");
 const originalDriver = readFileSync(path.join(root, "test-driver.ts"), "utf8");
@@ -27,18 +30,18 @@ writeJson(configFile, configuration);
 writeFileSync(path.join(root, "test-driver.ts"), 'import driver from "@legendapp/spark-sdk-test-driver";\nexport type TestDriver = typeof driver;\nexport const testDriver = driver;\n');
 const directory = path.join(root, ".spark/api-results"); mkdirSync(directory, { recursive: true });
 const port = await availablePort();
-let metro: ReturnType<typeof Bun.spawn> | undefined;
-let directApp: ReturnType<typeof Bun.spawn> | undefined;
+let metro: ReturnType<typeof spawnProcess> | undefined;
+let directApp: ReturnType<typeof spawnProcess> | undefined;
 let launchedPID: number | undefined;
 let staging: string | undefined;
 let application: string | undefined;
 const lsregister = "/System/Library/Frameworks/CoreServices.framework/Frameworks/LaunchServices.framework/Support/lsregister";
 async function waitFor<T>(read: () => Promise<T | undefined>, description: string, timeout = 120000): Promise<T> {
   const deadline = Date.now() + timeout;
-  while (Date.now() < deadline) { const value = await read(); if (value !== undefined) return value; await Bun.sleep(200); }
+  while (Date.now() < deadline) { const value = await read(); if (value !== undefined) return value; await sleep(200); }
   throw new Error(`Timed out waiting for ${description}; see ${directory}`);
 }
-const coverage = createReport(path.resolve(import.meta.dir, ".."), root, { platform: "macos", arch: "arm64", device: "macOS desktop", mode: "dev" }, "runtime");
+const coverage = createReport(path.resolve(import.meta.dirname, ".."), root, { platform: "macos", arch: "arm64", device: "macOS desktop", mode: "dev" }, "runtime");
 const coverageFile = path.resolve(".spark/test-results", `${coverage.runId}.json`);
 coverage.versions = installedVersions(root);
 let coverageStage = "build.native";
@@ -58,8 +61,8 @@ try {
   await run(root, [lsregister, "-f", application]);
   const executable = path.join(application, "Contents/MacOS", executableName);
   writeJson(path.join(root, ".spark/session.json"), { compatible: true, target: "test", port });
-  const log = Bun.file(path.join(directory, "metro.log"));
-  metro = Bun.spawn([binary(root, "expo"), "start", "--localhost", "--port", String(port), "--max-workers", "2"], { cwd: root, env: { ...process.env, CI: "1" }, stdout: log, stderr: log });
+  const log = processLog(path.join(directory, "metro.log"));
+  metro = spawnProcess([binary(root, "expo"), "start", "--localhost", "--port", String(port), "--max-workers", "2"], { cwd: root, env: { ...process.env, CI: "1" }, stdout: log, stderr: log });
   await waitFor(async () => fetch(`http://127.0.0.1:${port}/status`, { signal: AbortSignal.timeout(1000) }).then(r => r.ok ? true : undefined, () => undefined), "Metro", 60000);
   const bundleURL = `http://127.0.0.1:${port}/index.bundle?platform=macos&dev=true&minify=false`;
   const summary: Record<string, unknown> = {};
@@ -75,8 +78,8 @@ try {
       const owned = listing.split("\n").find(line => line.includes(executable) && line.includes(report));
       if (owned) launchedPID = Number(owned.trim().split(/\s+/)[0]);
     } else {
-      const output = Bun.file(path.join(directory, `${phase}.log`));
-      directApp = Bun.spawn([executable, ...args], { cwd: root, env: { ...process.env, SPARK_BUNDLE_URL: bundleURL }, stdout: output, stderr: output });
+      const output = processLog(path.join(directory, `${phase}.log`));
+      directApp = spawnProcess([executable, ...args], { cwd: root, env: { ...process.env, SPARK_BUNDLE_URL: bundleURL }, stdout: output, stderr: output });
     }
     const outcome = await waitFor(async () => existsSync(report) ? readJson(report) : undefined, phase);
     for (const check of outcome.results ?? []) console.log(`${check.passed ? "PASS" : "FAIL"} [${phase}] ${check.name}${check.error ? `: ${check.error}` : ""}`);

@@ -1,6 +1,6 @@
-import { expect, test } from "bun:test";
+import { expect, test } from "vitest";
 import { createRequire } from "node:module";
-import { goConfigurationIssues } from "../packages/cli/src/project";
+import { goConfigurationIssues } from "../packages/cli/src/project.ts";
 const { identity } = createRequire(import.meta.url)("../packages/config-plugin/identity.cjs");
 test("CNG embeds stable project identity and deduplicated URL associations", () => {
   const result = identity({ extra: { spark: { projectId: "project-uuid" } }, scheme: ["demo", "demo", "demo-auth"] });

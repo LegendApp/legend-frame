@@ -1,4 +1,5 @@
-import { test, expect } from "bun:test";
+import { validateWindowsWindowOptions } from "../packages/desktop-windows/src/windows-options.ts";
+import { test, expect } from "vitest";
 import { mkdtempSync, rmSync, mkdirSync, writeFileSync, readFileSync, existsSync } from "node:fs";
 import os from "node:os";
 import path from "node:path";
@@ -115,7 +116,6 @@ test("Windows canonical config does not require a macOS bundle identity", () => 
 
 
 test("Windows accepts implemented window options and rejects unsupported presentation", () => {
-  const { validateWindowsWindowOptions } = require("../packages/desktop-windows/src/windows-options");
   expect(() => validateWindowsWindowOptions({ title: "Editor", minWidth: 300, maxHeight: 900, resizable: false, minimizable: true, alwaysOnTop: true })).not.toThrow();
   for (const options of [{ material: "sidebar" }, { parentId: "main", modal: true }, { titleBarStyle: "overlay" }]) {
     try { validateWindowsWindowOptions(options); throw new Error("Expected unsupported options to fail"); }
@@ -181,7 +181,7 @@ test("Windows output discovery selects Debug executables for the requested archi
 
 
 test("Windows associations preserve project identity and validate shell inputs", async () => {
-  const { associationPlan } = await import("../packages/cli/src/windows-associations");
+  const { associationPlan } = await import("../packages/cli/src/windows-associations.ts");
   const expo = { name: "Editor", scheme: ["spark-editor", "spark-editor"], extra: { spark: { projectId: "editor", documentTypes: [{ name: "Text", contentTypes: ["public.plain-text"] }, { name: "Custom", extensions: ["CUSTOM"] }] } } };
   const plan = associationPlan(expo, String.raw`C:\Program Files\Editor\MyApp.exe`);
   expect(plan.protocols).toEqual(["spark-editor"]);

@@ -1,3 +1,7 @@
+import { managerCommand, packageManager } from "../packages/cli/src/package-manager.ts";
+import { spawnProcess, type ManagedProcess } from "../packages/cli/src/process.ts";
+import { setTimeout as sleep } from "node:timers/promises";
+import { serveTestHTTP } from "./testing/http.ts";
 import { appendFileSync, existsSync, mkdirSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import path from "node:path";
 import { parseArgs } from "node:util";
@@ -16,15 +20,15 @@ if (!prepareOnly && process.platform !== "win32") throw new Error("Run the nativ
 if (existsSync(path.join(root, "package.json"))) throw new Error("Choose a fresh --project directory; this test installs a native fixture.");
 const manifest = packageManifest();
 const report: any = { host: process.platform, arch: architecture("windows"), native: !prepareOnly, passed: false, stages: [] };
-let session: Bun.Subprocess<"pipe", "pipe", "pipe"> | undefined;
-let server: ReturnType<typeof Bun.serve> | undefined;
+let session: ManagedProcess | undefined;
+let server: Awaited<ReturnType<typeof serveTestHTTP>> | undefined;
 let originalApp: string | undefined;
 let proof: any;
 const token = crypto.randomUUID();
 function startSession(extra: string[] = []) {
-  const child = Bun.spawn(["bun", cli, "dev", "--project", root, ...extra], { cwd: root, env: { ...process.env, SPARK_SESSION_TOKEN: token }, stdin: "pipe", stdout: "pipe", stderr: "pipe" });
+  const child = spawnProcess([process.execPath, cli, "dev", "--project", root, ...extra], { cwd: root, env: { ...process.env, SPARK_SESSION_TOKEN: token }, stdin: "pipe", stdout: "pipe", stderr: "pipe" });
   for (const stream of [child.stdout, child.stderr]) void (async () => {
-    for await (const chunk of stream) appendFileSync(stateFile(root, "logs/windows-session.log"), chunk);
+    for await (const chunk of stream!) appendFileSync(stateFile(root, "logs/windows-session.log"), chunk);
   })();
   return child;
 }
@@ -33,7 +37,7 @@ async function wait(check: () => boolean | Promise<boolean>, message: string, ti
   while (Date.now() < end) {
     if (session && session.exitCode !== null) throw new Error("spark dev exited; inspect .spark/logs/windows-session.log");
     if (await check()) return;
-    await Bun.sleep(250);
+    await sleep(250);
   }
   throw new Error(message);
 }
@@ -61,11 +65,11 @@ try {
     pass();
   } else {
     stage("Build and register the Spark Runner with spark sdk build-runner");
-    await run(root, ["bun", cli, "sdk", "build-runner", "--project", root]);
+    await run(root, [process.execPath, cli, "sdk", "build-runner", "--project", root]);
     go = readJson(stateFile(root, "go-build.json"));
     goHash = digest(readFileSync(path.join(go.app, "MyApp.exe")).toString("base64"));
     pass({ app: go.app });
-    server = Bun.serve({ hostname: "127.0.0.1", port: 0, async fetch(request) {
+    server = await serveTestHTTP({ hostname: "127.0.0.1", port: 0, async fetch(request) {
       if (request.method !== "POST" || request.headers.get("x-spark-token") !== token) return new Response("Wrong session", { status: 403 });
       proof = await request.json();
       return new Response("ok");
@@ -97,7 +101,7 @@ export default function App() {
   }
   stage("Install the existing native-greeting fixture and invalidate prebuilt");
   const archive = path.resolve(path.dirname(manifest), readJson(manifest)["@legendapp/spark-native-greeting"]);
-  await run(root, ["bun", "add", archive]);
+  await run(root, managerCommand(packageManager(root), [packageManager(root) === "npm" ? "install" : "add", archive]));
   const issues = incompatible(baseline, nativePackages(root), "windows");
   if (!issues.includes("@legendapp/spark-native-greeting")) throw new Error("Shared compatibility check did not detect the new module");
   if (prepareOnly) {
@@ -115,7 +119,7 @@ export default function App() {
     session!.kill();
     await session!.exited;
     session = undefined;
-    await run(root, ["bun", cli, "build", "--dev", "--project", root]);
+    await run(root, [process.execPath, cli, "build", "--dev", "--project", root]);
     session = startSession();
     await wait(() => proof?.native.mode === "dev" && proof.greeting === "Hello from the custom native module", "The custom runtime did not report", 20 * 60 * 1000);
     const custom = readJson(stateFile(root, "dev-build.json"));
@@ -130,10 +134,10 @@ export default function App() {
 } finally {
   if (session && session.exitCode === null) {
     session.kill();
-    await Promise.race([session.exited, Bun.sleep(5000)]);
+    await Promise.race([session.exited, sleep(5000)]);
     if (session.exitCode === null) session.kill();
   }
-  server?.stop(true);
+  await server?.stop(true);
   if (originalApp !== undefined) writeFileSync(path.join(root, "App.tsx"), originalApp);
   for (const name of ["Marker.ts", "WindowsExtra.ts"]) rmSync(path.join(root, name), { force: true });
   report.finished = new Date().toISOString(); writeJson(stateFile(root, "windows-verification.json"), report);

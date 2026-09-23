@@ -1,10 +1,11 @@
+import { spawnProcess, processLog } from "../packages/cli/src/process.ts";
 // Integration boundary probe: real upstream CLI + prebuilt binary, with OS launch
 // intercepted so the probe never starts an app or terminates another session.
 import { cpSync, readdirSync, existsSync, mkdirSync, mkdtempSync, readFileSync, writeFileSync, symlinkSync, rmSync } from "node:fs";
 import path from "node:path";
 import os from "node:os";
-import { nodeCommand } from "../packages/cli/src/windows";
-const framework = path.resolve(import.meta.dir, "..");
+import { nodeCommand } from "../packages/cli/src/windows.ts";
+const framework = path.resolve(import.meta.dirname, "..");
 const binary = path.resolve(process.argv[2] ?? "examples/kitchen-sink/.spark/platforms/macos/products/dev/KitchenSink.app");
 if (process.platform !== "darwin" || !existsSync(binary)) throw new Error("Run on macOS with an existing Kitchen Sink .app (or pass its path).");
 const parent = mkdtempSync(path.join(os.tmpdir(), "spark-upstream-run-"));
@@ -29,11 +30,11 @@ for (const phase of ["javascript-only", "existing-project"] as const) {
   rmSync(record, { force: true });
   const logPath = path.join(output, `${phase}.log`);
   rmSync(logPath, { force: true });
-  const log = Bun.file(logPath);
+  const log = processLog(logPath);
   const args = nodeCommand(root, "expo-desktop", "expo-desktop", ["run", "macos", root, "--binary", binary, "--no-install", "--no-bundler", "--no-single-instance"]);
-  const child = Bun.spawn(args, { cwd: root, detached: true, env: { ...process.env, CI: "1", EXPO_NO_GIT_STATUS: "1", SPARK_PROBE_RECORD: record,
+  const child = spawnProcess(args, { cwd: root, detached: true, env: { ...process.env, CI: "1", EXPO_NO_GIT_STATUS: "1", SPARK_PROBE_RECORD: record,
     PATH: [shims, path.join(framework, "packages/cli/src/npm-bin"), process.env.PATH].join(path.delimiter) }, stdout: log, stderr: log });
-  const stop = () => { try { process.kill(-child.pid, "SIGTERM"); } catch {} };
+  const stop = () => { try { if (child.pid) process.kill(-child.pid, "SIGTERM"); } catch {} };
   const timer = setTimeout(stop, 60_000);
   const launched = setInterval(() => { if (existsSync(record)) stop(); }, 100);
   try {

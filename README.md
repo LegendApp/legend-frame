@@ -65,12 +65,12 @@ This is a **local SDK workflow**. Run the following from a clone of this reposit
 
 ### 1. Prepare the SDK
 
-You need Node 24.19.0 or newer and npm, pnpm, Yarn, or Bun as your package manager. Bun is optional; the CLI and SDK installer run on Node. The repository test harness still uses Bun. Building native binaries also requires an Apple Silicon Mac, full Xcode with first-launch setup completed, and CocoaPods. The SDK pack step uses Git and tar, and fetches pinned upstream Runtimes source and library archives on its first run. Patches are applied in JavaScript.
+You need Node 24.19.0 or newer and npm, pnpm, Yarn, or Bun as your package manager. Bun is optional; the CLI and SDK installer run on Node. The repository tests and integration scripts also run on Node. Building native binaries also requires an Apple Silicon Mac, full Xcode with first-launch setup completed, and CocoaPods. The SDK pack step uses Git and tar, and fetches pinned upstream Runtimes source and library archives on its first run. Patches are applied in JavaScript.
 
 ```sh
 npm install
 npm run typecheck
-bun test tests
+npm test
 npm run spark -- sdk pack
 npm run spark -- sdk build-runner
 ```
@@ -274,7 +274,7 @@ For framework changes, begin with the checks relevant to the change:
 
 ```sh
 npm run typecheck
-bun test tests
+npm test
 ```
 
 Native integration checks are separate and require Xcode, CocoaPods, and an unlocked/logged-in macOS desktop where UI interaction is involved:
@@ -284,9 +284,9 @@ npm run test:native
 npm run test:expansion
 npm run test:runtimes:all
 # Streaming/Trash checks; builds a Kitchen Sink development runtime:
-bun scripts/test-file-streams.ts
+node scripts/test-file-streams.ts
 # Helper checks; reuses that development runtime:
-bun scripts/test-sidecars.ts
+node scripts/test-sidecars.ts
 # Complete configured suite, including native builds:
 npm run test:all
 ```
@@ -371,7 +371,7 @@ From the framework checkout, with the native toolchain installed:
 
 ```sh
 npm run pack:local
-bun scripts/prepare-sidecar.ts /absolute/path/to/HelperDemo
+node scripts/prepare-sidecar.ts /absolute/path/to/HelperDemo
 cd /absolute/path/to/HelperDemo
 npm run macos
 # On Windows, use a fresh Windows path and run npm run windows instead.

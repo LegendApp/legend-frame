@@ -1,4 +1,5 @@
-import { expect, test } from "bun:test";
+import { spawnProcess } from "../packages/cli/src/process.ts";
+import { expect, test } from "vitest";
 import { createHash } from "node:crypto";
 import { createRequire } from "node:module";
 import { cpSync, existsSync, mkdirSync, mkdtempSync, readFileSync, readdirSync, realpathSync, rmSync, symlinkSync, writeFileSync } from "node:fs";
@@ -72,7 +73,7 @@ test.skipIf(process.platform !== "darwin" || process.arch !== "arm64")("noninter
     const bin = path.join(root, "bin");
     mkdirSync(bin);
     writeFileSync(path.join(bin, "security"), '#!/bin/sh\nprintf "0 valid identities found\\n"\n', { mode: 0o755 });
-    const child = Bun.spawn([process.execPath, path.resolve(import.meta.dir, "../packages/cli/src/index.ts"), "package"], {
+    const child = spawnProcess([process.execPath, path.resolve(import.meta.dirname, "../packages/cli/src/index.ts"), "package"], {
       cwd: root, env: { ...process.env, PATH: bin }, stdin: "ignore", stdout: "pipe", stderr: "pipe",
     });
     const error = await new Response(child.stderr).text();

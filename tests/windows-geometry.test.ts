@@ -1,5 +1,5 @@
-import { test, expect } from "bun:test";
-import { patchWindowsGeometry } from "../packages/cli/src/windows-geometry";
+import { test, expect } from "vitest";
+import { patchWindowsGeometry } from "../packages/cli/src/windows-geometry.ts";
 test("RNW geometry extension is idempotent and leaves existing interface ABI intact", () => {
   const original = '#include <ComponentView.Experimental.interop.h>\nstruct ComponentView : public ComponentViewT<ComponentView, ::Microsoft::ReactNative::Composition::Experimental::IComponentViewInterop> {\n  virtual RECT getClientRect() const noexcept;\n};';
   const patched = patchWindowsGeometry(original);

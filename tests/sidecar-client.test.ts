@@ -1,19 +1,20 @@
-import { expect, test, beforeAll, afterAll } from "bun:test";
+import { spawnProcess } from "../packages/cli/src/process.ts";
+import { expect, test, beforeAll, afterAll } from "vitest";
 import { mkdtempSync, rmSync } from "node:fs";
 import os from "node:os";
 import path from "node:path";
 import { fromByteArray } from "base64-js";
-import { startHelper, type Spawn } from "../examples/sidecar/client";
+import { startHelper, type Spawn } from "../examples/sidecar/client.ts";
 const directory = mkdtempSync(path.join(os.tmpdir(), 'spark-helper-tests-'));
 const binary = path.join(directory, 'worker');
-beforeAll(async () => { if (process.platform !== 'win32') { const result = Bun.spawn(['cc', path.resolve('examples/sidecar/worker.c'), '-Wall', '-Wextra', '-Werror', '-o', binary], { stderr: 'pipe' }); if (await result.exited) throw Error(await new Response(result.stderr).text()); } });
+beforeAll(async () => { if (process.platform !== 'win32') { const result = spawnProcess(['cc', path.resolve('examples/sidecar/worker.c'), '-Wall', '-Wextra', '-Werror', '-o', binary], { stderr: 'pipe' }); if (await result.exited) throw Error(await new Response(result.stderr).text()); } });
 afterAll(() => rmSync(directory, { recursive: true, force: true }));
 const spawn: Spawn = async (options, output) => {
-  const child = Bun.spawn([options.executable, ...(options.args ?? [])], { stdin: 'pipe', stdout: 'pipe', stderr: 'pipe' });
+  const child = spawnProcess([options.executable, ...(options.args ?? [])], { stdin: 'pipe', stdout: 'pipe', stderr: 'pipe' });
   let stderr = '';
   async function drain(stream: ReadableStream<Uint8Array>, name: 'stdout' | 'stderr') { for await (const chunk of stream) { if (name === 'stderr') stderr += new TextDecoder().decode(chunk); /* Force transport fragmentation, including between response tokens. */ for (let i = 0; i < chunk.length; i += 3) output({ stream: name, base64: fromByteArray(chunk.subarray(i, i + 3)) }); } }
-  const drains = Promise.all([drain(child.stdout, 'stdout'), drain(child.stderr, 'stderr')]);
-  return { write: async text => { child.stdin.write(text); await child.stdin.flush(); }, closeInput: async () => { child.stdin.end(); }, terminate: async () => { if (child.exitCode === null) child.kill(); }, exited: child.exited.then(async exitCode => { await drains; return { exitCode, stderr, timedOut: false }; }) };
+  const drains = Promise.all([drain(child.stdout!, 'stdout'), drain(child.stderr!, 'stderr')]);
+  return { write: async text => { await new Promise<void>((resolve, reject) => child.stdin!.write(text, error => error ? reject(error) : resolve())); }, closeInput: async () => { child.stdin!.end(); }, terminate: async () => { if (child.exitCode === null) child.kill(); }, exited: child.exited.then(async exitCode => { await drains; return { exitCode, stderr, timedOut: false }; }) };
 };
 const nativeTest = process.platform === 'win32' ? test.skip : test;
 nativeTest('real helper handshake, fragmented concurrent replies, binary echo, and graceful stop', async () => {

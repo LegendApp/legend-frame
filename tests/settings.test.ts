@@ -1,5 +1,6 @@
-import { expect, test } from "bun:test";
-import { createSettingsStore, type SettingsStorage } from "../packages/settings/src/store";
+import { setTimeout as sleep } from "node:timers/promises";
+import { expect, test } from "vitest";
+import { createSettingsStore, type SettingsStorage } from "../packages/settings/src/store.ts";
 function fixture() {
   const values = new Map<string, string>();
   const storage: SettingsStorage = { async read(key) { return values.get(key) ?? null; }, async write(key, value) { values.set(key, value); }, async remove(key) { values.delete(key); } };
@@ -13,7 +14,7 @@ test("settings persist JSON, distinguish missing/false/empty, and remove keys", 
 });
 test("concurrent async updates serialize without losing writes", async () => {
   const { store } = fixture();
-  await Promise.all(Array.from({ length: 50 }, () => store.update<number>("counter", async value => { await Bun.sleep(1); return (value ?? 0) + 1; })));
+  await Promise.all(Array.from({ length: 50 }, () => store.update<number>("counter", async value => { await sleep(1); return (value ?? 0) + 1; })));
   expect(await store.get("counter")).toBe(50);
 });
 test("failed update does not poison queue or overwrite previous value", async () => {

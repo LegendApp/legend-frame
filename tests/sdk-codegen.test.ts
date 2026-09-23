@@ -1,9 +1,9 @@
-import { expect, test } from "bun:test";
+import { expect, test } from "vitest";
 import { readdirSync, readFileSync, existsSync } from "node:fs";
 import { createRequire } from "node:module";
 import path from "node:path";
-import { selection, nativePackages, validateBuildModules } from "../packages/cli/src/project";
-const root = path.resolve(import.meta.dir, "..");
+import { selection, nativePackages, validateBuildModules } from "../packages/cli/src/project.ts";
+const root = path.resolve(import.meta.dirname, "..");
 const require = createRequire(import.meta.url);
 const rnRequire = createRequire(require.resolve("react-native/package.json"));
 const { combineSchemasInFileList } = rnRequire("@react-native/codegen/lib/cli/combine/combine-js-to-schema.js");

@@ -4,7 +4,7 @@ import { existsSync, mkdirSync, readFileSync, renameSync, writeFileSync } from "
 import path from "node:path";
 import { installedPackages } from "../packages/cli/src/project.ts";
 
-// Bun 1.3.14 cannot reliably add nested files through patchedDependencies.
+// Apply the same native adapters regardless of the selected package manager.
 // Apply the checked-in SDK deltas after install, with no network or native tools.
 // Atomic replacement avoids changing hardlinked package-manager cache files.
 export function installWorkspaceAdapters(root: string) {

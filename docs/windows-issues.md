@@ -65,10 +65,10 @@ native verification; macOS probe results do not establish Windows acceptance.
 ## Run and report
 
 ```powershell
-bun install
-bun run test:platform --platform windows --timeout 600
-bun run test:windows:features --project C:\dev\SparkWindowsFeatures
-bun run test:windows --project C:\dev\SparkWindowsVerification
+npm install
+npm run test:platform -- --platform windows --timeout 600
+npm run test:windows:features -- --project C:\dev\SparkWindowsFeatures
+npm run test:windows -- --project C:\dev\SparkWindowsVerification
 ```
 
 Use a fresh directory for each explicit `--project`. Run in an interactive desktop
@@ -76,7 +76,7 @@ session. The shared platform screen runs API checks and provides native interact
 checks for dialogs, menus, tray, shortcuts, notifications, drag/drop, modal windows,
 system/taskbar APIs and WebView. Choose **Finish run** afterward. `--api-only`
 leaves interactive cases untested. Reports live in `.spark/test-results`;
-`bun run test:report` summarizes them. See [platform-testing.md](platform-testing.md).
+`npm run test:report` summarizes them. See [platform-testing.md](platform-testing.md).
 Clipboard checks temporarily replace content; use a disposable test session.
 
 `test:windows:features` additionally uses UI Automation for controls and tests

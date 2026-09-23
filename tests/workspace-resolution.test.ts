@@ -1,4 +1,6 @@
-import { expect, test } from "bun:test";
+import { hostSourceSignature } from "../packages/cli/src/project.ts";
+import { binary } from "../packages/cli/src/commands.ts";
+import { expect, test } from "vitest";
 import { mkdtempSync, mkdirSync, writeFileSync, rmSync, realpathSync } from "node:fs";
 import path from "node:path";
 import os from "node:os";
@@ -12,8 +14,6 @@ test("workspace apps resolve hoisted tools and detect host source edits", () => 
     writeFileSync(path.join(host, "package.json"), JSON.stringify({ name: "@legendapp/spark-desktop-host", version: "1" }));
     writeFileSync(path.join(host, "AppDelegate.mm"), "before");
     writeFileSync(path.join(tool, "package.json"), JSON.stringify({ name: "expo", version: "1", bin: { expo: "cli.js" } }));
-    const { binary } = require("../packages/cli/src/commands");
-    const { hostSourceSignature } = require("../packages/cli/src/project");
     expect(binary(app, "expo")).toBe(path.join(tool, "cli.js"));
     const before = hostSourceSignature(app);
     writeFileSync(path.join(host, "AppDelegate.mm"), "after");

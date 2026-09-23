@@ -2,13 +2,13 @@ import { existsSync, mkdtempSync, readFileSync, readdirSync } from "node:fs";
 import { createRequire } from "node:module";
 import os from "node:os";
 import path from "node:path";
-import { create } from "../packages/cli/src/create";
-import { run } from "../packages/cli/src/commands";
-import { nodeCommand } from "../packages/cli/src/windows";
-import { readJson } from "../packages/cli/src/project";
+import { create } from "../packages/cli/src/create.ts";
+import { run } from "../packages/cli/src/commands.ts";
+import { nodeCommand } from "../packages/cli/src/windows.ts";
+import { readJson } from "../packages/cli/src/project.ts";
 
-const framework = path.resolve(import.meta.dir, "..");
-await run(framework, ["bun", "scripts/pack.ts"]);
+const framework = path.resolve(import.meta.dirname, "..");
+await run(framework, [process.execPath, "scripts/pack.ts"]);
 const manifest = path.join(framework, "artifacts/packages/manifest.json");
 const templates = readJson(path.join(path.dirname(manifest), "templates.json"));
 const parent = mkdtempSync(path.join(os.tmpdir(), "Spark Template Checks "));
@@ -27,7 +27,7 @@ const direct = path.join(parent, "DirectUniversal");
 await run(consumer, nodeCommand(consumer, "expo-desktop", "expo-desktop", ["create-app", direct,
   "--template", path.join(path.dirname(manifest), templates.universal), "--yes", "--no-agents-md",
   "--display-name", "Direct Universal", "--rdns", "org.example.directsettings"],
-), { env: { CI: "1", npm_config_user_agent: `bun/${Bun.version}`, PATH: `${path.join(cli, "dist/npm-bin")}${path.delimiter}${process.env.PATH}` } });
+), { env: { CI: "1", npm_config_user_agent: "npm/frame-tests", PATH: `${path.join(cli, "dist/npm-bin")}${path.delimiter}${process.env.PATH}` } });
 roots.push(direct);
 for (const root of roots) {
   const config = readJson(path.join(root, "desktop.config.json"));

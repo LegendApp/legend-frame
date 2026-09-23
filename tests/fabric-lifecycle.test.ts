@@ -1,4 +1,4 @@
-import { expect, test } from "bun:test";
+import { expect, test } from "vitest";
 import os from "node:os";
 import { readFileSync, mkdtempSync, mkdirSync, writeFileSync, linkSync, rmSync, statSync } from "node:fs";
 import path from "node:path";

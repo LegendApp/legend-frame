@@ -1,8 +1,8 @@
-import { expect, test } from "bun:test";
+import { expect, test } from "vitest";
 import { mkdtempSync, writeFileSync, rmSync } from "node:fs";
 import { tmpdir } from "node:os";
 import path from "node:path";
-import { DocumentSession, type DocumentIO } from "../packages/cli/templates/document-editor/document";
+import { DocumentSession, type DocumentIO } from "../packages/cli/templates/document-editor/document.ts";
 function fixture(overrides: Partial<DocumentIO> = {}) {
   return new DocumentSession({ open: async () => null, save: async file => ({ ...file, location: "/test.txt" }), confirmDiscard: async () => "cancel", ...overrides });
 }

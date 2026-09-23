@@ -1,15 +1,19 @@
+import { spawnProcess, which, processLog } from "../packages/cli/src/process.ts";
+import { setTimeout as sleep } from "node:timers/promises";
+import { serveTestHTTP } from "./testing/http.ts";
+import { managerCommand, packageManager } from "../packages/cli/src/package-manager.ts";
 import { cpSync, existsSync, mkdirSync, readFileSync, writeFileSync } from "node:fs";
 import path from "node:path";
 import { parseArgs } from "node:util";
-import { create } from "../packages/cli/src/create";
-import { build } from "../packages/cli/src/build";
-import { run, cancelCommands } from "../packages/cli/src/commands";
-import { nodeCommand } from "../packages/cli/src/windows";
-import { architecture } from "../packages/cli/src/platform";
-import { availablePort } from "../packages/cli/src/local";
-import { readJson, writeJson, stateFile, projectEnvironment } from "../packages/cli/src/project";
-import { platforms, type TestPlatform } from "../examples/kitchen-sink/contract-report";
-import { createReport, record, saveReport, installedVersions, acceptRuntimeMessage } from "./testing/report";
+import { create } from "../packages/cli/src/create.ts";
+import { build } from "../packages/cli/src/build.ts";
+import { run, cancelCommands } from "../packages/cli/src/commands.ts";
+import { nodeCommand } from "../packages/cli/src/windows.ts";
+import { architecture } from "../packages/cli/src/platform.ts";
+import { availablePort } from "../packages/cli/src/local.ts";
+import { readJson, writeJson, stateFile, projectEnvironment } from "../packages/cli/src/project.ts";
+import { platforms, type TestPlatform } from "../examples/kitchen-sink/contract-report.ts";
+import { createReport, record, saveReport, installedVersions, acceptRuntimeMessage } from "./testing/report.ts";
 
 const { values } = parseArgs({ args: process.argv.slice(2), options: {
   platform: { type: "string" }, project: { type: "string" }, device: { type: "string" },
@@ -17,7 +21,7 @@ const { values } = parseArgs({ args: process.argv.slice(2), options: {
   timeout: { type: "string", default: "180" }, "report-dir": { type: "string" }, help: { type: "boolean" },
 } });
 if (values.help) {
-  console.log(`bun run test:platform --platform macos|windows|ios|android|web [options]
+  console.log(`npm run test:platform -- --platform macos|windows|ios|android|web [options]
   --prepare-only    Create/generate/bundle; never claims native execution
   --api-only        Finish after API assertions; UI remains not tested
   --device ID       Simulator UDID / adb serial (required for mobile runtime)
@@ -32,7 +36,7 @@ Clipboard checks replace clipboard content and restore text; use a test session.
   process.exit(0);
 }
 class MissingPrerequisite extends Error {}
-const framework = path.resolve(import.meta.dir, "..");
+const framework = path.resolve(import.meta.dirname, "..");
 const platform = (values.platform ?? (process.platform === "win32" ? "windows" : "macos")) as TestPlatform;
 if (!platforms.includes(platform)) throw new Error(`Invalid platform: ${platform}`);
 const timeoutMs = Number(values.timeout) * 1000;
@@ -45,9 +49,9 @@ const report = createReport(framework, root, { platform, arch: desktop ? archite
   device: values.device ?? (platform === "web" ? "browser" : desktop ? "interactive desktop" : "not selected"), mode: "dev" }, prepareOnly ? "prepare" : "runtime");
 const reportFile = path.resolve(values["report-dir"] ?? ".spark/test-results", `${report.runId}.json`);
 let stage = "build.project";
-let metro: ReturnType<typeof Bun.spawn> | undefined;
-let app: ReturnType<typeof Bun.spawn> | undefined;
-let server: ReturnType<typeof Bun.serve> | undefined;
+let metro: ReturnType<typeof spawnProcess> | undefined;
+let app: ReturnType<typeof spawnProcess> | undefined;
+let server: Awaited<ReturnType<typeof serveTestHTTP>> | undefined;
 let completed = false;
 let transportError: string | undefined;
 let expectedFingerprint: string | undefined;
@@ -69,7 +73,7 @@ async function until(predicate: () => Promise<boolean> | boolean, label: string,
     if (app && app.exitCode !== null) throw new Error(`Application exited before reporting (${app.exitCode})`);
     if (metro && metro.exitCode !== null) throw new Error(`Metro exited (${metro.exitCode}); inspect ${root}`);
     if (await predicate()) return;
-    await Bun.sleep(150);
+    await sleep(150);
   }
   throw new Error(`Timed out: ${label}`);
 }
@@ -83,17 +87,17 @@ try {
   } else {
     if (!prepareOnly && platform !== "web") {
       const tools = { macos: ["xcodebuild", "pod"], windows: ["pwsh.exe", "dotnet.exe"], ios: ["xcrun", "pod"], android: ["adb", "java"] }[platform];
-      const missing = tools.filter(tool => !Bun.which(tool));
+      const missing = tools.filter(tool => !which(tool));
       if (missing.length) throw new MissingPrerequisite(`Missing native test prerequisites: ${missing.join(", ")}`);
     }
-    await run(framework, ["bun", "scripts/pack.ts", ...(platform === "windows" ? ["--platform=windows"] : [])], { capture: true });
+    await run(framework, [process.execPath, "scripts/pack.ts", ...(platform === "windows" ? ["--platform=windows"] : [])], { capture: true });
     await create(root, path.join(framework, "artifacts/packages/manifest.json"), platform === "windows" ? "windows" : "macos", true);
     for (const name of ["contract-cases.ts", "contract-report.ts", "PlatformChecks.tsx", "desktop-contract-cases.ts", "foundation-checks.ts", "file-stream-checks.ts", "desktop-contracts.ts", "desktop-contracts.desktop.ts", "desktop-contracts.macos.ts", "desktop-contracts.windows.ts", "DesktopInteractionChecks.tsx", "DesktopInteractionChecks.desktop.tsx", "DesktopInteractionChecks.macos.tsx", "DesktopInteractionChecks.windows.tsx", "DesktopLibraryChecks.tsx", "DesktopLibraryChecks.desktop.tsx", "DesktopLibraryChecks.macos.tsx", "DesktopLibraryChecks.windows.tsx", "platform-runtime-tasks.ts"]) cpSync(path.join(framework, "examples/kitchen-sink", name), path.join(root, name));
     writeFileSync(path.join(root, "App.tsx"), 'export { default } from "./PlatformChecks";\n');
     if (desktop) {
       const pkg = readJson(path.join(root, "package.json"));
       for (const name of ["@legendapp/spark", "react-native-nitro-modules", "@react-native-runtimes/core"]) pkg.dependencies[name] = pkg.overrides[name];
-      writeJson(path.join(root, "package.json"), pkg); await run(root, ["bun", "install"], { capture: true });
+      writeJson(path.join(root, "package.json"), pkg); await run(root, managerCommand(packageManager(root), ["install"]), { capture: true });
     }
     // A unique application ID prevents this probe replacing another test or user app.
     if (!prepareOnly && platform === "ios") {
@@ -105,7 +109,7 @@ try {
     config.expo = { ...config.expo, ios: { bundleIdentifier: applicationId }, android: { package: applicationId } };
     writeJson(path.join(root, "desktop.config.json"), config);
     const appCases = new Set(["clipboard.read", "clipboard.roundtrip", "storage.lifecycle", "storage.unavailable", "links.resolution", "files.recursive-watch", "windows.overlay", "files.streaming", "files.trash", "ui.button", "ui.input", "ui.select", "desktop.filesystem", "desktop.settings", "desktop.recent-documents", "desktop.rich-clipboard", "desktop.message-dialog", "desktop.context-menu", "desktop.tray", "desktop.global-shortcuts", "desktop.modal-windows", "desktop.advanced-menus", "desktop.processes", "desktop.system", "desktop.notifications", "desktop.sqlite", "desktop.nitro", "desktop.runtimes", "desktop.webview", "desktop.drag-drop"]);
-    server = Bun.serve({ hostname: "127.0.0.1", port: 0, maxRequestBodySize: 128 * 1024, async fetch(request) {
+    server = await serveTestHTTP({ hostname: "127.0.0.1", port: 0, maxRequestBodySize: 128 * 1024, async fetch(request) {
       const headers = { "Access-Control-Allow-Origin": "*", "Access-Control-Allow-Headers": "Content-Type", "Access-Control-Allow-Methods": "POST, OPTIONS" };
       if (request.method === "GET" && new URL(request.url).pathname === `/${report.runId}/webview`) return new Response('<html><body><p id="value">WebView URL acceptance</p></body></html>', { headers: { "Content-Type": "text/html; charset=utf-8" } });
       if (new URL(request.url).pathname !== `/${report.runId}`) return new Response("Not found", { status: 404, headers });
@@ -118,13 +122,13 @@ try {
         return new Response("ok", { headers });
       } catch (error) { transportError = String(error); return new Response(String(error), { status: 400, headers }); }
     } });
-    writeFileSync(path.join(root, "platform-test-config.ts"), `export const testConfig = ${JSON.stringify({ runId: report.runId, reportURL: `http://127.0.0.1:${server.port}/${report.runId}`, apiOnly: !!values["api-only"], processExecutable: platform === "windows" ? Bun.which("pwsh.exe") ?? undefined : "/bin/sh" })};\n`);
+    writeFileSync(path.join(root, "platform-test-config.ts"), `export const testConfig = ${JSON.stringify({ runId: report.runId, reportURL: `http://127.0.0.1:${server.port}/${report.runId}`, apiOnly: !!values["api-only"], processExecutable: platform === "windows" ? which("pwsh.exe") ?? undefined : "/bin/sh" })};\n`);
     report.versions = installedVersions(root);
     if (platform === "macos") {
       const manifest = readFileSync(path.join(root, "package.json"), "utf8");
       try { await run(root, nodeCommand(root, "expo-desktop", "expo-desktop", ["prebuild", "--platform", "macos", "--template", "expo-desktop-template-bare-minimum@54.81.1-beta.6", "--no-install"]), { env: { CI: "1" }, capture: true }); }
       finally { writeFileSync(path.join(root, "package.json"), manifest); }
-    } else if (platform !== "web") await run(root, ["bun", "node_modules/@legendapp/spark/bin/spark.cjs", "prebuild", "--platform", platform], { capture: true });
+    } else if (platform !== "web") await run(root, [process.execPath, "node_modules/@legendapp/spark/bin/spark.cjs", "prebuild", "--platform", platform], { capture: true });
     record(report, { id: "build.project", status: "passed" }); stage = "build.bundle"; checkpoint();
     await run(root, nodeCommand(root, "expo", "expo", ["export:embed", "--entry-file", "index.ts", "--platform", platform, "--dev", "true", "--max-workers", "2", "--bundle-output", stateFile(root, "contract-check.js")]), { capture: true });
     record(report, { id: "build.bundle", status: "passed" }); checkpoint();
@@ -132,8 +136,8 @@ try {
       const port = await availablePort();
       writeJson(stateFile(root, "session.json"), { compatible: true, target: "test", port });
       mkdirSync(path.dirname(stateFile(root, "contract-metro.log")), { recursive: true });
-      metro = Bun.spawn(nodeCommand(root, "expo", "expo", ["start", "--localhost", "--port", String(port), "--max-workers", "2"]), {
-        cwd: root, env: { ...process.env, CI: "1" }, stdout: Bun.file(stateFile(root, "contract-metro.log")), stderr: Bun.file(stateFile(root, "contract-metro-errors.log")),
+      metro = spawnProcess(nodeCommand(root, "expo", "expo", ["start", "--localhost", "--port", String(port), "--max-workers", "2"]), {
+        cwd: root, env: { ...process.env, CI: "1" }, stdout: processLog(stateFile(root, "contract-metro.log")), stderr: processLog(stateFile(root, "contract-metro-errors.log")),
       });
       stage = "runtime.launch";
       await until(() => fetch(`http://127.0.0.1:${port}/status`, { signal: AbortSignal.timeout(1000) }).then(r => r.ok, () => false), "Metro", 60_000);
@@ -141,10 +145,10 @@ try {
         stage = "build.native";
         const product = await build(root, "dev"); expectedFingerprint = product.runtime.fingerprint;
         record(report, { id: "build.native", status: "passed" });
-        if (platform === "windows") app = Bun.spawn([path.join(product.app, "MyApp.exe")], { cwd: product.app, env: { ...process.env, ...projectEnvironment(root), SPARK_METRO_PORT: String(port) }, stdout: "inherit", stderr: "inherit" });
+        if (platform === "windows") app = spawnProcess([path.join(product.app, "MyApp.exe")], { cwd: product.app, env: { ...process.env, ...projectEnvironment(root), SPARK_METRO_PORT: String(port) }, stdout: "inherit", stderr: "inherit" });
         else {
           const executable = (await run(root, ["/usr/libexec/PlistBuddy", "-c", "Print CFBundleExecutable", path.join(product.app, "Contents/Info.plist")], { capture: true })).trim();
-          app = Bun.spawn([path.join(product.app, "Contents/MacOS", executable), "-RCT_jsLocation", `127.0.0.1:${port}`], { cwd: root, env: { ...process.env, ...projectEnvironment(root), SPARK_BUNDLE_URL: `http://127.0.0.1:${port}/index.bundle?platform=macos&dev=true&minify=false` }, stdout: "inherit", stderr: "inherit" });
+          app = spawnProcess([path.join(product.app, "Contents/MacOS", executable), "-RCT_jsLocation", `127.0.0.1:${port}`], { cwd: root, env: { ...process.env, ...projectEnvironment(root), SPARK_BUNDLE_URL: `http://127.0.0.1:${port}/index.bundle?platform=macos&dev=true&minify=false` }, stdout: "inherit", stderr: "inherit" });
         }
       } else if (platform === "web") {
         const url = `http://localhost:${port}`;

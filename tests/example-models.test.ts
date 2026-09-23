@@ -1,6 +1,6 @@
-import { describe, expect, test } from "bun:test";
-import { Records } from "../packages/cli/templates/example-shared/records";
-import { NotesModel, decodeNotebook } from "../packages/cli/templates/notes-lite/model";
+import { describe, expect, test } from "vitest";
+import { Records } from "../packages/cli/templates/example-shared/records.ts";
+import { NotesModel, decodeNotebook } from "../packages/cli/templates/notes-lite/model.ts";
 function memory() { const map = new Map<string, string>(); return { map, getItem: async (key: string) => map.get(key) ?? null, setItem: async (key: string, value: string) => { map.set(key, value); } }; }
 describe("example persistence", () => {
   test("recovers a preceding snapshot without discarding corrupt data", async () => {
@@ -35,7 +35,7 @@ describe("example persistence", () => {
   });
 });
 
-import { mountSerial } from '../packages/cli/templates/example-shared/lifetime';
+import { mountSerial } from '../packages/cli/templates/example-shared/lifetime.ts';
 test('Strict Mode remount waits for asynchronous guard teardown', async () => {
   const calls: string[] = []; let finish!: () => void;
   const gate = new Promise<void>(resolve => { finish = resolve; });
@@ -54,7 +54,7 @@ test('a newer application schema is preserved for migration instead of silently 
   await expect(new Records(storage, 'future', decodeNotebook).load()).rejects.toThrow('Unsupported');
 });
 
-import { fitFrame } from '../packages/cli/templates/notes-lite/session';
+import { fitFrame } from '../packages/cli/templates/notes-lite/session.ts';
 test('old notebooks load with system theme and no restored windows', () => {
   const notebook = decodeNotebook({ version: 1, notes: [], selectedId: null });
   expect(notebook.theme ?? 'system').toBe('system');
@@ -103,7 +103,7 @@ test('window session validation rejects duplicate IDs and nonfinite geometry', (
   expect(() => decodeNotebook({ version: 1, notes: [], selectedId: null, windows: [{ id: 'main', frame: { ...frame, x: Infinity } }] })).toThrow('window session');
 });
 
-import { WindowSession, type WindowHost } from '../packages/cli/templates/notes-lite/window-session';
+import { WindowSession, type WindowHost } from '../packages/cli/templates/notes-lite/window-session.ts';
 test('restoration is idempotent, skips deleted notes, and quit retains open windows', async () => {
   const frame = { x: 1800, y: 20, width: 700, height: 600 };
   const model = new NotesModel({ load: async () => ({ recovered: false, value: { version: 1, selectedId: 'live', notes: [{ id: 'live', text: 'hello', updatedAt: 0, deleted: false }, { id: 'gone', text: 'deleted', updatedAt: 0, deleted: true }], windows: [{ id: 'main', frame }, { id: 'note-live', noteId: 'live', frame }, { id: 'note-gone', noteId: 'gone', frame }, { id: 'settings', frame }] } }), save: async () => {} });

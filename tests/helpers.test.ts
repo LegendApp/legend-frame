@@ -1,9 +1,9 @@
-import { expect, test } from "bun:test";
+import { expect, test } from "vitest";
 import { mkdtempSync, mkdirSync, writeFileSync, readFileSync, rmSync, symlinkSync, existsSync } from "node:fs";
 import os from "node:os";
 import path from "node:path";
-import { copyHelpers, resolveHelpers, type Helpers } from "../packages/cli/src/helpers";
-import { runtimeFor } from "../packages/cli/src/project";
+import { copyHelpers, resolveHelpers, type Helpers } from "../packages/cli/src/helpers.ts";
+import { runtimeFor } from "../packages/cli/src/project.ts";
 import { toExpo } from "@legendapp/spark-desktop-config/config.cjs";
 function fixture(run: (root: string) => void) {
   const root = mkdtempSync(path.join(os.tmpdir(), "spark-helpers-"));

@@ -1,5 +1,5 @@
-import { expect, test } from "bun:test";
-import { composeExport, composeMetro } from "../packages/cli/src/add-desktop";
+import { expect, test } from "vitest";
+import { composeExport, composeMetro } from "../packages/cli/src/add-desktop.ts";
 import { createRequire } from "node:module";
 import { mkdtempSync, writeFileSync, rmSync } from "node:fs";
 import path from "node:path";

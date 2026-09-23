@@ -9,7 +9,7 @@ packaging or complete platform parity.
 - Workspace typecheck and model/API/CLI tests pass. Persistence tests cover a
   corrupt snapshot, unreadable storage, unknown schema, edits during a pending
   save, retry, deleted-note restoration, and asynchronous resource teardown.
-- `bun run pack:local` followed by `bun scripts/test-examples.ts /tmp/SparkExamplesFinal` creates three independently
+- `npm run pack:local` followed by `node scripts/test-examples.ts /tmp/SparkExamplesFinal` creates three independently
   installed consumers from SDK archives outside the checkout. All three consumer
   typechecks and all 15 platform bundles pass. Mobile/web bundles are checked for
   accidental desktop native bindings. Platform switching preserves configuration.

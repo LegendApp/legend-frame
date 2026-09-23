@@ -1,9 +1,9 @@
-import { expect, test } from "bun:test";
+import { expect, test } from "vitest";
 import { mkdtempSync, readFileSync, writeFileSync, rmSync, mkdirSync, symlinkSync } from "node:fs";
 import os from "node:os";
 import path from "node:path";
-import { readAppConfig, prepareConfig, writeUpdates, projectEnvironment, goConfigurationIssues } from "../packages/cli/src/project";
-import { resolveHelpers, copyHelpers } from "../packages/cli/src/helpers";
+import { readAppConfig, prepareConfig, writeUpdates, projectEnvironment, goConfigurationIssues } from "../packages/cli/src/project.ts";
+import { resolveHelpers, copyHelpers } from "../packages/cli/src/helpers.ts";
 import { toExpo } from "@legendapp/spark-desktop-config/config.cjs";
 import { validateWindow } from "@legendapp/spark-window-options";
 const base = { name: "Demo", projectId: "demo", version: "1.0.0", macos: { bundleIdentifier: "com.example.demo" } };

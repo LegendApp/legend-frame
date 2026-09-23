@@ -146,7 +146,7 @@ The prototype removes complete SDK native modules. It does not promise individua
 
 ### P0 — Scaffold and freeze the integration baseline
 
-- Create the Bun workspace, initial package boundaries, lockfile, and consumer template.
+- Create the npm workspace, initial package boundaries, lockfile, and consumer template.
 - Establish a repeatable packed-package installation flow into a temporary project outside both repositories.
 - Port only the demonstrated menu/dialog packages and the minimum required host/config integration.
 - Resolve publishable dependency metadata and codegen/package contents. Audit transitive dependencies.
@@ -167,7 +167,7 @@ Acceptance: after Go is built, a fresh external consumer launches and uses both 
 ### P2 — Prove automatic detection and switching to a custom build
 
 - Implement the native-greeting fixture as an independently installable packed package with one native method.
-- Install it using ordinary `bun add`; do not implement `spark add` first.
+- Install it using ordinary `npm install`; do not implement `spark add` first.
 - Detect the native graph change and report that Go lacks the module before executing incompatible JS.
 - On the switch action, check prerequisites, generate the app-specific project, install native dependencies, build, and launch against the current server.
 - Cache the successful binary and native inputs. Relaunch unchanged inputs without recompiling.

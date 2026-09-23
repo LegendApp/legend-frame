@@ -10,7 +10,7 @@ No packages or binaries were published.
 
 | Check | Result |
 | --- | --- |
-| TypeScript | Pass: `bun run typecheck` |
+| TypeScript | Pass: `npm run typecheck` |
 | Unit/config/codegen suites | Pass: 109 tests, 418 assertions across 12 files |
 | Go expansion | Pass: 9 cases covering window configuration/styles/constraints, child/modal close guards, process I/O/streaming/timeouts/cancellation, shortcut registration/conflicts/cleanup, system snapshot/sleep assertions, SQLite persistence/rollback, mounted WebView JS round-trip |
 | Custom expansion | Pass: 11 cases — the Go cases plus a test-only driver for mounted drag hit testing/drop event delivery and native confirmation sheet completion |
@@ -50,16 +50,16 @@ passed in the native suite, which restores the original pasteboard representatio
 ## Reproduction
 
 ```sh
-bun install
-bun run typecheck
-bun test tests
-bun run test:expansion /tmp/SparkSDKKitchenSink
-bun run test:native /tmp/SparkSDKKitchenSink
-bun run test:updates /tmp/SparkUpdateReleaseProbe
+npm install
+npm run typecheck
+npm test
+npm run test:expansion -- /tmp/SparkSDKKitchenSink
+npm run test:native -- /tmp/SparkSDKKitchenSink
+npm run test:updates -- /tmp/SparkUpdateReleaseProbe
 
-bun run kitchen-sink /tmp/MyDesktopKitchenSink
+npm run kitchen-sink -- /tmp/MyDesktopKitchenSink
 cd /tmp/MyDesktopKitchenSink
-bun dev
+npm run dev
 ```
 
 The native suite normally uses the XCTest UI driver. Set

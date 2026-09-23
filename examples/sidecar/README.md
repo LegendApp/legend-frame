@@ -63,10 +63,10 @@ Restart, and Stop buttons, using framework-native buttons.
 From the framework checkout, prepare an independent app automatically:
 
 ```sh
-bun run pack:local
-bun scripts/prepare-sidecar.ts /absolute/path/to/HelperDemo
+npm run pack:local
+node scripts/prepare-sidecar.ts /absolute/path/to/HelperDemo
 cd /absolute/path/to/HelperDemo
-bun run macos # or windows; choose Build for the custom helper runtime
+npm run macos -- # or windows; choose Build for the custom helper runtime
 ```
 
 The preparer requires a fresh destination, compiles the helper for the host target,
@@ -78,7 +78,7 @@ Alternatively, create an ordinary desktop app and copy the three TypeScript file
 ```sh
 spark create HelperDemo
 cd HelperDemo
-bun add @legendapp/spark-ui@0.1.0-prototype.0 base64-js@1.5.1
+npm install @legendapp/spark@0.1.0-prototype.0 base64-js@1.5.1
 # Copy App.tsx, client.ts, service.ts from this example into this directory.
 # Copy worker.c into helpers/worker/worker.c.
 mkdir -p helpers/worker/binaries/macos-arm64
@@ -126,11 +126,11 @@ including abrupt macOS app death. A helper is not a durable background service.
 
 Validation:
 
-- `bun test tests/sidecar-client.test.ts` (from the framework root) compiles the real
+- `npm test -- tests/sidecar-client.test.ts` (from the framework root) compiles the real
   worker on macOS/Linux and tests fragmented replies, concurrent requests, binary
   echo, graceful close, crash/restart, and readiness/request timeouts. This portable
   harness is skipped on Windows, where a Visual Studio-built binary is required.
-- `bun scripts/test-sidecars.ts` packages both helpers into a disposable copy of the
+- `node scripts/test-sidecars.ts` packages both helpers into a disposable copy of the
   Kitchen Sink development runtime and checks the real native process transport.
 - On Windows compile both `echo.c` and `worker.c`, declare both helper bundles in
   your Kitchen Sink development project, and run the sidecar acceptance path in

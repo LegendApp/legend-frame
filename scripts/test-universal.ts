@@ -1,15 +1,15 @@
 import { createHash } from "node:crypto";
 import { existsSync, mkdirSync, readFileSync, readdirSync } from "node:fs";
 import path from "node:path";
-import { create } from "../packages/cli/src/create";
-import { run } from "../packages/cli/src/commands";
-import { nodeCommand } from "../packages/cli/src/windows";
-import { readJson, writeJson } from "../packages/cli/src/project";
+import { create } from "../packages/cli/src/create.ts";
+import { run } from "../packages/cli/src/commands.ts";
+import { nodeCommand } from "../packages/cli/src/windows.ts";
+import { readJson, writeJson } from "../packages/cli/src/project.ts";
 
 // Fresh packed consumer: real native generation plus the same App.tsx in all five bundles.
-const framework = path.resolve(import.meta.dir, "..");
+const framework = path.resolve(import.meta.dirname, "..");
 const root = path.resolve(process.argv[2] ?? `.spark/universal-tests/Settings${Date.now()}`);
-await run(framework, ["bun", "scripts/pack.ts"]);
+await run(framework, [process.execPath, "scripts/pack.ts"]);
 await create(root, path.join(framework, "artifacts/packages/manifest.json"), "macos", true);
 const shared = ["desktop.config.json", "package.json", "App.tsx", "index.ts", "metro.config.js", "react-native.config.js", "app.config.js", "global.css", "uniwind-types.d.ts"];
 const originals = shared.map(file => readFileSync(path.join(root, file), "utf8"));
@@ -32,7 +32,7 @@ function assertPreserved() {
   for (const [target, hash] of hashes) if (hashProject(target) !== hash) throw new Error(`Target switching changed the ${target} project`);
 }
 for (const platform of native) {
-  await run(root, ["bun", "node_modules/@legendapp/spark/bin/spark.cjs", "prebuild", "--platform", platform], { capture: true, env: { CI: "1" } });
+  await run(root, [process.execPath, "node_modules/@legendapp/spark/bin/spark.cjs", "prebuild", "--platform", platform], { capture: true, env: { CI: "1" } });
   assertPreserved();
   if (!existsSync(path.join(root, platform))) throw new Error(`${platform} project missing`);
   hashes.set(platform, hashProject(platform));

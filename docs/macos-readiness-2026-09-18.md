@@ -58,7 +58,7 @@ Focused reports:
 
 ## Native crash found and fixed
 
-`bun scripts/test-sidecars.ts` aborted twice with the original source. Its helper
+`node scripts/test-sidecars.ts` aborted twice with the original source. Its helper
 lifecycle test opens `sidecar-owner-probe` and immediately closes it. The crash
 stack is:
 
@@ -98,7 +98,7 @@ consecutive rebuilt-native runs passed all nine helper checks: **100 immediate
 open/close cycles**, helper survival, binary streaming, failure/deadline handling,
 and cleanup on normal app quit. `.spark/sidecar-tests/report.json` now contains
 an unmodified post-fix stress-run result. Streaming/Trash and the native overlay/drag callbacks also passed again. A separate
-`bun scripts/test-fabric-reload.ts` probe passed three full React Native reloads
+`node scripts/test-fabric-reload.ts` probe passed three full React Native reloads
 and another 40 immediate window-close cycles. TypeScript and all 247 unit tests
 passed after the fix.
 
@@ -167,7 +167,7 @@ filters still run, and untagged subviews do not suppress delivery at a later Rea
 ancestor. The patch is pinned to RN macOS 0.81.7, idempotent, source-checked and
 installed without modifying hardlinked package caches.
 
-After a successful native rebuild, `bun scripts/test-keyboard-events.ts` passed
+After a successful native rebuild, `node scripts/test-keyboard-events.ts` passed
 all nine native assertions. The same focused-WebView shortcut no longer crashed;
 20 additional repetitions (and another 20 on a fresh launch), WebView typing/selection/arrows/Tab/Escape, WebView to
 React message delivery, and subsequent native input editing passed through UI

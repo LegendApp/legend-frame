@@ -1,8 +1,8 @@
-import { expect, test } from "bun:test";
+import { expect, test } from "vitest";
 import { mkdtempSync, mkdirSync, writeFileSync, readFileSync, linkSync, rmSync } from "node:fs";
 import path from "node:path";
 import os from "node:os";
-import { installWorkspaceAdapters } from "../scripts/install-workspace-adapters";
+import { installWorkspaceAdapters } from "../scripts/install-workspace-adapters.ts";
 function fixture() {
   const root = mkdtempSync(path.join(os.tmpdir(), "spark-workspace-adapter-"));
   const pkg = path.join(root, "node_modules/probe"); mkdirSync(pkg, { recursive: true });

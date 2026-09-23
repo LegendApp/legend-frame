@@ -1,14 +1,16 @@
+import { spawnProcess, processLog } from "../packages/cli/src/process.ts";
+import { setTimeout as sleep } from "node:timers/promises";
 import { cpSync, existsSync, mkdirSync, rmSync } from "node:fs";
 import path from "node:path";
-import { prepareKitchenSink } from "./prepare-kitchen-sink";
-import { packageCameraApp } from "./package-camera";
-import { installCameraPackages } from "./prepare-camera";
-import { build } from "../packages/cli/src/build";
-import { binary, run } from "../packages/cli/src/commands";
-import { availablePort } from "../packages/cli/src/local";
-import { readJson, writeJson, prepareConfig, projectEnvironment } from "../packages/cli/src/project";
+import { prepareKitchenSink } from "./prepare-kitchen-sink.ts";
+import { packageCameraApp } from "./package-camera.ts";
+import { installCameraPackages } from "./prepare-camera.ts";
+import { build } from "../packages/cli/src/build.ts";
+import { binary, run } from "../packages/cli/src/commands.ts";
+import { availablePort } from "../packages/cli/src/local.ts";
+import { readJson, writeJson, prepareConfig, projectEnvironment } from "../packages/cli/src/project.ts";
 
-const framework = path.resolve(import.meta.dir, "..");
+const framework = path.resolve(import.meta.dirname, "..");
 const root = path.resolve(process.argv.slice(2).find(value => !value.startsWith("--")) ?? ".spark/examples/SparkCameraKitchenSink");
 const probeOnly = process.argv.includes("--probe-only");
 const mode = process.argv.includes("--release") ? "release" : "dev";
@@ -31,28 +33,28 @@ const result = process.argv.includes("--run-only") ? readJson(path.join(root, `.
 const directory = path.join(root, ".spark/camera-proof"); mkdirSync(directory, { recursive: true });
 const report = path.join(directory, `${probeOnly ? "nitro" : "camera"}-${mode}.json`); rmSync(report, { force: true });
 const port = await availablePort();
-let metro: ReturnType<typeof Bun.spawn> | undefined;
-let app: ReturnType<typeof Bun.spawn> | undefined;
+let metro: ReturnType<typeof spawnProcess> | undefined;
+let app: ReturnType<typeof spawnProcess> | undefined;
 try {
   if (mode === "dev") {
     writeJson(path.join(root, ".spark/session.json"), { compatible: true, target: "camera-proof", port });
-    const log = Bun.file(path.join(directory, "metro.log"));
-    metro = Bun.spawn([binary(root, "expo"), "start", "--localhost", "--port", String(port), "--max-workers", "2"], { cwd: root, env: { ...process.env, CI: "1" }, stdout: log, stderr: log });
+    const log = processLog(path.join(directory, "metro.log"));
+    metro = spawnProcess([binary(root, "expo"), "start", "--localhost", "--port", String(port), "--max-workers", "2"], { cwd: root, env: { ...process.env, CI: "1" }, stdout: log, stderr: log });
     const deadline = Date.now() + 120000; let ready = false;
     while (!ready && Date.now() < deadline) {
       ready = await fetch(`http://127.0.0.1:${port}/status`, { signal: AbortSignal.timeout(1000) }).then(r => r.ok, () => false);
       if (metro.exitCode !== null) throw new Error(`Metro exited; see ${directory}`);
-      if (!ready) await Bun.sleep(250);
+      if (!ready) await sleep(250);
     }
     if (!ready) throw new Error(`Metro timed out; see ${directory}`);
   }
   const executable = (await run(root, ["/usr/libexec/PlistBuddy", "-c", "Print CFBundleExecutable", path.join(result.app, "Contents/Info.plist")], { capture: true })).trim();
-  const log = Bun.file(path.join(directory, `${mode}.log`));
-  app = Bun.spawn([path.join(result.app, "Contents/MacOS", executable), "-RCT_jsLocation", `127.0.0.1:${port}`, "--spark-camera-proof", report], { cwd: root, env: { ...process.env, ...projectEnvironment(root), SPARK_BUNDLE_URL: `http://127.0.0.1:${port}/index.bundle?platform=macos&dev=true&minify=false` }, stdout: log, stderr: log });
+  const log = processLog(path.join(directory, `${mode}.log`));
+  app = spawnProcess([path.join(result.app, "Contents/MacOS", executable), "-RCT_jsLocation", `127.0.0.1:${port}`, "--spark-camera-proof", report], { cwd: root, env: { ...process.env, ...projectEnvironment(root), SPARK_BUNDLE_URL: `http://127.0.0.1:${port}/index.bundle?platform=macos&dev=true&minify=false` }, stdout: log, stderr: log });
   const deadline = Date.now() + 120000;
   while (!existsSync(report) && Date.now() < deadline) {
     if (app.exitCode !== null || app.signalCode !== null) throw new Error(`App exited before report (code ${app.exitCode}, signal ${app.signalCode}). Close any other instance of this example and inspect ${directory}`);
-    await Bun.sleep(200);
+    await sleep(200);
   }
   if (!existsSync(report)) throw new Error(`Native proof timed out; see ${directory}`);
   const outcome = readJson(report); console.log(JSON.stringify(outcome, null, 2));

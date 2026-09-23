@@ -49,7 +49,7 @@ Only source modules reachable from the app are worker entry points in production
 
 ## Existing projects
 
-Replace `@legendapp/spark/runtimes` imports with `@react-native-runtimes/core`. The previous framework `createRuntime` helper has been removed; use upstream `ThreadedRuntime.run(name, task, ...args)` and `ThreadedRuntime.destroy(name)` as above. Declare core in the app dependencies when migrating an older project with `bun add @react-native-runtimes/core@0.1.0-alpha.2`; retain the SDK-pinned archive override installed by the SDK refresh.
+Replace `@legendapp/spark/runtimes` imports with `@react-native-runtimes/core`. The previous framework `createRuntime` helper has been removed; use upstream `ThreadedRuntime.run(name, task, ...args)` and `ThreadedRuntime.destroy(name)` as above. Declare core in the app dependencies when migrating an older project with `npm install @react-native-runtimes/core@0.1.0-alpha.2`; retain the SDK-pinned archive override installed by the SDK refresh.
 
 Refreshing local SDK packages upgrades the exact original generated entry/Metro pair. For customized projects, compose these changes manually while retaining your other configuration:
 
@@ -78,15 +78,15 @@ The SDK pack step fetches Margelo's repository at `58710c25c6e505dcc1292ee54d855
 `patches/react-native-runtimes-macos.patch` contains the five-file macOS port for an upstream PR. `patches/react-native-runtimes-integration.patch` separately adds graph-selected entry generation, dispatcher cleanup and a worker-only event fallback. The packaging recipe and patches participate in the archive cache key; generated Nitro sources participate in native compatibility fingerprints. Keep these pins together until an upstream version replaces the patches.
 
 ```sh
-bun run pack:local
-bun run spark sdk build-runner
-bun run test:runtimes /tmp/SparkRuntimesProbe --prebuilt
-bun run test:runtimes /tmp/SparkRuntimesProbe
-bun run test:runtimes /tmp/SparkRuntimesProbe --release
-bun run test:runtimes:pruning /tmp/SparkRuntimesProbe
+npm run pack:local
+npm run spark -- sdk build-runner
+npm run test:runtimes -- /tmp/SparkRuntimesProbe --prebuilt
+npm run test:runtimes -- /tmp/SparkRuntimesProbe
+npm run test:runtimes -- /tmp/SparkRuntimesProbe --release
+npm run test:runtimes:pruning -- /tmp/SparkRuntimesProbe
 ```
 
-`bun run test:runtimes:all` prepares the Spark Runner and runs the complete matrix; it is also included in `test:all`.
+`npm run test:runtimes:all` prepares the Spark Runner and runs the complete matrix; it is also included in `test:all`.
 
 The native test app measures worker isolation, imported CPU work while the main JS timer ticks, async results, errors, filesystem access, runtime destruction after completed calls and fresh recreation. Dev/prebuilt additionally perform an actual app reload. The pruning test retains task source files and dependencies, removes their imports, verifies the native selection and linked symbols, and launches the resulting standalone Release app. Local Xcode is required for these native builds.
 

@@ -55,8 +55,8 @@ For Kitchen Sink, install at the repository root, then:
 
 ```sh
 cd examples/kitchen-sink
-bun run rebuild:macos  # or rebuild:windows, on Windows
-bun run macos         # or windows
+npm run rebuild:macos  # or rebuild:windows, on Windows
+npm run macos         # or windows
 ```
 
 The Spark artwork lives at `assets/branding/legend-spark.png` and is included in
