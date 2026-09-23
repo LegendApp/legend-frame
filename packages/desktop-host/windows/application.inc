@@ -5,6 +5,7 @@
 #include <algorithm>
 #include <cmath>
 #include <exception>
+#include <shellapi.h>
 #include <shellscalingapi.h>
 #include <fstream>
 #include <shlwapi.h>
@@ -25,25 +26,25 @@
 #pragma comment(lib, "Shlwapi.lib")
 #pragma comment(lib, "Shcore.lib")
 namespace SparkWin {
-namespace React = winrt::Microsoft::ReactNative;
+namespace RNW = winrt::Microsoft::ReactNative;
 namespace Json = winrt::Windows::Data::Json;
 namespace UI = winrt::Microsoft::UI::Windowing;
 using winrt::to_hstring; using winrt::to_string;
-struct WindowResources : winrt::implements<WindowResources, React::Composition::ICustomResourceLoader> {
+struct WindowResources : winrt::implements<WindowResources, RNW::Composition::ICustomResourceLoader> {
   int theme = -1;
   winrt::event<winrt::Windows::Foundation::EventHandler<winrt::Windows::Foundation::IInspectable>> changed;
-  void GetResource(winrt::hstring const &id, React::Composition::ResourceType, React::Composition::CustomResourceResult const &result) {
+  void GetResource(winrt::hstring const &id, RNW::Composition::ResourceType, RNW::Composition::CustomResourceResult const &result) {
     if (id == L"SparkWindowTheme") result.Resource(winrt::box_value(winrt::Windows::UI::Color{static_cast<uint8_t>(theme < 0 ? 0 : 255), static_cast<uint8_t>(theme == 1 ? 255 : 0), 0, 0}));
   }
   winrt::event_token ResourcesChanged(winrt::Windows::Foundation::EventHandler<winrt::Windows::Foundation::IInspectable> const &handler) { return changed.add(handler); }
   void ResourcesChanged(winrt::event_token const &token) noexcept { changed.remove(token); }
   void SetTheme(int value) { theme = value; changed(*this, nullptr); }
 };
-struct Window { React::ReactNativeWindow view{nullptr}; UI::AppWindow app{nullptr}; UI::OverlappedPresenter normal{nullptr}; int32_t minWidth = 100, minHeight = 100, maxWidth = 20000, maxHeight = 20000; std::string parentId; bool modal = false; bool overlay = false; bool transparent = false; bool shadow = true; bool disabledByModal = false; bool enabledBeforeModal = false; bool guard = false; bool pending = false; bool allow = false; uint64_t request = 0; HMONITOR monitor = nullptr; bool fullscreen = false; bool closable = true; bool restoreFrame = false; int theme = -1; winrt::com_ptr<WindowResources> resources; winrt::Microsoft::UI::Composition::SpriteVisual background{nullptr}; };
+struct Window { RNW::ReactNativeWindow view{nullptr}; UI::AppWindow app{nullptr}; UI::OverlappedPresenter normal{nullptr}; int32_t minWidth = 100, minHeight = 100, maxWidth = 20000, maxHeight = 20000; std::string parentId; bool modal = false; bool overlay = false; bool transparent = false; bool shadow = true; bool disabledByModal = false; bool enabledBeforeModal = false; bool guard = false; bool pending = false; bool allow = false; uint64_t request = 0; HMONITOR monitor = nullptr; bool fullscreen = false; bool closable = true; bool restoreFrame = false; int theme = -1; winrt::com_ptr<WindowResources> resources; winrt::Microsoft::UI::Composition::SpriteVisual background{nullptr}; };
 static std::map<std::string, Window> windows;
-static React::ReactNativeHost host{nullptr};
+static RNW::ReactNativeHost host{nullptr};
 static winrt::Microsoft::UI::Composition::Compositor compositor{nullptr};
-static React::ReactContext context;
+static RNW::ReactContext context;
 static void InitializeToastActivation();
 static void QueueNotificationResponse(std::string const &);
 static std::string NotificationResponses();
@@ -61,7 +62,7 @@ static std::filesystem::path dataDirectory;
 struct Shortcut { std::string id, windowId; UINT key; int modifiers; bool repeat; };
 static std::map<std::string, Shortcut> shortcuts;
 static HHOOK keyboardHook = nullptr;
-static std::map<UINT, React::JSValueObject> menuActions;
+static std::map<UINT, RNW::JSValueObject> menuActions;
 static HMENU currentMenu = nullptr;
 static std::string menuOwner;
 static Json::JsonArray menus{nullptr};
@@ -76,7 +77,7 @@ static void UpdateModality() {
   }
 }
 static std::string Id(HWND hwnd) { auto root = GetAncestor(hwnd, GA_ROOT); for (auto const &[id, window] : windows) if (Hwnd(window) == root) return id; return ""; }
-static void Emit(React::JSValueObject value) { if (context) context.EmitJSEvent(L"RCTDeviceEventEmitter", L"desktop", std::move(value)); }
+static void Emit(RNW::JSValueObject value) { if (context) context.EmitJSEvent(L"RCTDeviceEventEmitter", L"desktop", std::move(value)); }
 static void WindowTransitions(std::string const &id) {
   auto found = windows.find(id); if (found == windows.end()) return;
   auto &window = found->second;
@@ -101,7 +102,7 @@ static void ActivateApplication() {
   HWND target = GetLastActivePopup(Hwnd(window));
   SetForegroundWindow(IsWindowVisible(target) && IsWindowEnabled(target) ? target : Hwnd(window));
 }
-static void WriteJson(React::IJSValueWriter const &writer, Json::IJsonValue const &value) {
+static void WriteJson(RNW::IJSValueWriter const &writer, Json::IJsonValue const &value) {
   switch (value.ValueType()) {
     case Json::JsonValueType::Object: writer.WriteObjectBegin(); for (auto const &pair : value.GetObject()) { writer.WritePropertyName(pair.Key()); WriteJson(writer, pair.Value()); } writer.WriteObjectEnd(); break;
     case Json::JsonValueType::Array: writer.WriteArrayBegin(); for (auto const &item : value.GetArray()) WriteJson(writer, item); writer.WriteArrayEnd(); break;
@@ -163,7 +164,7 @@ static void ApplyAppearance(Window &window) {
   BOOL dark = window.theme < 0 ? (5 * foreground.G + 2 * foreground.R + foreground.B) > 8 * 128 : window.theme == 1;
   // Windows 10/11 titlebar appearance; unsupported OS chrome does not block content.
   DwmSetWindowAttribute(Hwnd(window), 20 /* DWMWA_USE_IMMERSIVE_DARK_MODE */, &dark, sizeof(dark));
-  if (!window.resources) { window.resources = winrt::make_self<WindowResources>(); window.view.ReactNativeIsland().Resources(window.resources.as<React::Composition::ICustomResourceLoader>()); }
+  if (!window.resources) { window.resources = winrt::make_self<WindowResources>(); window.view.ReactNativeIsland().Resources(window.resources.as<RNW::Composition::ICustomResourceLoader>()); }
   window.resources->SetTheme(window.theme);
 }
 static std::filesystem::path SparkFile(std::string const &id) {
@@ -350,7 +351,7 @@ static LRESULT CALLBACK WindowProc(HWND hwnd, UINT message, WPARAM wParam, LPARA
   }
   return DefSubclassProc(hwnd, message, wParam, lParam);
 }
-static void Attach(std::string id, React::ReactNativeWindow view) {
+static void Attach(std::string id, RNW::ReactNativeWindow view) {
   Window window; window.view = view; window.app = view.AppWindow(); window.normal = window.app.Presenter().as<UI::OverlappedPresenter>(); window.monitor = MonitorFromWindow(Hwnd(window), MONITOR_DEFAULTTONEAREST); windows.emplace(id, window);
   SetPropW(Hwnd(window), (L"Spark.Window." + std::wstring(to_hstring(id))).c_str(), reinterpret_cast<HANDLE>(1));
   SetPropW(Hwnd(window), L"Spark.ReactWindow", reinterpret_cast<HANDLE>(1));
@@ -397,17 +398,17 @@ static LRESULT CALLBACK Keyboard(int code, WPARAM remove, LPARAM param) {
       if (GetKeyState(VK_SHIFT) < 0) modifiers |= 1 << 17;
       if (GetKeyState(VK_LWIN) < 0 || GetKeyState(VK_RWIN) < 0) modifiers |= 1 << 20;
       for (auto const &[key, shortcut] : shortcuts) if (!id.empty() && (shortcut.windowId.empty() || shortcut.windowId == id) && shortcut.key == message->wParam && shortcut.modifiers == modifiers) {
-        if (shortcut.repeat || !(message->lParam & (1LL << 30))) context.EmitJSEvent(L"RCTDeviceEventEmitter", L"shortcut", React::JSValueObject{{"id", key}});
+        if (shortcut.repeat || !(message->lParam & (1LL << 30))) context.EmitJSEvent(L"RCTDeviceEventEmitter", L"shortcut", RNW::JSValueObject{{"id", key}});
         message->message = WM_NULL; break;
       }
     }
   }
   return CallNextHookEx(keyboardHook, code, remove, param);
 }
-static React::JSValue Value(Json::IJsonValue const &value) {
+static RNW::JSValue Value(Json::IJsonValue const &value) {
   switch (value.ValueType()) {
-    case Json::JsonValueType::Object: { React::JSValueObject result; for (auto const &entry : value.GetObject()) result.emplace(to_string(entry.Key()), Value(entry.Value())); return result; }
-    case Json::JsonValueType::Array: { React::JSValueArray result; for (auto const &entry : value.GetArray()) result.push_back(Value(entry)); return result; }
+    case Json::JsonValueType::Object: { RNW::JSValueObject result; for (auto const &entry : value.GetObject()) result.emplace(to_string(entry.Key()), Value(entry.Value())); return result; }
+    case Json::JsonValueType::Array: { RNW::JSValueArray result; for (auto const &entry : value.GetArray()) result.push_back(Value(entry)); return result; }
     case Json::JsonValueType::String: return to_string(value.GetString());
     case Json::JsonValueType::Number: return value.GetNumber();
     case Json::JsonValueType::Boolean: return value.GetBoolean();
@@ -418,7 +419,7 @@ static std::wstring MenuTitle(winrt::hstring const &title) {
   std::wstring result; for (auto c : title) { result += c; if (c == L'&') result += c; } return result;
 }
 static void RebuildMenus() {
-  auto next = CreateMenu(); std::map<UINT, React::JSValueObject> actions; std::vector<ACCEL> accelerators; UINT command = 0x5000;
+  auto next = CreateMenu(); std::map<UINT, RNW::JSValueObject> actions; std::vector<ACCEL> accelerators; UINT command = 0x5000;
   for (auto const &value : menus) {
     auto menu = value.GetObject(); auto popup = CreatePopupMenu();
     for (auto const &entry : menu.GetNamedArray(L"items")) {
@@ -446,7 +447,7 @@ static void RebuildMenus() {
         }
       }
       AppendMenuW(popup, flags, command, title.c_str());
-      actions.emplace(command++, React::JSValueObject{{"ownerId", to_string(item.GetNamedString(L"_sparkOwner", to_hstring(menuOwner)))}, {"menuId", to_string(item.GetNamedString(L"_sparkMenu", menu.GetNamedString(L"id")))}, {"itemId", to_string(item.GetNamedString(L"id"))}, {"payload", Value(item.GetNamedObject(L"payload", Json::JsonObject()))}});
+      actions.emplace(command++, RNW::JSValueObject{{"ownerId", to_string(item.GetNamedString(L"_sparkOwner", to_hstring(menuOwner)))}, {"menuId", to_string(item.GetNamedString(L"_sparkMenu", menu.GetNamedString(L"id")))}, {"itemId", to_string(item.GetNamedString(L"id"))}, {"payload", Value(item.GetNamedObject(L"payload", Json::JsonObject()))}});
     }
     AppendMenuW(next, MF_POPUP, reinterpret_cast<UINT_PTR>(popup), MenuTitle(menu.GetNamedString(L"title")).c_str());
   }
@@ -456,7 +457,7 @@ static void RebuildMenus() {
   if (acceleratorTable) DestroyAcceleratorTable(acceleratorTable);
   acceleratorTable = accelerators.empty() ? nullptr : CreateAcceleratorTableW(accelerators.data(), static_cast<int>(accelerators.size()));
 }
-static void Initialize(React::ReactNativeWin32App const &app) {
+static void Initialize(RNW::ReactNativeWin32App const &app) {
   // WinRT activation must follow init_apartment, never static initialization.
   pendingURLs = Json::JsonArray(); launchArguments = Json::JsonArray(); menus = Json::JsonArray();
   host = app.ReactNativeHost(); compositor = app.ReactNativeWindow().ReactNativeIsland().Compositor(); Attach("main", app.ReactNativeWindow());
@@ -510,7 +511,7 @@ struct SparkDesktopApp {
         else if (method == "initialURL") { promise.Resolve(initialURL.empty() ? "null" : to_string(Json::JsonValue::CreateStringValue(to_hstring(initialURL)).Stringify())); return; }
         else throw winrt::hresult_invalid_argument(L"Unsupported application operation");
         promise.Resolve("null");
-      } catch (winrt::hresult_error const &error) { promise.Reject(React::ReactError{"E_APP", to_string(error.message())}); }
+      } catch (winrt::hresult_error const &error) { promise.Reject(RNW::ReactError{"E_APP", to_string(error.message())}); }
     });
   }
 };
@@ -535,15 +536,15 @@ struct SparkDesktopWindows {
           const bool modal = args.GetNamedBoolean(L"modal", false);
           if (modal && overlay) throw winrt::hresult_invalid_argument(L"An overlay cannot be modal");
           if ((modal && parentId.empty()) || parentId == id) throw winrt::hresult_invalid_argument(L"Modal windows need a distinct parent");
-          if (!parentId.empty() && !windows.count(parentId)) { promise.Reject(React::ReactError{"E_NOT_FOUND", "Parent window not found"}); return; }
-          if (modal) for (auto const &[childId, child] : windows) if (child.parentId == parentId && child.modal) { promise.Reject(React::ReactError{"E_BUSY", "Parent already has a modal window"}); return; }
-          auto view = React::ReactNativeWindow::CreateFromCompositor(compositor); auto app = view.AppWindow();
+          if (!parentId.empty() && !windows.count(parentId)) { promise.Reject(RNW::ReactError{"E_NOT_FOUND", "Parent window not found"}); return; }
+          if (modal) for (auto const &[childId, child] : windows) if (child.parentId == parentId && child.modal) { promise.Reject(RNW::ReactError{"E_BUSY", "Parent already has a modal window"}); return; }
+          auto view = RNW::ReactNativeWindow::CreateFromCompositor(compositor); auto app = view.AppWindow();
           app.Title(args.GetNamedString(L"title", SparkWindowsEnv(L"SPARK_PROJECT_NAME"))); app.Resize({static_cast<int32_t>(args.GetNamedNumber(L"width", 640)), static_cast<int32_t>(args.GetNamedNumber(L"height", 480))});
-          React::ReactViewOptions options; options.ComponentName(L"main");
+          RNW::ReactViewOptions options; options.ComponentName(L"main");
           Json::JsonObject props; props.SetNamedValue(L"windowId", Json::JsonValue::CreateStringValue(to_hstring(id))); props.SetNamedValue(L"windowProps", args.GetNamedObject(L"props", Json::JsonObject()));
           // Write JSON props through the public JSValue writer contract.
           auto propsJson = to_string(props.Stringify());
-          options.InitialProps([propsJson](React::IJSValueWriter const &writer) { WriteJson(writer, Json::JsonObject::Parse(to_hstring(propsJson))); });
+          options.InitialProps([propsJson](RNW::IJSValueWriter const &writer) { WriteJson(writer, Json::JsonObject::Parse(to_hstring(propsJson))); });
           // Validate all options before attaching/showing a new React root.
           Json::JsonObject style;
           for (auto const &pair : args) if (pair.Key() != L"id" && pair.Key() != L"props" && pair.Key() != L"parentId" && pair.Key() != L"modal" && pair.Key() != L"kind") style.SetNamedValue(pair.Key(), pair.Value());
@@ -560,12 +561,12 @@ struct SparkDesktopWindows {
             if (GetLastError()) { app.Destroy(); throw winrt::hresult_error(HRESULT_FROM_WIN32(GetLastError())); }
           }
           attached.minWidth = pending.minWidth; attached.minHeight = pending.minHeight; attached.maxWidth = pending.maxWidth; attached.maxHeight = pending.maxHeight; attached.closable = pending.closable; attached.restoreFrame = pending.restoreFrame; attached.theme = pending.theme; attached.resources = pending.resources; attached.background = pending.background;
-          view.ReactNativeIsland().ReactViewHost(React::ReactCoreInjection::MakeViewHost(host, options)); RestoreFrame(id); ApplyAppearance(attached); app.Show(!overlay); UpdateModality(); Emit({{"type", "opened"}, {"windowId", id}});
+          view.ReactNativeIsland().ReactViewHost(RNW::ReactCoreInjection::MakeViewHost(host, options)); RestoreFrame(id); ApplyAppearance(attached); app.Show(!overlay); UpdateModality(); Emit({{"type", "opened"}, {"windowId", id}});
           promise.Resolve(to_string(Info(id).Stringify())); return;
         }
         if (method == "displays") { promise.Resolve(to_string(Displays().Stringify())); return; }
         if (method == "list") { Json::JsonArray result; for (auto const &[name, window] : windows) result.Append(Info(name)); promise.Resolve(to_string(result.Stringify())); return; }
-        auto found = windows.find(id); if (found == windows.end()) { promise.Reject(React::ReactError{"E_NOT_FOUND", "Window not found"}); return; }
+        auto found = windows.find(id); if (found == windows.end()) { promise.Reject(RNW::ReactError{"E_NOT_FOUND", "Window not found"}); return; }
         auto &window = found->second; auto hwnd = Hwnd(window);
         if (method == "info") { promise.Resolve(to_string(Info(id).Stringify())); return; }
         if (method == "options") ApplyOptions(window, args.GetNamedObject(L"options"));
@@ -596,7 +597,7 @@ struct SparkDesktopWindows {
         else if (method == "unmaximize") ShowWindow(hwnd, SW_RESTORE);
         else throw winrt::hresult_invalid_argument(L"Unsupported window operation");
         promise.Resolve("null");
-      } catch (winrt::hresult_error const &error) { promise.Reject(React::ReactError{"E_WINDOW", to_string(error.message())}); }
+      } catch (winrt::hresult_error const &error) { promise.Reject(RNW::ReactError{"E_WINDOW", to_string(error.message())}); }
     });
   }
 };
@@ -616,7 +617,7 @@ struct SparkDesktopShortcuts {
           wchar_t key = text[0]; UINT code = key >= 0xf704 && key <= 0xf717 ? VK_F1 + key - 0xf704 : key == 0xf700 ? VK_UP : key == 0xf701 ? VK_DOWN : key == 0xf702 ? VK_LEFT : key == 0xf703 ? VK_RIGHT : key == 0xf728 ? VK_DELETE : key == 0x7f ? VK_BACK : static_cast<UINT>(towupper(key));
           shortcuts[id] = {id, to_string(args.GetNamedString(L"windowId", L"")), code, static_cast<int>(args.GetNamedNumber(L"modifiers")), args.GetNamedBoolean(L"repeat", false)};
         } else throw winrt::hresult_invalid_argument(L"Unknown shortcut operation"); promise.Resolve("null");
-      } catch (winrt::hresult_error const &error) { promise.Reject(React::ReactError{"E_SHORTCUT", to_string(error.message())}); }
+      } catch (winrt::hresult_error const &error) { promise.Reject(RNW::ReactError{"E_SHORTCUT", to_string(error.message())}); }
     });
   }
 };

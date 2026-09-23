@@ -49,7 +49,9 @@ export async function buildWindows(root: string, mode: string, force: boolean): 
   }
   const runtime = await prepareWindows(root, mode);
   const target = runtime.arch === "arm64" ? "ARM64" : "x64";
-  await run(root, nodeCommand(root, "react-native", "react-native", ["run-windows", "--arch", target, "--no-packager", "--no-launch", "--no-deploy", "--no-telemetry", "--logging", "--buildLogDirectory", stateFile(root, "logs/msbuild")]), { capture: true });
+  // RNW invokes x64 MSBuild even on ARM64 hosts. Match its compiler host to avoid
+  // falling back to x86 and exhausting address space while loading large PCHs.
+  await run(root, nodeCommand(root, "react-native", "react-native", ["run-windows", "--arch", target, "--msbuildprops", "PreferredToolArchitecture=x64", "--no-packager", "--no-launch", "--no-deploy", "--no-telemetry", "--logging", "--buildLogDirectory", stateFile(root, "logs/msbuild")]), { capture: true });
   if (runtimeFor(root, nativePackages(root), mode).fingerprint !== runtime.fingerprint) throw new Error("Native inputs changed during the build. Retry; no Windows runtime was registered.");
   const products: string[] = [];
   function visit(dir: string) {

@@ -12,7 +12,8 @@
   ],
   "peerDependencies": {
     "react": "19.1.4",
-    "react-native": "0.81.6"
+    "react-native": "0.81.6",
+    "react-native-windows": "0.81.35"
   },
   "codegenConfig": {
     "name": "RNGreetingSpec",
@@ -22,6 +23,16 @@
       "modulesProvider": {
         "NativeGreeting": "RNGreeting"
       }
+    },
+    "windows": {
+      "namespace": "FrameWindowsGreetingCodegen",
+      "outputDirectory": "windows/FrameWindowsGreeting/codegen",
+      "separateDataTypes": true
+    }
+  },
+  "peerDependenciesMeta": {
+    "react-native-windows": {
+      "optional": true
     }
   }
 }
