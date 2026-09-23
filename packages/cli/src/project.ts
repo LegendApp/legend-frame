@@ -68,7 +68,9 @@ export function installedPackages(root: string): Package[] {
   while (queue.length) {
     const current = queue.shift()!;
     const req = createRequire(path.join(current.root, "package.json"));
+    const bundled = current.json.bundledDependencies ?? current.json.bundleDependencies;
     const names = Object.keys({
+      ...Object.fromEntries((Array.isArray(bundled) ? bundled : []).map(name => [name, true])),
       ...current.json.dependencies,
       ...(current.app ? current.json.devDependencies : {}),
       // Optional peers do not require a native module. If an application uses
@@ -86,7 +88,7 @@ export function installedPackages(root: string): Package[] {
         try {
           let dir = path.dirname(req.resolve(name));
           while (
-            !existsSync(path.join(dir, "package.json")) &&
+            (!existsSync(path.join(dir, "package.json")) || typeof readJson(path.join(dir, "package.json")).name !== "string") &&
             dir !== path.dirname(dir)
           )
             dir = path.dirname(dir);
@@ -329,8 +331,7 @@ export function goConfigurationIssues(config: any): string[] {
   if (
     (expo.plugins ?? []).some(
       (plugin: any) =>
-        (Array.isArray(plugin) ? plugin[0] : plugin) !==
-        "@legendapp/spark-desktop-config",
+        !["@legendapp/spark-desktop-config", "@legendapp/spark/config-plugin"].includes(Array.isArray(plugin) ? plugin[0] : plugin),
     )
   )
     issues.push("additional configuration plugins require a custom runtime");
@@ -353,7 +354,7 @@ export function goConfigurationIssues(config: any): string[] {
 
 export function validateBuildModules(mode: string, packages: NativePackage[]) {
   if (mode === "go" && packages.some(pkg => pkg.name === "@legendapp/spark-native-greeting" || pkg.json.spark?.testOnly))
-    throw new Error("Build the prebuilt runtime from the clean SDK starter, not a custom-module test fixture.");
+    throw new Error("Build the Spark Runner from the clean SDK starter, not a custom-module test fixture.");
   if (mode === "release" && packages.some(pkg => pkg.json.spark?.testOnly))
     throw new Error("Test-only native modules cannot be included in distribution builds.");
 }
@@ -365,7 +366,7 @@ export function projectEnvironment(root: string): Record<string, string> {
   const config = readAppConfig(root).expo ?? {};
   const projectId = config.extra?.spark?.projectId ?? config.macos?.bundleIdentifier;
   if (typeof projectId !== "string" || !projectId.length || projectId.length > 200)
-    throw new Error("Set extra.spark.projectId to a stable project identifier before launching the prebuilt runtime.");
+    throw new Error("Set extra.spark.projectId to a stable project identifier before launching the Spark Runner.");
   return {
     SPARK_WINDOW_CONFIG: JSON.stringify(config.extra?.spark?.window ?? {}),
     SPARK_PROJECT_ID: projectId,

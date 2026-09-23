@@ -75,7 +75,7 @@ The spark Apps packages also use workspace/catalog dependencies, private package
 metadata, and their own host/configuration conventions. A migration needs usable
 package manifests, compatible native codegen/Nitro pins, and integration with the
 framework host. Register native settings through Expo/Desktop configuration and
-use a custom binary. The shared prebuilt runtime cannot acquire these native
+use a custom binary. The shared Frame Runner cannot acquire these native
 modules from JavaScript.
 
 Storage can be adapted, but changing bundle/project identity, file layout, or

@@ -1,5 +1,5 @@
-import type * as FileSystem from "@legendapp/spark-file-system";
-import type { settings } from "@legendapp/spark-settings";
+import type * as FileSystem from "@legendapp/spark/files";
+import type { settings } from "@legendapp/spark/settings";
 import { assertContract } from "./contract-cases";
 
 async function rejectsCode(action: () => Promise<unknown>, code: string) {
@@ -87,7 +87,7 @@ export async function settingsLifecycle(store: typeof settings, token: string) {
   } finally { await store.remove(key); await store.remove(reserved); await store.remove(escaped); }
 }
 
-export async function recentDocumentsLifecycle(files: typeof FileSystem, links: typeof import("@legendapp/spark-desktop-links"), token: string) {
+export async function recentDocumentsLifecycle(files: typeof FileSystem, links: typeof import("@legendapp/spark/links"), token: string) {
   // The platform runner uses a disposable project identity. Kitchen Sink runs explicitly.
   const original = await links.getRecentDocuments();
   const file = `${await files.getDirectory("temp")}/spark-recent-${token}.txt`;
@@ -127,7 +127,7 @@ export async function richClipboardLifecycle(files: typeof FileSystem, clipboard
   }
 }
 
-export async function processLifecycle(files: typeof FileSystem, processes: typeof import("@legendapp/spark-processes"), executable: string, windows: boolean, token: string) {
+export async function processLifecycle(files: typeof FileSystem, processes: typeof import("@legendapp/spark/processes"), executable: string, windows: boolean, token: string) {
   const command = (script: string) => windows ? ["-NoProfile", "-NonInteractive", "-Command", script] : ["-c", script];
   const env = { SPARK_PROCESS_TEST: "space ü & $value" };
   const result = await processes.runCommand({ executable, env, args: command(windows ? "[Console]::OutputEncoding=[Text.UTF8Encoding]::new($false); [Console]::Out.Write($env:SPARK_PROCESS_TEST); [Console]::Error.Write('err'); exit 7" : 'printf %s "$SPARK_PROCESS_TEST"; printf err >&2; exit 7') });

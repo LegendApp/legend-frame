@@ -17,8 +17,8 @@ test("target configuration composes overrides without mutating shared input", ()
   const ios = toExpo(shared, "ios").expo, mac = toExpo(shared, "macos").expo;
   expect(ios.ios.infoPlist).toEqual({ Existing: true, IOSOnly: true });
   expect(mac.ios.infoPlist).toEqual({ Existing: true });
-  expect(ios.plugins).not.toContain("@legendapp/spark-desktop-config");
-  expect(mac.plugins).toContain("@legendapp/spark-desktop-config");
+  expect(ios.plugins).not.toContain("@legendapp/spark/config-plugin");
+  expect(mac.plugins).toContain("@legendapp/spark/config-plugin");
   expect(ios.extra.application).toBe("preserved");
   expect(mac.extra.spark.supportedPlatforms).toEqual(shared.platforms);
   expect(JSON.stringify(shared)).toBe(before);

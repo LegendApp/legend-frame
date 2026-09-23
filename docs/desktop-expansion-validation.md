@@ -16,7 +16,7 @@ No packages or binaries were published.
 | Custom expansion | Pass: 11 cases — the Go cases plus a test-only driver for mounted drag hit testing/drop event delivery and native confirmation sheet completion |
 | Full native regression | Pass: Go project A/B/A isolation, real reduced binary selection, 24 custom API cases, real Save acceptance, accepted quit |
 | Native pruning | Pass: unused SDK modules plus WebView/SQLite excluded from runtime metadata and executable classes; Sparkle framework absent; retained APIs execute |
-| Saved Go artifact | Pass: copied to `artifacts/runtimes/SparkPrebuilt.app`, `codesign --verify --deep --strict` succeeds, registered with the local SDK |
+| Saved Go artifact | Pass: copied to `artifacts/runtimes/SparkRunner.app`, `codesign --verify --deep --strict` succeeds, registered with the local SDK |
 | Standalone Release | Pass: starts without Metro, Sparkle initializes idempotently, automatic checks stay disabled, menu-bar-only window remains hidden; stale update config removal passes |
 
 The full regression used `SPARK_TEST_UI_DRIVER=external`; computer use clicked
@@ -70,7 +70,7 @@ for consumers to start a compatible JavaScript app.
 
 Local logs and JSON reports are preserved under
 `docs/evidence/expansion-2026-09-11/` (ignored by Git). Local SDK archives are in
-`artifacts/packages/`; the refreshed Go app is in `artifacts/runtimes/SparkPrebuilt.app`.
+`artifacts/packages/`; the refreshed Go app is in `artifacts/runtimes/SparkRunner.app`.
 The full suite and release logs record exactly which binaries and phases ran.
 
 ## Kitchen sink event feedback — 2026-09-14

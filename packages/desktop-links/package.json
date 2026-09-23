@@ -48,5 +48,6 @@
     "expo-linking": {
       "optional": true
     }
-  }
+  },
+  "private": true
 }

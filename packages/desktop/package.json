@@ -28,11 +28,26 @@
     "./ui": "./ui.ts",
     "./ui/uniwind": "./ui-uniwind.ts",
     "./audio": "./audio.ts",
-    "./auth-session": "./auth-session.ts"
+    "./auth-session": "./auth-session.ts",
+    "./config": "./config.cjs",
+    "./config-plugin": "./config-plugin.cjs",
+    "./expo-config": "./expo-config.cjs",
+    "./metro": "./metro.cjs",
+    "./expo-metro": "./expo-metro.cjs",
+    "./universal": "./universal.cjs",
+    "./runtime-entry": "./runtime-entry.cjs",
+    "./metro-gate": "./metro-gate.cjs",
+    "./init-template": "./init-template.cjs",
+    "./native": "./native.cjs",
+    "./cli": "./bin/spark.cjs",
+    "./schema.json": "./schema.json"
   },
   "files": [
     "*.ts",
-    "bin"
+    "*.cjs",
+    "schema.json",
+    "bin",
+    "*.d.cts"
   ],
   "dependencies": {
     "@legendapp/spark-file-dialog": "0.1.0-prototype.0",
@@ -61,10 +76,31 @@
     "@legendapp/spark-cli": "0.1.0-prototype.0",
     "@legendapp/spark-ui": "0.1.0-prototype.0",
     "@legendapp/spark-audio": "0.1.0-prototype.0",
-    "@legendapp/spark-auth-session": "0.1.0-prototype.0"
+    "@legendapp/spark-auth-session": "0.1.0-prototype.0",
+    "@legendapp/spark-desktop-config": "0.1.0-prototype.0",
+    "@legendapp/spark-desktop-host": "0.1.0-prototype.0",
+    "@legendapp/spark-window-options": "0.1.0-prototype.0",
+    "expo": "54.0.37",
+    "react": "19.1.4",
+    "react-native": "0.81.6",
+    "react-dom": "19.1.4"
   },
   "description": "Legend Spark \u2014 native applications with React Native and Expo",
   "bin": {
     "spark": "bin/spark.cjs"
+  },
+  "engines": {
+    "node": ">=24.19.0"
+  },
+  "peerDependencies": {
+    "expo": "54.0.37",
+    "react": "19.1.4",
+    "react-native": "0.81.6",
+    "react-dom": "19.1.4"
+  },
+  "peerDependenciesMeta": {
+    "react-dom": {
+      "optional": true
+    }
   }
 }

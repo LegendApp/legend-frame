@@ -1,9 +1,9 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import { Platform, ScrollView, Text, View, TurboModuleRegistry, type TurboModule } from "react-native";
-import { Button, TextInput, Select } from "@legendapp/spark-ui";
-import * as Clipboard from "@legendapp/spark-clipboard";
-import * as Storage from "@legendapp/spark-secure-storage";
-import * as Linking from "@legendapp/spark-desktop-links";
+import { Button, TextInput, Select } from "@legendapp/spark/ui";
+import * as Clipboard from "@legendapp/spark/clipboard";
+import * as Storage from "@legendapp/spark/secure-storage";
+import * as Linking from "@legendapp/spark/links";
 import { clipboardRead, clipboardRoundTrip, secureStorageLifecycle, linkingResolution, assertContract } from "./contract-cases";
 import { catalog, executeCase, initialResults, updateResult, summarize, type CaseResult, type TestPlatform } from "./contract-report";
 import { runDesktopContracts } from "./desktop-contracts";

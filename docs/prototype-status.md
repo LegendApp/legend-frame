@@ -62,7 +62,7 @@ Local validation reports, production selection, clean generation hashes, and nat
 
 ## Local artifacts
 
-- Go runtime: `artifacts/runtimes/SparkPrebuilt.app`
+- Go runtime: `artifacts/runtimes/SparkRunner.app`
 - Standalone demonstration: `artifacts/demo/SparkHello.app`
 - Framework package archives and manifest: `artifacts/packages/`
 - External integration projects: `/tmp/SparkFrameworkGoProbe`, `/tmp/SparkFrameworkHello`, `/tmp/SparkFrameworkFreshSmoke`

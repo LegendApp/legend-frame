@@ -1,9 +1,9 @@
 # Native UI
 
-`@legendapp/spark-ui` defines only the three controls used by the [shared Settings starter](universal-settings.md): `Button`, `TextInput`, and `Select`. It owns their small contracts and selects replaceable implementations. Buttons are actual native controls, with no React Native `Pressable` implementation.
+`@legendapp/spark/ui` defines only the three controls used by the [shared Settings starter](universal-settings.md): `Button`, `TextInput`, and `Select`. It owns their small contracts and selects replaceable implementations. Buttons are actual native controls, with no React Native `Pressable` implementation.
 
 ```tsx
-import { Button, TextInput, Select } from '@legendapp/spark-ui';
+import { Button, TextInput, Select } from '@legendapp/spark/ui';
 
 <TextInput defaultValue="" onChangeText={setName} accessibilityLabel="Display name" />
 <Select options={themes} value={theme} onValueChange={setTheme} accessibilityLabel="Appearance" />
@@ -45,7 +45,7 @@ see [Windows issues](windows-issues.md#foundation-work--2026-09-15).
 
 ## Optional Uniwind bindings
 
-Import the same three controls from `@legendapp/spark-ui/uniwind` to add `className` through upstream `withUniwind` on native platforms and `useResolveClassNames` on web. Classes map to the existing layout `style`, with explicit styles taking precedence. The base entry has no Uniwind dependency at runtime. See [styling setup, themes, and limitations](styling.md).
+Import the same three controls from `@legendapp/spark/ui/uniwind` to add `className` through upstream `withUniwind` on native platforms and `useResolveClassNames` on web. Classes map to the existing layout `style`, with explicit styles taking precedence. The base entry has no Uniwind dependency at runtime. See [styling setup, themes, and limitations](styling.md).
 
 ## Integration and verification
 

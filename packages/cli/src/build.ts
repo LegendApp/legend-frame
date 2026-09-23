@@ -73,7 +73,7 @@ export async function analyze(root: string, packages = nativePackages(root)) {
     return existsSync(absolute) ? absolute : path.resolve(root, source.replace(/^\//, ""));
   }).filter(source => existsSync(source)).map(source => realpathSync(source));
   const enabled = !!runtimeCore && (discovery.sources as string[]).some(source => (source.startsWith(runtimeCore.root + "/") || source.includes("/node_modules/@react-native-runtimes/core/")) && !source.endsWith("secondary-runtime-polyfill.js"));
-  if (enabled && !(discovery.sources as string[]).some(source => source.endsWith("/@legendapp/spark-cli/src/runtime-entry.cjs"))) {
+  if (enabled && !(discovery.sources as string[]).some(source => ["/@legendapp/spark-cli/src/runtime-entry.cjs", "/@legendapp/spark-cli/dist/runtime-entry.cjs"].some(entry => source.endsWith(entry)))) {
     throw new Error("Runtimes requires withDesktop in metro.config.js and the worker-aware index.ts. See docs/runtimes.md migration instructions.");
   }
   const runtimeSources = path.join(dir, "runtime-sources.json");
@@ -145,7 +145,7 @@ export async function build(
     const result = await buildUnlocked(root, mode, force);
     if (mode === "go") {
       registerRuntime(result.app);
-      console.log("Prebuilt runtime registered. Apps will discover it automatically.");
+      console.log("Spark Runner registered. Apps will discover it automatically.");
     }
     return result;
   } finally {
@@ -162,7 +162,7 @@ async function buildUnlocked(
   prepareConfig(root);
   if (mode === "go") {
     const issues = goConfigurationIssues(readAppConfig(root));
-    if (issues.length) throw new Error(`Build the prebuilt runtime from a generic SDK starter: ${issues.join("; ")}`);
+    if (issues.length) throw new Error(`Build the Spark Runner from a generic SDK starter: ${issues.join("; ")}`);
   }
   await doctor(root);
   const all = nativePackages(root);
@@ -276,7 +276,7 @@ async function buildUnlocked(
   const name = workspace.slice(0, -".xcworkspace".length);
   const configuration = mode === "release" ? "Release" : "Debug";
   const derived = stateFile(root, "DerivedData");
-  console.log(`Building ${mode === "go" ? "prebuilt" : mode} runtime (${configuration}, arm64)…`);
+  console.log(`Building ${mode === "go" ? "Spark Runner" : mode} runtime (${configuration}, arm64)…`);
   // Export once for analysis; native build performs the normal production bundle step.
   await run(
     root,

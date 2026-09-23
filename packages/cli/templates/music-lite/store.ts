@@ -1,4 +1,4 @@
-import { createAudioPlayer } from "@legendapp/spark-audio";
+import { createAudioPlayer } from "@legendapp/spark/audio";
 import { records } from "./shared/storage";
 import { resolveTrack } from "./assets";
 import { MusicModel, decodeLibrary } from "./model";

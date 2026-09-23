@@ -2,27 +2,27 @@
 
 ## Create and develop an app
 
-With the local SDK packed and a prebuilt runtime registered, run from the framework checkout:
+With the local SDK packed and a Spark Runner registered, run from the framework checkout:
 
 ```sh
-bun run spark create /tmp/MySparkApp
+npm run spark -- create /tmp/MySparkApp
 cd /tmp/MySparkApp
-bun run macos
+npm run macos
 ```
 
-`bun run macos`, `bun start`, and `bun dev` run Expo CLI's development terminal with spark desktop actions. Existing apps can use `"macos": "spark dev"` and `"start": "spark dev"`; the small spark supervisor starts the installed `expo start` with inherited terminal input/output. Expo owns Metro, prompts, reload, debugging, logs, and its mobile/web keys.
+`npm run macos`, `npm start`, and `npm run dev` run Expo CLI's development terminal with spark desktop actions. Existing apps can use `"macos": "spark dev"` and `"start": "spark dev"`; the small spark supervisor starts the installed `expo start` with inherited terminal input/output. Expo owns Metro, prompts, reload, debugging, logs, and its mobile/web keys.
 
-`create` delegates template extraction, identity assignment, and installation to Expo Desktop beta. `dev` discovers a compatible registered prebuilt runtime, uses Expo's host and port selection, and opens the app after Expo is ready. Running a compatible prebuilt runtime invokes no native build tools. Use `--no-open` to wait for a desktop launch key instead.
+`create` delegates template extraction, identity assignment, and installation to Expo Desktop beta. `dev` discovers a compatible registered Spark Runner, uses Expo's host and port selection, and opens the app after Expo is ready. Running a compatible Spark Runner invokes no native build tools. Use `--no-open` to wait for a desktop launch key instead.
 
 Expo's command table adds:
 
 ```text
-› Press d │ open macOS (prebuilt runtime)
+› Press d │ open macOS (Spark Runner)
 › Press g │ switch desktop to development build
 › Press b │ build and open macOS development build
 ```
 
-On Windows, the actions target Windows. They are disabled when the target cannot run on the host. `g` switches between the prebuilt runtime and a custom development build; it never compiles automatically. `b` becomes available when a custom build is required. Switching binaries can reset React state. Selection is remembered in `.spark/settings.json`.
+On Windows, the actions target Windows. They are disabled when the target cannot run on the host. `g` switches between the Spark Runner and a custom development build; it never compiles automatically. `b` becomes available when a custom build is required. Switching binaries can reset React state. Selection is remembered in `.spark/settings.json`.
 
 Expo retains `r` for reload, `j` for debugging, `m` for the dev menu, `w` for web, `o` for your editor, and `s` for the **mobile** Expo Go/development-client switch. `?` shows the current command table. **Ctrl+C** exits Expo and closes the native app owned by this session. Metro output appears directly in the terminal; native build logs remain in `.spark/logs/`.
 
@@ -35,7 +35,7 @@ Native signatures and prebuilt compatibility remain desktop-specific. A missing 
 The normal production command is:
 
 ```sh
-bun run build
+npm run build
 ```
 
 It produces a standalone `.app` and prints its location. `spark open` opens the last standalone product without requiring its path.
@@ -47,27 +47,27 @@ The compiler settings participate in the release cache fingerprint, so changing
 them rebuilds existing products. Debug-based prebuilt, dev, and preview modes
 and Windows builds are unaffected.
 
-To prepare a signed, notarized distribution archive, run `bun run package` in a new starter, or `bunx --no-install spark package` in an existing app. First use discovers signing identities and configures a notarization Keychain profile. See [packaging](packaging.md) for setup, CI, and retry behavior.
+To prepare a signed, notarized distribution archive, run `npm run package` in a new starter, or `npx --no-install spark package` in an existing app. First use discovers signing identities and configures a notarization Keychain profile. See [packaging](packaging.md) for setup, CI, and retry behavior.
 
 ## Prepare the local SDK (framework maintainers)
 
 This setup is done once per local SDK, rather than for every app:
 
 ```sh
-bun install
-bun run spark sdk pack
-bun run spark sdk build-prebuilt
+npm install
+npm run spark -- sdk pack
+npm run spark -- sdk build-runner
 ```
 
-`pack` produces local package archives and registers their manifest. `build-prebuilt` creates a managed SDK starter, installs the packed SDK, builds the prebuilt runtime, and registers the result automatically. Repeating it refreshes local packages before checking whether the binary needs rebuilding. To build from an existing SDK starter, pass `--project /path/to/starter`.
+`pack` produces local package archives and registers their manifest. `build-runner` creates a managed SDK starter, installs the packed SDK, builds the Spark Runner, and registers the result automatically. Repeating it refreshes local packages before checking whether the binary needs rebuilding. To build from an existing SDK starter, pass `--project /path/to/starter`.
 
 An existing prebuilt binary can be registered without rebuilding:
 
 ```sh
-bun run spark sdk register /path/to/SparkPrebuilt.app
+npm run spark -- sdk register /path/to/SparkRunner.app
 ```
 
-Packing also discovers the saved prototype binary at `artifacts/runtimes/SparkPrebuilt.app`, if present. Registration stores local paths under `~/.spark/`; it does not duplicate the binaries. Keep the registered binaries in place. Set `SPARK_HOME` to isolate local registry state for testing.
+Packing also discovers the saved prototype binary at `artifacts/runtimes/SparkRunner.app`, if present. Registration stores local paths under `~/.spark/`; it does not duplicate the binaries. Keep the registered binaries in place. Set `SPARK_HOME` to isolate local registry state for testing.
 
 Runtime selection checks SDK version, platform, architecture, and native signatures. Missing/deleted runtimes are skipped. A missing prebuilt installation produces installation guidance, while additional native modules or native app configuration produce a custom-build prompt. Runtime downloads are not implemented in this local prototype.
 
@@ -76,38 +76,38 @@ Runtime selection checks SDK version, platform, architecture, and native signatu
 Normal app development needs no flags. These remain available for automation and diagnosis:
 
 - `create --packages <manifest>`: use an explicit local SDK archive manifest.
-- `dev --prebuilt-binary <runtime path>`: register and use a particular prebuilt runtime.
+- `dev --runner-binary <runtime path>`: register and use a particular Spark Runner.
 - `--project <directory>`: choose another application directory.
 - `dev --port <number>` (or `-p`): Expo chooses the port, defaulting to 8081, and handles occupied-port prompts. Desktop launches use the port Expo reports.
 - `dev --no-open`: start the server without an automatic launch. Explicit Expo flags such as `--web` still open their targets.
 - `dev --platform ios|android|web|macos|windows`: choose the initial launch target; all declared platforms stay available.
 - `dev --clear`, `--offline`, `--lan`, `--localhost`, `--tunnel`, `--max-workers`, and other Expo start options pass through unchanged. `dev --help` includes Expo’s help.
-- `dev --go` / `--dev-client`: choose the **mobile** Expo runtime; these do not select the prebuilt runtime.
+- `dev --go` / `--dev-client`: choose the **mobile** Expo runtime; these do not select the Spark Runner.
 - `build --dev`: build a custom Debug runtime and remember it for the next `dev` session.
 - `build --preview`: build the production native selection in Debug.
 - `build --force`: force native regeneration and compilation for the selected mode.
 
-For SDK maintainers, `sdk build-prebuilt` builds and registers the shared runtime; `build --prebuilt` builds one from the current generic SDK project. The old `sdk build-go`, `build --go`, and `dev --go-binary` spellings remain compatibility aliases. Expo's `dev --go` still means Expo Go.
+For SDK maintainers, `sdk build-runner` builds and registers the shared runtime; `build --runner` builds one from the current generic SDK project. The old `sdk build-prebuilt` / `sdk build-go`, `build --prebuilt` / `build --go`, and `dev --prebuilt-binary` / `dev --go-binary` spellings remain compatibility aliases. Persisted runtime metadata continues to use `go`, and existing registered binaries remain discoverable. Expo's `dev --go` still means Expo Go.
 
-The persisted runtime mode (`"go"`), registry entries, saved settings, and existing `SparkPrebuilt`/`products/go` paths remain unchanged so registered binaries keep working. This terminology change itself does not require a native rebuild. Older validation reports retain the original name. Bare `build` still means a standalone release; `--preview` is unchanged.
+The persisted runtime mode (`"go"`), registry entries, saved settings, and existing `SparkRunner`/`products/go` paths remain unchanged so registered binaries keep working. This terminology change itself does not require a native rebuild. Older validation reports retain the original name. Bare `build` still means a standalone release; `--preview` is unchanged.
 
 ## Add native code
 
-The local fixture is distributed in `artifacts/packages/` after packing. Use its content-hashed filename from `artifacts/packages/manifest.json` (the stable alias below is also available for a first installation). Install its tarball with ordinary Bun:
+The local fixture is distributed in `artifacts/packages/` after packing. Use its content-hashed filename from `artifacts/packages/manifest.json` (the stable alias below is also available for a first installation). Install its tarball with your package manager:
 
 ```sh
-bun add /absolute/path/to/spark/artifacts/packages/legendapp-spark-native-greeting-0.1.0-prototype.0.tgz
+npm install /absolute/path/to/spark/artifacts/packages/legendapp-spark-native-greeting-0.1.0-prototype.0.tgz
 ```
 
-Import `getGreeting` from `@legendapp/spark-native-greeting` and render its returned string. The running CLI detects that the prebuilt runtime lacks the native module and offers a custom build. Press `b` to build and switch. Future JavaScript edits Fast Refresh; native source/configuration changes need another build.
+Import `getGreeting` from `@legendapp/spark-native-greeting` and render its returned string. The running CLI detects that the Spark Runner lacks the native module and offers a custom build. Press `b` to build and switch. Future JavaScript edits Fast Refresh; native source/configuration changes need another build.
 
-If the current custom binary is stale, press `b` to rebuild it, or run `spark build --dev` followed by `bun dev`. `spark build --dev --force` forces native regeneration and compilation for a custom development build. Generated native directories are disposable: author native changes in packages/config plugins.
+If the current custom binary is stale, press `b` to rebuild it, or run `spark build --dev` followed by `npm run dev`. `spark build --dev --force` forces native regeneration and compilation for a custom development build. Generated native directories are disposable: author native changes in packages/config plugins.
 
 ## Inspect and build production selection
 
 ```sh
-bunx --no-install spark analyze
-bun run build
+npx --no-install spark analyze
+npm run build
 ```
 
 `spark build --preview` builds the production module selection in Debug configuration. Launch its printed product path with `spark open <app> --port <metro-port>` against a running development server; it requests production JavaScript.
@@ -122,13 +122,13 @@ The prototype supports static `app.json` configuration. Programmatic app configu
 
 Use Node **24.19.0**, pinned in the checkout's `.nvmrc` (`nvm install && nvm use`). Node 24.12.0 fails to import `AndroidConfig` / `IOSConfig` from Expo's generated CommonJS modules when running Expo Desktop beta. Create/prebuild and the native doctor check the installed Expo Desktop config exports with the actual Node executable on PATH, so incompatible runtimes fail before native generation. This check does not patch Expo or change the Expo Desktop beta pin.
 
-`spark doctor` checks Apple Silicon macOS, Node, Bun, CocoaPods, Xcode, and the macOS SDK. Install full Xcode, complete its first-launch/license setup, and select it with the normal Xcode command-line tools settings. Command Line Tools alone cannot build the generated macOS application. Install CocoaPods in a supported Ruby environment and ensure `pod` is on PATH.
+`spark doctor` checks Apple Silicon macOS, Node, CocoaPods, Xcode, and the macOS SDK. Install full Xcode, complete its first-launch/license setup, and select it with the normal Xcode command-line tools settings. Command Line Tools alone cannot build the generated macOS application. Install CocoaPods in a supported Ruby environment and ensure `pod` is on PATH.
 
-The CLI diagnoses missing tooling; it does not silently install Xcode or accept licenses. Re-run the build or switch after completing setup. No native prerequisites are invoked for a compatible prebuilt runtime launch.
+The CLI diagnoses missing tooling; it does not silently install Xcode or accept licenses. Re-run the build or switch after completing setup. No native prerequisites are invoked for a compatible Spark Runner launch.
 
 ## Local package iteration
 
-Repack after source changes. The archive manifest maps package names to local tarballs; starters use overrides so transitive framework packages also resolve locally. The archive manifest uses content-hashed filenames to avoid stale package-manager caches. Run `bun scripts/refresh-consumer.ts /path/to/app` from the framework repository to update an existing test consumer. Public package versions will be immutable.
+Repack after source changes. The archive manifest maps package names to local tarballs; starters use overrides so transitive framework packages also resolve locally. The archive manifest uses content-hashed filenames to avoid stale package-manager caches. Run `node scripts/refresh-consumer.ts /path/to/app` from the framework repository to update an existing test consumer. Public package versions will be immutable.
 
 Do not use workspace symlinks as the sole distribution test. The prebuilt builder and consumer should install real tarballs outside both source repositories.
 
@@ -149,4 +149,4 @@ Edit the complete templates under `packages/cli/templates/`: `blank-typescript` 
 
 `spark create` invokes `expo-desktop@1.0.0-beta.5 create-app --template <archive>`. Expo Desktop validates the directory/name, extracts files, assigns app/native identity, installs dependencies, and initializes Git. A template postinstall initializes spark's configuration once. It does not overwrite an existing project ID or user edits. Project basenames must be alphanumeric, following upstream validation; spaces in parent directories are supported.
 
-Direct Expo Desktop template creation is also checked by `bun run test:templates`, including a consumer outside the checkout. These local archives reference local SDK tarballs; they are not a published package distribution. The [integration handoff](expo-desktop-integration.md) documents the npm compatibility pin and remaining build/launch limitations.
+Direct Expo Desktop template creation is also checked by `npm run test:templates`, including a consumer outside the checkout. These local archives reference local SDK tarballs; they are not a published package distribution. The [integration handoff](expo-desktop-integration.md) documents the npm compatibility pin and remaining build/launch limitations.

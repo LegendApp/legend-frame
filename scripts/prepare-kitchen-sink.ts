@@ -1,9 +1,10 @@
+import { packageManager, managerCommand } from "../packages/cli/src/package-manager.ts";
 import { cpSync, existsSync, readdirSync } from "node:fs";
 import path from "node:path";
 import { create, refreshLocalPackages } from "../packages/cli/src/create.ts";
 import { readJson, writeJson } from "../packages/cli/src/project.ts";
 import { run } from "../packages/cli/src/commands.ts";
-const framework = path.resolve(import.meta.dir, "..");
+const framework = path.resolve(import.meta.dirname, "..");
 const source = path.join(framework, "examples/kitchen-sink");
 
 // Integration runners deliberately use a fresh, copied consumer they can modify.
@@ -18,20 +19,21 @@ async function prepareKitchenSinkConsumer(root: string) {
   const marker = path.join(root, ".spark/kitchen-sink.json");
   if (existsSync(path.join(root, "package.json")) && !existsSync(marker))
     throw new Error(`Refusing to overwrite an existing app. Choose a new kitchen-sink directory: ${root}`);
-  await run(framework, ["bun", "scripts/pack.ts"]);
+  await run(framework, [process.execPath, "scripts/pack.ts"]);
   const manifest = path.join(framework, "artifacts/packages/manifest.json");
   if (!existsSync(path.join(root, "package.json"))) await create(root, manifest);
   else await refreshLocalPackages(root, manifest);
   const pkg = readJson(path.join(root, "package.json"));
-  for (const name of ["@legendapp/spark-ui", "@legendapp/spark-audio", "@legendapp/spark-auth-session"]) {
-    if (!pkg.overrides[name]) throw new Error(`Kitchen Sink needs the packed ${name} archive`);
-    pkg.dependencies[name] = pkg.overrides[name];
+  for (const name of ["@legendapp/spark"]) {
+    const overrides = pkg.overrides ?? pkg.resolutions ?? pkg.pnpm?.overrides ?? {};
+    if (!overrides[name]) throw new Error(`Kitchen Sink needs the packed ${name} archive`);
+    pkg.dependencies[name] = overrides[name];
   }
   pkg.dependencies["base64-js"] = "1.5.1";
   pkg.dependencies.uniwind = "1.6.3";
   pkg.dependencies.tailwindcss = "4.2.4";
   writeJson(path.join(root, "package.json"), pkg);
-  await run(root, ["bun", "install"]);
+  await run(root, managerCommand(packageManager(root), ["install"]));
   writeJson(marker, { managed: true });
   // Copy only application source. Preserve the freshly created consumer's
   // identity, SDK archive dependencies, and generated native configuration.
@@ -47,9 +49,9 @@ export function copyKitchenSinkScreens(source: string, root: string) {
 
 if (import.meta.main) {
   const args = process.argv.slice(2).filter(arg => arg !== "--packaged");
-  if (args.includes("--help")) console.log("bun run kitchen-sink:prepare [fresh-directory]\nPack the SDK and prepare a separate copied consumer for integration tests.");
+  if (args.includes("--help")) console.log("npm run kitchen-sink:prepare [fresh-directory]\nPack the SDK and prepare a separate copied consumer for integration tests.");
   else {
-    if (args.length > 1 || args[0]?.startsWith("--")) throw new Error("Use bun run kitchen-sink:prepare [fresh-directory]. Everyday development runs directly from examples/kitchen-sink.");
+    if (args.length > 1 || args[0]?.startsWith("--")) throw new Error("Use npm run kitchen-sink:prepare [fresh-directory]. Everyday development runs directly from examples/kitchen-sink.");
     const root = path.resolve(args[0] ?? ".spark/examples/KitchenSinkPackaged");
     await prepareKitchenSink(root);
     console.log(`Packaged kitchen sink ready at ${root}`);

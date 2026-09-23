@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from "react";
 import { StyleSheet, Text, View } from "react-native";
-import { Button, TextInput, Select } from "@legendapp/spark-ui";
+import { Button, TextInput, Select } from "@legendapp/spark/ui";
 import { writeText } from "@legendapp/spark/files";
 import { quit } from "@legendapp/spark/app";
 import { testDriver } from "./test-driver";

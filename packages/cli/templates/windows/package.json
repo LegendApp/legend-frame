@@ -10,11 +10,9 @@
     "package": "spark package",
     "doctor": "spark doctor",
     "windows": "spark dev",
-    "postinstall": "node node_modules/@legendapp/spark-cli/src/init-template.cjs"
+    "postinstall": "node node_modules/@legendapp/spark/init-template.cjs"
   },
   "dependencies": {
-    "@legendapp/spark-cli": "0.1.0-prototype.0",
-    "@legendapp/spark-desktop-config": "0.1.0-prototype.0",
     "expo": "54.0.37",
     "expo-desktop": "1.0.0-beta.6",
     "expo-desktop-prebuild-config": "1.1.0-beta.1",
@@ -29,7 +27,7 @@
     "react-native-windows": "0.81.35",
     "expo-desktop-modules-core": "54.0.14-beta.0",
     "expo-desktop-stubs": "54.0.14-beta.0",
-    "@legendapp/spark-desktop-host": "0.1.0-prototype.0"
+    "@legendapp/spark": "0.1.0-prototype.0"
   },
   "overrides": {
     "@expo/cli": "54.0.27",

@@ -1,35 +1,41 @@
-import { checkExpoDesktopNode } from "./expo-node";
-import { configureExample, type Example } from "./examples";
+import { packageManager, managerCommand, applyOverrides, localArchive, type PackageManager } from "./package-manager.ts";
+import { packArchive } from "./pack-archive.ts";
+import { spawnProcess } from "./process.ts";
+import { checkExpoDesktopNode } from "./expo-node.ts";
+import { configureExample, type Example } from "./examples.ts";
 import { hostPlatform, type AppPlatform } from "./platform.ts";
 import { nodeCommand } from "./windows.ts";
-import { cpSync, existsSync, readFileSync, mkdtempSync, rmSync } from "node:fs";
+import { cpSync, existsSync, readFileSync, writeFileSync, mkdtempSync, rmSync } from "node:fs";
 import path from "node:path";
 import os from "node:os";
 import { readJson, writeJson } from "./project.ts";
 import { run } from "./commands.ts";
 
 // Resolve relative to the installed CLI so packed consumers use the same starter.
-const template = path.resolve(import.meta.dir, "../templates/blank-typescript");
+const template = path.resolve(import.meta.dirname, "../templates/blank-typescript");
 
 export async function refreshLocalPackages(root: string, manifest: string) {
   const pkg = readJson(path.join(root, "package.json"));
   // The template owns the tested compatibility matrix, not module inclusion.
   const pins = readJson(path.join(template, "package.json")).overrides;
-  pkg.overrides = { ...pkg.overrides, ...pins };
+  const manager = packageManager(root);
+  const overrides = { ...pins };
   for (const [name, file] of Object.entries(readJson(manifest))) {
-    const archive = path.resolve(path.dirname(manifest), file as string).replaceAll("\\", "/");
-    pkg.overrides[name] = archive;
+    const archive = localArchive(path.resolve(path.dirname(manifest), file as string));
+    overrides[name] = archive;
     if (pkg.dependencies?.[name]) pkg.dependencies[name] = archive;
   }
+  applyOverrides(pkg, overrides, manager);
   writeJson(path.join(root, "package.json"), pkg);
-  await run(root, ["bun", "install"]);
+  await run(root, managerCommand(manager, ["install"]));
   upgradeManagedEntry(root);
 }
 
-export async function create(root: string, archiveManifest: string, platform: AppPlatform = hostPlatform(), universal = false, example?: Example) {
-  await checkExpoDesktopNode(path.resolve(import.meta.dir, ".."));
+export async function create(root: string, archiveManifest: string, platform: AppPlatform = hostPlatform(), universal = false, example?: Example, selectedManager?: PackageManager) {
+  const manager = packageManager(process.cwd(), selectedManager);
+  await checkExpoDesktopNode(path.resolve(import.meta.dirname, ".."));
   const variant = universal || example ? "universal" : platform === "macos" ? "blank-typescript" : "windows";
-  const source = path.resolve(import.meta.dir, "../templates", variant);
+  const source = path.resolve(import.meta.dirname, "../templates", variant);
   const temporary = mkdtempSync(path.join(os.tmpdir(), "spark-create-"));
   const templateFile = path.join(temporary, "template.tgz");
   // Resolve archives on the recipient machine, immediately before Expo extracts
@@ -39,29 +45,36 @@ export async function create(root: string, archiveManifest: string, platform: Ap
     const pkg = readJson(path.join(temporary, "package.json"));
     const archives = readJson(archiveManifest);
     if (pkg.dependencies["@react-native-runtimes/core"] && !archives["@react-native-runtimes/core"]) throw new Error("This SDK lacks the patched Runtimes archive. Repack or install the complete SDK.");
+    const overrides: Record<string, string> = {};
     for (const [name, file] of Object.entries(archives)) {
       const archive = path.resolve(path.dirname(archiveManifest), file as string).replaceAll("\\", "/");
       if (!existsSync(archive)) throw new Error(`Missing SDK archive: ${archive}`);
-      pkg.overrides = { ...pkg.overrides, [name]: archive };
-      if (pkg.dependencies[name]) pkg.dependencies[name] = archive;
+      overrides[name] = localArchive(archive);
+      if (pkg.dependencies[name]) pkg.dependencies[name] = localArchive(archive);
     }
+    applyOverrides(pkg, overrides, manager);
     writeJson(path.join(temporary, "package.json"), pkg);
-    await run(temporary, ["bun", "pm", "pack", "--filename", templateFile], { capture: true });
+
+    if (manager === "yarn") writeFileSync(path.join(temporary, ".yarnrc.yml"), "nodeLinker: node-modules\n");
+    if (manager === "pnpm") writeFileSync(path.join(temporary, ".npmrc"), "node-linker=hoisted\n");
+    await packArchive(temporary, templateFile);
     // The upstream CLI owns validation, extraction, app IDs, install, and Git setup.
     // The templates' postinstall initializes spark configuration once.
     const name = path.basename(root);
     // beta.5 misreads npm 12's record-shaped pack metadata for a local tarball.
-    // Use the compatible npm executable for upstream extraction; Bun still installs.
-    const npmBin = path.join(import.meta.dir, "npm-bin");
+    // Use the compatible npm executable for upstream extraction; the chosen manager installs.
+    const npmBin = path.join(import.meta.dirname, "npm-bin");
     // Expo needs file: to distinguish Windows drive paths from npm package names.
-    const child = Bun.spawn(nodeCommand(path.resolve(import.meta.dir, ".."), "expo-desktop", "expo-desktop", [
+    const child = spawnProcess(nodeCommand(path.resolve(import.meta.dirname, ".."), "expo-desktop", "expo-desktop", [
       "create-app", root, "--template", `file:${templateFile}`, "--yes", "--no-agents-md",
       "--display-name", name, "--rdns", `so.legend.spark.prototype.${name.toLowerCase()}`,
-    ]), { cwd: process.cwd(), env: { ...process.env, PATH: `${npmBin}${path.delimiter}${process.env.PATH ?? ""}`, npm_config_user_agent: `bun/${Bun.version}`, CI: "1" }, stdout: "inherit", stderr: "inherit" });
+    ]), { cwd: process.cwd(), env: { ...process.env, PATH: `${npmBin}${path.delimiter}${process.env.PATH ?? ""}`, npm_config_user_agent: `${manager}/frame`, CI: "1", ...(manager === "yarn" ? { YARN_ENABLE_IMMUTABLE_INSTALLS: "false" } : {}) }, stdout: "inherit", stderr: "inherit" });
     if (await child.exited) throw new Error("Expo Desktop could not create the app. See its output above.");
   } finally { rmSync(temporary, { recursive: true, force: true }); }
+  // Upstream can report success after an install failure. Require a usable CLI.
+  if (!existsSync(path.join(root, "node_modules/@legendapp/spark/package.json"))) throw new Error(`Dependency installation failed. Run ${manager} install in ${root} and retry.`);
   if (example) await configureExample(root, example);
-  console.log(`Created ${root}.\n\n  cd ${JSON.stringify(root)}\n  bun run ${platform}`);
+  console.log(`Created ${root}.\n\n  cd ${JSON.stringify(root)}\n  ${manager} run ${platform}`);
 }
 
 export function upgradeManagedEntry(root: string) {

@@ -1,4 +1,4 @@
-import { openFileDialog, saveFileDialog, readTextFile, writeTextFile, writeTextFileIfUnchanged } from "@legendapp/spark-file-dialog";
+import { openFileDialog, saveFileDialog, readTextFile, writeTextFile, writeTextFileIfUnchanged } from "@legendapp/spark/dialogs";
 import { Alert } from "react-native";
 import type { DocumentIO } from "./document";
 export const io: DocumentIO = {

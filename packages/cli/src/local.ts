@@ -9,7 +9,7 @@ export function sparkHome() {
   return path.resolve(process.env.SPARK_HOME ?? path.join(os.homedir(), ".spark"));
 }
 
-export function findFramework(start = import.meta.dir): string | undefined {
+export function findFramework(start = import.meta.dirname): string | undefined {
   let dir = path.resolve(start);
   while (true) {
     const pkg = path.join(dir, "package.json");
@@ -43,7 +43,7 @@ export function readRuntime(app: string): Runtime | undefined {
 export function registerRuntime(app: string) {
   app = path.resolve(app);
   const runtime = readRuntime(app);
-  if (!runtime || runtime.mode !== "go") throw new Error(`Not a compatible prebuilt runtime: ${app}`);
+  if (!runtime || runtime.mode !== "go") throw new Error(`Not a compatible Spark Runner: ${app}`);
   // One record per path preserves multiple local builds of the same SDK.
   writeJson(path.join(sparkHome(), "runtimes", `${digest(app)}.json`), { app });
   return { app, runtime };
@@ -52,14 +52,16 @@ export function registerRuntime(app: string) {
 export function registerPackages(manifest: string) {
   manifest = path.resolve(manifest);
   const archives = readJson(manifest);
-  for (const name of ["@legendapp/spark-cli", "@legendapp/spark", "@legendapp/spark-desktop-config"]) {
+  for (const name of ["@legendapp/spark"]) {
     if (typeof archives[name] !== "string" || !existsSync(path.resolve(path.dirname(manifest), archives[name]))) {
       throw new Error(`Missing local archive for ${name}. Run spark sdk pack in the framework checkout.`);
     }
   }
   writeJson(path.join(sparkHome(), "sdks", `${VERSION}.json`), { manifest });
-  const savedGo = path.resolve(path.dirname(manifest), "../runtimes/SparkPrebuilt.app");
-  if (readRuntime(savedGo)?.mode === "go") registerRuntime(savedGo);
+  for (const name of ["SparkRunner.app", "SparkPrebuilt.app"]) {
+    const savedRunner = path.resolve(path.dirname(manifest), "../runtimes", name);
+    if (readRuntime(savedRunner)?.mode === "go") registerRuntime(savedRunner);
+  }
   return manifest;
 }
 

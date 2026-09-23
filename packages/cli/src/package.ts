@@ -1,3 +1,4 @@
+import { setTimeout as sleep } from "node:timers/promises";
 import { readAppConfig } from "./project.ts";
 import { prepareUpdate } from "./updates.ts";
 import { createHash } from "node:crypto";
@@ -24,7 +25,7 @@ export function artifactHash(file: string): string {
 
 type PackageState = { phase: "signed" | "submitting" | "submitted" | "accepted" | "complete"; stagedHash: string; archiveHash: string; submissionId?: string; output?: string; outputHash?: string };
 type Dependencies = { run: Runner; build: typeof build; credentials: (root: string) => Promise<SigningCredentials>; wait: (ms: number) => Promise<unknown>; prepareUpdate?: typeof prepareUpdate };
-const defaults: Dependencies = { run, build, credentials, wait: (ms) => Bun.sleep(ms) };
+const defaults: Dependencies = { run, build, credentials, wait: (ms) => sleep(ms) };
 
 export async function packageApp(root: string, options: { force?: boolean; submissionId?: string; waitMs?: number } = {}, dependencies: Dependencies = defaults) {
   if (options.submissionId && !/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(options.submissionId)) throw new Error("Submission ID must be a UUID returned by Apple.");

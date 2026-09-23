@@ -12,6 +12,9 @@ test("build defaults to standalone release and rejects conflicting modes", () =>
   expect(buildMode({})).toBe("release");
   expect(buildMode({ dev: true })).toBe("dev");
   expect(buildMode({ preview: true })).toBe("preview");
+  expect(buildMode({ runner: true })).toBe("go");
+  expect(buildMode({ runner: true, prebuilt: true, go: true })).toBe("go");
+  expect(() => buildMode({ runner: true, dev: true })).toThrow("only one");
   expect(buildMode({ prebuilt: true })).toBe("go");
   expect(buildMode({ go: true })).toBe("go"); // Existing metadata and legacy build flag.
   expect(buildMode({ prebuilt: true, go: true })).toBe("go");
@@ -68,7 +71,7 @@ test("a missing Go install differs from missing native modules and stale custom 
   expect(missing.compatible).toBe(false);
   expect(missing.canBuild).toBe(false);
   expect(missing.message).toContain("isn’t installed");
-  const custom = sessionStatus("go", true, ["Greeting isn’t included in the prebuilt runtime."]);
+  const custom = sessionStatus("go", true, ["Greeting isn’t included in the Frame Runner."]);
   expect(custom.canBuild).toBe(true);
   expect(custom.actions).toContain("b  Build and open");
   expect(sessionStatus("dev", true, ["changed"]).actions).toContain("Rebuild and open");

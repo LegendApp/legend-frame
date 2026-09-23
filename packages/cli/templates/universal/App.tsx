@@ -1,10 +1,10 @@
 import { useState } from "react";
 import { Uniwind } from "uniwind";
 import { ScrollView, Text, View } from "react-native";
-import { Button, TextInput, Select } from "@legendapp/spark-ui/uniwind";
-import * as Clipboard from "@legendapp/spark-clipboard";
-import * as SecureStore from "@legendapp/spark-secure-storage";
-import * as Linking from "@legendapp/spark-desktop-links";
+import { Button, TextInput, Select } from "@legendapp/spark/ui/uniwind";
+import * as Clipboard from "@legendapp/spark/clipboard";
+import * as SecureStore from "@legendapp/spark/secure-storage";
+import * as Linking from "@legendapp/spark/links";
 
 const themes = [{ label: "System", value: "system" }, { label: "Light", value: "light" }, { label: "Dark", value: "dark" }];
 

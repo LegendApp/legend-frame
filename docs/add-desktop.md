@@ -9,9 +9,9 @@ This integration uses Expo Desktop **1.0.0-beta.5**, native template **54.81.1-b
 Packages are still distributed as local SDK archives. From the framework checkout:
 
 ```sh
-bun install
-bun run spark sdk pack
-bun run spark add desktop --project /absolute/path/to/ExistingExpoApp
+npm install
+npm run spark -- sdk pack
+npm run spark -- add desktop --project /absolute/path/to/ExistingExpoApp
 ```
 
 The command uses the app's declared package manager, or its existing lockfile, for installation. Without either it uses Bun. Conflicting lockfiles require an explicit `packageManager` field. Bun is the verified installer in the integration fixture; npm, pnpm, and Yarn follow their respective install/override conventions but have not received equivalent end-to-end verification.
@@ -20,28 +20,28 @@ In the integrated app:
 
 ```sh
 # Existing mobile/web commands keep their meaning
-bun run ios
-bun run android
-bun run web
+npm run ios
+npm run android
+npm run web
 
 # Build once, then develop on macOS
-bunx --no-install spark build --dev --platform macos
-bun run macos
+npx --no-install spark build --dev --platform macos
+npm run macos
 
 # On a configured Windows machine
-bunx --no-install spark build --dev --platform windows
-bun run windows
+npx --no-install spark build --dev --platform windows
+npm run windows
 ```
 
-If a `macos` or `windows` script already exists, it is preserved and the added script is named `spark:macos` or `spark:windows`. Direct spark commands can also select the target with `--platform`. A compatible registered prebuilt runtime can be used through the existing development session; the initial native build is only necessary when no compatible binary is available.
+If a `macos` or `windows` script already exists, it is preserved and the added script is named `spark:macos` or `spark:windows`. Direct spark commands can also select the target with `--platform`. A compatible registered Spark Runner can be used through the existing development session; the initial native build is only necessary when no compatible binary is available.
 
-For one shared session, run `bunx --no-install spark dev --no-open`, then use `i`, `a`, `w`, and `d`. The existing Expo scripts stay unchanged; they remain available for standalone Expo workflows. Standard Expo start options pass through spark.
+For one shared session, run `npx --no-install spark dev --no-open`, then use `i`, `a`, `w`, and `d`. The existing Expo scripts stay unchanged; they remain available for standalone Expo workflows. Standard Expo start options pass through spark.
 
 ## Configuration composition
 
 The integration adds `desktop.config.json` with `"extends": "expo"`, stable project identity, desktop options, supported targets, and desktop autolinking exclusions. Names, versions, mobile identifiers, plugins, and environment-dependent application values continue to come from Expo config.
 
-The command composes the existing `app.config.js` or `app.config.ts` export with `withSparkExpo` from `@legendapp/spark-desktop-config/expo.cjs`. For a static `app.json`, it adds a small `app.config.js` that extends Expo's supplied config. It keeps the original configuration code in the same file and directory, preserving relative imports and environment logic.
+The command composes the existing `app.config.js` or `app.config.ts` export with `withSparkExpo` from `@legendapp/spark/expo-config`. For a static `app.json`, it adds a small `app.config.js` that extends Expo's supplied config. It keeps the original configuration code in the same file and directory, preserving relative imports and environment logic.
 
 Ordinary Expo commands, including commands without `SPARK_PLATFORM`, retain their original configuration. For native builds, `SPARK_PLATFORM=macos` or `windows` applies desktop options and the spark config plugin. A `spark dev` session instead exposes all declared platforms, preserves the original shared Expo config and plugins, and omits desktop build overlays. spark commands supply that environment automatically. For direct Expo Desktop commands, set it explicitly:
 
@@ -53,7 +53,7 @@ PowerShell uses `$env:SPARK_PLATFORM="windows"`. Keep desktop-specific exclusion
 
 ## Metro and native configuration
 
-The existing Metro config gets its defaults through `@legendapp/spark-cli/src/expo-metro.cjs`. That helper delegates to Expo for standalone mobile/web commands and Expo Desktop for desktop or shared spark dev sessions. Application customizations continue to run after those defaults. Custom resolver fallbacks retain upstream desktop module resolution, and spark adds its development compatibility gate.
+The existing Metro config gets its defaults through `@legendapp/spark/expo-metro`. That helper delegates to Expo for standalone mobile/web commands and Expo Desktop for desktop or shared spark dev sessions. Application customizations continue to run after those defaults. Custom resolver fallbacks retain upstream desktop module resolution, and spark adds its development compatibility gate.
 
 Desktop hosts request `index.bundle` or `index.windows.bundle`. The composed Metro config routes those requests through Expo's virtual entry resolver, which reads the original `package.json` main. There is no generated replacement application entry. Apps must register the normal Expo `main` component through their existing entry.
 
@@ -70,7 +70,7 @@ The existing React Native config export is composed with `withSparkNative`. Mobi
 
 ## Verification
 
-`bun run test:add-desktop` creates an independent Expo app with a custom TypeScript configuration, config plugin, Metro alias, React Native config, and `src/bootstrap.ts` entry. It verifies the app's original mobile bundle, generates its iOS project before integration, and then checks:
+`npm run test:add-desktop` creates an independent Expo app with a custom TypeScript configuration, config plugin, Metro alias, React Native config, and `src/bootstrap.ts` entry. It verifies the app's original mobile bundle, generates its iOS project before integration, and then checks:
 
 - Rejection of an unsupported Metro configuration before any integration files are written.
 - Unchanged mobile/web config and plugin behavior, app source, entry point, existing scripts, and repeated-integration identity.

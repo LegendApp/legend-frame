@@ -27,7 +27,7 @@ writeJson(path.join(root, "tsconfig.json"), { extends: "expo/tsconfig.base", com
 if (prepareOnly) { console.log(`Prepared ${root}`); process.exit(0); }
 const prebuilt = process.argv.includes("--prebuilt") || process.argv.includes("--go");
 const result = prebuilt ? findGo(nativePackages(root)) : await build(root, mode, process.argv.includes("--force"));
-if (!result || (prebuilt && incompatible(result.runtime, nativePackages(root)).length)) throw new Error("Build a compatible prebuilt runtime with spark sdk build-prebuilt first.");
+if (!result || (prebuilt && incompatible(result.runtime, nativePackages(root)).length)) throw new Error("Build a compatible Spark Runner with spark sdk build-runner first.");
 const port = await availablePort();
 const report = path.join(directory, `${prebuilt ? "go" : mode}.json`); rmSync(report, { force: true });
 rmSync(`${report}.before-reload`, { force: true });

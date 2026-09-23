@@ -1,5 +1,5 @@
 const { withUniwindConfig } = require("uniwind/metro");
-const { metroConfig } = require("@legendapp/spark-cli/src/universal.cjs");
+const { metroConfig } = require("@legendapp/spark/universal");
 
 module.exports = withUniwindConfig(metroConfig(__dirname), {
   cssEntryFile: "./global.css",

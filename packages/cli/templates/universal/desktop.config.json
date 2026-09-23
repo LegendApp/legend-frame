@@ -1,5 +1,5 @@
 {
-  "$schema": "./node_modules/@legendapp/spark-desktop-config/schema.json",
+  "$schema": "./node_modules/@legendapp/spark/schema.json",
   "name": "HelloWorld",
   "version": "0.0.1",
   "window": {

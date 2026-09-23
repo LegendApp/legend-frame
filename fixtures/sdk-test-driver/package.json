@@ -38,6 +38,7 @@
     "testOnly": true
   },
   "dependencies": {
-    "@legendapp/spark-desktop-app": "0.1.0-prototype.0"
-  }
+    "@legendapp/spark": "0.1.0-prototype.0"
+  },
+  "private": true
 }

@@ -1,7 +1,7 @@
 # Audio player
 
 ```ts
-import { createAudioPlayer } from '@legendapp/spark-audio';
+import { createAudioPlayer } from '@legendapp/spark/audio';
 
 const player = await createAudioPlayer({ uri, title: 'My track' });
 await player.play();
@@ -24,7 +24,7 @@ includes audio; custom projects include it by adding the package. Windows source
 is present but native acceptance remains open.
 
 The Music template configures these dependencies automatically. When adding audio
-manually to a universal project, exclude `@legendapp/spark-audio` from native autolinking
+manually to a universal project, exclude `@legendapp/spark/audio` from native autolinking
 on iOS/Android and exclude `expo-audio` on macOS/Windows using `expoByPlatform`.
 These exclusions affect native linking and codegen; Metro still selects the
 framework's mobile JavaScript adapter. Keep the Expo Audio plugin on mobile only.
@@ -63,7 +63,7 @@ visible through player status. Replacing a player does not transfer its listener
 Desktop and web can publish controls for an external playback engine:
 
 ```ts
-import { createMediaSession } from '@legendapp/spark-audio';
+import { createMediaSession } from '@legendapp/spark/audio';
 const session = await createMediaSession({
   metadata: { title: 'Episode', artist: 'Host' },
   playbackState: 'playing', position: 12, duration: 120,

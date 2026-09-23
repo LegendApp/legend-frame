@@ -8,7 +8,7 @@ The implementation is a local macOS 14+ / Apple Silicon prototype with an integr
 
 spark supplies a desktop application framework on top of React Native and Expo Desktop. The central workflow is:
 
-1. Start an application in a compatible prebuilt runtime.
+1. Start an application in a compatible Spark Runner.
 2. Detect when app-specific native dependencies or configuration require a custom development binary.
 3. Build a standalone app from a production-selected native dependency graph.
 4. Prepare a signed distribution artifact through a separate packaging workflow.
@@ -22,7 +22,7 @@ flowchart TD
   App[Application source and desktop config] --> CLI[spark CLI]
   CLI --> Metro[Expo and Metro]
   CLI --> Check[Runtime compatibility and native selection]
-  Check --> prebuilt[Registered prebuilt runtime]
+  Check --> prebuilt[Registered Spark Runner]
   Check --> Build[Expo Desktop prebuild]
   Build --> Mac[CocoaPods and Xcode: macOS arm64]
   Build --> Win[RNW autolinking and MSBuild: Windows x64 or ARM64]
@@ -80,11 +80,11 @@ For new apps, `desktop.config.json` is the canonical source. [config.cjs](packag
 
 The project ID is stable application identity. It scopes data directories, settings, Keychain service names, recent documents, window restoration, and single-instance behavior. Renaming an app should not change its ID. Independently cloned apps should receive different IDs when their data and instances should be independent.
 
-The prebuilt runtime receives project identity and supported window options from the launching CLI. Custom and standalone apps embed their identity/configuration during native generation. Application identity is separate from the generic prebuilt binary's own bundle identity.
+The Spark Runner receives project identity and supported window options from the launching CLI. Custom and standalone apps embed their identity/configuration during native generation. Application identity is separate from the generic prebuilt binary's own bundle identity.
 
 Native configuration has real binary consequences. URL/document registration, helpers, menu-bar-only activation, update settings, additional plugins, and native capability changes can require a custom build. Runtime compatibility must consider these inputs as well as installed module names.
 
-Project namespacing is not a security boundary. Native filesystem/process APIs retain their implemented OS access; do not describe projects using the prebuilt runtime as sandbox-isolated applications. See the [SDK identity guide](docs/sdk.md#app-identity-and-storage).
+Project namespacing is not a security boundary. Native filesystem/process APIs retain their implemented OS access; do not describe projects using the Spark Runner as sandbox-isolated applications. See the [SDK identity guide](docs/sdk.md#app-identity-and-storage).
 
 ## Runtime targets and application lifecycle
 
@@ -105,11 +105,11 @@ App/window close guards, incoming launch events, and single-instance forwarding 
 
 ## Development session and compatibility
 
-`spark dev` supervises the installed Expo CLI and the native application it launches. Expo inherits the terminal and owns its keyboard handling, command table, prompts, Metro, reload, debugger, and mobile/web actions. A version- and source-checked process-local patch adds `d` (open desktop), `g` (switch desktop runtime), and `b` (build when required). JSON IPC carries desktop actions/results and runtime status between Expo under Node and the spark supervisor under Bun; there is no second stdin handler. Metro workers skip the inherited preload. Closing Expo closes the owned app. Ordinary Expo commands outside this launcher are unpatched. Expo chooses its host and port (LAN and 8081 by default); IPC reports the actual Metro port for desktop launches. spark consumes only `--project`, `--platform`, `--prebuilt-binary`, and `--no-open`, forwarding Expo options unchanged. Expo’s boolean `--go` keeps its mobile meaning. It can discover registered prebuilt binaries or reuse a recorded custom build; the selected target is remembered per project.
+`spark dev` supervises the installed Expo CLI and the native application it launches. Expo inherits the terminal and owns its keyboard handling, command table, prompts, Metro, reload, debugger, and mobile/web actions. A version- and source-checked process-local patch adds `d` (open desktop), `g` (switch desktop runtime), and `b` (build when required). JSON IPC carries desktop actions/results and runtime status between Expo under Node and the spark supervisor under Bun; there is no second stdin handler. Metro workers skip the inherited preload. Closing Expo closes the owned app. Ordinary Expo commands outside this launcher are unpatched. Expo chooses its host and port (LAN and 8081 by default); IPC reports the actual Metro port for desktop launches. spark consumes only `--project`, `--platform`, `--runner-binary`, and `--no-open`, forwarding Expo options unchanged. Expo’s boolean `--go` keeps its mobile meaning. It can discover registered prebuilt binaries or reuse a recorded custom build; the selected target is remembered per project.
 
-The public shared-client name is **prebuilt runtime**. Legacy `build-go`/`--go-binary` commands alias the new `build-prebuilt`/`--prebuilt-binary` spellings. Persisted `"go"` mode values and existing build/registry paths remain stable; this is a terminology change, not a runtime schema migration.
+The public shared-client name is **Spark Runner**. Legacy `build-go`/`--go-binary` commands alias the new `build-runner`/`--runner-binary` spellings. Persisted `"go"` mode values and existing build/registry paths remain stable; this is a terminology change, not a runtime schema migration.
 
-Each binary embeds `spark-runtime.json`. The current schema contains the framework version, platform, architecture, mode, native package signatures, and a build fingerprint. Runtime discovery also validates the expected application layout. The supported layouts are macOS/arm64 (`Contents/Resources/spark-runtime.json` inside a `.app`) and Windows/x64 or Windows/arm64 (`spark-runtime.json` alongside `MyApp.exe` and its DLLs). Prebuilt runtime discovery filters by platform and target architecture before checking module signatures; it must never select a macOS binary for a Windows project.
+Each binary embeds `spark-runtime.json`. The current schema contains the framework version, platform, architecture, mode, native package signatures, and a build fingerprint. Runtime discovery also validates the expected application layout. The supported layouts are macOS/arm64 (`Contents/Resources/spark-runtime.json` inside a `.app`) and Windows/x64 or Windows/arm64 (`spark-runtime.json` alongside `MyApp.exe` and its DLLs). Spark Runner discovery filters by platform and target architecture before checking module signatures; it must never select a macOS binary for a Windows project.
 
 Native signatures include package metadata, native sources/specs, relevant configuration, and host integration. The build fingerprint additionally includes pinned framework/runtime versions, app configuration, and helper inputs. Matching a semver range is not sufficient proof of native compatibility.
 
@@ -158,7 +158,7 @@ Framework SDK packages are eligible for pruning. Selected integrations such as W
 
 The resulting selection must agree across generated config, autolinking, codegen, native compilation, runtime metadata, and final JavaScript. Leaving an excluded package in a project reference or generated binding defeats pruning. Removing a required package produces a broken binary.
 
-Development compatibility follows required dependency edges. Optional peers become native requirements only when reachable through another required edge, such as an explicit application dependency; an optional mobile backend found in a parent workspace must not make the desktop prebuilt runtime incompatible.
+Development compatibility follows required dependency edges. Optional peers become native requirements only when reachable through another required edge, such as an explicit application dependency; an optional mobile backend found in a parent workspace must not make the desktop Spark Runner incompatible.
 
 This removes complete native modules. It does not promise individual native-method elimination, arbitrary third-party tree shaking, or export-level JavaScript dead-code elimination. An import inside a reachable module can retain a dependency even if an exported function is never called. Keep all application screens reachable from the main entry; disconnected bundles and arbitrary native lookup are outside this analyzer's supported model.
 
@@ -225,7 +225,7 @@ For a missing runtime, inspect SDK registration and binary metadata. For an inco
 
 ## Windows development boundary and remaining work
 
-Windows support is part of the existing framework. `spark create --platform windows`, `spark sdk build-prebuilt --platform windows`, `spark dev`, and `spark build --dev` share project discovery, runtime metadata, registry, compatibility policy, Metro gating, terminal actions, and build records with macOS. There is no second session implementation or external source kit. See the [Windows guide](docs/windows-slice.md) for commands and prerequisites.
+Windows support is part of the existing framework. `spark create --platform windows`, `spark sdk build-runner --platform windows`, `spark dev`, and `spark build --dev` share project discovery, runtime metadata, registry, compatibility policy, Metro gating, terminal actions, and build records with macOS. There is no second session implementation or external source kit. See the [Windows guide](docs/windows-slice.md) for commands and prerequisites.
 
 The development targets are Windows 11 x64 and ARM64, RNW 0.81.35, New Architecture/Hermes, and the pinned Expo Desktop template. That RNW template uses MSVC v145 / Visual Studio 2026. The minimal starter provides the native host; the SDK prebuilt profile adds the desktop SDK and external libraries. Universal projects preserve configuration and generated projects across platform switches. Windows architecture defaults to the OS CPU (including ARM64 when the CLI is emulated) and can be overridden with `SPARK_WINDOWS_ARCH=x64|arm64`. It participates in the native fingerprint and product path. Build records retain the latest build per mode; registered binaries for the other architecture remain intact. Expo Desktop beta owns generation and RNW receives the corresponding `--arch x64` or `--arch ARM64`.
 
@@ -236,7 +236,7 @@ The acceptance gate for this slice is deliberately development-only:
 1. Create and build/register the baseline through the framework CLI.
 2. Launch it through the real `spark dev` session and verify the compiled native host identity and Hermes.
 3. Deliver a JavaScript edit through Fast Refresh.
-4. Install the existing native-greeting fixture and observe the shared session reject the prebuilt runtime.
+4. Install the existing native-greeting fixture and observe the shared session reject the Spark Runner.
 5. Use the session’s normal build action, execute the added native API in the custom binary, and verify the saved prebuilt executable was unchanged.
 
 `scripts/test-windows.ts` drives that path and writes a stage report and logs. Its `--prepare-only` mode validates project generation, development bundles, and compatibility changes without claiming native execution. Typechecking, unit tests, packed-consumer generation/bundling, and a live Windows-target Metro gate check have passed on macOS. Compilation, Windows autolinking, native launch, Hermes, and Fast Refresh still require the Windows machine; the native verifier has not yet passed there.
@@ -281,7 +281,7 @@ Keep these invariants intact:
 - Native changes are authored in durable package/config/host source, not only in generated projects.
 - One selected module set must govern native generation, linking, runtime metadata, and required JavaScript capabilities.
 - Unknown native dependencies are retained conservatively; test fixtures are excluded from shipping targets.
-- App identity remains stable, while projects using the prebuilt runtime retain independent storage and process identity.
+- App identity remains stable, while projects using the Spark Runner retain independent storage and process identity.
 - Runtime/platform versions and native signatures determine compatibility; a reload cannot supply missing native code.
 - Production packaging retries preserve submission identity and immutable artifact checks.
 - Upstream APIs retain ownership and attribution; framework wrappers require framework-specific behavior.
@@ -320,7 +320,7 @@ acceptance; all open native checks remain in [Windows issues](docs/windows-issue
 
 `spark create MyEditor --example document-editor` creates a [shared document editor](docs/document-editor.md) using Expo adapters on mobile, browser file operations on web, and native desktop dialogs. The macOS example exercises windows, menus, shortcuts, file-open events, and unsaved-change guards. Windows includes native control/API/file-dialog implementations, with remaining native acceptance and lifecycle gaps listed in [known Windows issues](docs/windows-issues.md).
 
-[SDK export/import](docs/sdk-distribution.md) packages the CLI, module archives, and optional prebuilt runtimes into a transferable directory. The recipient installs it without this checkout; Expo Desktop beta still owns creation and desktop generation, and spark retains native compatibility checks.
+[SDK export/import](docs/sdk-distribution.md) packages the CLI, module archives, and optional Spark Runner runtimes into a transferable directory. The recipient installs it without this checkout; Expo Desktop beta still owns creation and desktop generation, and spark retains native compatibility checks.
 
 ## Kitchen sink development
 

@@ -43,7 +43,7 @@ export async function runChecks(onResult: (result: Check) => void | Promise<void
     await check("app: identity and runtime metadata", async () => {
       const context = await app.getAppContext();
       assert(context.projectId.length && context.name.length && context.runtime.mode, "Missing host identity");
-      assert(context.runtime.modules?.["@legendapp/spark-desktop-app"], "Host core missing from runtime inventory");
+      assert(context.runtime.modules?.["@legendapp/spark/app"], "Host core missing from runtime inventory");
     });
     await check("files: scoped directories, text, binary, stat, list, copy, move, deletion", async () => {
       const data = await files.getDirectory("data"); const cache = await files.getDirectory("cache");
@@ -83,7 +83,7 @@ export async function runChecks(onResult: (result: Check) => void | Promise<void
         assert((await settings.get<{ text: string; enabled: boolean }>(token))?.text === "hello", "Object roundtrip");
       } finally { await settings.remove(token); }
     });
-    if (isolation) await check("Prebuilt runtime isolation: persisted files, settings and Keychain", async () => {
+    if (isolation) await check("Spark Runner isolation: persisted files, settings and Keychain", async () => {
       const key = "sdk-isolation";
       const file = `${await files.getDirectory("data")}/${key}.txt`;
       const context = await app.getAppContext();

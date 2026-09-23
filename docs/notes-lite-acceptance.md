@@ -1,7 +1,7 @@
 # Notes Lite acceptance
 
 Create an isolated app with `spark create NotesAcceptance --example notes-lite`,
-install/select its compatible prebuilt runtime or build a development runtime,
+install/select its compatible Spark Runner or build a development runtime,
 and run `bun run macos` or `bun run windows`. Use disposable notes. The example
 source is in `packages/cli/templates/notes-lite`; an already-created app does not
 receive template edits automatically.

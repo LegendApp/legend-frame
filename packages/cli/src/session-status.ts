@@ -2,7 +2,7 @@ export function sessionStatus(target: "go" | "dev", available: boolean, issues: 
   if (!available && target === "go" && !issues.length) return {
     compatible: false,
     canBuild: false,
-    message: "The prebuilt runtime isn’t installed for this SDK.\nInstall an SDK bundle containing a matching prebuilt runtime (bun install.ts), or register a prebuilt runtime with spark sdk register <runtime directory>.",
+    message: "The Spark Runner isn’t installed for this SDK.\nInstall an SDK bundle containing a matching Spark Runner (node install.mjs), or register a Spark Runner with spark sdk register <runtime directory>.",
     actions: "g  Use development build · Ctrl+C  Exit",
   };
   if (issues.length || !available) return {
@@ -14,7 +14,7 @@ export function sessionStatus(target: "go" | "dev", available: boolean, issues: 
   return {
     compatible: true,
     canBuild: false,
-    message: `● ${running ? "Running in " : "Ready to open "}${target === "go" ? "prebuilt runtime" : "development build"}\n  Fast Refresh enabled`,
+    message: `● ${running ? "Running in " : "Ready to open "}${target === "go" ? "Spark Runner" : "development build"}\n  Fast Refresh enabled`,
     actions: "d  Open desktop · r  Reload · j  Debugger\ng  Change desktop runtime · Ctrl+C  Exit",
   };
 }

@@ -1,6 +1,6 @@
 # Styling with Uniwind
 
-React Native `style` remains the framework's styling contract. Uniwind is an optional application dependency that adds Tailwind classes; importing `@legendapp/spark-ui` does not load it. The universal Settings starter includes Uniwind 1.6.3 and Tailwind CSS 4.2.4, following the setup in legend-apps. It continues to use the pinned Expo 54 / Expo Desktop beta toolchain.
+React Native `style` remains the framework's styling contract. Uniwind is an optional application dependency that adds Tailwind classes; importing `@legendapp/spark/ui` does not load it. The universal Settings starter includes Uniwind 1.6.3 and Tailwind CSS 4.2.4, following the setup in legend-apps. It continues to use the pinned Expo 54 / Expo Desktop beta toolchain.
 
 ## Application setup
 
@@ -13,7 +13,7 @@ bun add uniwind@1.6.3 tailwindcss@4.2.4
 ```js
 // metro.config.js
 const { withUniwindConfig } = require('uniwind/metro');
-const { metroConfig } = require('@legendapp/spark-cli/src/universal.cjs');
+const { metroConfig } = require('@legendapp/spark/universal');
 
 module.exports = withUniwindConfig(metroConfig(__dirname), {
   cssEntryFile: './global.css',
@@ -38,7 +38,7 @@ Keep the generated `uniwind-types.d.ts` in the application's TypeScript includes
 
 ## Kitchen sink
 
-`bun run kitchen-sink` also configures Uniwind while preserving the desktop runtime Metro integration. The header native button cycles System → Light → Dark → System. Every launch begins in System; the selection is shared by React windows in the current JavaScript runtime and is not persisted. Cards, text, editors, status colors, drag targets, and the embedded WebView demo follow the theme. All application action buttons use `@legendapp/spark-ui/uniwind`; the embedded HTML demo retains its browser button. API actions add example-local pending, result, and error feedback below the native button, so responses remain visible without scrolling to the event log. Repeat presses are disabled while an action is pending; the framework Button contract is unchanged. Each event-driven demo also keeps its six most recent events beside the controls: window/file/link activity, menu and shortcut actions, notification responses, tray/Dock choices, update progress, drag/drop, process output, and WebView messages. Process stdout/stderr is decoded as streaming UTF-8; the full event log retains the shared history. The native-controls demo shows its remount count.
+`bun run kitchen-sink` also configures Uniwind while preserving the desktop runtime Metro integration. The header native button cycles System → Light → Dark → System. Every launch begins in System; the selection is shared by React windows in the current JavaScript runtime and is not persisted. Cards, text, editors, status colors, drag targets, and the embedded WebView demo follow the theme. All application action buttons use `@legendapp/spark/ui/uniwind`; the embedded HTML demo retains its browser button. API actions add example-local pending, result, and error feedback below the native button, so responses remain visible without scrolling to the event log. Repeat presses are disabled while an action is pending; the framework Button contract is unchanged. Each event-driven demo also keeps its six most recent events beside the controls: window/file/link activity, menu and shortcut actions, notification responses, tray/Dock choices, update progress, drag/drop, process output, and WebView messages. Process stdout/stderr is decoded as streaming UTF-8; the full event log retains the shared history. The native-controls demo shows its remount count.
 
 ## Components
 
@@ -46,7 +46,7 @@ Ordinary React Native views and text accept classes through Uniwind:
 
 ```tsx
 import { View, Text } from 'react-native';
-import { Button, TextInput } from '@legendapp/spark-ui/uniwind';
+import { Button, TextInput } from '@legendapp/spark/ui/uniwind';
 
 <View className="gap-3 rounded-xl bg-surface p-4">
   <Text className="text-xl font-semibold text-foreground">Profile</Text>

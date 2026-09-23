@@ -10,7 +10,7 @@ import { architecture } from "../packages/cli/src/platform.ts";
 
 const { values } = parseArgs({ args: process.argv.slice(2), options: { project: { type: "string" }, "prepare-only": { type: "boolean" } } });
 const root = path.resolve(values.project ?? ".spark/windows-probe/WindowsProbe");
-const cli = path.join(root, "node_modules/@legendapp/spark-cli/src/index.ts");
+const cli = path.join(root, "node_modules/@legendapp/spark/bin/spark.cjs");
 const prepareOnly = !!values["prepare-only"];
 if (!prepareOnly && process.platform !== "win32") throw new Error("Run the native verifier on Windows x64 or ARM64, or pass --prepare-only to check generation and bundles here.");
 if (existsSync(path.join(root, "package.json"))) throw new Error("Choose a fresh --project directory; this test installs a native fixture.");
@@ -60,8 +60,8 @@ try {
     if (runtimeFor(root, nativePackages(root), "go").fingerprint !== baseline.fingerprint) throw new Error("Native fingerprint changed during prebuild");
     pass();
   } else {
-    stage("Build and register the prebuilt runtime with spark sdk build-prebuilt");
-    await run(root, ["bun", cli, "sdk", "build-prebuilt", "--project", root]);
+    stage("Build and register the Spark Runner with spark sdk build-runner");
+    await run(root, ["bun", cli, "sdk", "build-runner", "--project", root]);
     go = readJson(stateFile(root, "go-build.json"));
     goHash = digest(readFileSync(path.join(go.app, "MyApp.exe")).toString("base64"));
     pass({ app: go.app });
@@ -87,9 +87,9 @@ export default function App() {
 `);
     stage("Launch through spark dev and execute the native core with Hermes");
     mkdirSync(stateFile(root, "logs"), { recursive: true });
-    session = startSession(["--prebuilt-binary", go.app]);
+    session = startSession(["--runner-binary", go.app]);
     await wait(() => proof?.marker === "initial", "The native prebuilt app did not report", 10 * 60 * 1000);
-    if (!proof.hermes || proof.native.fingerprint !== go.runtime.fingerprint || proof.native.mode !== "go") throw new Error("Wrong prebuilt runtime or JavaScript engine");
+    if (!proof.hermes || proof.native.fingerprint !== go.runtime.fingerprint || proof.native.mode !== "go") throw new Error("Wrong Spark Runner or JavaScript engine");
     pass(proof);
     stage("Fast Refresh in the same prebuilt session");
     writeFileSync(path.join(root, "Marker.ts"), 'export default "refreshed";\n');
@@ -108,7 +108,7 @@ export default function App() {
   } else {
     await wait(() => {
       try { const s = readJson(stateFile(root, "session.json")); return s.target === "go" && !s.compatible && s.reason.includes("native-greeting"); } catch { return false; }
-    }, "spark dev did not reject the incompatible prebuilt runtime");
+    }, "spark dev did not reject the incompatible Spark Runner");
     pass(issues);
     writeFileSync(path.join(root, "WindowsExtra.ts"), 'import { getGreeting } from "@legendapp/spark-native-greeting";\nexport const greeting = getGreeting;\n');
     stage("Build explicitly and reopen through Expo's noninteractive development session");

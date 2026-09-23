@@ -1,0 +1,305 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "Desktop application configuration",
+  "type": "object",
+  "required": [
+    "projectId"
+  ],
+  "additionalProperties": false,
+  "properties": {
+    "$schema": {
+      "type": "string"
+    },
+    "name": {
+      "type": "string"
+    },
+    "projectId": {
+      "type": "string"
+    },
+    "version": {
+      "type": "string"
+    },
+    "window": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "width": {
+          "type": "number",
+          "minimum": 100,
+          "maximum": 20000
+        },
+        "height": {
+          "type": "number",
+          "minimum": 100,
+          "maximum": 20000
+        },
+        "minWidth": {
+          "type": "number",
+          "minimum": 100,
+          "maximum": 20000
+        },
+        "minHeight": {
+          "type": "number",
+          "minimum": 100,
+          "maximum": 20000
+        },
+        "maxWidth": {
+          "type": "number",
+          "minimum": 100,
+          "maximum": 20000
+        },
+        "maxHeight": {
+          "type": "number",
+          "minimum": 100,
+          "maximum": 20000
+        },
+        "resizable": {
+          "type": "boolean"
+        },
+        "closable": {
+          "type": "boolean"
+        },
+        "minimizable": {
+          "type": "boolean"
+        },
+        "alwaysOnTop": {
+          "type": "boolean"
+        },
+        "transparent": {
+          "type": "boolean"
+        },
+        "hasShadow": {
+          "type": "boolean"
+        },
+        "trafficLights": {
+          "type": "boolean"
+        },
+        "restoreFrame": {
+          "type": "boolean"
+        },
+        "titleBarStyle": {
+          "enum": [
+            "default",
+            "overlay",
+            "hidden",
+            "borderless"
+          ]
+        },
+        "appearance": {
+          "enum": [
+            "system",
+            "light",
+            "dark"
+          ]
+        },
+        "material": {
+          "enum": [
+            "none",
+            "sidebar",
+            "windowBackground",
+            "hudWindow",
+            "popover"
+          ]
+        },
+        "title": {
+          "type": "string"
+        },
+        "backgroundColor": {
+          "type": "string",
+          "pattern": "^#[0-9a-fA-F]{6}([0-9a-fA-F]{2})?$"
+        }
+      }
+    },
+    "macos": {
+      "type": "object",
+      "required": [
+        "bundleIdentifier"
+      ],
+      "properties": {
+        "bundleIdentifier": {
+          "type": "string"
+        },
+        "buildNumber": {
+          "type": "string"
+        },
+        "entitlements": {
+          "type": "object"
+        },
+        "infoPlist": {
+          "type": "object"
+        }
+      }
+    },
+    "scheme": {
+      "oneOf": [
+        {
+          "type": "string"
+        },
+        {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        }
+      ]
+    },
+    "documentTypes": {
+      "type": "array"
+    },
+    "menuBarOnly": {
+      "type": "boolean"
+    },
+    "updates": {
+      "type": "object",
+      "required": [
+        "feedURL",
+        "publicKey"
+      ],
+      "properties": {
+        "feedURL": {
+          "type": "string"
+        },
+        "publicKey": {
+          "type": "string"
+        }
+      }
+    },
+    "include": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      }
+    },
+    "helpers": {
+      "type": "object",
+      "propertyNames": {
+        "pattern": "^[A-Za-z0-9_-]+$"
+      },
+      "additionalProperties": {
+        "oneOf": [
+          {
+            "type": "string"
+          },
+          {
+            "type": "object",
+            "minProperties": 1,
+            "propertyNames": {
+              "enum": [
+                "macos-arm64",
+                "macos-x64",
+                "windows-arm64",
+                "windows-x64"
+              ]
+            },
+            "additionalProperties": {
+              "type": "object",
+              "required": [
+                "directory",
+                "executable"
+              ],
+              "additionalProperties": false,
+              "properties": {
+                "directory": {
+                  "type": "string"
+                },
+                "executable": {
+                  "type": "string"
+                }
+              }
+            }
+          }
+        ]
+      }
+    },
+    "signing": {
+      "type": "object"
+    },
+    "expo": {
+      "type": "object"
+    },
+    "platforms": {
+      "type": "array",
+      "minItems": 1,
+      "uniqueItems": true,
+      "items": {
+        "enum": [
+          "ios",
+          "android",
+          "web",
+          "macos",
+          "windows"
+        ]
+      }
+    },
+    "expoByPlatform": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "ios": {
+          "type": "object"
+        },
+        "android": {
+          "type": "object"
+        },
+        "web": {
+          "type": "object"
+        },
+        "macos": {
+          "type": "object"
+        },
+        "windows": {
+          "type": "object"
+        }
+      }
+    },
+    "extends": {
+      "const": "expo",
+      "description": "Compose desktop options onto the existing Expo configuration."
+    }
+  },
+  "allOf": [
+    {
+      "if": {
+        "properties": {
+          "platforms": {
+            "const": [
+              "windows"
+            ]
+          }
+        },
+        "required": [
+          "platforms"
+        ]
+      },
+      "then": {},
+      "else": {
+        "required": [
+          "macos"
+        ]
+      }
+    },
+    {
+      "if": {
+        "required": [
+          "extends"
+        ],
+        "properties": {
+          "extends": {
+            "const": "expo"
+          }
+        }
+      },
+      "then": {
+        "required": [
+          "platforms"
+        ]
+      },
+      "else": {
+        "required": [
+          "name",
+          "version"
+        ]
+      }
+    }
+  ]
+}

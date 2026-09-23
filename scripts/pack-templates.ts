@@ -1,8 +1,9 @@
+import { packArchive } from "../packages/cli/src/pack-archive.ts";
 import { cpSync, existsSync, mkdtempSync, readFileSync, rmSync, copyFileSync, mkdirSync } from "node:fs";
 import { createHash } from "node:crypto";
 import os from "node:os";
 import path from "node:path";
-import { readJson, writeJson } from "../packages/cli/src/project";
+import { readJson, writeJson } from "../packages/cli/src/project.ts";
 
 export async function packTemplates(root: string, output: string, packages: Record<string, string>) {
   const templates: Record<string, string> = {};
@@ -23,9 +24,7 @@ export async function packTemplates(root: string, output: string, packages: Reco
       pkg.overrides = { ...pkg.overrides, ...local };
       writeJson(path.join(temporary, "package.json"), pkg);
       const archive = path.join(temporary, "template.tgz");
-      const child = Bun.spawn(["bun", "pm", "pack", "--filename", archive], { cwd: temporary, stdout: "pipe", stderr: "pipe" });
-      const [stdout, stderr, code] = await Promise.all([new Response(child.stdout).text(), new Response(child.stderr).text(), child.exited]);
-      if (code || !existsSync(archive)) throw new Error(`Could not pack ${variant} template: ${stdout}\n${stderr}`);
+      await packArchive(temporary, archive);
       const hash = createHash("sha256").update(readFileSync(archive)).digest("hex").slice(0, 12);
       const file = `${pkg.name}-${hash}.tgz`;
       copyFileSync(archive, path.join(output, file)); templates[variant] = file;

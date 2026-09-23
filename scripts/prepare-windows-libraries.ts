@@ -2,10 +2,10 @@ import { createRequire } from "node:module";
 import { createHash } from "node:crypto";
 import { cpSync, existsSync, mkdirSync, readdirSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import path from "node:path";
-import { run } from "../packages/cli/src/commands";
-import { readJson, writeJson } from "../packages/cli/src/project";
+import { run } from "../packages/cli/src/commands.ts";
+import { readJson, writeJson } from "../packages/cli/src/project.ts";
 
-const root = path.resolve(import.meta.dir, "..");
+const root = path.resolve(import.meta.dirname, "..");
 /** Keep upstream JS/C++ intact except for the explicit Windows portability edits. */
 export async function packWindowsLibraries(output: string) {
   const pins = readJson(path.join(root, "patches/windows/upstream.json")) as Record<string, { version: string; url: string; integrity: string }>;
@@ -85,9 +85,12 @@ export async function packWindowsLibraries(output: string) {
       const project = path.join(stage, "windows/ReactNativeWebView/ReactNativeWebView.vcxproj");
       writeFileSync(project, readFileSync(project, "utf8").replace("<PlatformToolset>v143</PlatformToolset>", "<PlatformToolset>v145</PlatformToolset>").replace("%(AdditionalDependenices)", "%(AdditionalDependencies)"));
     }
+    // Registry archives already contain built JS/types. Producer lifecycle hooks
+    // must not invoke Bun or Yarn when a consumer installs our patched archive.
+    for (const script of ["prepare", "prepack", "prepublish", "prepublishOnly"]) if (pkg.scripts) delete pkg.scripts[script];
     pkg.spark = { ...pkg.spark, sdk: true, windowsAdapter: true, upstreamIntegrity: pin.integrity }; writeJson(path.join(stage, "package.json"), pkg);
     const temporary = path.join(output, "windows-library.tgz");
-    await run(stage, ["tar", "--exclude=.spark", "-czf", temporary, "."], { capture: true });
+    await run(stage, ["tar", "--exclude=.spark", "-czf", temporary, "."], { capture: true, env: { COPYFILE_DISABLE: "1" } });
     const hash = createHash("sha256").update(readFileSync(temporary)).digest("hex").slice(0, 12);
     const file = `${name.replace(/^@/, "").replaceAll("/", "-")}-${pin.version}-${hash}.tgz`; cpSync(temporary, path.join(output, file)); rmSync(temporary); result[name] = file;
   }

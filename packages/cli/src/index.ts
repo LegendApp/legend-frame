@@ -1,5 +1,6 @@
-#!/usr/bin/env bun
-import { examples, type Example } from "./examples";
+import type { PackageManager } from "./package-manager.ts";
+import { spawnProcess } from "./process.ts";
+import { examples, type Example } from "./examples.ts";
 import { prepareGoProfile } from "./go-profile.ts";
 import { exportSDK, importSDK } from "./sdk-transfer.ts";
 import { hostPlatform, type AppPlatform } from "./platform.ts";
@@ -19,7 +20,7 @@ import { launch } from "./dev.ts";
 import { doctor, run } from "./commands.ts";
 import { findFramework, findProject, sparkHome, packageManifest, registerRuntime } from "./local.ts";
 import { readJson, stateFile, VERSION, writeJson } from "./project.ts";
-import { devCommand } from "./dev-command";
+import { devCommand } from "./dev-command.ts";
 
 async function main() {
   const argv = process.argv.slice(2);
@@ -29,6 +30,7 @@ async function main() {
     allowPositionals: true,
     options: {
       example: { type: "string" },
+      "package-manager": { type: "string" },
       runtime: { type: "string", multiple: true },
       universal: { type: "boolean" },
       device: { type: "string" },
@@ -36,6 +38,7 @@ async function main() {
       platform: { type: "string" },
       packages: { type: "string" },
       port: { type: "string" },
+      runner: { type: "boolean" },
       prebuilt: { type: "boolean" },
       go: { type: "boolean" }, // Legacy desktop build alias; dev --go belongs to Expo.
       dev: { type: "boolean" },
@@ -67,12 +70,12 @@ async function main() {
     if (["ios", "android", "web"].includes(selected)) {
       if (command === "build" && selected === "web") throw new Error("Use expo export --platform web for web production output.");
       if (command === "prebuild" && selected === "web") throw new Error("Web has no native project to prebuild.");
-      if (values.prebuilt || values.go || values.release || values.preview || (command === "build" && !values.dev)) throw new Error("Mobile builds use --dev in this slice; Expo owns mobile distribution workflows.");
+      if (values.runner || values.prebuilt || values.go || values.release || values.preview || (command === "build" && !values.dev)) throw new Error("Mobile builds use --dev in this slice; Expo owns mobile distribution workflows.");
       prepareConfig(root);
       const args = command === "prebuild" ? ["prebuild", "--platform", selected, "--no-install"] : [`run:${selected}`, ...(values.device ? ["--device", values.device] : []), ...(port ? ["--port", String(port)] : [])];
       const manifest = readFileSync(path.join(root, "package.json"), "utf8");
       try {
-        const child = Bun.spawn(nodeCommand(root, "expo", "expo", args), { cwd: root, env: process.env, stdin: "inherit", stdout: "inherit", stderr: "inherit" });
+        const child = spawnProcess(nodeCommand(root, "expo", "expo", args), { cwd: root, env: process.env, stdin: "inherit", stdout: "inherit", stderr: "inherit" });
         process.exitCode = await child.exited;
       } finally {
         writeFileSync(path.join(root, "package.json"), manifest);
@@ -94,14 +97,14 @@ async function main() {
   spark prebuild      Generate a Windows/mobile native project
   spark package       Sign and notarize a distribution archive
 
-Inside an app: bun dev, bun run build, bun run package
+Inside an app: npm run dev, npm run build, npm run package (or pnpm, yarn, bun)
 
 Advanced: updates init <feedURL>, credentials, doctor, analyze, open [app], build --dev, build --preview
 Windows: dev and build --dev; production builds are not yet supported.
-SDK transfer: sdk export <directory> [--runtime <prebuilt runtime directory>], sdk import <directory>
-SDK maintainers: sdk pack, sdk build-prebuilt [--platform windows], sdk register <runtime directory>
+SDK transfer: sdk export <directory> [--runtime <Spark Runner directory>], sdk import <directory>
+SDK maintainers: sdk pack, sdk build-runner [--platform windows], sdk register <runtime directory>
 Targets: dev/build/prebuild --platform macos|windows|ios|android|web
-Overrides: --project <directory>, --port <number>, dev --prebuilt-binary <runtime path>, create --packages <manifest>`);
+Overrides: --project <directory>, --port <number>, dev --runner-binary <runtime path>, create --packages <manifest>, create --package-manager npm|pnpm|yarn|bun`);
   } else switch (command) {
     case "add": {
       if (positionals[1] !== "desktop") throw new Error("Usage: spark add desktop [--project <Expo app>]");
@@ -111,15 +114,15 @@ Overrides: --project <directory>, --port <number>, dev --prebuilt-binary <runtim
     case "create": {
       if (!positionals[1]) throw new Error("Usage: spark create MyApp");
       if (!values.universal && !["macos", "windows"].includes(platform)) throw new Error("Use create --universal for mobile/web targets");
-      await create(path.resolve(positionals[1]), packageManifest(values.packages as string | undefined), platform, !!values.universal || !!values.example, values.example as Example | undefined);
+      await create(path.resolve(positionals[1]), packageManifest(values.packages as string | undefined), platform, !!values.universal || !!values.example, values.example as Example | undefined, values["package-manager"] as PackageManager | undefined);
       break;
     }
     case "sdk": {
       if (!["macos", "windows"].includes(platform)) throw new Error("SDK commands require a desktop target");
       switch (positionals[1]) {
         case "export": {
-          if (!positionals[2]) throw new Error("Usage: spark sdk export <directory> [--runtime <prebuilt runtime directory>]");
-          console.log(`Exported SDK to ${exportSDK(packageManifest(values.packages as string | undefined), positionals[2], values.runtime)}. Transfer the directory and run bun install.ts there.`);
+          if (!positionals[2]) throw new Error("Usage: spark sdk export <directory> [--runtime <Spark Runner directory>]");
+          console.log(`Exported SDK to ${exportSDK(packageManifest(values.packages as string | undefined), positionals[2], values.runtime)}. Transfer the directory and run node install.mjs there.`);
           break;
         }
         case "import": {
@@ -130,21 +133,22 @@ Overrides: --project <directory>, --port <number>, dev --prebuilt-binary <runtim
         case "pack": {
           const framework = findFramework(start) ?? findFramework();
           if (!framework) throw new Error("Run spark sdk pack inside the framework checkout.");
-          await run(framework, ["bun", path.join(framework, "scripts/pack.ts"), ...(platform === "windows" ? ["--platform=windows"] : [])]);
+          await run(framework, [process.execPath, path.join(framework, "scripts/pack.ts"), ...(platform === "windows" ? ["--platform=windows"] : [])]);
           break;
         }
         case "register": {
           if (!positionals[2]) throw new Error("Usage: spark sdk register <runtime directory>");
           const result = registerRuntime(positionals[2]);
-          console.log(`Registered prebuilt runtime for SDK ${result.runtime.framework}. Apps will discover it automatically.`);
+          console.log(`Registered Spark Runner for SDK ${result.runtime.framework}. Apps will discover it automatically.`);
           break;
         }
         case "build-go": // Legacy alias; persisted runtime metadata still uses "go".
-        case "build-prebuilt": {
+        case "build-prebuilt": // Legacy command alias.
+        case "build-runner": {
           let root: string;
           if (projectOption) root = project();
           else {
-            root = path.join(sparkHome(), "sdk-builds", VERSION, ...(platform === "windows" ? ["windows"] : []), "SparkPrebuilt");
+            root = path.join(sparkHome(), "sdk-builds", VERSION, ...(platform === "windows" ? ["windows"] : []), "SparkRunner");
             const manifest = packageManifest(values.packages as string | undefined);
             if (!existsSync(path.join(root, "package.json"))) await create(root, manifest, platform);
             else await refreshLocalPackages(root, manifest);
@@ -153,7 +157,7 @@ Overrides: --project <directory>, --port <number>, dev --prebuilt-binary <runtim
           await build(root, "go", !!values.force);
           break;
         }
-        default: throw new Error("SDK commands: spark sdk pack, spark sdk build-prebuilt, spark sdk register <runtime directory>");
+        default: throw new Error("SDK commands: spark sdk pack, spark sdk build-runner, spark sdk register <runtime directory>");
       }
       break;
     }
@@ -199,9 +203,9 @@ Overrides: --project <directory>, --port <number>, dev --prebuilt-binary <runtim
       // No path opens the project's last standalone build. In-session `o` opens the development runtime.
       const root = positionals[1] ? start : project();
       const record = stateFile(root, "release-build.json");
-      if (!positionals[1] && !existsSync(record)) throw new Error("No standalone app has been built. Run bun run build first.");
+      if (!positionals[1] && !existsSync(record)) throw new Error("No standalone app has been built. Run npm run build first.");
       const product = positionals[1] ? path.resolve(positionals[1]) : readJson(record).app;
-      if (!existsSync(product)) throw new Error("The app binary is missing. Rebuild it with bun run build.");
+      if (!existsSync(product)) throw new Error("The app binary is missing. Rebuild it with npm run build.");
       const app = await launch(root, product, port);
       await app.exited;
       break;

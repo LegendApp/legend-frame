@@ -92,7 +92,7 @@ try {
     writeFileSync(path.join(root, "App.tsx"), 'export { default } from "./PlatformChecks";\n');
     if (desktop) {
       const pkg = readJson(path.join(root, "package.json"));
-      for (const name of ["@legendapp/spark", "@legendapp/spark-file-system", "@legendapp/spark-settings", "@legendapp/spark-message-dialog", "@legendapp/spark-context-menu", "@legendapp/spark-tray", "@legendapp/spark-global-shortcuts", "@legendapp/spark-processes", "@legendapp/spark-system", "@legendapp/spark-notifications", "@legendapp/spark-drag-drop", "@legendapp/spark-native-menu", "@legendapp/spark-desktop-windows", "@legendapp/spark-sqlite", "@legendapp/spark-webview", "react-native-nitro-modules", "@react-native-runtimes/core"]) pkg.dependencies[name] = pkg.overrides[name];
+      for (const name of ["@legendapp/spark", "react-native-nitro-modules", "@react-native-runtimes/core"]) pkg.dependencies[name] = pkg.overrides[name];
       writeJson(path.join(root, "package.json"), pkg); await run(root, ["bun", "install"], { capture: true });
     }
     // A unique application ID prevents this probe replacing another test or user app.
@@ -124,7 +124,7 @@ try {
       const manifest = readFileSync(path.join(root, "package.json"), "utf8");
       try { await run(root, nodeCommand(root, "expo-desktop", "expo-desktop", ["prebuild", "--platform", "macos", "--template", "expo-desktop-template-bare-minimum@54.81.1-beta.6", "--no-install"]), { env: { CI: "1" }, capture: true }); }
       finally { writeFileSync(path.join(root, "package.json"), manifest); }
-    } else if (platform !== "web") await run(root, ["bun", "node_modules/@legendapp/spark-cli/src/index.ts", "prebuild", "--platform", platform], { capture: true });
+    } else if (platform !== "web") await run(root, ["bun", "node_modules/@legendapp/spark/bin/spark.cjs", "prebuild", "--platform", platform], { capture: true });
     record(report, { id: "build.project", status: "passed" }); stage = "build.bundle"; checkpoint();
     await run(root, nodeCommand(root, "expo", "expo", ["export:embed", "--entry-file", "index.ts", "--platform", platform, "--dev", "true", "--max-workers", "2", "--bundle-output", stateFile(root, "contract-check.js")]), { capture: true });
     record(report, { id: "build.bundle", status: "passed" }); checkpoint();

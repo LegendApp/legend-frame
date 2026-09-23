@@ -1,4 +1,4 @@
-import { getDisplays, listWindows, openWindow, setWindowFrame, showWindow, onWindowEvent } from "@legendapp/spark-desktop-windows";
+import { getDisplays, listWindows, openWindow, setWindowFrame, showWindow, onWindowEvent } from "@legendapp/spark/windows";
 import { notes } from "./store";
 import { WindowSession } from "./window-session";
 export const desktop = true;

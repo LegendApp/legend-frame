@@ -34,5 +34,6 @@
     "react-native-windows": {
       "optional": true
     }
-  }
+  },
+  "private": true
 }

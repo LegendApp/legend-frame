@@ -47,5 +47,6 @@
     "expo-clipboard": {
       "optional": true
     }
-  }
+  },
+  "private": true
 }

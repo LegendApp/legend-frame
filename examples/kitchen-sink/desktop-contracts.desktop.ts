@@ -1,13 +1,13 @@
 import { runFileStreamChecks } from "./file-stream-checks";
 import { runFoundationChecks } from "./foundation-checks";
 import { assertContract } from "./contract-cases";
-import * as processes from "@legendapp/spark-processes";
+import * as processes from "@legendapp/spark/processes";
 import { Platform } from "react-native";
 import { testConfig } from "./platform-test-config";
-import * as files from "@legendapp/spark-file-system";
-import * as clipboard from "@legendapp/spark-clipboard";
-import * as links from "@legendapp/spark-desktop-links";
-import { settings } from "@legendapp/spark-settings";
+import * as files from "@legendapp/spark/files";
+import * as clipboard from "@legendapp/spark/clipboard";
+import * as links from "@legendapp/spark/links";
+import { settings } from "@legendapp/spark/settings";
 import { filesystemLifecycle, settingsLifecycle, recentDocumentsLifecycle, richClipboardLifecycle, processLifecycle } from "./desktop-contract-cases";
 export async function runDesktopContracts(check: (id: string, action: () => Promise<void>) => Promise<void>, token: string) {
   await runFoundationChecks(check);
@@ -20,7 +20,7 @@ export async function runDesktopContracts(check: (id: string, action: () => Prom
     assertContract(NitroModules.box(NitroModules).unbox().equals(NitroModules), "Hybrid object boxing lost identity");
   });
   await check("desktop.sqlite", async () => {
-    const { openDatabase } = await import("@legendapp/spark-sqlite");
+    const { openDatabase } = await import("@legendapp/spark/sqlite");
     let db = await openDatabase(`contract-${token.replace(/[^a-zA-Z0-9_-]/g, "")}.sqlite`);
     try {
       await db.execute("CREATE TABLE checks (id INTEGER PRIMARY KEY, value TEXT, bytes BLOB)");

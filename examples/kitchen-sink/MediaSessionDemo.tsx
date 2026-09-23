@@ -1,6 +1,6 @@
 import { useEffect, useRef } from "react";
 import { Text, View } from "react-native";
-import { createMediaSession, type MediaSession } from "@legendapp/spark-audio";
+import { createMediaSession, type MediaSession } from "@legendapp/spark/audio";
 import { ActionButton } from "./ActionButton";
 import { EventResults, useEventResults } from "./EventResults";
 export function MediaSessionDemo({ report }: { report: (value: unknown) => void }) {

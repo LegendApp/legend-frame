@@ -7,9 +7,9 @@ These adapters are the current small API migration. Router, declarative windows,
 Use the individual framework packages when sharing these capabilities with mobile/web:
 
 ```tsx
-import * as Clipboard from '@legendapp/spark-clipboard';
-import * as SecureStore from '@legendapp/spark-secure-storage';
-import * as Linking from '@legendapp/spark-desktop-links';
+import * as Clipboard from '@legendapp/spark/clipboard';
+import * as SecureStore from '@legendapp/spark/secure-storage';
+import * as Linking from '@legendapp/spark/links';
 
 await Clipboard.setStringAsync('Hello');
 const text = await Clipboard.getStringAsync();

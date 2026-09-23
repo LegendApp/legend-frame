@@ -1,6 +1,6 @@
 import { useEffect } from "react";
 import { Text, TurboModuleRegistry, type TurboModule } from "react-native";
-import { createAudioPlayer, createMediaSession } from "@legendapp/spark-audio";
+import { createAudioPlayer, createMediaSession } from "@legendapp/spark/audio";
 import * as files from "@legendapp/spark/files";
 import type { TestDriver } from "./test-driver";
 const driver = TurboModuleRegistry.get<TestDriver & TurboModule>("NativeSDKTestDriver");

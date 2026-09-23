@@ -36,5 +36,6 @@
     "requires": [
       "@legendapp/spark-desktop-links"
     ]
-  }
+  },
+  "private": true
 }

@@ -3,7 +3,7 @@ import { mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import os from "node:os";
 import path from "node:path";
 import { createRequire } from "node:module";
-import { readConfig } from "@legendapp/spark-desktop-config/config.cjs";
+import { readConfig } from "@legendapp/spark/config";
 const { initializeTemplate } = createRequire(import.meta.url)("../packages/cli/src/init-template.cjs");
 const templates = path.resolve(import.meta.dir, "../packages/cli/templates");
 for (const folder of ["blank-typescript", "windows", "universal"]) {
@@ -46,6 +46,6 @@ test("all templates retain the tested beta matrix", () => {
     expect(pkg.dependencies.expo).toBe("54.0.37");
     expect(pkg.overrides["@expo/cli"]).toBe("54.0.27");
     expect(pkg.dependencies["react-native"]).toBe("0.81.6");
-    expect(pkg.scripts.postinstall).toBe("node node_modules/@legendapp/spark-cli/src/init-template.cjs");
+    expect(pkg.scripts.postinstall).toBe("node node_modules/@legendapp/spark/init-template.cjs");
   }
 });

@@ -7,5 +7,6 @@
   "files": [
     "*.cjs",
     "*.d.ts"
-  ]
+  ],
+  "private": true
 }

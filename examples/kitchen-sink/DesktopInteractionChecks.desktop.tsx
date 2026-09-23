@@ -1,15 +1,15 @@
 import { useRef, useState } from "react";
 import { Text, View } from "react-native";
-import { Button } from "@legendapp/spark-ui";
-import { showMessage } from "@legendapp/spark-message-dialog";
-import { showContextMenu } from "@legendapp/spark-context-menu";
-import { DragDropView } from "@legendapp/spark-drag-drop";
-import * as notifications from "@legendapp/spark-notifications";
-import * as system from "@legendapp/spark-system";
-import { createTray } from "@legendapp/spark-tray";
-import { registerGlobalShortcut } from "@legendapp/spark-global-shortcuts";
-import { configureMenus, clearMenus, addNativeMenuActionListener, updateMenuItems, commandModifier } from "@legendapp/spark-native-menu";
-import { getWindow, openWindow, closeWindow, onWindowEvent } from "@legendapp/spark-desktop-windows";
+import { Button } from "@legendapp/spark/ui";
+import { showMessage } from "@legendapp/spark/message-dialog";
+import { showContextMenu } from "@legendapp/spark/context-menu";
+import { DragDropView } from "@legendapp/spark/drag-drop";
+import * as notifications from "@legendapp/spark/notifications";
+import * as system from "@legendapp/spark/system";
+import { createTray } from "@legendapp/spark/tray";
+import { registerGlobalShortcut } from "@legendapp/spark/global-shortcuts";
+import { configureMenus, clearMenus, addNativeMenuActionListener, updateMenuItems, commandModifier } from "@legendapp/spark/menus";
+import { getWindow, openWindow, closeWindow, onWindowEvent } from "@legendapp/spark/windows";
 import { assertContract } from "./contract-cases";
 
 async function requireError(action: () => Promise<unknown>, code: string) {
@@ -99,14 +99,14 @@ export default function DesktopInteractionChecks({ check, onError, onBusy }: {
   }
   async function advancedMenus() {
     setInstruction("Use Command+Shift+Y (macOS) or Control+Shift+Y (Windows) to activate the Parity → Continue item.");
-    let selected!: (event: import("@legendapp/spark-native-menu").NativeMenuAction) => void;
-    const action = new Promise<import("@legendapp/spark-native-menu").NativeMenuAction>(resolve => { selected = resolve; });
+    let selected!: (event: import("@legendapp/spark/menus").NativeMenuAction) => void;
+    const action = new Promise<import("@legendapp/spark/menus").NativeMenuAction>(resolve => { selected = resolve; });
     const sub = addNativeMenuActionListener(event => { if (event.ownerId === "contract-binding") selected(event); });
     configureMenus("contract-base", [{ id: "parity", title: "Parity", items: [{ id: "base", title: "Original" }, { id: "after", title: "After" }] }]);
     configureMenus("contract-binding", [{ id: "bound", title: "Parity", items: [{ id: "continue", targetTitle: "Original", title: "Continue", placement: { after: "After" }, shortcut: { key: "y", modifiers: commandModifier | (1 << 17) }, payload: { token: "acceptance" } }] }]);
     updateMenuItems("contract-binding", [{ id: "continue", checked: true }]);
     try {
-      let received: import("@legendapp/spark-native-menu").NativeMenuAction | undefined;
+      let received: import("@legendapp/spark/menus").NativeMenuAction | undefined;
       await within(action.then(value => { received = value; }), 45000);
       assertContract(received?.itemId === "continue" && received.menuId === "bound" && received.payload?.token === "acceptance", "Menu action lost semantic identity or payload");
     } finally { sub.remove(); clearMenus("contract-binding"); clearMenus("contract-base"); }

@@ -1,8 +1,11 @@
-// Standalone bootstrap, copied into SDK bundles. Requires Bun; no framework checkout.
+import { spawnSync } from "node:child_process";
+import { parseArgs } from "node:util";
+import { packageManager, managerCommand, applyOverrides, localArchive } from "./package-manager.ts";
+// Standalone bootstrap, copied into SDK bundles. Requires Node; no framework checkout.
 import { createHash } from "node:crypto";
 import { existsSync, lstatSync, readFileSync, readdirSync, readlinkSync, mkdirSync, writeFileSync } from "node:fs";
 import path from "node:path";
-const root = import.meta.dir;
+const root = import.meta.dirname;
 const metadata = JSON.parse(readFileSync(path.join(root, "sdk.json"), "utf8"));
 const actual: Record<string, string> = {};
 function visit(relative: string) {
@@ -25,15 +28,24 @@ const manifest = JSON.parse(readFileSync(path.join(root, "packages/manifest.json
 const overrides: Record<string, string> = {};
 for (const [name, file] of Object.entries(manifest)) {
   if (typeof file !== "string" || path.basename(file) !== file || !actual[`packages/${file}`]) throw new Error("Invalid SDK manifest");
-  overrides[name] = path.join(root, "packages", file);
+  overrides[name] = localArchive(path.join(root, "packages", file));
 }
-if (!overrides["@legendapp/spark-cli"]) throw new Error("SDK has no CLI");
+if (!overrides["@legendapp/spark"]) throw new Error("SDK has no CLI");
 const tooling = path.join(root, ".cli");
 mkdirSync(tooling, { recursive: true });
-writeFileSync(path.join(tooling, "package.json"), JSON.stringify({ name: "spark-sdk-tools", private: true, dependencies: { "@legendapp/spark-cli": overrides["@legendapp/spark-cli"] }, overrides }, null, 2));
-const install = Bun.spawn(["bun", "install"], { cwd: tooling, stdout: "inherit", stderr: "inherit" });
-if (await install.exited) throw new Error("SDK CLI installation failed");
-const cli = path.join(tooling, "node_modules/@legendapp/spark-cli/src/index.ts");
-const register = Bun.spawn(["bun", cli, "sdk", "import", root], { cwd: root, stdout: "inherit", stderr: "inherit" });
-if (await register.exited) throw new Error("SDK registration failed");
-console.log(`SDK installed. Keep this directory in place.\nCreate an app: bun ${JSON.stringify(cli)} create MyApp --universal`);
+const { values } = parseArgs({ options: { "package-manager": { type: "string" } } });
+const manager = packageManager(root, values["package-manager"]);
+const pkg = { name: "spark-sdk-tools", private: true, dependencies: { ...metadata.tooling?.dependencies, "@legendapp/spark": overrides["@legendapp/spark"] } };
+applyOverrides(pkg, { ...metadata.tooling?.overrides, ...overrides }, manager);
+writeFileSync(path.join(tooling, "package.json"), JSON.stringify(pkg, null, 2));
+if (manager === "yarn") writeFileSync(path.join(tooling, ".yarnrc.yml"), "nodeLinker: node-modules\n");
+if (manager === "pnpm") writeFileSync(path.join(tooling, ".npmrc"), "node-linker=hoisted\n");
+const [executable, ...args] = managerCommand(manager, ["install"]);
+// Only fixed manager names + 'install' use a Windows shell; paths/CLI arguments
+// are always passed directly to Node without shell interpolation.
+const install = spawnSync(executable!, args, { cwd: tooling, stdio: "inherit", env: { ...process.env, ...(manager === "yarn" ? { YARN_ENABLE_IMMUTABLE_INSTALLS: "false" } : {}) }, shell: process.platform === "win32" && executable === manager });
+if (install.error || install.status !== 0) throw new Error(`SDK CLI installation failed: ${install.error ?? install.status}`);
+const cli = path.join(tooling, "node_modules/@legendapp/spark/bin/spark.cjs");
+const register = spawnSync(process.execPath, [cli, "sdk", "import", root], { cwd: root, stdio: "inherit" });
+if (register.error || register.status !== 0) throw new Error("SDK registration failed");
+console.log(`SDK installed. Keep this directory in place.\nCreate an app: node ${JSON.stringify(cli)} create MyApp --universal --package-manager ${manager}`);

@@ -1,13 +1,13 @@
 # Browser authentication sessions
 
-`@legendapp/spark-auth-session` supplies browser launch and callback transport. OAuth
+`@legendapp/spark/auth-session` supplies browser launch and callback transport. OAuth
 request construction, PKCE, code exchange, refresh, token validation and storage
 remain in your authentication library/application. It does not bundle Node or
 embed a login WebView. Native browser authorization follows the external-browser
 approach described in [RFC 8252](https://www.rfc-editor.org/rfc/rfc8252.html).
 
 ```ts
-import { createAuthSession } from '@legendapp/spark-auth-session';
+import { createAuthSession } from '@legendapp/spark/auth-session';
 
 // Desktop: binds 127.0.0.1 on an available port before opening the browser.
 const session = await createAuthSession({ timeoutMs: 120_000 });

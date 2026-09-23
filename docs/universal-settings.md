@@ -1,6 +1,6 @@
 # Shared Settings starter
 
-The universal starter keeps one `App.tsx` and one dependency/configuration source for iOS, Android, web, macOS, and Windows. It uses ordinary React Native layout and text, the existing clipboard/secure-storage/linking adapters, and three controls from `@legendapp/spark-ui`.
+The universal starter keeps one `App.tsx` and one dependency/configuration source for iOS, Android, web, macOS, and Windows. It uses ordinary React Native layout and text, the existing clipboard/secure-storage/linking adapters, and three controls from `@legendapp/spark/ui`.
 
 ## Create and run
 

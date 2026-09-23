@@ -12,8 +12,8 @@ spark create MyDiff --example diff-lite
 
 Inside each project, run `bun run web`, `bun run ios`, `bun run android`,
 `bun run macos`, or `bun run windows`. Mobile native development clients need a
-first build. Desktop selects a compatible prebuilt runtime or requests a custom build
-when a native dependency is missing. Rebuild an older prebuilt runtime for the new audio,
+first build. Desktop selects a compatible Frame Runner or requests a custom build
+when a native dependency is missing. Rebuild an older Frame Runner for the new audio,
 AsyncStorage, or Windows host implementations; JavaScript reload cannot add them.
 
 ## Notes Lite

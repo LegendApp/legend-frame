@@ -1,7 +1,8 @@
-import { prepareWindowsGeometry } from "./windows-geometry";
-import { copyHelpers } from "./helpers";
-import { registerWindowsAssociations } from "./windows-associations";
-import { checkExpoDesktopNode } from "./expo-node";
+import { which } from "./process.ts";
+import { prepareWindowsGeometry } from "./windows-geometry.ts";
+import { copyHelpers } from "./helpers.ts";
+import { registerWindowsAssociations } from "./windows-associations.ts";
+import { checkExpoDesktopNode } from "./expo-node.ts";
 import { cpSync, existsSync, mkdirSync, mkdtempSync, readdirSync, renameSync, rmSync, readFileSync, writeFileSync } from "node:fs";
 import path from "node:path";
 import { createRequire } from "node:module";
@@ -56,7 +57,7 @@ export async function prepareWindows(root: string, mode: "go" | "dev") {
   validateBuildModules(mode, packages);
   if (mode === "go") {
     const issues = goConfigurationIssues(readAppConfig(root));
-    if (issues.length) throw new Error(`Build the prebuilt runtime from a generic SDK starter: ${issues.join("; ")}`);
+    if (issues.length) throw new Error(`Build the Spark Runner from a generic SDK starter: ${issues.join("; ")}`);
   }
   const runtime = runtimeFor(root, packages, mode);
   writeJson(stateFile(root, "windows-build-input.json"), runtime);
@@ -73,9 +74,9 @@ export async function prepareWindows(root: string, mode: "go" | "dev") {
   return runtime;
 }
 export async function buildWindows(root: string, mode: string, force: boolean): Promise<{ app: string; runtime: Runtime }> {
-  if (mode !== "go" && mode !== "dev") throw new Error("Windows currently supports prebuilt runtimes and development builds. Use spark build --dev; production builds and packaging are not implemented.");
+  if (mode !== "go" && mode !== "dev") throw new Error("Windows currently supports Spark Runner runtimes and development builds. Use spark build --dev; production builds and packaging are not implemented.");
   if (process.platform !== "win32") throw new Error("Windows native builds require Windows x64 or ARM64. Project generation and Metro bundle checks can run on macOS.");
-  for (const tool of ["node", "bun", "pwsh.exe", "dotnet.exe"]) if (!Bun.which(tool)) throw new Error(`Missing ${tool}. See docs/windows-slice.md for the Windows native prerequisites.`);
+  for (const tool of ["node", "pwsh.exe", "dotnet.exe"]) if (!which(tool)) throw new Error(`Missing ${tool}. See docs/windows-slice.md for the Windows native prerequisites.`);
   const expected = runtimeFor(root, nativePackages(root), mode);
   const record = stateFile(root, `${mode}-build.json`);
   if (!force && existsSync(record)) {

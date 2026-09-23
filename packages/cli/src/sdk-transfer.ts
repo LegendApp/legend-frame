@@ -1,8 +1,8 @@
 import { cpSync, existsSync, mkdirSync, readFileSync, readdirSync, lstatSync, readlinkSync, renameSync, rmSync, writeFileSync } from "node:fs";
 import path from "node:path";
 import { createHash } from "node:crypto";
-import { readJson, writeJson, VERSION } from "./project";
-import { readRuntime, registerPackages, registerRuntime } from "./local";
+import { readJson, writeJson, VERSION } from "./project.ts";
+import { readRuntime, registerPackages, registerRuntime } from "./local.ts";
 
 export function treeHashes(root: string): Record<string, string> {
   const result: Record<string, string> = {};
@@ -31,7 +31,7 @@ export function verifySDK(root: string) {
     if (typeof file !== "string" || path.basename(file) !== file || !actual[`packages/${file}`]) throw new Error("Invalid SDK archive manifest");
   }
   for (const relative of metadata.runtimes) {
-    if (typeof relative !== "string" || !relative.startsWith("runtimes/") || relative.includes("..") || !readRuntime(path.join(root, relative))) throw new Error("Invalid bundled prebuilt runtime");
+    if (typeof relative !== "string" || !relative.startsWith("runtimes/") || relative.includes("..") || !readRuntime(path.join(root, relative))) throw new Error("Invalid bundled Spark Runner");
   }
   return metadata;
 }
@@ -59,21 +59,31 @@ export function exportSDK(manifest: string, destination: string, runtimes: strin
     const clients: string[] = [];
     for (const app of runtimes) {
       const runtime = readRuntime(app);
-      if (!runtime || runtime.mode !== "go") throw new Error(`Not a compatible prebuilt runtime: ${app}`);
+      if (!runtime || runtime.mode !== "go") throw new Error(`Not a compatible Spark Runner: ${app}`);
       const relative = `runtimes/${runtime.platform}-${runtime.arch}/${path.basename(app)}`;
-      if (clients.includes(relative)) throw new Error("Duplicate prebuilt runtime target");
+      if (clients.includes(relative)) throw new Error("Duplicate Spark Runner target");
       cpSync(app, path.join(pending, relative), { recursive: true, verbatimSymlinks: true });
       clients.push(relative);
     }
-    cpSync(path.join(import.meta.dir, "sdk-install.ts"), path.join(pending, "install.ts"));
-    writeJson(path.join(pending, "sdk.json"), { schema: 1, framework: VERSION, runtimes: clients, sha256: treeHashes(pending) });
+    const cli = existsSync(path.join(import.meta.dirname, "sdk-install.js")) ? import.meta.dirname : path.resolve(import.meta.dirname, "../dist");
+    for (const name of ["sdk-install", "package-manager", "executable"]) {
+      const source = readFileSync(path.join(cli, `${name}.js`), "utf8")
+        .replaceAll("./package-manager.js", "./package-manager.mjs").replaceAll("./executable.js", "./executable.mjs");
+      writeFileSync(path.join(pending, name === "sdk-install" ? "install.mjs" : `${name}.mjs`), source);
+    }
+    const template = readJson(path.resolve(import.meta.dirname, "../templates/universal/package.json"));
+    const tooling = {
+      dependencies: Object.fromEntries(["react", "react-native", "react-dom", "expo"].map(name => [name, template.dependencies[name]])),
+      overrides: template.overrides,
+    };
+    writeJson(path.join(pending, "sdk.json"), { schema: 1, framework: VERSION, runtimes: clients, tooling, sha256: treeHashes(pending) });
     writeFileSync(path.join(pending, "README.md"), `# Spark SDK ${VERSION}
 
-Requires Bun 1.3.14+ and Node. Run \`bun install.ts\` in this directory. The installer prints the CLI command to create an app; add \`--universal\` for Settings or \`--example document-editor\` for the editor.
+Requires Node 24.19.0+ and npm, pnpm, Yarn, or Bun. Run \`node install.mjs\` in this directory (optionally pass \`--package-manager npm|pnpm|yarn|bun\`). The installer prints the CLI command to create an app; add \`--universal\` for Settings or \`--example document-editor\` for the editor.
 
-Keep this directory in place after installing. Its package archives and optional prebuilt runtimes are registered by path. Transfer before installing, preserving executable permissions and symlinks. Third-party npm dependencies still require internet access.
+Keep this directory in place after installing. Its package archives and optional Spark Runner runtimes are registered by path. Transfer before installing, preserving executable permissions and symlinks. Third-party npm dependencies still require internet access.
 
-Included runtimes: ${clients.length ? clients.join(", ") : "none (install a matching prebuilt runtime or build a development client)"}. Compatibility checks reject mismatched native modules. Native Windows compilation and clean-machine acceptance require Windows; public hosting and production signing are separate workflows.
+Included runtimes: ${clients.length ? clients.join(", ") : "none (install a matching Spark Runner or build a development client)"}. Compatibility checks reject mismatched native modules. Native Windows compilation and clean-machine acceptance require Windows; public hosting and production signing are separate workflows.
 `);
     verifySDK(pending);
     renameSync(pending, destination);

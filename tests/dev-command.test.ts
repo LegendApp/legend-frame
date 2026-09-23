@@ -3,11 +3,11 @@ import { devArguments, devTargets } from "../packages/cli/src/dev-command";
 
 test("dev consumes spark options and forwards Expo flags and aliases unchanged", () => {
   const expo = ["--go", "--clear", "--offline", "-p", "8123", "--max-workers=2", "-w", "--scheme", "my-app", "--future-expo-flag"];
-  expect(devArguments(["--project", "/tmp/My App", ...expo, "--platform=ios", "--prebuilt-binary=/tmp/Go=1.app", "--no-open"])).toEqual({
+  expect(devArguments(["--project", "/tmp/My App", ...expo, "--platform=ios", "--runner-binary=/tmp/Go=1.app", "--no-open"])).toEqual({
     project: "/tmp/My App", platform: "ios", prebuiltBinary: "/tmp/Go=1.app", noOpen: true, expo,
   });
   expect(devArguments(["-g", "-c", "-m", "lan"])).toEqual({ expo: ["-g", "-c", "-m", "lan"] });
-  for (const args of [["--prebuilt-binary"], ["--platform", "--clear"], ["--project="], ["--no-open=false"]]) expect(() => devArguments(args)).toThrow();
+  for (const args of [["--runner-binary"], ["--platform", "--clear"], ["--project="], ["--no-open=false"]]) expect(() => devArguments(args)).toThrow();
 });
 
 test("initial mobile launch keeps host desktop actions available", () => {
@@ -22,5 +22,11 @@ test("initial mobile launch keeps host desktop actions available", () => {
 
 test("legacy binary override aliases prebuilt without consuming Expo Go", () => {
   expect(devArguments(["--go-binary", "/tmp/Legacy.app", "--go"])).toEqual({ prebuiltBinary: "/tmp/Legacy.app", expo: ["--go"] });
-  expect(devArguments(["--prebuilt-binary=/tmp/Runtime.app", "--go"])).toEqual({ prebuiltBinary: "/tmp/Runtime.app", expo: ["--go"] });
+  expect(devArguments(["--runner-binary=/tmp/Runtime.app", "--go"])).toEqual({ prebuiltBinary: "/tmp/Runtime.app", expo: ["--go"] });
+});
+
+test("Runner binary option retains prebuilt and Go aliases", () => {
+  for (const flag of ["--runner-binary", "--prebuilt-binary", "--go-binary"]) {
+    expect(devArguments([flag, "/tmp/FrameRunner.app"]).prebuiltBinary).toBe("/tmp/FrameRunner.app");
+  }
 });

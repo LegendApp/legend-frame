@@ -8,12 +8,12 @@ exports.nativeConfig = root => {
   // Expo autolinking and React Native codegen have separate exclusion inputs.
   // An excluded desktop provider must not enter an iOS module registry either.
   const excluded = (expo.autolinking?.exclude ?? []).map(name => [name, { platforms: { ios: null, macos: null, android: null, windows: null } }]);
-  if (platform !== "macos") return { platforms, dependencies: Object.fromEntries(excluded) };
+  if (!["macos", "windows"].includes(platform)) return { platforms, dependencies: Object.fromEntries(excluded) };
   const file = statePath(root, "native-selection.json");
   const selection = fs.existsSync(file) ? JSON.parse(fs.readFileSync(file, "utf8")) : { included: [], excluded: [] };
   return { platforms, dependencies: Object.fromEntries([
     ...selection.included.map(p => [p.name, { root: p.root }]),
-    ...selection.excluded.map(name => [name, { platforms: { ios: null, macos: null, android: null } }]),
+    ...selection.excluded.map(name => [name, { platforms: { ios: null, macos: null, android: null, windows: null } }]),
     ...excluded,
   ]) };
 };

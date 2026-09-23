@@ -8,13 +8,13 @@ test("SDK can move before registration; altered packages fail verification", () 
   const root = mkdtempSync(path.join(os.tmpdir(), "spark-sdk-transfer-")); const home = process.env.SPARK_HOME;
   try {
     process.env.SPARK_HOME = path.join(root, "home"); mkdirSync(path.join(root, "source"));
-    const packages = Object.fromEntries(["cli", "desktop", "desktop-config"].map(name => [name === "desktop" ? "@legendapp/spark" : `@legendapp/spark-${name}`, `${name}.tgz`]));
+    const packages = { "@legendapp/spark": "frame.tgz" };
     for (const file of Object.values(packages)) writeFileSync(path.join(root, "source", file), file);
     writeJson(path.join(root, "source/manifest.json"), packages);
     exportSDK(path.join(root, "source/manifest.json"), path.join(root, "export"));
     renameSync(path.join(root, "export"), path.join(root, "relocated"));
     expect(importSDK(path.join(root, "relocated"))).toBe(path.join(root, "relocated"));
-    writeFileSync(path.join(root, "relocated/packages/cli.tgz"), "changed");
+    writeFileSync(path.join(root, "relocated/packages/frame.tgz"), "changed");
     expect(() => verifySDK(path.join(root, "relocated"))).toThrow("checksum");
   } finally { if (home === undefined) delete process.env.SPARK_HOME; else process.env.SPARK_HOME = home; rmSync(root, { recursive: true, force: true }); }
 });

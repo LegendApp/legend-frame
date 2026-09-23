@@ -1,9 +1,10 @@
+import { packageManager, managerCommand, localArchive } from "./package-manager.ts";
 import { existsSync, readFileSync, writeFileSync } from "node:fs";
 import path from "node:path";
 import { createRequire } from "node:module";
 import ts from "typescript";
-import { run } from "./commands";
-import { readJson } from "./project";
+import { run } from "./commands.ts";
+import { readJson } from "./project.ts";
 
 export const integrationMarker = "// spark: existing Expo project";
 
@@ -37,20 +38,8 @@ export function composeMetro(source: string, file: string) {
   }
   visit(parsed);
   if (!replacements.length) throw new Error(`Cannot safely compose ${file}: use Expo's getDefaultConfig before adding desktop support. No files were changed.`);
-  for (const { start, end } of replacements.sort((a, b) => b.start - a.start)) source = source.slice(0, start) + '"@legendapp/spark-cli/src/expo-metro.cjs"' + source.slice(end);
-  return composeExport(source, file, "@legendapp/spark-cli/src/expo-metro.cjs", "withSparkMetro", false);
-}
-
-function packageManager(root: string, pkg: any) {
-  const declared = pkg.packageManager?.split("@")[0];
-  if (declared) {
-    if (!["bun", "npm", "pnpm", "yarn"].includes(declared)) throw new Error(`Unsupported package manager: ${declared}`);
-    return declared;
-  }
-  const candidates = [["bun", "bun.lock", "bun.lockb"], ["npm", "package-lock.json"], ["pnpm", "pnpm-lock.yaml"], ["yarn", "yarn.lock"]]
-    .filter(([, ...files]) => files.some(file => existsSync(path.join(root, file)))).map(([manager]) => manager!);
-  if (candidates.length > 1) throw new Error("Set packageManager in package.json to choose between the existing lockfiles.");
-  return candidates[0] ?? "bun";
+  for (const { start, end } of replacements.sort((a, b) => b.start - a.start)) source = source.slice(0, start) + '"@legendapp/spark/expo-metro"' + source.slice(end);
+  return composeExport(source, file, "@legendapp/spark/expo-metro", "withSparkMetro", false);
 }
 
 export async function addDesktop(root: string, manifestFile: string) {
@@ -70,7 +59,7 @@ export async function addDesktop(root: string, manifestFile: string) {
   const desktopFile = path.join(root, "desktop.config.json");
   if (existsSync(desktopFile)) {
     if (readJson(desktopFile).extends !== "expo") throw new Error("This app already uses spark-owned configuration; add desktop is for existing Expo projects.");
-    await run(root, [manager, "install"]);
+    await run(root, managerCommand(manager, ["install"]));
     console.log("Desktop integration already exists; dependencies installed. Existing configuration preserved.");
     return;
   }
@@ -84,38 +73,45 @@ export async function addDesktop(root: string, manifestFile: string) {
   if (configNames.length > 1) throw new Error("Keep one dynamic Expo configuration file before adding desktop.");
   const configFile = configNames[0] ?? "app.config.js";
   const configSource = configNames.length ? readFileSync(path.join(root, configFile), "utf8") : "module.exports = ({ config }) => config;\n";
-  files.set(configFile, composeExport(configSource, configFile, "@legendapp/spark-desktop-config/expo.cjs", "withSparkExpo"));
+  files.set(configFile, composeExport(configSource, configFile, "@legendapp/spark/expo-config", "withSparkExpo"));
   for (const file of ["metro.config.ts", "metro.config.mjs", "metro.config.cjs", "react-native.config.ts", "react-native.config.cjs"]) {
     if (existsSync(path.join(root, file))) throw new Error(`Compose ${file} explicitly; automatic integration currently supports metro.config.js and react-native.config.js. No files were changed.`);
   }
   const metro = "metro.config.js";
   files.set(metro, composeMetro(existsSync(path.join(root, metro)) ? readFileSync(path.join(root, metro), "utf8") : 'const { getDefaultConfig } = require("expo/metro-config");\nmodule.exports = getDefaultConfig(__dirname);\n', metro));
   const native = "react-native.config.js";
-  files.set(native, composeExport(existsSync(path.join(root, native)) ? readFileSync(path.join(root, native), "utf8") : "module.exports = {};\n", native, "@legendapp/spark-cli/src/expo-native.cjs", "withSparkNative"));
+  files.set(native, composeExport(existsSync(path.join(root, native)) ? readFileSync(path.join(root, native), "utf8") : "module.exports = {};\n", native, "@legendapp/spark/native", "withSparkNative"));
 
-  const template = path.resolve(import.meta.dir, "../templates/universal");
+  const template = path.resolve(import.meta.dirname, "../templates/universal");
   const defaults = readJson(path.join(template, "package.json"));
   const archives = readJson(manifestFile);
-  const local = ["@legendapp/spark-cli", "@legendapp/spark-desktop-config", "@legendapp/spark-desktop-host", "@legendapp/spark-desktop-app", "@legendapp/spark-window-options"];
+  const local = ["@legendapp/spark"];
   const dependencies: Record<string, string> = {};
   for (const name of local) {
     if (!archives[name]) throw new Error(`SDK is missing ${name}; run spark sdk pack first.`);
     const file = path.resolve(path.dirname(manifestFile), archives[name]);
     if (!existsSync(file)) throw new Error(`Missing SDK archive: ${file}`);
-    dependencies[name] = file;
+    dependencies[name] = localArchive(file);
   }
   for (const [name, version] of Object.entries(defaults.dependencies)) {
     if (name.startsWith("expo-desktop") || ["react-native-macos", "react-native-windows", "@react-native-community/cli"].includes(name)) dependencies[name] = version as string;
   }
   pkg.dependencies ??= {};
   for (const [name, version] of Object.entries(dependencies)) {
-    if (["@legendapp/spark-desktop-app", "@legendapp/spark-window-options"].includes(name)) continue;
     const previous = pkg.dependencies[name] ?? pkg.devDependencies?.[name];
     if (previous && previous !== version) throw new Error(`Existing ${name} dependency conflicts with the tested desktop version. Resolve it explicitly before retrying. No files were changed.`);
     if (!previous) pkg.dependencies[name] = version;
   }
   // Resolve local transitive SDK packages without replacing any mobile pins.
-  const overrides = { ...Object.fromEntries(local.map(name => [name, dependencies[name]])), "@expo/cli": "54.0.27" };
+  const vendor = ["@react-native-runtimes/core", "react-native-nitro-modules", "@op-engineering/op-sqlite", "react-native-webview"];
+  const overrides: Record<string, string> = { ...Object.fromEntries(local.map(name => [name, dependencies[name]!])), "@expo/cli": "54.0.27" };
+  for (const name of vendor) {
+    if (archives[name]) {
+      const file = path.resolve(path.dirname(manifestFile), archives[name]);
+      if (!existsSync(file)) throw new Error(`Missing SDK archive: ${file}`);
+      overrides[name] = localArchive(file);
+    }
+  }
   const overrideField = manager === "yarn" ? "resolutions" : "overrides";
   const owner = manager === "pnpm" ? (pkg.pnpm ??= {}) : pkg;
   for (const [name, version] of Object.entries(overrides)) if (owner[overrideField]?.[name] && owner[overrideField][name] !== version) throw new Error(`Existing ${name} override conflicts with the local SDK. No files were changed.`);
@@ -142,6 +138,6 @@ export async function addDesktop(root: string, manifestFile: string) {
   // All conflicts are checked before the first write. The integration is kept
   // reviewable/retryable if the package manager fails; never regenerate mobile.
   for (const [file, content] of files) writeFileSync(path.join(root, file), content);
-  await run(root, [manager, "install"]);
+  await run(root, managerCommand(manager, ["install"]));
   console.log(`Added desktop support to ${root}. Existing entry point and mobile/web scripts are unchanged.\nRun spark build --dev --platform macos, then spark dev --platform macos. Windows native builds run on Windows.`);
 }

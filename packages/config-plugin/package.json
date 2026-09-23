@@ -14,5 +14,6 @@
     "@legendapp/spark-desktop-host": "0.1.0-prototype.0",
     "@legendapp/spark-window-options": "0.1.0-prototype.0",
     "@expo/config-plugins": "54.0.5"
-  }
+  },
+  "private": true
 }
