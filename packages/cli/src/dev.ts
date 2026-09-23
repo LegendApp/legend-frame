@@ -152,9 +152,9 @@ export async function dev(
       restartPending = false;
     } finally { clearTimeout(timeout); }
   }
-  async function check() {
+  async function check(report = false) {
     if (closing) return false;
-    try { return await inspectRuntime(); }
+    try { return await inspectRuntime(report); }
     catch (error) {
       current = undefined;
       canBuild = false;
@@ -163,11 +163,11 @@ export async function dev(
       const reason = String(error);
       writeJson(stateFile(root, "session.json"), { compatible: false, reason, target, port, canBuild });
       if (metro?.exitCode === null) metro.send({ type: "spark:state", state: { target, canBuild } });
-      if (status !== reason) { status = reason; console.error(`\n› Desktop: ${reason}`); }
+      if (report || status !== reason) { status = reason; console.error(`\n› Desktop: ${reason}`); }
       return false;
     }
   }
-  async function inspectRuntime() {
+  async function inspectRuntime(report: boolean) {
     const native = nativePackages(root);
     current = undefined;
     if (target === "go") {
@@ -228,7 +228,7 @@ export async function dev(
       await appProcess.exited;
     }
     if (metro?.exitCode === null) metro.send({ type: "spark:state", state: { target, canBuild } });
-    if (next !== status) {
+    if (report || next !== status) {
       status = next;
       console.log(`\n› Desktop: ${status}\n${view.compatible ? "" : view.actions + "\n"}`);
     }
@@ -238,7 +238,7 @@ export async function dev(
     if (platform === "windows" ? process.platform !== "win32" : process.platform !== "darwin") {
       throw new Error(`Open ${platform} on a matching desktop host. Mobile and web remain available.`);
     }
-    if ((await check()) && current) {
+    if ((await check(true)) && current) {
       if (restartPending) await startMetro();
       if (closing) return;
       if (appProcess && appProcess.exitCode === null) {
