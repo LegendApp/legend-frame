@@ -266,3 +266,20 @@ test("configured updates must survive production pruning before packaging", asyn
     expect(h.state.submits).toBe(0);
   } finally { h.cleanup(); }
 });
+
+test("Runner packaging preserves development mode, needs no embedded JS, and skips app updates", async () => {
+  const h = harness();
+  try {
+    h.state.status = "Accepted";
+    rmSync(path.join(h.source, "Contents/Resources/main.jsbundle"));
+    const runtime: Runtime = { schema: 1, framework: VERSION, platform: "macos", arch: "arm64", mode: "go", fingerprint: "runner", modules: {} };
+    writeJson(path.join(h.source, "Contents/Resources/frame-runtime.json"), runtime);
+    let mode: string | undefined;
+    const result = await packageApp(h.root, { runner: true }, { ...h.dependencies,
+      build: async (_root, selected) => { mode = selected; return { app: h.source, runtime }; },
+      prepareUpdate: async () => { throw new Error("Runner must not generate app update feeds"); },
+    });
+    expect(mode).toBe("go"); expect(result.pending).toBe(false);
+    expect(h.state.submits).toBe(1);
+  } finally { h.cleanup(); }
+});

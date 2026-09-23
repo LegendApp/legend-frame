@@ -1,6 +1,6 @@
 {
   "name": "@legendapp/frame-desktop-links",
-  "version": "0.1.0-prototype.0",
+  "version": "0.0.1-next.1",
   "license": "MIT",
   "main": "src/index",
   "react-native": "src/index",
@@ -42,7 +42,7 @@
     ]
   },
   "dependencies": {
-    "@legendapp/frame-desktop-app": "0.1.0-prototype.0"
+    "@legendapp/frame-desktop-app": "0.0.1-next.1"
   },
   "peerDependenciesMeta": {
     "expo-linking": {

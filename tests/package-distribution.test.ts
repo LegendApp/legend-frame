@@ -1,3 +1,4 @@
+import { VERSION } from "../packages/cli/src/project.ts";
 import { spawnProcess } from "../packages/cli/src/process.ts";
 import { expect, test } from "vitest";
 import { existsSync, mkdirSync, mkdtempSync, readFileSync, readdirSync, realpathSync, rmSync, writeFileSync } from "node:fs";
@@ -11,7 +12,8 @@ const framework = path.resolve(import.meta.dirname, "..");
 test("single Frame archive resolves public exports and preserves private native discovery and pruning", async () => {
   const root = mkdtempSync(path.join(os.tmpdir(), "frame-public-package-"));
   try {
-    const file = await packFrame(framework, root);
+    const release = { schema: 1 as const, version: VERSION, revision: "a".repeat(40), packages: {}, runners: {} };
+    const file = await packFrame(framework, root, release);
     // macOS AppleDouble root files make Yarn Classic recurse outside the
     // extraction directory after it strips the package prefix.
     const tooling = createRequire(path.join(framework, "packages/cli/package.json"));
@@ -25,10 +27,11 @@ test("single Frame archive resolves public exports and preserves private native 
     mkdirSync(destination, { recursive: true });
     const child = spawnProcess(["tar", "-xzf", path.join(root, file), "--strip-components=1", "-C", destination], { stdout: "pipe", stderr: "pipe" });
     expect(await child.exited).toBe(0);
-    writeFileSync(path.join(app, "package.json"), JSON.stringify({ dependencies: { "@legendapp/frame": "0.1.0-prototype.0" } }));
+    writeFileSync(path.join(app, "package.json"), JSON.stringify({ dependencies: { "@legendapp/frame": VERSION } }));
     writeFileSync(path.join(app, "desktop.config.json"), JSON.stringify({ name: "Packed", version: "1.0.0", projectId: "packed-test", macos: { bundleIdentifier: "org.example.packed" }, platforms: ["macos"] }));
     const req = createRequire(path.join(app, "package.json"));
     const manifest = req("@legendapp/frame/package.json");
+    expect(JSON.parse(readFileSync(path.join(destination, "node_modules/@legendapp/frame-cli/dist/release.json"), "utf8"))).toEqual(release);
     const internal = readdirSync(path.join(framework, "packages")).map(name => JSON.parse(readFileSync(path.join(framework, "packages", name, "package.json"), "utf8"))).filter(pkg => pkg.name !== "@legendapp/frame");
     expect(manifest.bundledDependencies.sort()).toEqual(internal.map(pkg => pkg.name).sort());
     expect(Object.keys(manifest.dependencies).some(name => name.startsWith("@legendapp/frame-"))).toBe(false);

@@ -1,3 +1,4 @@
+import { validateRelease, type ReleaseManifest } from "../packages/cli/src/release.ts";
 // @ts-ignore JavaScript build utility shared with the Node launcher.
 import { buildCLI } from "./build-node.mjs";
 import { spawnProcess } from "../packages/cli/src/process.ts";
@@ -8,7 +9,7 @@ import path from "node:path";
 import os from "node:os";
 
 /** One published archive; native modules retain private identities for codegen and pruning. */
-export async function packFrame(root: string, output: string) {
+export async function packFrame(root: string, output: string, release?: ReleaseManifest) {
   buildCLI(root);
   const req = createRequire(path.join(root, "packages/cli/package.json"));
   const npm = path.join(path.dirname(req.resolve("npm/package.json")), "bin/npm-cli.js");
@@ -63,6 +64,7 @@ export async function packFrame(root: string, output: string) {
       const destination = path.join(stage, "node_modules", pkg.json.name);
       await unpack(await pack(path.join(root, "packages", pkg.directory)), destination);
     }
+    if (release) writeFileSync(path.join(stage, "node_modules/@legendapp/frame-cli/dist/release.json"), JSON.stringify(validateRelease(release), null, 2) + "\n");
     manifest.dependencies = { ...external, ...Object.fromEntries(bundled.map(pkg => [pkg.json.name, pkg.json.version])) };
     manifest.bundledDependencies = bundled.map(pkg => pkg.json.name);
     manifest.peerDependencies = peers;

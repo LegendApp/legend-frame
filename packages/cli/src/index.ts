@@ -18,7 +18,7 @@ import { credentials } from "./credentials.ts";
 import { build, analyze } from "./build.ts";
 import { launch } from "./dev.ts";
 import { doctor, run } from "./commands.ts";
-import { findFramework, findProject, frameHome, packageManifest, registerRuntime } from "./local.ts";
+import { findFramework, findProject, frameHome, creationManifest, packageManifest, registerRuntime } from "./local.ts";
 import { readJson, stateFile, VERSION, writeJson } from "./project.ts";
 import { devCommand } from "./dev-command.ts";
 
@@ -102,19 +102,19 @@ Inside an app: npm run dev, npm run build, npm run package (or pnpm, yarn, bun)
 Advanced: updates init <feedURL>, credentials, doctor, analyze, open [app], build --dev, build --preview
 Windows: dev and build --dev; production builds are not yet supported.
 SDK transfer: sdk export <directory> [--runtime <Frame Runner directory>], sdk import <directory>
-SDK maintainers: sdk pack, sdk build-runner [--platform windows], sdk register <runtime directory>
+SDK maintainers: sdk pack, sdk package-runner, sdk build-runner [--platform windows], sdk register <runtime directory>
 Targets: dev/build/prebuild --platform macos|windows|ios|android|web
 Overrides: --project <directory>, --port <number>, dev --runner-binary <runtime path>, create --packages <manifest>, create --package-manager npm|pnpm|yarn|bun`);
   } else switch (command) {
     case "add": {
       if (positionals[1] !== "desktop") throw new Error("Usage: frame add desktop [--project <Expo app>]");
-      await addDesktop(start, packageManifest(values.packages as string | undefined));
+      await addDesktop(start, creationManifest(values.packages as string | undefined));
       break;
     }
     case "create": {
       if (!positionals[1]) throw new Error("Usage: frame create MyApp");
       if (!values.universal && !["macos", "windows"].includes(platform)) throw new Error("Use create --universal for mobile/web targets");
-      await create(path.resolve(positionals[1]), packageManifest(values.packages as string | undefined), platform, !!values.universal || !!values.example, values.example as Example | undefined, values["package-manager"] as PackageManager | undefined);
+      await create(path.resolve(positionals[1]), creationManifest(values.packages as string | undefined), platform, !!values.universal || !!values.example, values.example as Example | undefined, values["package-manager"] as PackageManager | undefined);
       break;
     }
     case "sdk": {
@@ -142,6 +142,13 @@ Overrides: --project <directory>, --port <number>, dev --runner-binary <runtime 
           console.log(`Registered Frame Runner for SDK ${result.runtime.framework}. Apps will discover it automatically.`);
           break;
         }
+        case "package-runner": {
+          if (platform !== "macos") throw new Error("Signed Runner distribution currently supports macOS only.");
+          const root = projectOption ? project() : path.join(frameHome(), "sdk-builds", VERSION, "FrameRunner");
+          const result = await packageApp(root, { runner: true, force: !!values.force, submissionId: values["submission-id"] });
+          if (result.pending) process.exitCode = 2;
+          break;
+        }
         case "build-go": // Legacy alias; persisted runtime metadata still uses "go".
         case "build-prebuilt": // Legacy command alias.
         case "build-runner": {
@@ -153,6 +160,10 @@ Overrides: --project <directory>, --port <number>, dev --runner-binary <runtime 
             if (!existsSync(path.join(root, "package.json"))) await create(root, manifest, platform);
             else await refreshLocalPackages(root, manifest);
             await prepareGoProfile(root, manifest, platform as "macos" | "windows");
+            const configFile = path.join(root, "desktop.config.json");
+            const config = readJson(configFile);
+            config.version = VERSION.split("-")[0];
+            writeJson(configFile, config);
           }
           await build(root, "go", !!values.force);
           break;

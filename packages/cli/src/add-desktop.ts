@@ -1,3 +1,4 @@
+import { packageSources } from "./release.ts";
 import { packageManager, managerCommand, localArchive } from "./package-manager.ts";
 import { existsSync, readFileSync, writeFileSync } from "node:fs";
 import path from "node:path";
@@ -42,12 +43,12 @@ export function composeMetro(source: string, file: string) {
   return composeExport(source, file, "@legendapp/frame/expo-metro", "withFrameMetro", false);
 }
 
-export async function addDesktop(root: string, manifestFile: string) {
+export async function addDesktop(root: string, manifestFile: string | undefined) {
   const pkgFile = path.join(root, "package.json");
   if (!existsSync(pkgFile)) throw new Error("Run add desktop in an installed Expo app, or pass --project.");
   const pkg = readJson(pkgFile);
   if (pkg.type === "module") throw new Error("ES module package configurations need explicit composition; automatic add desktop currently supports Expo's CommonJS project layout. No files were changed.");
-  const manager = packageManager(root, pkg);
+  const manager = packageManager(root);
   const req = createRequire(pkgFile);
   const installed = (name: string) => readJson(req.resolve(`${name}/package.json`)).version;
   // Never upgrade the mobile baseline as a side effect of adding desktop.
@@ -84,14 +85,12 @@ export async function addDesktop(root: string, manifestFile: string) {
 
   const template = path.resolve(import.meta.dirname, "../templates/universal");
   const defaults = readJson(path.join(template, "package.json"));
-  const archives = readJson(manifestFile);
+  const archives = packageSources(manifestFile);
   const local = ["@legendapp/frame"];
   const dependencies: Record<string, string> = {};
   for (const name of local) {
     if (!archives[name]) throw new Error(`SDK is missing ${name}; run frame sdk pack first.`);
-    const file = path.resolve(path.dirname(manifestFile), archives[name]);
-    if (!existsSync(file)) throw new Error(`Missing SDK archive: ${file}`);
-    dependencies[name] = localArchive(file);
+    dependencies[name] = archives[name]!;
   }
   for (const [name, version] of Object.entries(defaults.dependencies)) {
     if (name.startsWith("expo-desktop") || ["react-native-macos", "react-native-windows", "@react-native-community/cli"].includes(name)) dependencies[name] = version as string;
@@ -107,9 +106,7 @@ export async function addDesktop(root: string, manifestFile: string) {
   const overrides: Record<string, string> = { ...Object.fromEntries(local.map(name => [name, dependencies[name]!])), "@expo/cli": "54.0.27" };
   for (const name of vendor) {
     if (archives[name]) {
-      const file = path.resolve(path.dirname(manifestFile), archives[name]);
-      if (!existsSync(file)) throw new Error(`Missing SDK archive: ${file}`);
-      overrides[name] = localArchive(file);
+      overrides[name] = archives[name]!;
     }
   }
   const overrideField = manager === "yarn" ? "resolutions" : "overrides";

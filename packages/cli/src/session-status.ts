@@ -1,9 +1,9 @@
-export function sessionStatus(target: "go" | "dev", available: boolean, issues: string[], running = false) {
+export function sessionStatus(target: "go" | "dev", available: boolean, issues: string[], running = false, downloadable = false) {
   if (!available && target === "go" && !issues.length) return {
     compatible: false,
     canBuild: false,
-    message: "The Frame Runner isn’t installed for this SDK.\nInstall an SDK bundle containing a matching Frame Runner (node install.mjs), or register a Frame Runner with frame sdk register <runtime directory>.",
-    actions: "g  Use development build · Ctrl+C  Exit",
+    message: downloadable ? "Frame Runner is ready to download. Press d to install and open it." : "The Frame Runner isn’t installed for this SDK.\nInstall an SDK bundle containing a matching Frame Runner (node install.mjs), or register a Frame Runner with frame sdk register <runtime directory>.",
+    actions: downloadable ? "d  Download and open Runner · g  Use development build · Ctrl+C  Exit" : "g  Use development build · Ctrl+C  Exit",
   };
   if (issues.length || !available) return {
     compatible: false,
