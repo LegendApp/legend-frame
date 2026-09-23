@@ -1,20 +1,27 @@
+import path from "node:path";
 import { spawn as nodeSpawn, type ChildProcess, type StdioOptions, type Serializable } from "node:child_process";
 import { createRequire } from "node:module";
 import { constants as osConstants } from "node:os";
-import { Readable } from "node:stream";
+import { openSync, closeSync, mkdirSync } from "node:fs";
+import { Readable, type Writable } from "node:stream";
 
 const spawn: typeof nodeSpawn = createRequire(import.meta.url)("cross-spawn");
+export type ProcessLog = { file: string };
+export function processLog(file: string): ProcessLog { return { file }; }
 export type ProcessOptions = {
   cwd?: string;
   env?: NodeJS.ProcessEnv;
   stdin?: "pipe" | "inherit" | "ignore";
-  stdout?: "pipe" | "inherit" | "ignore";
-  stderr?: "pipe" | "inherit" | "ignore";
+  stdout?: "pipe" | "inherit" | "ignore" | ProcessLog | number;
+  stderr?: "pipe" | "inherit" | "ignore" | ProcessLog | number;
+  detached?: boolean;
   serialization?: "json";
   ipc?: (message: any, child: ManagedProcess) => void;
 };
 export type ManagedProcess = {
   readonly exitCode: number | null;
+  readonly signalCode: NodeJS.Signals | null;
+  readonly stdin: Writable | null;
   readonly pid: number | undefined;
   stdout: ReadableStream<Uint8Array> | null;
   stderr: ReadableStream<Uint8Array> | null;
@@ -24,8 +31,25 @@ export type ManagedProcess = {
 };
 /** Process ownership shared by builds, native runners and Expo's terminal/IPC. */
 export function spawnProcess(argv: string[], options: ProcessOptions = {}): ManagedProcess {
-  const stdio: StdioOptions = [options.stdin ?? "ignore", options.stdout ?? "pipe", options.stderr ?? "pipe", ...(options.ipc ? ["ipc" as const] : [])];
-  const child: ChildProcess = spawn(argv[0]!, argv.slice(1), { cwd: options.cwd, env: options.env ?? process.env, stdio, serialization: options.serialization ?? "json" });
+  const descriptors = new Map<string, number>();
+  function output(value: ProcessOptions["stdout"]) {
+    if (value && typeof value === "object") {
+      if (!descriptors.has(value.file)) {
+        mkdirSync(path.dirname(value.file), { recursive: true });
+        descriptors.set(value.file, openSync(value.file, "w"));
+      }
+      return descriptors.get(value.file)!;
+    }
+    return value ?? "pipe";
+  }
+  let child: ChildProcess;
+  try {
+    const stdio: StdioOptions = [options.stdin ?? "ignore", output(options.stdout), output(options.stderr), ...(options.ipc ? ["ipc" as const] : [])];
+    child = spawn(argv[0]!, argv.slice(1), { cwd: options.cwd, env: options.env ?? process.env, stdio, detached: options.detached, serialization: options.serialization ?? "json" });
+  } finally {
+    // The child owns duplicated handles; do not leak parent descriptors.
+    for (const descriptor of descriptors.values()) closeSync(descriptor);
+  }
   let exitCode: number | null = null;
   const exited = new Promise<number>((resolve, reject) => {
     child.once("error", error => { exitCode = 1; reject(error); });
@@ -37,6 +61,8 @@ export function spawnProcess(argv: string[], options: ProcessOptions = {}): Mana
   void exited.catch(() => {});
   const result: ManagedProcess = {
     get exitCode() { return exitCode; },
+    get signalCode() { return child.signalCode; },
+    get stdin() { return child.stdin; },
     get pid() { return child.pid; },
     stdout: child.stdout ? Readable.toWeb(child.stdout) as unknown as ReadableStream<Uint8Array> : null,
     stderr: child.stderr ? Readable.toWeb(child.stderr) as unknown as ReadableStream<Uint8Array> : null,

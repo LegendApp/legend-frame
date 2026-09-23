@@ -1,12 +1,13 @@
-import { expect, test } from "bun:test";
+import { spawnProcess } from "../packages/cli/src/process.ts";
+import { expect, test } from "vitest";
 import { existsSync, mkdirSync, mkdtempSync, readFileSync, readdirSync, realpathSync, rmSync, writeFileSync } from "node:fs";
 import { createRequire } from "node:module";
 import os from "node:os";
 import path from "node:path";
-import { packFrame } from "../scripts/pack-frame";
-import { installedPackages, nativePackages, selection, stateFile } from "../packages/cli/src/project";
+import { packFrame } from "../scripts/pack-frame.ts";
+import { installedPackages, nativePackages, selection, stateFile } from "../packages/cli/src/project.ts";
 
-const framework = path.resolve(import.meta.dir, "..");
+const framework = path.resolve(import.meta.dirname, "..");
 test("single Frame archive resolves public exports and preserves private native discovery and pruning", async () => {
   const root = mkdtempSync(path.join(os.tmpdir(), "frame-public-package-"));
   try {
@@ -22,7 +23,7 @@ test("single Frame archive resolves public exports and preserves private native 
     const app = path.join(root, "consumer");
     const destination = path.join(app, "node_modules/@legendapp/frame");
     mkdirSync(destination, { recursive: true });
-    const child = Bun.spawn(["tar", "-xzf", path.join(root, file), "--strip-components=1", "-C", destination], { stdout: "pipe", stderr: "pipe" });
+    const child = spawnProcess(["tar", "-xzf", path.join(root, file), "--strip-components=1", "-C", destination], { stdout: "pipe", stderr: "pipe" });
     expect(await child.exited).toBe(0);
     writeFileSync(path.join(app, "package.json"), JSON.stringify({ dependencies: { "@legendapp/frame": "0.1.0-prototype.0" } }));
     writeFileSync(path.join(app, "desktop.config.json"), JSON.stringify({ name: "Packed", version: "1.0.0", projectId: "packed-test", macos: { bundleIdentifier: "org.example.packed" }, platforms: ["macos"] }));
@@ -42,10 +43,10 @@ test("single Frame archive resolves public exports and preserves private native 
     for (const subpath of Object.keys(manifest.exports)) {
       expect(realpathSync(req.resolve(`@legendapp/frame/${subpath.slice(2)}`)).startsWith(realpathSync(destination) + path.sep)).toBe(true);
     }
-    expect(req("@legendapp/frame/config").readConfig).toBeFunction();
-    expect(req("@legendapp/frame/metro").withDesktop).toBeFunction();
-    expect(req("@legendapp/frame/native").withFrameNative).toBeFunction();
-    expect(req("@legendapp/frame/init-template").initializeTemplate).toBeFunction();
+    expect(req("@legendapp/frame/config").readConfig).toBeTypeOf("function");
+    expect(req("@legendapp/frame/metro").withDesktop).toBeTypeOf("function");
+    expect(req("@legendapp/frame/native").withFrameNative).toBeTypeOf("function");
+    expect(req("@legendapp/frame/init-template").initializeTemplate).toBeTypeOf("function");
     expect(req("@legendapp/frame/schema.json")).toEqual(JSON.parse(readFileSync(path.join(framework, "packages/config-plugin/schema.json"), "utf8")));
     const graph = installedPackages(app);
     expect(graph.filter(pkg => pkg.name.startsWith("@legendapp/frame-")).map(pkg => pkg.name).sort()).toEqual(internal.map(pkg => pkg.name).sort());

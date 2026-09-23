@@ -9,9 +9,9 @@ The next useful delegation is standard desktop compilation and binary launching.
 On macOS, first build the Kitchen Sink development binary using the normal framework workflow. Then run:
 
 ```sh
-bun scripts/probe-expo-desktop-run.ts
+node scripts/probe-expo-desktop-run.ts
 # Or pass an existing compatible .app:
-bun scripts/probe-expo-desktop-run.ts /absolute/path/to/KitchenSink.app
+node scripts/probe-expo-desktop-run.ts /absolute/path/to/KitchenSink.app
 ```
 
 The probe uses the installed upstream CLI in a disposable project with the Kitchen Sink dependency graph. It intercepts `open` and `osascript`, so it neither launches the native app nor terminates another application. It kills the probe's process group after reaching the launch boundary or after 60 seconds. Logs and a report are written to `.frame/expo-desktop-run-probe`; the report identifies the retained temporary project. The second phase requires the Kitchen Sink's generated Xcode metadata, which it copies without Pods or build products.

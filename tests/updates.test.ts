@@ -1,11 +1,11 @@
-import { expect, test } from "bun:test";
+import { expect, test } from "vitest";
 import { generateKeyPairSync, sign } from "node:crypto";
 import { mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import os from "node:os";
 import path from "node:path";
 import { createRequire } from "node:module";
-import { verifyUpdateSignature, prepareUpdate, SPARKLE_VERSION } from "../packages/cli/src/updates";
-import { goConfigurationIssues } from "../packages/cli/src/project";
+import { verifyUpdateSignature, prepareUpdate, SPARKLE_VERSION } from "../packages/cli/src/updates.ts";
+import { goConfigurationIssues } from "../packages/cli/src/project.ts";
 const { updateConfiguration, updatePlist } = createRequire(import.meta.url)("../packages/config-plugin/updates.cjs");
 const valid = { feedURL: "https://example.com/updates/appcast.xml", publicKey: Buffer.alloc(32).toString("base64") };
 function config(updates: unknown) { return { extra: { frame: { updates } } }; }

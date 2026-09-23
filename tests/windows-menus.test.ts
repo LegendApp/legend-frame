@@ -1,6 +1,6 @@
-import { expect, test } from "bun:test";
-import { composeWindowsMenus, patchWindowsMenus } from "../packages/native-menu/src/windows-menus";
-import type { NativeMenuConfig } from "../packages/native-menu/src/api";
+import { expect, test } from "vitest";
+import { composeWindowsMenus, patchWindowsMenus } from "../packages/native-menu/src/windows-menus.ts";
+import type { NativeMenuConfig } from "../packages/native-menu/src/api.ts";
 test("Windows menu contributions merge by title and restore targeted items when an owner clears", () => {
   const base: NativeMenuConfig[] = [{ id: "file", title: "File", items: [{ id: "open", title: "Open…", payload: { original: true } }, { id: "save", title: "Save" }] }];
   const owners = new Map<string, NativeMenuConfig[]>([["base", base], ["editor", [{ id: "editor-file", title: "File", items: [

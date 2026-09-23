@@ -9,7 +9,7 @@
     "allowImportingTsExtensions": true,
     "jsx": "react-jsx",
     "types": [
-      "bun"
+      "node"
     ]
   },
   "include": [

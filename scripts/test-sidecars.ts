@@ -1,11 +1,13 @@
+import { spawnProcess, processLog } from "../packages/cli/src/process.ts";
+import { setTimeout as sleep } from "node:timers/promises";
 // Exercise the actual React Native process module in a disposable packaged app.
-// Build Kitchen Sink first with: bun run frame build --dev --project examples/kitchen-sink
+// Build Kitchen Sink first with: npm run frame -- build --dev --project examples/kitchen-sink
 import { cpSync, existsSync, mkdirSync, readFileSync, rmSync } from "node:fs";
 import path from "node:path";
-import { copyHelpers } from "../packages/cli/src/helpers";
-import { availablePort } from "../packages/cli/src/local";
-import { binary, run } from "../packages/cli/src/commands";
-import { projectEnvironment } from "../packages/cli/src/project";
+import { copyHelpers } from "../packages/cli/src/helpers.ts";
+import { availablePort } from "../packages/cli/src/local.ts";
+import { binary, run } from "../packages/cli/src/commands.ts";
+import { projectEnvironment } from "../packages/cli/src/project.ts";
 if (process.platform !== "darwin") throw new Error("This launcher currently runs on macOS; see docs/sidecars.md for the Windows probe.");
 const root = path.resolve("examples/kitchen-sink");
 const source = path.join(root, ".frame/platforms/macos/products/dev/KitchenSink.app");
@@ -20,31 +22,31 @@ copyHelpers(directory, appPath, { echo: { "macos-arm64": { directory: "binary", 
 await run(directory, ["codesign", "--force", "--deep", "--sign", "-", appPath]);
 const port = await availablePort();
 const report = path.join(directory, "report.json");
-const metroLog = Bun.file(path.join(directory, "metro.log"));
-const metro = Bun.spawn([binary(root, "expo"), "start", "--localhost", "--port", String(port), "--max-workers", "2"], { cwd: root, env: { ...process.env, CI: "1", FRAME_PLATFORM: "macos" }, stdout: metroLog, stderr: metroLog });
-let app: ReturnType<typeof Bun.spawn> | undefined;
+const metroLog = processLog(path.join(directory, "metro.log"));
+const metro = spawnProcess([binary(root, "expo"), "start", "--localhost", "--port", String(port), "--max-workers", "2"], { cwd: root, env: { ...process.env, CI: "1", FRAME_PLATFORM: "macos" }, stdout: metroLog, stderr: metroLog });
+let app: ReturnType<typeof spawnProcess> | undefined;
 try {
   const deadline = Date.now() + 60000;
   while (!await fetch(`http://127.0.0.1:${port}/status`, { signal: AbortSignal.timeout(1000) }).then(r => r.ok, () => false)) {
     if (Date.now() > deadline || metro.exitCode !== null) throw new Error(`Metro did not start; see ${directory}`);
-    await Bun.sleep(250);
+    await sleep(250);
   }
   const executable = (await run(directory, ["/usr/libexec/PlistBuddy", "-c", "Print CFBundleExecutable", path.join(appPath, "Contents/Info.plist")], { capture: true })).trim();
-  const log = Bun.file(path.join(directory, "app.log"));
-  app = Bun.spawn([path.join(appPath, "Contents/MacOS", executable), "-RCT_jsLocation", `127.0.0.1:${port}`, "--frame-test-report", report, "--frame-sidecar-probe", "--frame-sidecar-quit-probe"], { cwd: root, env: { ...process.env, ...projectEnvironment(root), FRAME_BUNDLE_URL: `http://127.0.0.1:${port}/index.bundle?platform=macos&dev=true&minify=false` }, stdout: log, stderr: log });
+  const log = processLog(path.join(directory, "app.log"));
+  app = spawnProcess([path.join(appPath, "Contents/MacOS", executable), "-RCT_jsLocation", `127.0.0.1:${port}`, "--frame-test-report", report, "--frame-sidecar-probe", "--frame-sidecar-quit-probe"], { cwd: root, env: { ...process.env, ...projectEnvironment(root), FRAME_BUNDLE_URL: `http://127.0.0.1:${port}/index.bundle?platform=macos&dev=true&minify=false` }, stdout: log, stderr: log });
   const end = Date.now() + 90000;
   while (!existsSync(report)) {
     if (Date.now() > end || app.exitCode !== null) throw new Error(`Sidecar probe did not report; see ${directory}`);
-    await Bun.sleep(250);
+    await sleep(250);
   }
   const result = JSON.parse(readFileSync(report, "utf8"));
   console.log(JSON.stringify(result, null, 2));
   if (!result.passed) throw new Error("Sidecar probe failed");
-  await Promise.race([app.exited, Bun.sleep(10000).then(() => { throw new Error("App quit timed out"); })]);
+  await Promise.race([app.exited, sleep(10000).then(() => { throw new Error("App quit timed out"); })]);
   let alive = true;
   for (let attempt = 0; attempt < 40; attempt++) {
     try { process.kill(result.livePid, 0); } catch { alive = false; break; }
-    await Bun.sleep(50);
+    await sleep(50);
   }
   if (alive) throw new Error(`Helper ${result.livePid} survived app quit`);
   console.log("PASS normal app quit cleaned up the live helper");

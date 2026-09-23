@@ -1,7 +1,7 @@
 import { readFileSync, readdirSync, statSync, writeFileSync } from "node:fs";
 import path from "node:path";
 import { parseArgs } from "node:util";
-import { renderReports, validateReport, type TestReport } from "./testing/report";
+import { renderReports, validateReport, type TestReport } from "./testing/report.ts";
 const { values, positionals } = parseArgs({ args: process.argv.slice(2), allowPositionals: true, options: { output: { type: "string" }, strict: { type: "boolean" } } });
 const reports: TestReport[] = [];
 function read(file: string) {

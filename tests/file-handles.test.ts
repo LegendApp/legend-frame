@@ -1,5 +1,5 @@
-import { expect, test } from "bun:test";
-import { createFileHandle, iterateFile, writeFileChunks, MAX_CHUNK_SIZE, type FileCall } from "../packages/file-system/src/handles";
+import { expect, test } from "vitest";
+import { createFileHandle, iterateFile, writeFileChunks, MAX_CHUNK_SIZE, type FileCall } from "../packages/file-system/src/handles.ts";
 import { fromByteArray, toByteArray } from "base64-js";
 function backend() {
   let data = new Uint8Array([0, 1, 2, 255]), closed = 0, reads = 0, writes = 0;

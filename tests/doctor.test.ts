@@ -1,4 +1,5 @@
-import { expect, test } from "bun:test";
+import { spawnProcess, which } from "../packages/cli/src/process.ts";
+import { expect, test } from "vitest";
 import { mkdtempSync, symlinkSync, rmSync } from "node:fs";
 import path from "node:path";
 import os from "node:os";
@@ -8,15 +9,15 @@ test.skipIf(process.platform !== "darwin" || process.arch !== "arm64")(
   async () => {
     const root = mkdtempSync(path.join(os.tmpdir(), "frame-doctor-"));
     try {
-      for (const command of ["bun", "node", "pod"])
+      for (const command of ["node", "pod"])
         symlinkSync(
-          Bun.which(command) ?? process.execPath,
+          which(command) ?? process.execPath,
           path.join(root, command),
         );
-      const child = Bun.spawn(
+      const child = spawnProcess(
         [
           process.execPath,
-          path.resolve(import.meta.dir, "../packages/cli/src/index.ts"),
+          path.resolve(import.meta.dirname, "../packages/cli/src/index.ts"),
           "doctor",
           "--project",
           root,

@@ -10,8 +10,8 @@ frame create MyMusic --example music-lite
 frame create MyDiff --example diff-lite
 ```
 
-Inside each project, run `bun run web`, `bun run ios`, `bun run android`,
-`bun run macos`, or `bun run windows`. Mobile native development clients need a
+Inside each project, run `npm run web`, `npm run ios`, `npm run android`,
+`npm run macos`, or `npm run windows`. Mobile native development clients need a
 first build. Desktop selects a compatible Frame Runner or requests a custom build
 when a native dependency is missing. Rebuild an older Frame Runner for the new audio,
 AsyncStorage, or Windows host implementations; JavaScript reload cannot add them.

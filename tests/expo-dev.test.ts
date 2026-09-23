@@ -1,4 +1,5 @@
-import { expect, test } from "bun:test";
+import { spawnProcess } from "../packages/cli/src/process.ts";
+import { expect, test } from "vitest";
 import { createRequire } from "node:module";
 import { mkdtempSync, mkdirSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import os from "node:os";
@@ -7,7 +8,7 @@ import path from "node:path";
 const require = createRequire(import.meta.url);
 const { preparePatch, VERSION } = require("../packages/cli/src/expo-dev-patch.cjs");
 const { commands } = require("../packages/cli/src/expo-dev-extension.cjs");
-const root = path.resolve(import.meta.dir, "..");
+const root = path.resolve(import.meta.dirname, "..");
 const preload = path.join(root, "packages/cli/src/expo-dev-preload.cjs");
 
 test("desktop keys follow host/target and leave Expo's existing shortcuts available", () => {
@@ -55,7 +56,7 @@ test("the patch rejects unsupported versions and modified upstream sources witho
 
 test("Expo's real key handler routes desktop actions over IPC and retains reload/menu actions", async () => {
   const actions: string[] = [];
-  const child = Bun.spawn(["node", "--require", preload, path.join(import.meta.dir, "fixtures/expo-dev-session.cjs")], {
+  const child = spawnProcess(["node", "--require", preload, path.join(import.meta.dirname, "fixtures/expo-dev-session.cjs")], {
     cwd: root, env: { ...process.env, FRAME_PLATFORM: "macos", FORCE_COLOR: "0" },
     stdout: "pipe", stderr: "pipe", serialization: "json",
     ipc(message, sender) {
@@ -88,7 +89,7 @@ test("Expo's real key handler routes desktop actions over IPC and retains reload
 }, 20000);
 
 test("Metro child processes ignore the inherited preload", async () => {
-  const child = Bun.spawn(["node", "--require", preload, "-e", "console.log('worker ready')"], {
+  const child = spawnProcess(["node", "--require", preload, "-e", "console.log('worker ready')"], {
     cwd: os.tmpdir(), env: { ...process.env, FRAME_EXPO_PRELOADED: "1" }, stdout: "pipe", stderr: "pipe",
   });
   expect(await new Response(child.stdout).text()).toContain("worker ready");

@@ -1,4 +1,5 @@
-import { beforeEach, expect, mock, test } from "bun:test";
+import { setTimeout as sleep } from "node:timers/promises";
+import { beforeEach, expect, vi, test } from "vitest";
 const calls: { native: string; method: string; args: any }[] = [];
 const handlers = new Map<string, (args: any) => unknown | Promise<unknown>>();
 const subscriptions = new Map<string, Set<(event: any) => void>>();
@@ -20,7 +21,7 @@ function emit(name: string, event: string, value: unknown) {
   for (const listener of subscriptions.get(`${name}.${event}`) ?? []) listener(value);
 }
 const platform = { OS: "macos" };
-mock.module("react-native", () => ({
+vi.doMock("react-native", () => ({
   Platform: platform,
   TurboModuleRegistry: { getEnforcing: module },
   NativeEventEmitter: class {
@@ -33,21 +34,21 @@ mock.module("react-native", () => ({
     }
   },
 }));
-const notifications = await import("../packages/notifications/src/index");
-const tray = await import("../packages/tray/src/index");
-const updates = await import("../packages/updates/src/index");
-const app = await import("../packages/desktop-app/src/index");
-const windows = await import("../packages/desktop-windows/src/index");
-const files = await import("../packages/file-system/src/index");
-const clipboard = await import("../packages/clipboard/src/index");
-const links = await import("../packages/desktop-links/src/index");
-const { secureStorage } = await import("../packages/secure-storage/src/index");
-const shortcuts = await import("../packages/desktop-shortcuts/src/index");
-const menus = await import("../packages/native-menu/src/index");
-const context = await import("../packages/context-menu/src/index");
-const dialogs = await import("../packages/file-dialog/src/index");
+const notifications = await import("../packages/notifications/src/index.ts");
+const tray = await import("../packages/tray/src/index.ts");
+const updates = await import("../packages/updates/src/index.ts");
+const app = await import("../packages/desktop-app/src/index.ts");
+const windows = await import("../packages/desktop-windows/src/index.ts");
+const files = await import("../packages/file-system/src/index.ts");
+const clipboard = await import("../packages/clipboard/src/index.ts");
+const links = await import("../packages/desktop-links/src/index.ts");
+const { secureStorage } = await import("../packages/secure-storage/src/index.ts");
+const shortcuts = await import("../packages/desktop-shortcuts/src/index.ts");
+const menus = await import("../packages/native-menu/src/index.ts");
+const context = await import("../packages/context-menu/src/index.ts");
+const dialogs = await import("../packages/file-dialog/src/index.ts");
 beforeEach(() => { platform.OS = "macos"; calls.length = 0; handlers.clear(); subscriptions.clear(); });
-const tick = () => Bun.sleep(1);
+const tick = () => sleep(1);
 function nativeError(code: string) { return Object.assign(new Error(code), { code }); }
 
 test("app context, activation, hide and quit call the native host", async () => {
@@ -227,10 +228,10 @@ test("updates expose availability without starting and preserve native errors", 
   emit("NativeDesktopApp", "desktop", { type: "trayClick" }); expect(events).toHaveLength(1); sub.remove();
 });
 
-const processes = await import("../packages/processes/src/index");
-const globalShortcuts = await import("../packages/global-shortcuts/src/index");
-const system = await import("../packages/system/src/index");
-const messages = await import("../packages/message-dialog/src/index");
+const processes = await import("../packages/processes/src/index.ts");
+const globalShortcuts = await import("../packages/global-shortcuts/src/index.ts");
+const system = await import("../packages/system/src/index.ts");
+const messages = await import("../packages/message-dialog/src/index.ts");
 test("global hotkey conflicts clean subscriptions and distinct registrations dispose independently", async () => {
   let hits = 0;
   const first = await globalShortcuts.registerGlobalShortcut("Cmd+Shift+J", () => hits++);
@@ -310,7 +311,7 @@ test("Expo clipboard subset handles formats, boolean results, and native failure
 });
 
 test("Expo SecureStore subset shares legacy storage and rejects unsupported options", async () => {
-  const store = await import("../packages/secure-storage/src/index");
+  const store = await import("../packages/secure-storage/src/index.ts");
   expect(await store.isAvailableAsync()).toBe(true);
   expect(await store.getItemAsync("missing")).toBeNull();
   handlers.set("NativeDesktopSecureStorage.get", () => "");
@@ -344,7 +345,7 @@ test("Expo linking separates stable initial URLs, live URLs, and legacy file eve
 });
 
 test("web SecureStore stays unavailable without native dispatch", async () => {
-  const web = await import("../packages/secure-storage/src/index.web");
+  const web = await import("../packages/secure-storage/src/index.web.ts");
   expect(await web.isAvailableAsync()).toBe(false);
   await expect(web.setItemAsync("secret", "value")).rejects.toThrow("unavailable");
   expect(calls).toHaveLength(0);
@@ -352,27 +353,27 @@ test("web SecureStore stays unavailable without native dispatch", async () => {
 
 test("mobile adapters delegate the shared subset to Expo without native dispatch", async () => {
   const forwarded: string[] = [];
-  mock.module("expo-clipboard", () => ({
+  vi.doMock("expo-clipboard", () => ({
     getStringAsync: async () => "expo text",
     setStringAsync: async () => { forwarded.push("clipboard"); return false; },
     hasStringAsync: async () => true,
     StringFormat: { PLAIN_TEXT: "plainText", HTML: "html" },
   }));
-  mock.module("expo-secure-store", () => ({
+  vi.doMock("expo-secure-store", () => ({
     isAvailableAsync: async () => true,
     getItemAsync: async () => "expo secret",
     setItemAsync: async () => { forwarded.push("secret"); },
     deleteItemAsync: async () => { forwarded.push("delete"); },
   }));
-  mock.module("expo-linking", () => ({
+  vi.doMock("expo-linking", () => ({
     getInitialURL: async () => "expo://initial",
     openURL: async () => { forwarded.push("url"); },
     canOpenURL: async () => true,
     addEventListener: () => ({ remove() {} }),
   }));
-  const mobileClipboard = await import("../packages/clipboard/src/index.ios");
-  const mobileSecure = await import("../packages/secure-storage/src/index.android");
-  const mobileLinks = await import("../packages/desktop-links/src/index.web");
+  const mobileClipboard = await import("../packages/clipboard/src/index.ios.ts");
+  const mobileSecure = await import("../packages/secure-storage/src/index.android.ts");
+  const mobileLinks = await import("../packages/desktop-links/src/index.web.ts");
   expect(await mobileClipboard.getStringAsync()).toBe("expo text");
   expect(await mobileClipboard.setStringAsync("text")).toBe(false);
   expect(await mobileSecure.getItemAsync("key")).toBe("expo secret");
@@ -385,9 +386,9 @@ test("mobile adapters delegate the shared subset to Expo without native dispatch
 
 test("Windows shared adapters dispatch rich formats to native backends", async () => {
   platform.OS = "windows";
-  const win = await import("../packages/clipboard/src/index.windows");
-  const store = await import("../packages/secure-storage/src/index.windows");
-  const linking = await import("../packages/desktop-links/src/index.windows");
+  const win = await import("../packages/clipboard/src/index.windows.ts");
+  const store = await import("../packages/secure-storage/src/index.windows.ts");
+  const linking = await import("../packages/desktop-links/src/index.windows.ts");
   handlers.set("NativeDesktopClipboard.getString", () => "Windows text");
   expect(await win.getStringAsync()).toBe("Windows text");
   expect(await win.setStringAsync("hello")).toBe(true);
@@ -430,7 +431,7 @@ test("Windows dialogs retain four-button indices, parent selection and checkbox 
 
 test("Windows process validation accepts drive and UNC executables without allowing relative paths", async () => {
   platform.OS = "windows";
-  const processes = await import("../packages/processes/src/index");
+  const processes = await import("../packages/processes/src/index.ts");
   await processes.spawn({ executable: String.raw`C:\Program Files\tool.exe`, cwd: String.raw`\\server\share\folder`, args: ['a"b', "", "space value"] });
   expect(calls.at(-1)).toMatchObject({ native: "NativeDesktopProcesses", method: "spawn", args: { executable: String.raw`C:\Program Files\tool.exe`, args: ['a"b', "", "space value"] } });
   await expect(processes.spawn({ executable: "tool.exe" })).rejects.toThrow("absolute");

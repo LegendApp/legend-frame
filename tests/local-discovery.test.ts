@@ -1,4 +1,4 @@
-import { expect, test } from "bun:test";
+import { expect, test } from "vitest";
 import { mkdtempSync, mkdirSync, rmSync } from "node:fs";
 import { createServer } from "node:net";
 import os from "node:os";

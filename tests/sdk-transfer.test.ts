@@ -1,9 +1,9 @@
-import { expect, test } from "bun:test";
+import { expect, test } from "vitest";
 import { mkdtempSync, mkdirSync, writeFileSync, rmSync, renameSync, symlinkSync } from "node:fs";
 import os from "node:os";
 import path from "node:path";
-import { exportSDK, importSDK, verifySDK, treeHashes } from "../packages/cli/src/sdk-transfer";
-import { writeJson } from "../packages/cli/src/project";
+import { exportSDK, importSDK, verifySDK, treeHashes } from "../packages/cli/src/sdk-transfer.ts";
+import { writeJson } from "../packages/cli/src/project.ts";
 test("SDK can move before registration; altered packages fail verification", () => {
   const root = mkdtempSync(path.join(os.tmpdir(), "frame-sdk-transfer-")); const home = process.env.FRAME_HOME;
   try {

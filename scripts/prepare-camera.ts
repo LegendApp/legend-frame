@@ -1,10 +1,12 @@
+import { packArchive } from "../packages/cli/src/pack-archive.ts";
+import { applyOverrides, localArchive, managerCommand, packageManager } from "../packages/cli/src/package-manager.ts";
 import { createHash } from "node:crypto";
 import { cpSync, existsSync, mkdirSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import path from "node:path";
-import { run } from "../packages/cli/src/commands";
-import { readJson, writeJson } from "../packages/cli/src/project";
+import { run } from "../packages/cli/src/commands.ts";
+import { readJson, writeJson } from "../packages/cli/src/project.ts";
 
-const framework = path.resolve(import.meta.dir, "..");
+const framework = path.resolve(import.meta.dirname, "..");
 type Upstream = { version: string; url: string; integrity: string };
 
 /** Recreate patched packages from integrity-checked published sources. */
@@ -31,7 +33,7 @@ export async function packCameraPackages(names?: string[]) {
     if (existsSync(patch)) await run(stage, ["patch", "--batch", "--fuzz=0", "-p1", "-i", patch], { capture: true });
     const hash = createHash("sha256").update(info.integrity).update(existsSync(patch) ? readFileSync(patch) : "").digest("hex").slice(0, 12);
     const file = `${name}-${info.version}-macos-${hash}.tgz`;
-    await run(stage, ["tar", "--exclude=.frame", "-czf", path.join(output, file), "."], { capture: true });
+    await run(stage, ["tar", "--exclude=.frame", "-czf", path.join(output, file), "."], { capture: true, env: { COPYFILE_DISABLE: "1" } });
     manifest[name] = path.join(output, file);
   }
   writeJson(path.join(output, "manifest.json"), manifest);
@@ -42,13 +44,16 @@ export async function installCameraPackages(root: string, probeOnly = false) {
   const packages = await packCameraPackages(probeOnly ? ["react-native-nitro-modules"] : ["react-native-nitro-modules", "react-native-nitro-image", "react-native-vision-camera"]);
   const probe = path.join(framework, "examples/camera/nitro-view-probe");
   const output = path.join(framework, "artifacts/camera/packages/nitro-view-probe.tgz");
-  await run(probe, ["bun", "pm", "pack", "--filename", output], { capture: true });
+  await packArchive(probe, output);
   const hash = createHash("sha256").update(readFileSync(output)).digest("hex").slice(0, 12);
   const immutable = output.replace(".tgz", `-${hash}.tgz`); cpSync(output, immutable);
   packages["@legendapp/frame-nitro-view-probe"] = immutable;
   const pkg = readJson(path.join(root, "package.json"));
-  Object.assign(pkg.dependencies, packages); Object.assign(pkg.overrides, packages);
+  const manager = packageManager(root);
+  const dependencies = Object.fromEntries(Object.entries(packages).map(([name, archive]) => [name, localArchive(archive)]));
+  pkg.dependencies = { ...pkg.dependencies, ...dependencies };
+  applyOverrides(pkg, dependencies, manager);
   writeJson(path.join(root, "package.json"), pkg);
-  await run(root, ["bun", "install"], { capture: true });
+  await run(root, managerCommand(manager, ["install"]), { capture: true });
   return packages;
 }

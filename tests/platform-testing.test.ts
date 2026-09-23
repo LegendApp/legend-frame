@@ -1,7 +1,7 @@
-import { expect, test } from "bun:test";
-import { clipboardRoundTrip, secureStorageLifecycle, fileConflict } from "../examples/kitchen-sink/contract-cases";
-import { catalog, executeCase, initialResults, summarize } from "../examples/kitchen-sink/contract-report";
-import { acceptRuntimeMessage, record, renderReports, validateReport, type TestReport } from "../scripts/testing/report";
+import { expect, test } from "vitest";
+import { clipboardRoundTrip, secureStorageLifecycle, fileConflict } from "../examples/kitchen-sink/contract-cases.ts";
+import { catalog, executeCase, initialResults, summarize } from "../examples/kitchen-sink/contract-report.ts";
+import { acceptRuntimeMessage, record, renderReports, validateReport, type TestReport } from "../scripts/testing/report.ts";
 function fixture(platform: "windows" | "web" = "windows", scope: "prepare" | "runtime" = "runtime"): TestReport {
   const results = initialResults(platform);
   return { schema: "frame-platform-tests/v1", runId: crypto.randomUUID(), source: { commit: "abc123", dirty: false, fingerprint: "source-one" },

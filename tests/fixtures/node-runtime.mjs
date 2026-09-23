@@ -5,9 +5,9 @@ import { createRequire } from "node:module";
 import { pathToFileURL } from "node:url";
 import path from "node:path";
 import os from "node:os";
-import { mkdtempSync, mkdirSync, writeFileSync, rmSync } from "node:fs";
+import { mkdtempSync, mkdirSync, writeFileSync, readFileSync, rmSync } from "node:fs";
 const directory = process.argv[2];
-const { spawnProcess, which } = await import(pathToFileURL(path.join(directory, "process.js")));
+const { spawnProcess, processLog, which } = await import(pathToFileURL(path.join(directory, "process.js")));
 const { startWindowsMetro } = await import(pathToFileURL(path.join(directory, "windows-metro.js")));
 const { installedPackages } = await import(pathToFileURL(path.join(directory, "project.js")));
 const packageFixture = mkdtempSync(path.join(os.tmpdir(), "frame-package-graph-"));
@@ -19,6 +19,15 @@ try {
   writeFileSync(path.join(dependency, "dist/package.json"), JSON.stringify({ type: "module" }));
   writeFileSync(path.join(dependency, "dist/index.js"), "export default {};\n");
   assert.deepEqual(installedPackages(packageFixture).map(pkg => pkg.name), ["hidden-package"]);
+  const log = path.join(packageFixture, "child.log");
+  const child = spawnProcess([process.execPath, "-e", 'process.stdin.on("data", chunk => { process.stdout.write(chunk); process.stderr.write("stderr\\n"); });'], {
+    stdin: "pipe", stdout: processLog(log), stderr: processLog(log),
+  });
+  await new Promise((resolve, reject) => child.stdin.write("stdin payload\n", error => error ? reject(error) : resolve()));
+  child.stdin.end();
+  assert.equal(await child.exited, 0);
+  assert.equal(child.signalCode, null);
+  assert.equal(readFileSync(log, "utf8"), "stdin payload\nstderr\n");
 } finally { rmSync(packageFixture, { recursive: true, force: true }); }
 const WebSocket = createRequire(path.join(directory, "index.js"))("ws");
 const { WebSocketServer } = WebSocket;

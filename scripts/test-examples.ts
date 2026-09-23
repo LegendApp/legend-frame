@@ -1,10 +1,10 @@
 import { mkdirSync, readFileSync } from "node:fs";
 import path from "node:path";
-import { create } from "../packages/cli/src/create";
-import { run } from "../packages/cli/src/commands";
-import { nodeCommand } from "../packages/cli/src/windows";
-import { type Example } from "../packages/cli/src/examples";
-const framework = path.resolve(import.meta.dir, "..");
+import { create } from "../packages/cli/src/create.ts";
+import { run } from "../packages/cli/src/commands.ts";
+import { nodeCommand } from "../packages/cli/src/windows.ts";
+import { type Example } from "../packages/cli/src/examples.ts";
+const framework = path.resolve(import.meta.dirname, "..");
 const parent = path.resolve(process.argv[2] ?? `.frame/example-tests/${Date.now()}`);
 for (const example of ["notes-lite", "music-lite", "diff-lite"] as Example[]) {
   const root = path.join(parent, example.replace(/-([a-z])/g, (_, letter) => letter.toUpperCase()));

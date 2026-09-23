@@ -5,16 +5,16 @@
 In a newly created app:
 
 ```sh
-bun run package
+npm run package
 ```
 
 In an existing app that does not yet have the package script:
 
 ```sh
-bunx --no-install frame package
+npx --no-install frame package
 ```
 
-`bun run build` continues to produce an ad-hoc-signed standalone app for local testing. Packaging signs a staging copy and leaves that build output untouched.
+`npm run build` continues to produce an ad-hoc-signed standalone app for local testing. Packaging signs a staging copy and leaves that build output untouched.
 
 ## First-run setup
 
@@ -25,7 +25,7 @@ On first use, frame discovers available Developer ID identities. It uses the onl
 Repeat or change the setup with:
 
 ```sh
-bunx --no-install frame credentials
+npx --no-install frame credentials
 ```
 
 frame remembers the certificate fingerprint, team, and Keychain profile in `.frame/signing.json`. This file contains references, not private keys or passwords, and is ignored by Git. Secret values do not belong in `app.json`.
@@ -86,7 +86,7 @@ If Apple rejects the app, frame saves the notarization log and reports its path.
 If a connection drops before Apple returns the submission ID, frame records the uncertainty and will not submit the same artifact again automatically. Find the ID with `notarytool history`, then recover it with:
 
 ```sh
-bunx --no-install frame package --submission-id <submission-id>
+npx --no-install frame package --submission-id <submission-id>
 ```
 
 Recovery checks the unique upload filename, and acceptance checks Apple's recorded SHA-256 against the exact uploaded ZIP. Keep the `.frame/packaging/` artifacts while a submission is pending. A changed staged artifact is rejected.

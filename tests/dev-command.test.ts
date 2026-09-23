@@ -1,5 +1,5 @@
-import { expect, test } from "bun:test";
-import { devArguments, devTargets } from "../packages/cli/src/dev-command";
+import { expect, test } from "vitest";
+import { devArguments, devTargets } from "../packages/cli/src/dev-command.ts";
 
 test("dev consumes frame options and forwards Expo flags and aliases unchanged", () => {
   const expo = ["--go", "--clear", "--offline", "-p", "8123", "--max-workers=2", "-w", "--scheme", "my-app", "--future-expo-flag"];

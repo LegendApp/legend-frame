@@ -1,9 +1,9 @@
-import { expect, test } from "bun:test";
+import { expect, test } from "vitest";
 import { mkdtempSync, rmSync } from "node:fs";
 import os from "node:os";
 import path from "node:path";
-import { macOSReleaseSettings } from "../packages/cli/src/macos-release";
-import { runtimeFor, writeJson } from "../packages/cli/src/project";
+import { macOSReleaseSettings } from "../packages/cli/src/macos-release.ts";
+import { runtimeFor, writeJson } from "../packages/cli/src/project.ts";
 
 test("compiler policy changes invalidate macOS releases without invalidating development or Windows", () => {
   const root = mkdtempSync(path.join(os.tmpdir(), "frame-release-policy-"));

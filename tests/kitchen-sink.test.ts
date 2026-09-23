@@ -1,8 +1,8 @@
-import { expect, test } from "bun:test";
+import { expect, test } from "vitest";
 import { mkdtempSync, mkdirSync, writeFileSync, readFileSync, existsSync, rmSync } from "node:fs";
 import os from "node:os";
 import path from "node:path";
-import { copyKitchenSinkScreens, prepareKitchenSink } from "../scripts/prepare-kitchen-sink";
+import { copyKitchenSinkScreens, prepareKitchenSink } from "../scripts/prepare-kitchen-sink.ts";
 
 test("packaged consumers receive screens without workspace manifests or native projects", () => {
   const root = mkdtempSync(path.join(os.tmpdir(), "kitchen-copy-"));

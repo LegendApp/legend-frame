@@ -1,6 +1,6 @@
-import { expect, test } from 'bun:test';
-import { MusicModel } from '../packages/cli/templates/music-lite/model';
-import { compare } from '../packages/cli/templates/diff-lite/compare';
+import { expect, test } from 'vitest';
+import { MusicModel } from '../packages/cli/templates/music-lite/model.ts';
+import { compare } from '../packages/cli/templates/diff-lite/compare.ts';
 test('restoring a queue never autoplays and resumes only after a play command', async () => {
   const calls: string[] = []; let saved: unknown;
   const model = new MusicModel({ load: async () => ({ value: { version: 1, tracks: [{ id: 'one', name: 'One', uri: 'one.wav' }], currentId: 'one', position: 12 }, recovered: false }), save: async value => { saved = value; } }, async () => ({ release() { calls.push('release'); }, player: { async setVolume() {}, async setMetadata() {}, addListener() { return { remove() {} }; },

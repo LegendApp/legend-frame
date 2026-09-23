@@ -1,7 +1,8 @@
+import { spawnSync } from "node:child_process";
 import { createHash } from "node:crypto";
 import { existsSync, mkdirSync, readFileSync, writeFileSync, renameSync } from "node:fs";
 import path from "node:path";
-import { catalog, initialResults, summarize, updateResult, type CaseResult, type TestPlatform } from "../../examples/kitchen-sink/contract-report";
+import { catalog, initialResults, summarize, updateResult, type CaseResult, type TestPlatform } from "../../examples/kitchen-sink/contract-report.ts";
 export interface TestReport {
   schema: "frame-platform-tests/v1";
   runId: string;
@@ -21,8 +22,8 @@ export interface TestReport {
 }
 export function sourceIdentity(root: string): TestReport["source"] {
   function git(args: string[]) {
-    const result = Bun.spawnSync(["git", ...args], { cwd: root });
-    if (result.exitCode !== 0) throw new Error(result.stderr.toString());
+    const result = spawnSync("git", args, { cwd: root });
+    if (result.status !== 0) throw new Error(result.stderr.toString());
     return result.stdout.toString();
   }
   const hash = createHash("sha256");

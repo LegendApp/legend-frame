@@ -66,7 +66,7 @@ The current distribution mechanism is local tarballs. `scripts/pack.ts` writes c
 
 `~/.frame` is the default global registry; `FRAME_HOME` overrides it. SDK records are versioned. Runtime registration records a path rather than copying an application. The managed prebuilt build project is created under the frame home unless a project is supplied explicitly. App-local `.frame` data and the global frame home are different scopes.
 
-The template manifests and `scripts/prepare-runtimes.ts` are the authoritative pins. We remain on Expo Desktop `1.0.0-beta.5` and native template `54.81.1-beta.5`, with Expo 54.0.37, React Native 0.81.6, React Native macOS 0.81.7, and React Native Windows 0.81.35. Creation uses a subprocess-scoped npm 11 executable because beta.5 misreads npm 12's local-tarball metadata. Bun still installs dependencies. This compatibility adapter does not patch upstream or change the host npm installation.
+The template manifests and `scripts/prepare-runtimes.ts` are the authoritative pins. We remain on Expo Desktop `1.0.0-beta.5` and native template `54.81.1-beta.5`, with Expo 54.0.37, React Native 0.81.6, React Native macOS 0.81.7, and React Native Windows 0.81.35. Creation uses a subprocess-scoped npm 11 executable because beta.5 misreads npm 12's local-tarball metadata. The selected package manager installs dependencies. This compatibility adapter does not patch upstream or change the host npm installation.
 
 Windows uses its own complete application template, with no runtime removal/replacement of macOS source files. SDK packing prepares the pinned Runtimes archive and Windows Nitro, OP-SQLite, and WebView adapters on either host OS. Patch application uses JavaScript; consumers receive ordinary dependency archives.
 
@@ -105,7 +105,7 @@ App/window close guards, incoming launch events, and single-instance forwarding 
 
 ## Development session and compatibility
 
-`frame dev` supervises the installed Expo CLI and the native application it launches. Expo inherits the terminal and owns its keyboard handling, command table, prompts, Metro, reload, debugger, and mobile/web actions. A version- and source-checked process-local patch adds `d` (open desktop), `g` (switch desktop runtime), and `b` (build when required). JSON IPC carries desktop actions/results and runtime status between Expo under Node and the frame supervisor under Bun; there is no second stdin handler. Metro workers skip the inherited preload. Closing Expo closes the owned app. Ordinary Expo commands outside this launcher are unpatched. Expo chooses its host and port (LAN and 8081 by default); IPC reports the actual Metro port for desktop launches. frame consumes only `--project`, `--platform`, `--runner-binary`, and `--no-open`, forwarding Expo options unchanged. Expo’s boolean `--go` keeps its mobile meaning. It can discover registered prebuilt binaries or reuse a recorded custom build; the selected target is remembered per project.
+`frame dev` supervises the installed Expo CLI and the native application it launches. Expo inherits the terminal and owns its keyboard handling, command table, prompts, Metro, reload, debugger, and mobile/web actions. A version- and source-checked process-local patch adds `d` (open desktop), `g` (switch desktop runtime), and `b` (build when required). JSON IPC carries desktop actions/results and runtime status between Expo under Node and the frame supervisor under Node; there is no second stdin handler. Metro workers skip the inherited preload. Closing Expo closes the owned app. Ordinary Expo commands outside this launcher are unpatched. Expo chooses its host and port (LAN and 8081 by default); IPC reports the actual Metro port for desktop launches. frame consumes only `--project`, `--platform`, `--runner-binary`, and `--no-open`, forwarding Expo options unchanged. Expo’s boolean `--go` keeps its mobile meaning. It can discover registered prebuilt binaries or reuse a recorded custom build; the selected target is remembered per project.
 
 The public shared-client name is **Frame Runner**. Legacy `build-go`/`--go-binary` commands alias the new `build-runner`/`--runner-binary` spellings. Persisted `"go"` mode values and existing build/registry paths remain stable; this is a terminology change, not a runtime schema migration.
 
@@ -273,7 +273,7 @@ Useful starting points:
 | Windows development | `platform.ts`, `windows.ts`, Windows config/host hooks, native-greeting fixture | `test:windows:prepare` locally; `test:windows` on Windows x64/ARM64 |
 | Production on a new platform | Remaining platform work above and upstream template | Native production build, clean-machine launch, reduced standalone artifact |
 
-Begin with `bun run typecheck` and `bun test tests` where appropriate. Native tests need the platform toolchain and sometimes an interactive desktop. `bun run test:all` includes costly native builds; inspect its current definition before running it. A locked GUI or unavailable UI driver is a validation limitation, not a passing interactive test.
+Begin with `npm run typecheck` and `npm test` where appropriate. Native tests need the platform toolchain and sometimes an interactive desktop. `npm run test:all` includes costly native builds; inspect its current definition before running it. A locked GUI or unavailable UI driver is a validation limitation, not a passing interactive test.
 
 Keep these invariants intact:
 
@@ -324,23 +324,22 @@ acceptance; all open native checks remain in [Windows issues](docs/windows-issue
 
 ## Kitchen sink development
 
-`examples/kitchen-sink` is a checked-in Bun workspace app with its own manifest,
+`examples/kitchen-sink` is a checked-in npm workspace app with its own manifest,
 canonical desktop configuration, Expo config, Metro config and run scripts. The
-repository lockfile and hoisted Bun installation match Expo Desktop beta's native
+repository lockfile and hoisted installation match Expo Desktop beta's native
 template assumptions. Application dependencies reference framework workspace
 packages; Metro watches workspace source through Expo's ordinary monorepo support.
 The desktop adapter keeps the bundle server root at the app so prebuilt hosts can
 continue requesting `/index.bundle` and `/.threaded-runtime/entry.bundle`.
 
-`bun install` applies checked-in external-library deltas through
+`npm install` applies checked-in external-library deltas through
 `scripts/install-workspace-adapters.ts`. The hook performs local file operations
 only, validates versions and patch contexts, supports repeat installs, and replaces
-files atomically to preserve package-cache hardlinks. This avoids Bun 1.3.14's
-nested-file patching failure. `scripts/sync-workspace-patches.ts` is a maintainer
+files atomically to preserve package-cache hardlinks across package managers. `scripts/sync-workspace-patches.ts` is a maintainer
 command deriving those patches from the same pinned recipes as SDK packing.
 Neither command generates an application or compiles native code during install.
 
-`bun run macos` and `bun run windows` invoke the existing frame/Expo development
+`npm run macos` and `npm run windows` invoke the existing frame/Expo development
 session and prebuilt registry. Native dependencies come from the compatible binary;
 Metro supplies live JavaScript and CSS. No hosted download service exists yet.
 The explicit `rebuild:macos` / `rebuild:windows` commands build and register a

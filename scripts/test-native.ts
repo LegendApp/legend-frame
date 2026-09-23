@@ -1,3 +1,6 @@
+import { spawnProcess, processLog } from "../packages/cli/src/process.ts";
+import { setTimeout as sleep } from "node:timers/promises";
+import { managerCommand, packageManager } from "../packages/cli/src/package-manager.ts";
 import { cpSync, existsSync, mkdirSync, readFileSync, readdirSync, writeFileSync } from "node:fs";
 import path from "node:path";
 import { prepareKitchenSink } from "./prepare-kitchen-sink.ts";
@@ -27,27 +30,27 @@ const packageFile = path.join(root, "package.json");
 let pkg = readJson(packageFile);
 if (pkg.dependencies["@legendapp/frame-sdk-test-driver"]) {
   delete pkg.dependencies["@legendapp/frame-sdk-test-driver"]; writeJson(packageFile, pkg);
-  await run(root, ["bun", "install"]);
+  await run(root, managerCommand(packageManager(root), ["install"]));
 }
 const go = await build(root, "go");
 const port = await availablePort();
 const reportDir = path.join(root, ".frame/test-results"); mkdirSync(reportDir, { recursive: true });
 writeJson(path.join(root, ".frame/session.json"), { compatible: true, target: "test", port });
-const metroLog = Bun.file(path.join(reportDir, "metro.log"));
-const startMetro = () => { writeFileSync(path.join(reportDir, "metro.log"), ""); return Bun.spawn([binary(root, "expo"), "start", "--localhost", "--port", String(port), "--max-workers", "2"], { cwd: root, env: { ...process.env, CI: "1" }, stdout: metroLog, stderr: metroLog }); };
+const metroLog = processLog(path.join(reportDir, "metro.log"));
+const startMetro = () => { writeFileSync(path.join(reportDir, "metro.log"), ""); return spawnProcess([binary(root, "expo"), "start", "--localhost", "--port", String(port), "--max-workers", "2"], { cwd: root, env: { ...process.env, CI: "1" }, stdout: metroLog, stderr: metroLog }); };
 let metro = startMetro();
-let appProcess: ReturnType<typeof Bun.spawn> | undefined;
+let appProcess: ReturnType<typeof spawnProcess> | undefined;
 async function waitFor<T>(read: () => Promise<T | undefined>, timeout: number, description: string): Promise<T> {
   const until = Date.now() + timeout;
-  while (Date.now() < until) { const result = await read(); if (result !== undefined) return result; await Bun.sleep(200); }
+  while (Date.now() < until) { const result = await read(); if (result !== undefined) return result; await sleep(200); }
   throw new Error(`Timed out: ${description}. See ${reportDir}`);
 }
 async function execute(app: string, phase: string, projectId: string, extraArgs: string[] = [], development = true) {
   const reportFile = path.join(reportDir, `${phase}-${Date.now()}.json`);
   const executableName = (await run(root, ["/usr/libexec/PlistBuddy", "-c", "Print :CFBundleExecutable", path.join(app, "Contents/Info.plist")], { capture: true })).trim();
   writeFileSync(path.join(reportDir, `${phase}.log`), "");
-  const appLog = Bun.file(path.join(reportDir, `${phase}.log`));
-  appProcess = Bun.spawn([path.join(app, "Contents/MacOS", executableName), "-RCT_jsLocation", `127.0.0.1:${port}`, "--frame-test-report", reportFile, ...extraArgs], {
+  const appLog = processLog(path.join(reportDir, `${phase}.log`));
+  appProcess = spawnProcess([path.join(app, "Contents/MacOS", executableName), "-RCT_jsLocation", `127.0.0.1:${port}`, "--frame-test-report", reportFile, ...extraArgs], {
     cwd: root, env: { ...process.env, FRAME_PROJECT_ID: projectId, FRAME_PROJECT_NAME: "SDK Tests", FRAME_PROJECT_VERSION: "9.8.7", FRAME_BUNDLE_URL: `http://127.0.0.1:${port}/index.bundle?platform=macos&dev=${development}&minify=false` }, stdout: appLog, stderr: appLog,
   });
   try {
@@ -76,7 +79,7 @@ async function executeUI(app: string) {
   }
   const directory = path.join(root, ".frame/ui-tests");
   mkdirSync(directory, { recursive: true });
-  const fixture = path.resolve(import.meta.dir, "../tests/native-ui");
+  const fixture = path.resolve(import.meta.dirname, "../tests/native-ui");
   cpSync(fixture, directory, { recursive: true });
   const report = path.join(reportDir, `custom-ui-${Date.now()}.json`);
   writeJson(path.join(directory, "configuration.json"), { app, report, location: `127.0.0.1:${port}`, bundleURL: `http://127.0.0.1:${port}/index.bundle?platform=macos&dev=true&minify=false` });
@@ -103,7 +106,7 @@ try {
   const resumed = await execute(go.app, "go-project-a-again", `${testIdentity}.a`, ["--frame-isolation-expect", "present", "--frame-isolation-cleanup"]);
   if (first.dataDirectory === second.dataDirectory || first.dataDirectory !== resumed.dataDirectory) throw new Error("Go storage isolation failed");
   pkg = readJson(packageFile); delete pkg.dependencies["@legendapp/frame-sdk-test-driver"]; writeJson(packageFile, pkg);
-  await run(root, ["bun", "install"]);
+  await run(root, managerCommand(packageManager(root), ["install"]));
   writeFileSync(path.join(root, "test-driver.ts"), 'export type TestDriver = { call(method: string, args: string): Promise<string> };\nexport const testDriver: TestDriver | undefined = undefined;\n');
   writeFileSync(path.join(root, "App.tsx"), reducedApp);
   const preview = await build(root, "preview");
@@ -131,7 +134,7 @@ try {
   writeFileSync(path.join(root, "App.tsx"), originalApp);
   pkg = readJson(packageFile);
   pkg.dependencies["@legendapp/frame-sdk-test-driver"] = pkg.overrides["@legendapp/frame-sdk-test-driver"];
-  writeJson(packageFile, pkg); await run(root, ["bun", "install"]);
+  writeJson(packageFile, pkg); await run(root, managerCommand(packageManager(root), ["install"]));
   writeFileSync(path.join(root, "test-driver.ts"), 'import driver from "@legendapp/frame-sdk-test-driver";\nexport type TestDriver = typeof driver;\nexport const testDriver: TestDriver = driver;\n');
   const customConfig = readJson(configFile);
   const source = customConfig.expo ?? customConfig;

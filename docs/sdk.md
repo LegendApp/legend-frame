@@ -204,7 +204,7 @@ list scoped to the project; standalone apps additionally notify the native
 
 ```sh
 npm run typecheck
-bun test tests
+npm test
 npm run test:native
 # All of the above:
 npm run test:all
@@ -236,7 +236,7 @@ the retained APIs. This validates pruning without a release compile or signing
 credentials. Signing/notarization retain the existing mocked pipeline tests;
 these SDK checks do not submit anything to Apple.
 
-The ordinary Bun suite covers public API transport, validation, disposal,
+The Node/Vitest suite covers public API transport, validation, disposal,
 settings concurrency/failure recovery, URL delivery races, native codegen,
 CNG identity/associations, native selection and runtime compatibility, CLI
 behavior, and the packaging workflow. Tests exercise the macOS implementation;

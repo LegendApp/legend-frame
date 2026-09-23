@@ -16,11 +16,11 @@ desktop kitchen sink.
 From the framework checkout, with the normal macOS build prerequisites:
 
 ```sh
-bun run test:runtimes /tmp/FrameRuntimesProbe
+npm run test:runtimes -- /tmp/FrameRuntimesProbe
 # Also prove worker startup from an embedded bundle, with no Metro:
-bun run test:runtimes /tmp/FrameRuntimesProbe --release
+npm run test:runtimes -- /tmp/FrameRuntimesProbe --release
 # Run the checks and leave the example visible for interaction:
-bun run test:runtimes /tmp/FrameRuntimesProbe --interactive
+npm run test:runtimes -- /tmp/FrameRuntimesProbe --interactive
 ```
 
 The runner creates a managed kitchen-sink consumer, checks out the pinned upstream
@@ -35,7 +35,7 @@ are only installed in the probe. Check the prepared consumer separately:
 
 ```sh
 cd /tmp/FrameRuntimesProbe
-bunx --no-install tsc --noEmit
+npx --no-install tsc --noEmit
 ```
 
 On this development Mac, Bun stalls in the Documents checkout, so the actual

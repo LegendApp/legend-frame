@@ -29,13 +29,13 @@ unattended suite has passed.
 ## Reproduce
 
 ```sh
-bun install
-bun run typecheck
-bun test tests
-bun run test:native /tmp/DesktopSDKTests
+npm install
+npm run typecheck
+npm test
+npm run test:native -- /tmp/DesktopSDKTests
 ```
 
-`bun run test:all` runs the full sequence. Native tests require Xcode, CocoaPods,
+`npm run test:all` runs the full sequence. Native tests require Xcode, CocoaPods,
 the `xcodeproj` Ruby gem, an unlocked GUI session, and a working XCTest service.
 See [SDK test documentation](sdk.md#tests) for the optional external UI driver.
 

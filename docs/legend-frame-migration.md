@@ -8,7 +8,7 @@ own names.
 The intended published entry point is:
 
 ```sh
-bunx @legendapp/frame create MyApp
+npx @legendapp/frame create MyApp
 # Or, with Node/npm and Bun installed:
 npx @legendapp/frame create MyApp
 ```

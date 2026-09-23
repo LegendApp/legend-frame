@@ -1,10 +1,12 @@
+import { spawnProcess, processLog } from "../packages/cli/src/process.ts";
+import { setTimeout as sleep } from "node:timers/promises";
 import { generateKeyPairSync } from "node:crypto";
 import { existsSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import path from "node:path";
-import { prepareKitchenSink } from "./prepare-kitchen-sink";
-import { build } from "../packages/cli/src/build";
-import { binary, run } from "../packages/cli/src/commands";
-import { readJson, writeJson, prepareConfig } from "../packages/cli/src/project";
+import { prepareKitchenSink } from "./prepare-kitchen-sink.ts";
+import { build } from "../packages/cli/src/build.ts";
+import { binary, run } from "../packages/cli/src/commands.ts";
+import { readJson, writeJson, prepareConfig } from "../packages/cli/src/project.ts";
 
 // This integration specifically validates standalone behavior and needs Release.
 const root = path.resolve(process.argv[2] ?? ".frame/update-tests/UpdateProbe");
@@ -14,7 +16,7 @@ const appFile = path.join(root, "App.tsx");
 const originalConfig = readFileSync(configFile, "utf8");
 const originalApp = readFileSync(appFile, "utf8");
 const report = path.join(root, ".frame/release-update-report.json");
-let app: ReturnType<typeof Bun.spawn> | undefined;
+let app: ReturnType<typeof spawnProcess> | undefined;
 try {
   const config = readJson(configFile);
   const { publicKey } = generateKeyPairSync("ed25519");
@@ -47,12 +49,12 @@ export default function App() {
   if (!info.LSUIElement || !info.FrameMenuBarOnly || !info.SURequireSignedFeed || !info.SUVerifyUpdateBeforeExtraction) throw new Error("Release updater/menu-bar CNG settings missing");
   await run(root, ["codesign", "--verify", "--deep", "--strict", result.app], { capture: true });
   rmSync(report, { force: true });
-  const log = Bun.file(path.join(root, ".frame/update-release.log"));
-  app = Bun.spawn([path.join(result.app, "Contents/MacOS", info.CFBundleExecutable)], { cwd: root, stdout: log, stderr: log });
+  const log = processLog(path.join(root, ".frame/update-release.log"));
+  app = spawnProcess([path.join(result.app, "Contents/MacOS", info.CFBundleExecutable)], { cwd: root, stdout: log, stderr: log });
   const deadline = Date.now() + 30000;
   while (!existsSync(report) && Date.now() < deadline) {
     if (app.exitCode !== null || app.signalCode !== null) throw new Error("Release app exited before reporting");
-    await Bun.sleep(100);
+    await sleep(100);
   }
   if (!existsSync(report)) throw new Error(`Release update test timed out: ${root}/.frame/update-release.log`);
   const outcome = readJson(report);

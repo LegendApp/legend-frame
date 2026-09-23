@@ -1,6 +1,6 @@
-import { expect, test } from "bun:test";
-import { validateSession, validateVolume, validateMetadata } from "../packages/audio/src/media-types";
-import { createMediaSession } from "../packages/audio/src/media-session.web";
+import { expect, test } from "vitest";
+import { validateSession, validateVolume, validateMetadata } from "../packages/audio/src/media-types.ts";
+import { createMediaSession } from "../packages/audio/src/media-session.web.ts";
 test("media contracts reject invalid positions, operations and artwork", () => {
   for (const value of [-1, 2, NaN]) expect(() => validateVolume(value)).toThrow();
   for (const options of [{ position: NaN }, { duration: -1 }, { commands: ["delete"] }, { commands: ["play", "play"] }]) expect(() => validateSession(options as never)).toThrow();

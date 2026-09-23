@@ -1,5 +1,5 @@
-import { expect, test } from "bun:test";
-import { dragConfiguration } from "../packages/drag-drop/src/contracts";
+import { expect, test } from "vitest";
+import { dragConfiguration } from "../packages/drag-drop/src/contracts.ts";
 test("drag contracts preserve built-in compatibility and explicit move/custom data", () => {
   expect(JSON.parse(dragConfiguration({ text: "text" }, {}, "macos"))).toEqual({ sourceOperations: ["copy"], acceptedOperations: ["copy"], acceptedTypes: ["files", "text", "urls"] });
   expect(JSON.parse(dragConfiguration({ data: { "application/x-playlist": '{"id":42}' } }, { sourceOperations: ["copy", "move"], acceptedOperations: ["move"], acceptedTypes: ["application/x-playlist"] }, "windows"))).toMatchObject({ acceptedOperations: ["move"], acceptedTypes: ["application/x-playlist"] });

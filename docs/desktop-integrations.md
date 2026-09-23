@@ -97,7 +97,7 @@ JavaScript OTA update mechanism.
 In the application project:
 
 ```sh
-bunx --no-install frame updates init https://example.com/updates/appcast.xml
+npx --no-install frame updates init https://example.com/updates/appcast.xml
 ```
 
 The command downloads checksum-pinned Sparkle tools, creates or reuses a
@@ -145,7 +145,7 @@ To ship an update, increase `expo.macos.buildNumber` for every release and set t
 user-visible `expo.version`, then run:
 
 ```sh
-bun run package
+npm run package
 ```
 
 The existing package command signs, notarizes and verifies the ZIP. For an app
@@ -163,12 +163,12 @@ archives, custom channels, or Mac App Store distribution.
 ## Automated checks
 
 ```sh
-bun run typecheck
-bun test tests
-bun run test:sparkle       # Real tools, ephemeral test keys; no Keychain mutation
-bun run test:integrations  # prebuilt and custom native APIs; no permission prompt
-bun run test:updates       # Standalone Release startup and menu-bar-only CNG
-bun run test:all           # Also includes the complete SDK/XCTest acceptance suite
+npm run typecheck
+npm test
+npm run test:sparkle --       # Real tools, ephemeral test keys; no Keychain mutation
+npm run test:integrations --  # prebuilt and custom native APIs; no permission prompt
+npm run test:updates --       # Standalone Release startup and menu-bar-only CNG
+npm run test:all --           # Also includes the complete SDK/XCTest acceptance suite
 ```
 
 `test:sparkle` verifies real Ed25519 archive signing, signed-feed generation and

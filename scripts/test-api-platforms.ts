@@ -1,16 +1,17 @@
+import { applyOverrides, localArchive, managerCommand, packageManager } from "../packages/cli/src/package-manager.ts";
 import { existsSync, mkdirSync, writeFileSync } from "node:fs";
 import path from "node:path";
-import { run, binary } from "../packages/cli/src/commands";
-import { readJson, writeJson } from "../packages/cli/src/project";
+import { run, binary } from "../packages/cli/src/commands.ts";
+import { readJson, writeJson } from "../packages/cli/src/project.ts";
 
 // A packed, minimal consumer proves platform selection independently of the macOS-only kitchen sink.
-const framework = path.resolve(import.meta.dir, "..");
+const framework = path.resolve(import.meta.dirname, "..");
 const root = path.resolve(process.argv[2] ?? ".frame/api-platforms");
 if (existsSync(path.join(root, "package.json")) && !existsSync(path.join(root, ".frame-api-probe"))) throw new Error("Choose an empty directory for the API platform probe");
-await run(framework, ["bun", "scripts/pack.ts"]);
+await run(framework, [process.execPath, "scripts/pack.ts"]);
 const manifest = readJson(path.join(framework, "artifacts/packages/manifest.json"));
 const packages = ["@legendapp/frame-clipboard", "@legendapp/frame-secure-storage", "@legendapp/frame-desktop-links", "@legendapp/frame-desktop-app", "@legendapp/frame-ui"];
-const archives = { "@legendapp/frame": path.join(framework, "artifacts/packages", manifest["@legendapp/frame"]) };
+const archives = { "@legendapp/frame": localArchive(path.join(framework, "artifacts/packages", manifest["@legendapp/frame"])) };
 mkdirSync(root, { recursive: true }); writeFileSync(path.join(root, ".frame-api-probe"), "managed\n");
 writeJson(path.join(root, "package.json"), {
   name: "frame-api-platform-probe", private: true, version: "1.0.0", main: "index.ts",
@@ -20,7 +21,11 @@ writeJson(path.join(root, "package.json"), {
 writeJson(path.join(root, "app.json"), { expo: { name: "API Platform Probe", slug: "frame-api-probe", platforms: ["ios", "android", "web"] } });
 writeFileSync(path.join(root, "metro.config.js"), 'const {getDefaultConfig} = require("expo/metro-config"); module.exports = getDefaultConfig(__dirname);\n');
 writeFileSync(path.join(root, "index.ts"), 'import * as clipboard from "@legendapp/frame/clipboard";\nimport * as secureStore from "@legendapp/frame/secure-storage";\nimport * as linking from "@legendapp/frame/links";\nimport { Button } from "@legendapp/frame/ui";\n(globalThis as any).__API_PROBE__ = {clipboard, secureStore, linking, Button};\n');
-await run(root, ["bun", "install"]);
+const manager = packageManager(root);
+const pkg = readJson(path.join(root, "package.json"));
+applyOverrides(pkg, pkg.overrides, manager);
+writeJson(path.join(root, "package.json"), pkg);
+await run(root, managerCommand(manager, ["install"]));
 const output = path.join(root, "results"); mkdirSync(output, { recursive: true });
 const results = [];
 for (const platform of ["ios", "android", "web"]) {

@@ -3,3 +3,4 @@ packages:
   - fixtures/*
   - examples/kitchen-sink
 linkWorkspacePackages: true
+nodeLinker: hoisted

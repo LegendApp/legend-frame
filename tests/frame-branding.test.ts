@@ -1,8 +1,9 @@
-import { expect, test } from "bun:test";
-import { readFileSync, readdirSync, existsSync } from "node:fs";
+import { spawnSync } from "node:child_process";
+import { expect, test } from "vitest";
+import { readFileSync, readdirSync, existsSync, globSync } from "node:fs";
 import path from "node:path";
 import { createRequire } from "node:module";
-const root = path.resolve(import.meta.dir, "..");
+const root = path.resolve(import.meta.dirname, "..");
 const require = createRequire(import.meta.url);
 test("public frame package exposes the CLI and component entry points", () => {
   const pkg = JSON.parse(readFileSync(path.join(root, "packages/desktop/package.json"), "utf8"));
@@ -11,8 +12,8 @@ test("public frame package exposes the CLI and component entry points", () => {
   for (const entry of ["./ui", "./ui/uniwind", "./audio", "./auth-session", "./files", "./windows"]) {
     expect(existsSync(require.resolve(`@legendapp/frame/${entry.slice(2)}`))).toBe(true);
   }
-  const command = Bun.spawnSync(["node", path.join(root, "packages/desktop/bin/frame.cjs"), "--help"], { cwd: root });
-  expect(command.exitCode).toBe(0);
+  const command = spawnSync(process.execPath, [path.join(root, "packages/desktop/bin/frame.cjs"), "--help"], { cwd: root });
+  expect(command.status).toBe(0);
   expect(command.stdout.toString()).toContain("Legend Frame");
   expect(command.stdout.toString()).toContain("frame create MyApp");
 });
@@ -33,7 +34,7 @@ test("framework packages and generated commands use frame names", () => {
 test("renamed Windows projects reference existing local source and resource files", () => {
   let projects = 0;
   for (const base of ["packages", "fixtures", "patches"]) {
-    for (const file of new Bun.Glob("**/*.vcxproj").scanSync({ cwd: path.join(root, base), onlyFiles: true })) {
+    for (const file of globSync("**/*.vcxproj", { cwd: path.join(root, base) })) {
       if (file.includes("node_modules/")) continue;
       projects++;
       const project = path.join(root, base, file);

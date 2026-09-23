@@ -18,24 +18,24 @@ packages on each machine; do not copy `node_modules` from another OS.
 From the repository root:
 
 ```sh
-bun install
-bun run typecheck
-bun test tests
+npm install
+npm run typecheck
+npm test
 cd examples/kitchen-sink
 ```
 
 On macOS:
 
 ```sh
-bun run rebuild:macos
-bun run macos
+npm run rebuild:macos
+npm run macos
 ```
 
 On Windows:
 
 ```powershell
-bun run rebuild:windows
-bun run windows
+npm run rebuild:windows
+npm run windows
 ```
 
 The explicit rebuild is necessary for native fixes, including the macOS keyboard
@@ -66,7 +66,7 @@ In Kitchen Sink's desktop expansion section:
 The macOS native regression can also be rerun from the repository root:
 
 ```sh
-bun scripts/test-keyboard-events.ts
+node scripts/test-keyboard-events.ts
 ```
 
 It builds a custom test runtime and checks nine native assertions, including
@@ -80,11 +80,11 @@ Stop the Kitchen Sink session with Ctrl+C. From the repository root, run the
 appropriate command (allow time for a fresh consumer and native compilation):
 
 ```sh
-bun run test:platform --platform macos --timeout 1800
+npm run test:platform -- --platform macos --timeout 1800
 ```
 
 ```powershell
-bun run test:platform --platform windows --timeout 1800
+npm run test:platform -- --platform windows --timeout 1800
 ```
 
 Use the interactive run, without `--api-only`. Follow each onscreen instruction
@@ -124,14 +124,14 @@ Use Kitchen Sink and [Notes Lite](example-apps.md) for these checks on each OS:
 macOS supplemental regressions, from the root:
 
 ```sh
-bun scripts/test-sidecars.ts
-bun scripts/test-fabric-reload.ts
+node scripts/test-sidecars.ts
+node scripts/test-fabric-reload.ts
 ```
 
 On Windows also run the native feature/lifecycle suite with a fresh short path:
 
 ```powershell
-bun run test:windows:features --project C:\dev\FrameAcceptance
+npm run test:windows:features -- --project C:\dev\FrameAcceptance
 ```
 
 The [Windows issue matrix](windows-issues.md) records platform-specific pending
@@ -145,13 +145,13 @@ notes. For a crash include macOS `~/Library/Logs/DiagnosticReports` or the Windo
 crash/Event Viewer details and the exact focus/key/action sequence.
 
 ```sh
-bun run test:report --output .frame/platform-coverage.md
+npm run test:report -- --output .frame/platform-coverage.md
 ```
 
 Copy portable JSON reports into one directory to compare machines:
 
 ```sh
-bun run test:report ./reports --strict --output coverage.md
+npm run test:report -- ./reports --strict --output coverage.md
 ```
 
 `--strict` deliberately fails for untested applicable cases. Keep partial failures

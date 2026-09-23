@@ -8,7 +8,7 @@ The current scope is prebuilt and custom development builds on Windows x64 and A
 
 ## Set up the Windows machine
 
-Use Windows 11 x64 or ARM64 with an interactive desktop, Node.js 24.19.0 (the tested version in `.nvmrc`), Bun 1.3.14+, Git, PowerShell 7 (`pwsh.exe` on PATH), and the React Native Windows native prerequisites. The pinned RNW 0.81.35 template uses **Visual Studio 2026 / MSVC v145**. Its prerequisite script checks VS 18.6.1+, .NET SDK 10, and the Windows 11 SDK 22621 component; an older VS 2022-only installation does not match this template. See [RNW environment setup](https://microsoft.github.io/react-native-windows/docs/getting-started).
+Use Windows 11 x64 or ARM64 with an interactive desktop, Node.js 24.19.0 (the tested version in `.nvmrc`), a package manager (npm is included with Node), Git, PowerShell 7 (`pwsh.exe` on PATH), and the React Native Windows native prerequisites. The pinned RNW 0.81.35 template uses **Visual Studio 2026 / MSVC v145**. Its prerequisite script checks VS 18.6.1+, .NET SDK 10, and the Windows 11 SDK 22621 component; an older VS 2022-only installation does not match this template. See [RNW environment setup](https://microsoft.github.io/react-native-windows/docs/getting-started).
 
 Use this repository normally. From its root in PowerShell:
 
@@ -33,7 +33,7 @@ It checks by default; `-Install` installs missing prerequisites from an elevated
 
 ## Parallels and target architecture
 
-Windows on Apple Silicon Parallels defaults to a native ARM64 build. The CLI detects the Windows CPU independently of the Node/Bun process architecture; an emulated x64 CLI is allowed. Install the **MSVC v145 ARM64/ARM64EC build tools** in Visual Studio Installer alongside the RNW prerequisites. The project still comes from the pinned Expo Desktop beta template and delegates the target to [RNW's `--arch` option](https://microsoft.github.io/react-native-windows/docs/run-windows-cli/); no upstream patch or separate source kit is needed for architecture selection.
+Windows on Apple Silicon Parallels defaults to a native ARM64 build. The CLI detects the Windows CPU independently of the Node process architecture; an emulated x64 CLI is allowed. Install the **MSVC v145 ARM64/ARM64EC build tools** in Visual Studio Installer alongside the RNW prerequisites. The project still comes from the pinned Expo Desktop beta template and delegates the target to [RNW's `--arch` option](https://microsoft.github.io/react-native-windows/docs/run-windows-cli/); no upstream patch or separate source kit is needed for architecture selection.
 
 To explicitly select a target in PowerShell (for example, to test x64 under Windows ARM emulation):
 

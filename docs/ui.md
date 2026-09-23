@@ -52,10 +52,10 @@ Import the same three controls from `@legendapp/frame/ui/uniwind` to add `classN
 The kitchen sink's **Native UI** card exercises activation, disabled state, dynamic labels, remounting, text editing, and semantic selection. The Settings starter demonstrates the same imports across targets.
 
 ```sh
-bun run test:ui
-bun run test:universal
-bun run typecheck
-bun test tests
+npm run test:ui
+npm run test:universal
+npm run typecheck
+npm test
 ```
 
 `test:ui` builds a packed kitchen-sink consumer with the test-only driver. It checks a mounted NSButton hit target, dispatches AppKit actions, and verifies React updates. Text/selection checks invoke the native delegate/action paths, including changed defaults and reordered options with duplicate labels. This is in-app native verification; it does not replace real pointer/keyboard and accessibility testing.
@@ -74,4 +74,4 @@ Native Android and Windows execution remain pending. Windows uses WinUI controls
 
 Bun execution used the synchronized `/tmp/frame-api-clean` checkout because Bun stalled in Documents on this host. Native Android/Windows execution and macOS pointer/keyboard inspection remain unverified; native Mac UI automation was blocked by the locked desktop. These checks do not establish mobile production distribution or Windows UI support.
 
-The new Windows implementations are source-complete for the three contracts but await native compilation and UI acceptance. Run `bun run test:windows:features` on an interactive Windows machine. These are WinUI controls, not Pressable wrappers.
+The new Windows implementations are source-complete for the three contracts but await native compilation and UI acceptance. Run `npm run test:windows:features` on an interactive Windows machine. These are WinUI controls, not Pressable wrappers.

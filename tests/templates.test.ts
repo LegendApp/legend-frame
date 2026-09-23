@@ -1,11 +1,11 @@
-import { expect, test } from "bun:test";
+import { expect, test } from "vitest";
 import { mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import os from "node:os";
 import path from "node:path";
 import { createRequire } from "node:module";
 import { readConfig } from "@legendapp/frame/config";
 const { initializeTemplate } = createRequire(import.meta.url)("../packages/cli/src/init-template.cjs");
-const templates = path.resolve(import.meta.dir, "../packages/cli/templates");
+const templates = path.resolve(import.meta.dirname, "../packages/cli/templates");
 for (const folder of ["blank-typescript", "windows", "universal"]) {
   test(`${folder} initializes upstream identity once and preserves edits`, () => {
     const root = mkdtempSync(path.join(os.tmpdir(), "frame-template-test-"));

@@ -1,8 +1,8 @@
-import { expect, test } from "bun:test";
+import { expect, test } from "vitest";
 import { mkdtempSync, mkdirSync, writeFileSync, rmSync } from "node:fs";
 import os from "node:os";
 import path from "node:path";
-import { selection, type NativePackage } from "../packages/cli/src/project";
+import { selection, type NativePackage } from "../packages/cli/src/project.ts";
 const { runtimePlan } = require("../packages/cli/src/metro.cjs");
 test("production prunes Runtimes and Nitro, retaining Nitro for other native consumers", () => {
   const pkg = (name: string, deps = {}, sdk = true): NativePackage => ({ name, sdk, root: name, requires: [], signature: name, json: { dependencies: deps } });
@@ -29,7 +29,7 @@ test("production registry uses the discovered graph, independent of installed pa
 });
 
 test("SDK refresh upgrades the original starter pair and preserves custom entries", async () => {
-  const { upgradeManagedEntry } = await import("../packages/cli/src/create");
+  const { upgradeManagedEntry } = await import("../packages/cli/src/create.ts");
   const root = mkdtempSync(path.join(os.tmpdir(), "frame-runtimes-migration-"));
   const metro = `const { makeMetroConfig } = require("expo-desktop-metro-config");
 const { gate } = require("@legendapp/frame-cli/src/metro-gate.cjs");

@@ -1,15 +1,17 @@
+import { spawnProcess } from "../packages/cli/src/process.ts";
+import { setTimeout as sleep } from "node:timers/promises";
 import assert from "node:assert/strict";
-import { existsSync, readFileSync, writeFileSync, openSync, closeSync } from "node:fs";
+import { existsSync, mkdirSync, readFileSync, writeFileSync, openSync, closeSync } from "node:fs";
 import path from "node:path";
-import { create } from "../packages/cli/src/create";
-import { availablePort } from "../packages/cli/src/local";
-import { run } from "../packages/cli/src/commands";
-import { readJson, writeJson } from "../packages/cli/src/project";
+import { create } from "../packages/cli/src/create.ts";
+import { availablePort } from "../packages/cli/src/local.ts";
+import { run } from "../packages/cli/src/commands.ts";
+import { readJson, writeJson } from "../packages/cli/src/project.ts";
 
 // One real Expo process serves all five graphs. No native toolchains/devices required.
-const framework = path.resolve(import.meta.dir, "..");
+const framework = path.resolve(import.meta.dirname, "..");
 const root = path.resolve(process.argv[2] ?? `.frame/universal-dev/Settings${Date.now()}`);
-await run(framework, ["bun", "scripts/pack.ts"], { capture: true });
+await run(framework, [process.execPath, "scripts/pack.ts"], { capture: true });
 await create(root, path.join(framework, "artifacts/packages/manifest.json"), "macos", true);
 const sourceFiles = ["desktop.config.json", "package.json", "App.tsx", "app.config.js", "metro.config.js", "react-native.config.js"];
 const original = sourceFiles.map(file => readFileSync(path.join(root, file), "utf8"));
@@ -20,9 +22,9 @@ writeJson(configFile, { ...config, scheme: "frame-session-test" });
 const port = await availablePort();
 const base = `http://127.0.0.1:${port}`;
 const logFile = path.join(root, ".frame/universal-dev.log");
-const file = Bun.file(logFile);
+mkdirSync(path.dirname(logFile), { recursive: true });
 const log = openSync(logFile, "a");
-const session = Bun.spawn(["bun", "node_modules/@legendapp/frame/bin/frame.cjs", "dev", "--platform", "ios", "--no-open", "--go", "--offline", "--clear", "-p", String(port), "--max-workers", "2"], {
+const session = spawnProcess([process.execPath, "node_modules/@legendapp/frame/bin/frame.cjs", "dev", "--platform", "ios", "--no-open", "--go", "--offline", "--clear", "-p", String(port), "--max-workers", "2"], {
   cwd: root, env: { ...process.env, CI: "false" }, stdin: "ignore", stdout: log, stderr: log,
 });
 const sessionFile = path.join(root, ".frame/platforms", process.platform === "win32" ? "windows" : "macos", "session.json");
@@ -30,9 +32,9 @@ const desktop = process.platform === "win32" ? "windows" : "macos";
 async function until(check: () => Promise<boolean>, label: string, timeout = 60000) {
   const deadline = Date.now() + timeout;
   while (Date.now() < deadline) {
-    if (session.exitCode !== null) throw new Error(`Expo exited (${session.exitCode}): ${await file.text()}`);
+    if (session.exitCode !== null) throw new Error(`Expo exited (${session.exitCode}): ${readFileSync(logFile, "utf8")}`);
     if (await check()) return;
-    await Bun.sleep(150);
+    await sleep(150);
   }
   throw new Error(`Timed out: ${label}. See ${logFile}`);
 }
@@ -78,13 +80,13 @@ try {
     await until(async () => clients.every(c => c.messages.some(m => m.type === "update" && JSON.stringify(m.body.modified).includes("frame-shared-session-hmr"))), "shared source edit reaches both HMR clients");
     console.log("PASS one source edit reaches iOS and web HMR clients while desktop is blocked");
   } finally { for (const client of clients) client.socket.close(); }
-  const beforeLog = await file.text();
+  const beforeLog = readFileSync(logFile, "utf8");
   assert.equal(beforeLog.split("Starting Metro Bundler").length - 1, 1);
   assert.ok(beforeLog.includes("Networking has been disabled"));
   assert.ok(beforeLog.includes("Bundler cache is empty"));
   // Native config changes must restart the shared server even if desktop stays incompatible.
   writeJson(configFile, { ...config, scheme: "frame-session-test-changed" });
-  await until(async () => (await file.text()).split("Starting Metro Bundler").length - 1 === 2, "Metro restart while desktop is blocked");
+  await until(async () => (readFileSync(logFile, "utf8")).split("Starting Metro Bundler").length - 1 === 2, "Metro restart while desktop is blocked");
   await until(async () => { try { return (await request("/status")).ok; } catch { return false; } }, "restarted server ready");
   for (const platform of ["ios", "android", "web"]) {
     const response = await request(`/index.bundle?platform=${platform}&dev=true&minify=false`);
