@@ -36,5 +36,6 @@
     "requires": [
       "@legendapp/frame-desktop-links"
     ]
-  }
+  },
+  "private": true
 }

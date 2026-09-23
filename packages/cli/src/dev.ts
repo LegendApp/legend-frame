@@ -1,4 +1,5 @@
-import { windowsMetroPort, stopWindowsMetro } from "./windows-metro";
+import { spawnProcess } from "./process.ts";
+import { windowsMetroPort, stopWindowsMetro } from "./windows-metro.ts";
 import { projectPlatform } from "./platform.ts";
 import { nodeCommand } from "./windows.ts";
 import { readAppConfig } from "./project.ts";
@@ -29,9 +30,9 @@ type BundleOptions = { dev?: boolean; minify?: boolean; https?: boolean };
 export async function launch(root: string, app: string, port?: number, options: BundleOptions = {}) {
   if (readRuntime(app)?.platform === "windows") {
     if (process.platform !== "win32") throw new Error("Launch the Windows runtime on Windows.");
-    const nativePort = windowsMetroPort(root, port ?? 8081, options);
+    const nativePort = await windowsMetroPort(root, port ?? 8081, options);
     writeJson(stateFile(root, "windows-connection.json"), { port: nativePort, dev: options.dev ?? true });
-    return Bun.spawn([path.join(app, "MyApp.exe")], { cwd: app, env: { ...process.env, ...projectEnvironment(root), FRAME_METRO_PORT: String(nativePort), FRAME_SESSION_FILE: stateFile(root, "windows-connection.json") }, stdout: "inherit", stderr: "inherit" });
+    return spawnProcess([path.join(app, "MyApp.exe")], { cwd: app, env: { ...process.env, ...projectEnvironment(root), FRAME_METRO_PORT: String(nativePort), FRAME_SESSION_FILE: stateFile(root, "windows-connection.json") }, stdout: "inherit", stderr: "inherit" });
   }
   const info = await run(
     root,
@@ -49,7 +50,7 @@ export async function launch(root: string, app: string, port?: number, options: 
   // Direct executable launch retains the exact product path and process ownership.
   // RN's native packager websocket reads RCT_jsLocation independently of the
   // JS bundle URL. The process argument domain avoids persistent preference edits.
-  return Bun.spawn(
+  return spawnProcess(
     [executable, ...(port ? ["-RCT_jsLocation", `127.0.0.1:${port}`] : [])],
     {
       cwd: root,
@@ -86,7 +87,7 @@ export async function dev(
   if (explicitGo) registerRuntime(goApp!);
   if (!explicitGo && settings.target === "dev") target = "dev";
   let current: { app: string; runtime: Runtime } | undefined;
-  let appProcess: ReturnType<typeof Bun.spawn> | undefined;
+  let appProcess: ReturnType<typeof spawnProcess> | undefined;
   let launchedRuntime: { app: string; fingerprint: string } | undefined;
   let busy = false;
   let status = "";
@@ -95,7 +96,7 @@ export async function dev(
   let restartPending = false;
   let reopenPending = false;
   let closing = false;
-  let metro: ReturnType<typeof Bun.spawn> | undefined;
+  let metro: ReturnType<typeof spawnProcess> | undefined;
   let finish!: () => void;
   const finished = new Promise<void>((resolve) => {
     finish = resolve;
@@ -116,8 +117,8 @@ export async function dev(
     ]);
     // Expo owns stdin and the terminal. JSON IPC carries desktop actions only;
     // reload, debugger, mobile/web actions, prompts and shutdown remain Expo's.
-    const child = Bun.spawn([
-      "node", "--require", path.join(import.meta.dir, "expo-dev-preload.cjs"), expo!, ...args,
+    const child = spawnProcess([
+      "node", "--require", path.join(import.meta.dirname, "expo-dev-preload.cjs"), expo!, ...args,
     ], {
       cwd: root, env: { ...process.env, FRAME_PLATFORM: platform, FRAME_DEV_SESSION: "1" },
       stdin: "inherit", stdout: "inherit", stderr: "inherit", serialization: "json",
@@ -194,8 +195,8 @@ export async function dev(
         const name = issues[i]!;
         if (native.some((pkg) => pkg.name === name)) {
           issues[i] = current?.runtime.modules[name]
-            ? `${name} has changed since this prebuilt runtime was built.`
-            : `${name} isn’t included in the prebuilt runtime.`;
+            ? `${name} has changed since this Frame Runner was built.`
+            : `${name} isn’t included in the Frame Runner.`;
         }
       }
       issues.push(...goConfigurationIssues(readAppConfig(root)));

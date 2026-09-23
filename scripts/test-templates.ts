@@ -22,12 +22,12 @@ for (const platform of ["macos", "windows"] as const) {
 // Call the real upstream CLI from an installed consumer: no Frame creation path.
 const consumer = roots[0]!;
 const req = createRequire(path.join(consumer, "package.json"));
-const cli = path.dirname(req.resolve("@legendapp/frame-cli/package.json"));
+const cli = path.dirname(createRequire(req.resolve("@legendapp/frame/package.json")).resolve("@legendapp/frame-cli/package.json"));
 const direct = path.join(parent, "DirectUniversal");
 await run(consumer, nodeCommand(consumer, "expo-desktop", "expo-desktop", ["create-app", direct,
   "--template", path.join(path.dirname(manifest), templates.universal), "--yes", "--no-agents-md",
   "--display-name", "Direct Universal", "--rdns", "org.example.directsettings"],
-), { env: { CI: "1", npm_config_user_agent: `bun/${Bun.version}`, PATH: `${path.join(cli, "src/npm-bin")}${path.delimiter}${process.env.PATH}` } });
+), { env: { CI: "1", npm_config_user_agent: `bun/${Bun.version}`, PATH: `${path.join(cli, "dist/npm-bin")}${path.delimiter}${process.env.PATH}` } });
 roots.push(direct);
 for (const root of roots) {
   const config = readJson(path.join(root, "desktop.config.json"));
@@ -36,7 +36,7 @@ for (const root of roots) {
   if (["macos", "windows", "ios", "android"].some(p => existsSync(path.join(root, p)))) throw new Error("Creation unexpectedly prebuilt a native project");
   if (readdirSync(root).includes("App.windows.tsx")) throw new Error("Template contains the other starter's screen");
   const configBefore = readFileSync(path.join(root, "desktop.config.json"), "utf8");
-  await run(root, ["node", "node_modules/@legendapp/frame-cli/src/init-template.cjs"]);
+  await run(root, ["node", "node_modules/@legendapp/frame/init-template.cjs"]);
   if (readFileSync(path.join(root, "desktop.config.json"), "utf8") !== configBefore) throw new Error("Initializer overwrote configuration");
   await run(root, ["node", "node_modules/typescript/bin/tsc", "--noEmit"], { capture: true });
   console.log(`PASS ${path.basename(root)}: real Expo Desktop extraction, install, identity, and TypeScript`);

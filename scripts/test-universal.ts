@@ -32,7 +32,7 @@ function assertPreserved() {
   for (const [target, hash] of hashes) if (hashProject(target) !== hash) throw new Error(`Target switching changed the ${target} project`);
 }
 for (const platform of native) {
-  await run(root, ["bun", "node_modules/@legendapp/frame-cli/src/index.ts", "prebuild", "--platform", platform], { capture: true, env: { CI: "1" } });
+  await run(root, ["bun", "node_modules/@legendapp/frame/bin/frame.cjs", "prebuild", "--platform", platform], { capture: true, env: { CI: "1" } });
   assertPreserved();
   if (!existsSync(path.join(root, platform))) throw new Error(`${platform} project missing`);
   hashes.set(platform, hashProject(platform));

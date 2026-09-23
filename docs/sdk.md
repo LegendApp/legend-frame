@@ -35,11 +35,11 @@ See [desktop integrations](desktop-integrations.md) for notification, tray, and 
 
 ## Run the kitchen sink
 
-From this checkout, with Bun and a compatible registered prebuilt runtime:
+From this checkout, with Node 24.19.0+ and a compatible registered Frame Runner:
 
 ```sh
-bun install
-bun run kitchen-sink
+npm install
+npm run kitchen-sink
 ```
 
 The first run packs and registers the local SDK and installs a managed consumer.
@@ -49,14 +49,14 @@ directly, including Uniwind CSS, for Fast Refresh. `--refresh` forces setup;
 `--prepare-only` stops before Metro. Dev options such as `--port 8082` pass through.
 
 If no compatible runtime is available, prepare the app with
-`bun run kitchen-sink --prepare-only`, then run `bun run frame sdk build-prebuilt` with the native build
+`npm run kitchen-sink -- --prepare-only`, then run `npm run frame -- sdk build-runner` with the native build
 prerequisites installed. This builds the reusable runtime. Ordinary app edits need
 no native rebuild. `g` switches the desktop runtime; `b` explicitly builds a custom
 runtime. Native source and checked host configuration changes require a rebuilt
 binary, and the CLI checks compatibility before serving desktop JS.
 
 For a copied consumer that validation scripts can modify independently, run
-`bun run kitchen-sink:prepare`. It always packs/installs and exits without Metro;
+`npm run kitchen-sink:prepare`. It always packs/installs and exits without Metro;
 its directory is `.frame/examples/KitchenSinkPackaged`. Integration runners retain
 that isolated preparation behavior through `prepareKitchenSink`.
 
@@ -73,11 +73,11 @@ an unsaved editor buffer. Demo secrets are never printed in the event log.
 renames, builds and transfers of the same app. Give independently cloned apps a
 new ID. Older projects fall back to `expo.macos.bundleIdentifier`.
 
-The prebuilt runtime receives the project ID and display name from the CLI. Custom and distribution
-apps embed the ID through CNG and ignore the prebuilt runtime's environment overrides. The native
+The Frame Runner receives the project ID and display name from the CLI. Custom and distribution
+apps embed the ID through CNG and ignore the Frame Runner's environment overrides. The native
 host hashes it for application data directories, settings, recent documents,
 window restoration, single-instance locks, and Keychain service names. Thus two
-projects using the prebuilt runtime do not accidentally share these values. This is namespacing, not an
+projects using the Frame Runner do not accidentally share these values. This is namespacing, not an
 OS security sandbox: JS can still access explicitly supplied filesystem paths.
 Keychain values use the normal macOS access policy; changing the app's signing
 identity can cause a Keychain access prompt.
@@ -143,7 +143,7 @@ bottom-left origin. Closing all windows does not automatically quit the app.
 
 The host permits one running instance per project ID. A second launch forwards
 its arguments through the `secondInstance` app event, activates the existing app,
-and exits. Different projects using the prebuilt runtime remain independent processes.
+and exits. Different projects using the Frame Runner remain independent processes.
 
 ## Menus and shortcuts
 
@@ -172,7 +172,7 @@ rejects with `E_BUSY`. Menu and dialog APIs stay asynchronous to JS.
 Subscribe with `await onOpen(listener)`. Subscription installation happens before
 reading queued launch events, and IDs deduplicate live/queued overlap. The last
 100 launch events are retained for a late subscriber. The return value has a
-`remove()` method. The prebuilt runtime can test handling through the test fixture, but registering
+`remove()` method. The Frame Runner can test handling through the test fixture, but registering
 OS URL schemes or document types requires a custom build.
 
 Declare existing UTIs and URL schemes in `app.json`:
@@ -196,18 +196,18 @@ Declare existing UTIs and URL schemes in `app.json`:
 CNG creates `CFBundleURLTypes` and `CFBundleDocumentTypes`. `role` may be `Editor`
 or `Viewer`. Custom UTIs can be declared through `macos.infoPlist` or a config
 plugin; both correctly require a custom build. Incoming file events provide file
-URLs. `noteRecentDocument` also takes a file URL. The prebuilt runtime keeps its recent-document
+URLs. `noteRecentDocument` also takes a file URL. The Frame Runner keeps its recent-document
 list scoped to the project; standalone apps additionally notify the native
 `NSDocumentController`.
 
 ## Tests
 
 ```sh
-bun run typecheck
+npm run typecheck
 bun test tests
-bun run test:native
+npm run test:native
 # All of the above:
-bun run test:all
+npm run test:all
 ```
 
 The native suite needs an Apple Silicon Mac, Xcode, CocoaPods, and a logged-in
@@ -219,7 +219,7 @@ and per-check progress live in that app's `.frame/test-results` directory.
 A path argument selects a separate scratch directory, for example:
 
 ```sh
-bun run test:native /tmp/DesktopSDKTests
+npm run test:native /tmp/DesktopSDKTests
 ```
 
 The runner tests three prebuilt launches (A, B, A), proving file/settings/Keychain

@@ -19,7 +19,7 @@ not forward every feature of every backend.
 4. Run the selected target. A missing or changed native module requires a custom
    development build (`frame build --dev --platform macos`, or `windows`). The
    development session checks native signatures before loading JS. Do not disable
-   the compatibility gate to make a library appear to work in an older prebuilt runtime.
+   the compatibility gate to make a library appear to work in an older Frame Runner.
 
 See `@legendapp/frame-audio` for a real adapter with mobile Expo delegation, HTML on
 web, and native desktop backends. See AsyncStorage in the examples for a library

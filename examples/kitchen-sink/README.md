@@ -16,7 +16,7 @@ adapters. It does not create another application, pack the SDK, or compile nativ
 code. The repository lockfile is shared by the app and framework packages.
 
 The run commands open Expo's development terminal and discover a compatible
-registered prebuilt runtime. Edit the screens, framework JavaScript, or CSS for
+registered Frame Runner. Edit the screens, framework JavaScript, or CSS for
 Fast Refresh. The theme defaults to System; the header button cycles through
 System, Light, and Dark. Native changes invalidate the old runtime and require an
 explicit rebuild.
@@ -28,7 +28,7 @@ prebuilt download service yet. If a matching runtime is already registered, the
 run command uses it without compiling. You can register one supplied by another
 machine with `bunx --no-install frame sdk register <runtime-directory>`.
 
-To build and register a matching prebuilt runtime locally, run one of these **once**
+To build and register a matching Frame Runner locally, run one of these **once**
 with the platform's native toolchain installed, and again after native changes:
 
 ```sh

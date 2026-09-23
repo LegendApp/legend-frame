@@ -1,9 +1,9 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import { Platform, ScrollView, Text, View, TurboModuleRegistry, type TurboModule } from "react-native";
-import { Button, TextInput, Select } from "@legendapp/frame-ui";
-import * as Clipboard from "@legendapp/frame-clipboard";
-import * as Storage from "@legendapp/frame-secure-storage";
-import * as Linking from "@legendapp/frame-desktop-links";
+import { Button, TextInput, Select } from "@legendapp/frame/ui";
+import * as Clipboard from "@legendapp/frame/clipboard";
+import * as Storage from "@legendapp/frame/secure-storage";
+import * as Linking from "@legendapp/frame/links";
 import { clipboardRead, clipboardRoundTrip, secureStorageLifecycle, linkingResolution, assertContract } from "./contract-cases";
 import { catalog, executeCase, initialResults, updateResult, summarize, type CaseResult, type TestPlatform } from "./contract-report";
 import { runDesktopContracts } from "./desktop-contracts";

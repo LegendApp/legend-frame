@@ -56,5 +56,6 @@
       "macos",
       "windows"
     ]
-  }
+  },
+  "private": true
 }

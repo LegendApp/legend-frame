@@ -26,7 +26,7 @@ test("framework packages and generated commands use frame names", () => {
   for (const template of ["blank-typescript", "windows", "universal"]) {
     const pkg = JSON.parse(readFileSync(path.join(root, "packages/cli/templates", template, "package.json"), "utf8"));
     expect(pkg.scripts.dev).toBe("frame dev");
-    expect(pkg.scripts.postinstall).toContain("@legendapp/frame-cli");
+    expect(pkg.scripts.postinstall).toBe("node node_modules/@legendapp/frame/init-template.cjs");
   }
 });
 

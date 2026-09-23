@@ -1,8 +1,8 @@
 import { useRef, useState } from "react";
 import { Text, View } from "react-native";
-import { Button } from "@legendapp/frame-ui";
+import { Button } from "@legendapp/frame/ui";
 import { testConfig } from "./platform-test-config";
-import { WebView } from "@legendapp/frame-webview";
+import { WebView } from "@legendapp/frame/webview";
 const source = { html: '<html><body><p id="value">WebView acceptance</p></body></html>' };
 export default function DesktopLibraryChecks({ check, onError, onBusy }: { check: (id: string, action: () => Promise<void>) => Promise<void>; onError: (message: string) => void; onBusy: (busy: boolean) => void }) {
   const [activeSource, setActiveSource] = useState<typeof source | { uri: string } | null>(null);

@@ -71,7 +71,7 @@ for (const platform of ["macos", "windows"]) {
   assert.equal(value.extra.frame.projectId, readJson(path.join(root, "desktop.config.json")).projectId);
   await run(root, ["node", "-e", `const assert = require('node:assert/strict'); const config = require('./metro.config'); const rewritten = config.server.rewriteRequestUrl('/index${platform === "windows" ? ".windows" : ""}.bundle?platform=${platform}&dev=true'); assert.ok(rewritten.startsWith('/src/bootstrap.bundle?'), rewritten); assert.ok(config.resolver.sourceExts.includes('custom'));`], { capture: true, env: { FRAME_PLATFORM: platform } });
 }
-await run(root, ["node", "-e", `const assert = require('node:assert/strict'); const { readConfig } = require('@legendapp/frame-desktop-config/config.cjs'); const a = readConfig(${JSON.stringify(root)}, 'macos'); const b = readConfig(${JSON.stringify(realpathSync(root))}, 'macos'); assert.deepEqual(a, b); assert.equal(a.expo._internal, undefined);`], { capture: true });
+await run(root, ["node", "-e", `const assert = require('node:assert/strict'); const { readConfig } = require('@legendapp/frame/config'); const a = readConfig(${JSON.stringify(root)}, 'macos'); const b = readConfig(${JSON.stringify(realpathSync(root))}, 'macos'); assert.deepEqual(a, b); assert.equal(a.expo._internal, undefined);`], { capture: true });
 const managed = ["package.json", "app.config.ts", "metro.config.js", "react-native.config.js", "desktop.config.json", ".gitignore"];
 const integrated = managed.map(file => readFileSync(path.join(root, file), "utf8"));
 await addDesktop(root, manifest);
@@ -88,7 +88,7 @@ for (const platform of ["ios", "android", "web", "macos", "windows"]) {
   assert.ok(sources.some(file => file.endsWith("src/label.ts")));
   console.log(`PASS ${platform}: original entry and custom Metro resolver`);
 }
-await run(root, ["bun", "node_modules/@legendapp/frame-cli/src/index.ts", "prebuild", "--platform", "windows"], { capture: true, env: { CI: "1" } });
+await run(root, ["bun", "node_modules/@legendapp/frame/bin/frame.cjs", "prebuild", "--platform", "windows"], { capture: true, env: { CI: "1" } });
 assert.equal(nativeHash(path.join(root, "ios")), iosBefore);
 assert.deepEqual(unchanged.map(file => readFileSync(path.join(root, file), "utf8")), before);
 assert.deepEqual(managed.map(file => readFileSync(path.join(root, file), "utf8")), integrated);

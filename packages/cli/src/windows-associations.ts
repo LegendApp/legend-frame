@@ -1,8 +1,8 @@
 import { createHash } from "node:crypto";
 import path from "node:path";
 import { existsSync, rmSync } from "node:fs";
-import { run } from "./commands";
-import { readAppConfig, readJson, stateFile, writeJson } from "./project";
+import { run } from "./commands.ts";
+import { readAppConfig, readJson, stateFile, writeJson } from "./project.ts";
 const knownTypes: Record<string, string[]> = { "public.plain-text": ["txt"], "public.text": ["txt"], "public.json": ["json"], "public.html": ["html", "htm"], "net.daringfireball.markdown": ["md", "markdown"], "public.png": ["png"], "public.jpeg": ["jpg", "jpeg"], "com.adobe.pdf": ["pdf"] };
 export function associationPlan(expo: any, executable: string) {
   const project = expo.extra?.frame?.projectId;
@@ -30,7 +30,7 @@ export async function registerWindowsAssociations(root: string, app: string) {
   // Keep the last successful plan until registration and stale-entry cleanup succeed.
   writeJson(pending, { ...plan, previous });
   try {
-    await run(root, ["pwsh.exe", "-NoProfile", "-File", path.join(import.meta.dir, "windows-associations.ps1"), "-PlanFile", pending], { capture: true });
+    await run(root, ["pwsh.exe", "-NoProfile", "-File", path.join(import.meta.dirname, "windows-associations.ps1"), "-PlanFile", pending], { capture: true });
     writeJson(file, plan);
   } finally { rmSync(pending, { force: true }); }
 }

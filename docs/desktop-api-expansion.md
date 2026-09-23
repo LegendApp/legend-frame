@@ -36,7 +36,7 @@ Top-level fields include `scheme`, `documentTypes`, `menuBarOnly`, `updates`,
 Expo plugin overrides live under `expo`; framework identity remains authoritative.
 The `updates init` command edits the canonical source.
 
-The prebuilt runtime receives window options from the launching CLI. A custom app embeds the same
+The Frame Runner receives window options from the launching CLI. A custom app embeds the same
 options in its Info.plist. Configuration applies before the main window appears.
 Saved frames override the initial size, constrained by current min/max dimensions
 and available screens. Window config works with prebuilt; URL registration, menu-bar-only
@@ -197,7 +197,7 @@ the upstream behavior; database isolation applies through openDatabase.
 
 The kitchen sink includes interactive controls for each area. `bun run
 test:expansion` runs native window/process/shortcut/system/SQLite checks and a
-mounted WebView round-trip in custom and prebuilt runtimes. A test-only custom-build
+mounted WebView round-trip in custom and Frame Runner runtimes. A test-only custom-build
 driver also checks mounted drag targeting/event delivery and confirmation sheets;
 this driver is removed before the prebuilt build. `bun test tests` includes
 config, transport, validation, ownership, helper packaging and codegen checks.

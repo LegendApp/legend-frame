@@ -14,7 +14,7 @@ test("Windows adapter forwards HTTP bodies and WebSocket messages to Metro", asy
       return Response.json({ url: request.url, body: await request.text() });
     }, websocket: { message(socket, value) { socket.send(value); } },
   });
-  const proxy = startWindowsMetro(upstream.port!, { dev: false, minify: true });
+  const proxy = await startWindowsMetro(upstream.port!, { dev: false, minify: true });
   try {
     const response = await (await fetch(`http://127.0.0.1:${proxy.port}/index.bundle?platform=windows`, { method: "POST", body: "body" })).json() as { url: string; body: string };
     expect(response.body).toBe("body"); expect(new URL(response.url).searchParams.get("minify")).toBe("true");

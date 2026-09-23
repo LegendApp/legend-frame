@@ -40,7 +40,7 @@ Write mutable data into application storage, never into the installed bundle.
 
 Every bundled file contributes to build compatibility, so changing an asset or
 library requires rebuilding, just like changing the helper executable. Helpers
-require a custom application binary; they cannot extend a shared prebuilt runtime
+require a custom application binary; they cannot extend a shared Frame Runner
 at JavaScript startup. Fast Refresh still handles JavaScript-only edits.
 
 ## API and ownership

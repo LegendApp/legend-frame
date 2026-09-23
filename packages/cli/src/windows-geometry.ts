@@ -23,6 +23,6 @@ export function prepareWindowsGeometry(root: string) {
   const rnw = path.dirname(manifest), source = path.join(rnw, "Microsoft.ReactNative/Fabric/ComponentView.h");
   const original = readFileSync(source, "utf8"); const patched = patchWindowsGeometry(original);
   if (patched !== original) writeFileSync(source, patched);
-  const header = readFileSync(req.resolve("@legendapp/frame-desktop-host/windows/FrameComponentGeometry.h"), "utf8");
+  const header = readFileSync(createRequire(req.resolve("@legendapp/frame/package.json")).resolve("@legendapp/frame-desktop-host/windows/FrameComponentGeometry.h"), "utf8");
   writeFileSync(path.join(rnw, "Microsoft.ReactNative.Cxx/FrameComponentGeometry.h"), header);
 }

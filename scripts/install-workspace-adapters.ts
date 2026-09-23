@@ -1,7 +1,8 @@
+import { fileURLToPath } from "node:url";
 import { createRequire } from "node:module";
 import { existsSync, mkdirSync, readFileSync, renameSync, writeFileSync } from "node:fs";
 import path from "node:path";
-import { installedPackages } from "../packages/cli/src/project";
+import { installedPackages } from "../packages/cli/src/project.ts";
 
 // Bun 1.3.14 cannot reliably add nested files through patchedDependencies.
 // Apply the checked-in SDK deltas after install, with no network or native tools.
@@ -25,7 +26,7 @@ export function installWorkspaceAdapters(root: string) {
       // either the upstream file or the exact patch's already-applied context.
       if (applyPatch(current, reversePatch(patch)) !== false) continue;
       const next = applyPatch(current, patch);
-      if (next === false) throw new Error(`Cannot apply ${file} to ${relative}. Reinstall dependencies with bun install --force.`);
+      if (next === false) throw new Error(`Cannot apply ${file} to ${relative}. Reinstall dependencies with your package manager before retrying.`);
       mkdirSync(path.dirname(target), { recursive: true });
       const temporary = `${target}.frame-${process.pid}.tmp`;
       writeFileSync(temporary, next);
@@ -33,4 +34,4 @@ export function installWorkspaceAdapters(root: string) {
     }
   }
 }
-if (import.meta.main) installWorkspaceAdapters(path.resolve(import.meta.dir, ".."));
+if (process.argv[1] && path.resolve(process.argv[1]) === fileURLToPath(import.meta.url)) installWorkspaceAdapters(path.resolve(import.meta.dirname, ".."));

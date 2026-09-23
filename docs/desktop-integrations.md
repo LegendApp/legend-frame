@@ -42,7 +42,7 @@ copies. Data values must be strings.
 The native delegate installs before launch finishes and retains the latest 100
 responses for late JS subscribers. Subscriptions deduplicate queued/live overlap.
 Foreground notifications can show banners, subject to macOS notification settings
-and Focus modes. The prebuilt runtime shares its host's permission, icon and notification identity;
+and Focus modes. The Frame Runner shares its host's permission, icon and notification identity;
 it can handle responses for its running project, but does not cold-launch the
 correct development project from a notification. Test cold launches in a custom
 standalone app. No remote push/APNs service is included.
@@ -126,7 +126,7 @@ await setAutomaticUpdateChecks(true);
 events.remove();
 ```
 
-`getUpdateStatus()` does not start Sparkle. Prebuilt runtimes and Debug/custom-development builds
+`getUpdateStatus()` does not start Sparkle. Frame Runner runtimes and Debug/custom-development builds
 report why updating is unavailable; attempts to start/check reject with
 `E_UPDATES_UNAVAILABLE`. A configured Release app starts the updater idempotently.
 Checks initially default off. Explicitly enabling automatic checks preserves the

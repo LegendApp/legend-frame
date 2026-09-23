@@ -1,5 +1,5 @@
 const { withUniwindConfig } = require("uniwind/metro");
-const { metroConfig } = require("@legendapp/frame-cli/src/universal.cjs");
+const { metroConfig } = require("@legendapp/frame/universal");
 
 module.exports = withUniwindConfig(metroConfig(__dirname), {
   cssEntryFile: "./global.css",

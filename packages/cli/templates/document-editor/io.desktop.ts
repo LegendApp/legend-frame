@@ -1,4 +1,4 @@
-import { openFileDialog, saveFileDialog, readTextFile, writeTextFile, writeTextFileIfUnchanged } from "@legendapp/frame-file-dialog";
+import { openFileDialog, saveFileDialog, readTextFile, writeTextFile, writeTextFileIfUnchanged } from "@legendapp/frame/dialogs";
 import { Alert } from "react-native";
 import type { DocumentIO } from "./document";
 export const io: DocumentIO = {

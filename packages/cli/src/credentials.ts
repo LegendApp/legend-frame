@@ -1,3 +1,4 @@
+import { spawnProcess } from "./process.ts";
 import { readAppConfig } from "./project.ts";
 import { existsSync } from "node:fs";
 import path from "node:path";
@@ -54,7 +55,7 @@ export async function credentials(root: string, reset = false, execute: Runner =
     if (!keychainProfile) {
       keychainProfile = `frame-${selected.teamId}`;
       console.log(`Apple’s tool will store and validate notarization credentials in Keychain as ${keychainProfile}. Secret input is handled by notarytool and is not recorded by frame.`);
-      const child = Bun.spawn(["xcrun", "notarytool", "store-credentials", keychainProfile, ...(keychain ? ["--keychain", keychain] : [])], {
+      const child = spawnProcess(["xcrun", "notarytool", "store-credentials", keychainProfile, ...(keychain ? ["--keychain", keychain] : [])], {
         stdin: "inherit", stdout: "inherit", stderr: "inherit",
       });
       if (await child.exited) throw new Error("Notarization credential setup failed. Run frame credentials to retry.");

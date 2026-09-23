@@ -56,20 +56,20 @@ Refreshing local SDK packages upgrades the exact original generated entry/Metro 
 ```js
 // metro.config.js
 const { makeMetroConfig } = require("expo-desktop-metro-config");
-const { withDesktop } = require("@legendapp/frame-cli/src/metro.cjs");
+const { withDesktop } = require("@legendapp/frame/metro");
 module.exports = withDesktop(makeMetroConfig(__dirname));
 ```
 
 ```ts
 // index.ts — do not eagerly import your main App in secondary runtimes.
-require("@legendapp/frame-cli/src/runtime-entry.cjs");
+require("@legendapp/frame/runtime-entry");
 if (!(globalThis as any).__THREADED_RUNTIME_ENV__) {
   const { registerRootComponent } = require("expo");
   registerRootComponent(require("./App").default);
 }
 ```
 
-Ignore `.threaded-runtime/` in Git. Remove the prototype's `runtimes.plugin.cjs` from the config plugins list. Rebuild the prebuilt runtime or your custom dev binary after updating the SDK; reloading Metro cannot add native code to an older binary.
+Ignore `.threaded-runtime/` in Git. Remove the prototype's `runtimes.plugin.cjs` from the config plugins list. Rebuild the Frame Runner or your custom dev binary after updating the SDK; reloading Metro cannot add native code to an older binary.
 
 ## Pinned source and local distribution
 
@@ -79,14 +79,14 @@ The SDK pack step fetches Margelo's repository at `58710c25c6e505dcc1292ee54d855
 
 ```sh
 bun run pack:local
-bun run frame sdk build-prebuilt
+bun run frame sdk build-runner
 bun run test:runtimes /tmp/FrameRuntimesProbe --prebuilt
 bun run test:runtimes /tmp/FrameRuntimesProbe
 bun run test:runtimes /tmp/FrameRuntimesProbe --release
 bun run test:runtimes:pruning /tmp/FrameRuntimesProbe
 ```
 
-`bun run test:runtimes:all` prepares the prebuilt runtime and runs the complete matrix; it is also included in `test:all`.
+`bun run test:runtimes:all` prepares the Frame Runner and runs the complete matrix; it is also included in `test:all`.
 
 The native test app measures worker isolation, imported CPU work while the main JS timer ticks, async results, errors, filesystem access, runtime destruction after completed calls and fresh recreation. Dev/prebuilt additionally perform an actual app reload. The pruning test retains task source files and dependencies, removes their imports, verifies the native selection and linked symbols, and launches the resulting standalone Release app. Local Xcode is required for these native builds.
 

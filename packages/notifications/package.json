@@ -41,5 +41,6 @@
   },
   "dependencies": {
     "@legendapp/frame-desktop-app": "0.1.0-prototype.0"
-  }
+  },
+  "private": true
 }

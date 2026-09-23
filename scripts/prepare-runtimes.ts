@@ -1,8 +1,8 @@
 import { createRequire } from "node:module";
 import { existsSync, mkdirSync, readFileSync, rmSync, writeFileSync, cpSync } from "node:fs";
 import path from "node:path";
-import { run } from "../packages/cli/src/commands";
-import { digest, readJson, writeJson } from "../packages/cli/src/project";
+import { run } from "../packages/cli/src/commands.ts";
+import { digest, readJson, writeJson } from "../packages/cli/src/project.ts";
 
 export const runtimesRevision = "58710c25c6e505dcc1292ee54d855408a6f7a42d";
 // Distribute the patched, pinned source in the SDK archive manifest. Consumers
@@ -14,7 +14,7 @@ export async function packRuntimes(root: string, output: string) {
   if (!existsSync(source)) await run(root, ["git", "clone", "https://github.com/margelo/react-native-runtimes.git", source], { capture: true });
   const patches = ["react-native-runtimes-macos.patch", "react-native-runtimes-integration.patch"];
   const surface = path.join(root, "patches/windows/runtimes/NativeThreadedRuntimeSurface.windows.tsx");
-  const hash = digest(readFileSync(surface, "utf8") + readFileSync(import.meta.path, "utf8") + runtimesRevision + patches.map(file => readFileSync(path.join(root, "patches", file), "utf8")).join(""));
+  const hash = digest(readFileSync(surface, "utf8") + readFileSync(import.meta.filename, "utf8") + runtimesRevision + patches.map(file => readFileSync(path.join(root, "patches", file), "utf8")).join(""));
   const stage = path.join(cache, "stage");
   rmSync(stage, { recursive: true, force: true }); mkdirSync(stage);
   const archive = path.join(cache, "source.tar");
@@ -44,7 +44,7 @@ export async function packRuntimes(root: string, output: string) {
   // The Metro scanner's Babel dependencies must be declared, not accidentally hoisted.
   pkg.dependencies = { ...pkg.dependencies, "@babel/parser": "7.28.5", "@babel/traverse": "7.28.5", "react-native-nitro-modules": "0.35.7" };
   writeJson(path.join(core, "package.json"), pkg);
-  const file = `react-native-runtimes-core-${pkg.version}-${hash}.tgz`;
-  await run(core, ["tar", "--exclude=.frame", "-czf", path.join(output, file), "."], { capture: true });
+  const file = `runtimes-${hash.slice(0, 12)}.tgz`;
+  await run(core, ["tar", "--exclude=.frame", "-czf", path.join(output, file), "."], { capture: true, env: { COPYFILE_DISABLE: "1" } });
   return { [pkg.name]: file };
 }

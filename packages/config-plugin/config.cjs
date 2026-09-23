@@ -108,7 +108,7 @@ function toExpo(value, target) {
     extra: { ...backend.extra, frame: { ...extra, ...(platforms.length > 1 ? { supportedPlatforms: platforms } : {}) } },
     experiments: { ...backend.experiments, outOfTreePlatforms: true },
     windows: backend.windows ?? { namespace: "DesktopApp", displayName: value.name, packageGuid: guid, projectGuid: guid },
-    plugins: [...(["macos", "windows"].includes(selected) ? ["@legendapp/frame-desktop-config"] : []), ...(backend.plugins ?? []).filter(p => (Array.isArray(p) ? p[0] : p) !== "@legendapp/frame-desktop-config")],
+    plugins: [...(["macos", "windows"].includes(selected) ? ["@legendapp/frame/config-plugin"] : []), ...(backend.plugins ?? []).filter(p => (Array.isArray(p) ? p[0] : p) !== "@legendapp/frame-desktop-config" && (Array.isArray(p) ? p[0] : p) !== "@legendapp/frame/config-plugin")],
   };
   identity(config);
   return { expo: config };
@@ -130,7 +130,7 @@ function prepareConfig(root) {
     const file = path.join(root, "app.config.js");
     if (fs.existsSync(path.join(root, "app.config.ts")) || (fs.existsSync(file) && !fs.readFileSync(file, "utf8").startsWith(managedConfig))) throw new Error("Universal configuration needs a frame-managed app.config.js; preserve custom configuration under expo or expoByPlatform");
     const result = readConfig(root);
-    if (!fs.existsSync(file)) fs.writeFileSync(file, `${managedConfig}\nmodule.exports = () => require("@legendapp/frame-desktop-config/config.cjs").expoConfig(__dirname);\n`);
+    if (!fs.existsSync(file)) fs.writeFileSync(file, `${managedConfig}\nmodule.exports = () => require("@legendapp/frame/config").expoConfig(__dirname);\n`);
     return result;
   }
   if (fs.existsSync(path.join(root, filename)) && ["app.config.js", "app.config.ts"].some(name => fs.existsSync(path.join(root, name)))) throw new Error("desktop.config.json cannot be combined with an Expo app.config file; put backend overrides under expo in desktop.config.json");

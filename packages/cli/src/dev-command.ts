@@ -1,9 +1,10 @@
+import { spawnProcess } from "./process.ts";
 import path from "node:path";
 import { prepareConfig, selectTarget, supportedPlatforms } from "@legendapp/frame-desktop-config/config.cjs";
-import { dev } from "./dev";
-import { findProject } from "./local";
-import { hostPlatform } from "./platform";
-import { nodeCommand } from "./windows";
+import { dev } from "./dev.ts";
+import { findProject } from "./local.ts";
+import { hostPlatform } from "./platform.ts";
+import { nodeCommand } from "./windows.ts";
 
 // Consume only frame options. Expo validates its flags, aliases and values.
 export function devArguments(args: string[]) {
@@ -15,7 +16,7 @@ export function devArguments(args: string[]) {
     if (key === "--no-open") {
       if (inline.length) throw new Error("--no-open does not take a value");
       frame.noOpen = true;
-    } else if (["--project", "--platform", "--prebuilt-binary", "--go-binary"].includes(key!)) {
+    } else if (["--project", "--platform", "--runner-binary", "--prebuilt-binary", "--go-binary"].includes(key!)) {
       const value = inline.length ? inline.join("=") : args[++i];
       if (!value || value.startsWith("-")) throw new Error(`${key} needs a value`);
       if (key === "--project") frame.project = value;
@@ -37,8 +38,8 @@ export async function devCommand(args: string[]) {
   const options = devArguments(args);
   const start = path.resolve(options.project ?? process.cwd());
   if (options.expo.includes("--help") || options.expo.includes("-h")) {
-    console.log("frame dev options:\n  --project <directory>    Application directory\n  --platform <platform>    Initial launch target; all declared platforms stay available\n  --prebuilt-binary <path>  Register and use a prebuilt desktop runtime\n  --no-open                Wait for a launch key (explicit Expo launch flags still apply)\n\nAll other options belong to expo start:\n");
-    const child = Bun.spawn(nodeCommand(start, "expo", "expo", ["start", "--help"]), { cwd: start, stdin: "inherit", stdout: "inherit", stderr: "inherit" });
+    console.log("frame dev options:\n  --project <directory>    Application directory\n  --platform <platform>    Initial launch target; all declared platforms stay available\n  --runner-binary <path>  Register and use a Frame Runner\n  --no-open                Wait for a launch key (explicit Expo launch flags still apply)\n\nAll other options belong to expo start:\n");
+    const child = spawnProcess(nodeCommand(start, "expo", "expo", ["start", "--help"]), { cwd: start, stdin: "inherit", stdout: "inherit", stderr: "inherit" });
     process.exitCode = await child.exited;
     return;
   }
@@ -52,9 +53,9 @@ export async function devCommand(args: string[]) {
   if (desktop) {
     await dev(root, options.prebuiltBinary, expo, !!options.noOpen || initial !== desktop || (desktop === "windows" ? process.platform !== "win32" : process.platform !== "darwin"));
   } else {
-    if (options.prebuiltBinary) throw new Error("--prebuilt-binary needs a desktop platform in desktop.config.json");
+    if (options.prebuiltBinary) throw new Error("--runner-binary needs a desktop platform in desktop.config.json");
     prepareConfig(root);
-    const child = Bun.spawn(nodeCommand(root, "expo", "expo", ["start", root, ...expo]), {
+    const child = spawnProcess(nodeCommand(root, "expo", "expo", ["start", root, ...expo]), {
       cwd: root, env: { ...process.env, FRAME_DEV_SESSION: "1" }, stdin: "inherit", stdout: "inherit", stderr: "inherit",
     });
     const stop = () => child.kill();

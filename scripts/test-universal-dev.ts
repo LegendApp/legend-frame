@@ -22,7 +22,7 @@ const base = `http://127.0.0.1:${port}`;
 const logFile = path.join(root, ".frame/universal-dev.log");
 const file = Bun.file(logFile);
 const log = openSync(logFile, "a");
-const session = Bun.spawn(["bun", "node_modules/@legendapp/frame-cli/src/index.ts", "dev", "--platform", "ios", "--no-open", "--go", "--offline", "--clear", "-p", String(port), "--max-workers", "2"], {
+const session = Bun.spawn(["bun", "node_modules/@legendapp/frame/bin/frame.cjs", "dev", "--platform", "ios", "--no-open", "--go", "--offline", "--clear", "-p", String(port), "--max-workers", "2"], {
   cwd: root, env: { ...process.env, CI: "false" }, stdin: "ignore", stdout: log, stderr: log,
 });
 const sessionFile = path.join(root, ".frame/platforms", process.platform === "win32" ? "windows" : "macos", "session.json");

@@ -1,3 +1,4 @@
+import { writeFile } from "node:fs/promises";
 import { readAppConfig, writeUpdates } from "./project.ts";
 import { createHash, createPublicKey, verify } from "node:crypto";
 import { cpSync, existsSync, mkdirSync, readFileSync, renameSync, rmSync } from "node:fs";
@@ -23,7 +24,7 @@ export async function sparkleTools(root: string, execute: Runner = run) {
     const bytes = new Uint8Array(await response.arrayBuffer());
     if (createHash("sha256").update(bytes).digest("hex") !== archiveHash) throw new Error("Sparkle tools archive checksum mismatch");
     const archive = path.join(temporary, "tools.tar.xz");
-    await Bun.write(archive, bytes);
+    await writeFile(archive, bytes);
     await execute(root, ["tar", "-xJf", archive, "-C", temporary], { capture: true });
     rmSync(archive);
     try { renameSync(temporary, directory); } catch (error) { if (!existsSync(path.join(directory, "bin/generate_appcast"))) throw error; }

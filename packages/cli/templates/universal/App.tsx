@@ -1,10 +1,10 @@
 import { useState } from "react";
 import { Uniwind } from "uniwind";
 import { ScrollView, Text, View } from "react-native";
-import { Button, TextInput, Select } from "@legendapp/frame-ui/uniwind";
-import * as Clipboard from "@legendapp/frame-clipboard";
-import * as SecureStore from "@legendapp/frame-secure-storage";
-import * as Linking from "@legendapp/frame-desktop-links";
+import { Button, TextInput, Select } from "@legendapp/frame/ui/uniwind";
+import * as Clipboard from "@legendapp/frame/clipboard";
+import * as SecureStore from "@legendapp/frame/secure-storage";
+import * as Linking from "@legendapp/frame/links";
 
 const themes = [{ label: "System", value: "system" }, { label: "Light", value: "light" }, { label: "Dark", value: "dark" }];
 

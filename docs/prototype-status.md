@@ -62,7 +62,7 @@ Local validation reports, production selection, clean generation hashes, and nat
 
 ## Local artifacts
 
-- Go runtime: `artifacts/runtimes/FramePrebuilt.app`
+- Go runtime: `artifacts/runtimes/FrameRunner.app`
 - Standalone demonstration: `artifacts/demo/FrameHello.app`
 - Framework package archives and manifest: `artifacts/packages/`
 - External integration projects: `/tmp/FrameFrameworkGoProbe`, `/tmp/FrameFrameworkHello`, `/tmp/FrameFrameworkFreshSmoke`

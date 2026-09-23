@@ -1,7 +1,7 @@
 import { useState } from "react";
-import { Button } from "@legendapp/frame-ui";
-import { openFileDialog } from "@legendapp/frame-file-dialog";
-import { runCommand } from "@legendapp/frame-processes";
+import { Button } from "@legendapp/frame/ui";
+import { openFileDialog } from "@legendapp/frame/dialogs";
+import { runCommand } from "@legendapp/frame/processes";
 export function Git({ onResult, onError }: { onResult(text: string): void; onError(message: string): void }) {
   const [busy, setBusy] = useState(false);
   return <Button disabled={busy} onPress={() => { setBusy(true); void (async () => {

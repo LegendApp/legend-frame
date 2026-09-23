@@ -1,7 +1,7 @@
 const fs = require("node:fs");
 const path = require("node:path");
 const { gate } = require("./metro-gate.cjs");
-const ENTRY = "@legendapp/frame-cli/src/runtime-entry.cjs";
+const ENTRY = "@legendapp/frame/runtime-entry";
 
 // Production discovery omits the registry: otherwise scanning an unused task
 // would itself make that task (and all its native dependencies) reachable.
@@ -52,7 +52,7 @@ function withDesktop(config, options = {}) {
   const enhanceMiddleware = config.server?.enhanceMiddleware;
   return { ...config,
     resolver: { ...config.resolver, resolveRequest(context, name, platform) {
-      if (name === ENTRY) return { type: "sourceFile", filePath: plan.enabled ? generatedEntry : path.join(__dirname, "runtime-entry.cjs") };
+      if (name === ENTRY || name === "@legendapp/frame-cli/src/runtime-entry.cjs") return { type: "sourceFile", filePath: plan.enabled ? generatedEntry : path.join(__dirname, "runtime-entry.cjs") };
       return resolveRequest ? resolveRequest(context, name, platform) : context.resolveRequest(context, name, platform);
     } },
     server: { ...config.server, enhanceMiddleware(middleware, server) {

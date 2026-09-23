@@ -1,15 +1,15 @@
 import { useRef, useState } from "react";
 import { Text, View } from "react-native";
-import { Button } from "@legendapp/frame-ui";
-import { showMessage } from "@legendapp/frame-message-dialog";
-import { showContextMenu } from "@legendapp/frame-context-menu";
-import { DragDropView } from "@legendapp/frame-drag-drop";
-import * as notifications from "@legendapp/frame-notifications";
-import * as system from "@legendapp/frame-system";
-import { createTray } from "@legendapp/frame-tray";
-import { registerGlobalShortcut } from "@legendapp/frame-global-shortcuts";
-import { configureMenus, clearMenus, addNativeMenuActionListener, updateMenuItems, commandModifier } from "@legendapp/frame-native-menu";
-import { getWindow, openWindow, closeWindow, onWindowEvent } from "@legendapp/frame-desktop-windows";
+import { Button } from "@legendapp/frame/ui";
+import { showMessage } from "@legendapp/frame/message-dialog";
+import { showContextMenu } from "@legendapp/frame/context-menu";
+import { DragDropView } from "@legendapp/frame/drag-drop";
+import * as notifications from "@legendapp/frame/notifications";
+import * as system from "@legendapp/frame/system";
+import { createTray } from "@legendapp/frame/tray";
+import { registerGlobalShortcut } from "@legendapp/frame/global-shortcuts";
+import { configureMenus, clearMenus, addNativeMenuActionListener, updateMenuItems, commandModifier } from "@legendapp/frame/menus";
+import { getWindow, openWindow, closeWindow, onWindowEvent } from "@legendapp/frame/windows";
 import { assertContract } from "./contract-cases";
 
 async function requireError(action: () => Promise<unknown>, code: string) {
@@ -99,14 +99,14 @@ export default function DesktopInteractionChecks({ check, onError, onBusy }: {
   }
   async function advancedMenus() {
     setInstruction("Use Command+Shift+Y (macOS) or Control+Shift+Y (Windows) to activate the Parity → Continue item.");
-    let selected!: (event: import("@legendapp/frame-native-menu").NativeMenuAction) => void;
-    const action = new Promise<import("@legendapp/frame-native-menu").NativeMenuAction>(resolve => { selected = resolve; });
+    let selected!: (event: import("@legendapp/frame/menus").NativeMenuAction) => void;
+    const action = new Promise<import("@legendapp/frame/menus").NativeMenuAction>(resolve => { selected = resolve; });
     const sub = addNativeMenuActionListener(event => { if (event.ownerId === "contract-binding") selected(event); });
     configureMenus("contract-base", [{ id: "parity", title: "Parity", items: [{ id: "base", title: "Original" }, { id: "after", title: "After" }] }]);
     configureMenus("contract-binding", [{ id: "bound", title: "Parity", items: [{ id: "continue", targetTitle: "Original", title: "Continue", placement: { after: "After" }, shortcut: { key: "y", modifiers: commandModifier | (1 << 17) }, payload: { token: "acceptance" } }] }]);
     updateMenuItems("contract-binding", [{ id: "continue", checked: true }]);
     try {
-      let received: import("@legendapp/frame-native-menu").NativeMenuAction | undefined;
+      let received: import("@legendapp/frame/menus").NativeMenuAction | undefined;
       await within(action.then(value => { received = value; }), 45000);
       assertContract(received?.itemId === "continue" && received.menuId === "bound" && received.payload?.token === "acceptance", "Menu action lost semantic identity or payload");
     } finally { sub.remove(); clearMenus("contract-binding"); clearMenus("contract-base"); }

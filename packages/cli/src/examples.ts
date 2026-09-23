@@ -1,7 +1,8 @@
+import { packageManager, managerCommand } from "./package-manager.ts";
 import { cpSync, writeFileSync } from "node:fs";
 import path from "node:path";
-import { readJson, writeJson } from "./project";
-import { run } from "./commands";
+import { readJson, writeJson } from "./project.ts";
+import { run } from "./commands.ts";
 export const examples = ["document-editor", "notes-lite", "music-lite", "diff-lite"] as const;
 export type Example = typeof examples[number];
 export async function configureExample(root: string, example: Example) {
@@ -10,10 +11,7 @@ export async function configureExample(root: string, example: Example) {
   if (example === "music-lite") suffixes.push("audio");
   if (example === "diff-lite") suffixes.push("processes");
   const desktop = suffixes.map(name => name === "desktop" ? "@legendapp/frame" : `@legendapp/frame-${name}`);
-  for (const name of desktop) {
-    if (!pkg.overrides[name]) throw new Error(`SDK example requires ${name}`);
-    pkg.dependencies[name] = pkg.overrides[name];
-  }
+  if (!pkg.dependencies["@legendapp/frame"]) throw new Error("SDK example requires @legendapp/frame");
   Object.assign(pkg.dependencies, { "expo-document-picker": "14.0.8", "expo-file-system": "19.0.24", "expo-sharing": "14.0.8" });
   if (example !== "document-editor") pkg.dependencies["@react-native-async-storage/async-storage"] = "2.2.0";
   if (example === "music-lite") pkg.dependencies["expo-audio"] = "1.1.1";
@@ -29,10 +27,10 @@ export async function configureExample(root: string, example: Example) {
     if (example === "music-lite" && ["ios", "android"].includes(platform)) options.plugins = [...(options.plugins ?? []), ["expo-audio", { microphonePermission: false, enableBackgroundPlayback: true, recordAudioAndroid: false }]];
   }
   writeJson(path.join(root, "desktop.config.json"), config);
-  cpSync(path.resolve(import.meta.dir, "../templates", example), root, { recursive: true });
+  cpSync(path.resolve(import.meta.dirname, "../templates", example), root, { recursive: true });
   if (example !== "document-editor") {
-    cpSync(path.resolve(import.meta.dir, "../templates/example-shared"), path.join(root, "shared"), { recursive: true });
+    cpSync(path.resolve(import.meta.dirname, "../templates/example-shared"), path.join(root, "shared"), { recursive: true });
     writeFileSync(path.join(root, "shared/identity.ts"), `export const projectId = ${JSON.stringify(config.projectId)};\n`);
   }
-  await run(root, ["bun", "install"]);
+  await run(root, managerCommand(packageManager(root), ["install"]));
 }

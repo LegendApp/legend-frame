@@ -10,7 +10,7 @@ if (existsSync(path.join(root, "package.json")) && !existsSync(path.join(root, "
 await run(framework, ["bun", "scripts/pack.ts"]);
 const manifest = readJson(path.join(framework, "artifacts/packages/manifest.json"));
 const packages = ["@legendapp/frame-clipboard", "@legendapp/frame-secure-storage", "@legendapp/frame-desktop-links", "@legendapp/frame-desktop-app", "@legendapp/frame-ui"];
-const archives = Object.fromEntries(packages.map(name => [name, path.join(framework, "artifacts/packages", manifest[name])]));
+const archives = { "@legendapp/frame": path.join(framework, "artifacts/packages", manifest["@legendapp/frame"]) };
 mkdirSync(root, { recursive: true }); writeFileSync(path.join(root, ".frame-api-probe"), "managed\n");
 writeJson(path.join(root, "package.json"), {
   name: "frame-api-platform-probe", private: true, version: "1.0.0", main: "index.ts",
@@ -19,7 +19,7 @@ writeJson(path.join(root, "package.json"), {
 });
 writeJson(path.join(root, "app.json"), { expo: { name: "API Platform Probe", slug: "frame-api-probe", platforms: ["ios", "android", "web"] } });
 writeFileSync(path.join(root, "metro.config.js"), 'const {getDefaultConfig} = require("expo/metro-config"); module.exports = getDefaultConfig(__dirname);\n');
-writeFileSync(path.join(root, "index.ts"), 'import * as clipboard from "@legendapp/frame-clipboard";\nimport * as secureStore from "@legendapp/frame-secure-storage";\nimport * as linking from "@legendapp/frame-desktop-links";\nimport { Button } from "@legendapp/frame-ui";\n(globalThis as any).__API_PROBE__ = {clipboard, secureStore, linking, Button};\n');
+writeFileSync(path.join(root, "index.ts"), 'import * as clipboard from "@legendapp/frame/clipboard";\nimport * as secureStore from "@legendapp/frame/secure-storage";\nimport * as linking from "@legendapp/frame/links";\nimport { Button } from "@legendapp/frame/ui";\n(globalThis as any).__API_PROBE__ = {clipboard, secureStore, linking, Button};\n');
 await run(root, ["bun", "install"]);
 const output = path.join(root, "results"); mkdirSync(output, { recursive: true });
 const results = [];

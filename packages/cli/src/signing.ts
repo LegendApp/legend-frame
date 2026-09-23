@@ -1,3 +1,4 @@
+import { writeFile } from "node:fs/promises";
 import { readAppConfig } from "./project.ts";
 import { existsSync, openSync, closeSync, readSync, readdirSync, realpathSync, lstatSync } from "node:fs";
 import path from "node:path";
@@ -138,7 +139,7 @@ export async function validateApp(root: string, app: string, credentials: Signin
     let actual: Entitlements = {};
     if (xml) {
       const plist = stateFile(root, "packaging/verified-entitlements.plist");
-      await Bun.write(plist, xml);
+      await writeFile(plist, xml);
       actual = distributionEntitlements(JSON.parse(await execute(root, ["plutil", "-convert", "json", "-o", "-", plist], { capture: true })));
     }
     const desired = targets.get(file);

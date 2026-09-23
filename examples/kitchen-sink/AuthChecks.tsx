@@ -1,6 +1,6 @@
 import { useEffect } from "react";
 import { Text } from "react-native";
-import { createAuthSession, digestStringAsync, getRandomBytesAsync } from "@legendapp/frame-auth-session";
+import { createAuthSession, digestStringAsync, getRandomBytesAsync } from "@legendapp/frame/auth-session";
 import * as files from "@legendapp/frame/files";
 export function AuthChecks({ report, provider }: { report: string; provider: string }) {
   useEffect(() => {

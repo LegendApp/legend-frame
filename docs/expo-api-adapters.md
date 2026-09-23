@@ -7,9 +7,9 @@ These adapters are the current small API migration. Router, declarative windows,
 Use the individual framework packages when sharing these capabilities with mobile/web:
 
 ```tsx
-import * as Clipboard from '@legendapp/frame-clipboard';
-import * as SecureStore from '@legendapp/frame-secure-storage';
-import * as Linking from '@legendapp/frame-desktop-links';
+import * as Clipboard from '@legendapp/frame/clipboard';
+import * as SecureStore from '@legendapp/frame/secure-storage';
+import * as Linking from '@legendapp/frame/links';
 
 await Clipboard.setStringAsync('Hello');
 const text = await Clipboard.getStringAsync();

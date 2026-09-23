@@ -38,5 +38,6 @@
       "windows"
     ],
     "requires": []
-  }
+  },
+  "private": true
 }

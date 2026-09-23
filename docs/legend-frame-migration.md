@@ -32,13 +32,13 @@ native runtime identities.
 | `legend` command | `frame` |
 | `@legend-apps/desktop/<feature>` | `@legendapp/frame/<feature>` |
 | `@legend-apps/ui` | `@legendapp/frame/ui` (implementation: `@legendapp/frame-ui`) |
-| `@legend-apps/cli` | `@legendapp/frame-cli` (implementation package) |
+| `@legend-apps/cli` | `@legendapp/frame` (`frame` executable) |
 | Other `@legend-apps/<module>` | `@legendapp/frame-<module>` |
 | `.legend/`, `~/.legend/` | `.frame/`, `~/.frame/` |
 | `LEGEND_*` environment variables | `FRAME_*` |
 | `legend` package metadata / Expo extras | `frame` |
 | `withLegendExpo` config wrapper | `withFrameExpo` |
-| `LegendGo.app` | `FramePrebuilt.app` |
+| `LegendGo.app` | `FrameRunner.app` |
 
 `desktop.config.json` keeps its filename. Generated native identifiers, codegen
 names, helper protocols and runtime metadata have changed, so old binaries are
@@ -50,18 +50,18 @@ migrated automatically. Old logs/reports still live at their original paths.
 From the framework checkout, reinstall and repack:
 
 ```sh
-bun install --force
-bun run frame sdk pack
-bun run frame sdk build-prebuilt
-bun run frame create /path/to/FreshApp --universal
+npm install --force
+npm run frame -- sdk pack
+npm run frame -- sdk build-runner
+npm run frame -- create /path/to/FreshApp --universal
 ```
 
 Use `--platform windows` on Windows where appropriate. For Kitchen Sink:
 
 ```sh
 cd examples/kitchen-sink
-bun run rebuild:macos  # or rebuild:windows
-bun run macos         # or windows
+npm run rebuild:macos  # or rebuild:windows
+npm run macos         # or windows
 ```
 
 Update imports, dependency names, overrides, package scripts and custom environment
@@ -72,3 +72,18 @@ in the prototypes also changed; data is not automatically moved into the new one
 After rebuilding, follow the [manual acceptance checklist](desktop-manual-acceptance.md).
 
 See the [rename validation report](frame-rename-validation.md) for executed checks and remaining limits.
+
+## Single public package
+
+New applications depend on `@legendapp/frame` only. Replace direct implementation
+dependencies and overrides such as `@legendapp/frame-ui` and
+`@legendapp/frame-cli` with the single Frame SDK archive. Change application
+imports to public subpaths (`@legendapp/frame/ui`, `@legendapp/frame/files`,
+`@legendapp/frame/windows`, etc.) and configuration imports to the helpers listed
+in [SDK distribution](sdk-distribution.md#public-package-layout). The generated
+postinstall command is `node node_modules/@legendapp/frame/init-template.cjs`.
+
+Native module names in explicit inclusion/exclusion configuration and compatibility
+reports retain their private identities; those are not JavaScript import paths.
+Use a fresh starter to compare custom configuration, and rebuild Runner from the
+new SDK before launching it. Existing applications are not rewritten automatically.

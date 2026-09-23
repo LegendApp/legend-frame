@@ -1,7 +1,7 @@
 import { copyFileSync, lstatSync, mkdirSync, realpathSync, chmodSync, readdirSync, rmSync, writeFileSync } from "node:fs";
 import path from "node:path";
 import { createRequire } from "node:module";
-import { architecture, type DesktopPlatform } from "./platform";
+import { architecture, type DesktopPlatform } from "./platform.ts";
 const { validateHelpers } = createRequire(import.meta.url)("@legendapp/frame-desktop-config/helpers.cjs");
 export type HelperBundle = { directory: string; executable: string };
 export type Helpers = Record<string, string | Partial<Record<`${DesktopPlatform}-${"arm64" | "x64"}`, HelperBundle>>>;

@@ -1,7 +1,7 @@
 import { Activation } from "./Activation";
 import { useEffect, useMemo, useState } from "react";
 import { FlatList, Platform, SafeAreaView, StyleSheet, Text, View } from "react-native";
-import { Button } from "@legendapp/frame-ui";
+import { Button } from "@legendapp/frame/ui";
 import { Lifecycle } from "./shared/Lifecycle";
 import { useModel } from "./shared/useModel";
 import { mountSerial } from "./shared/lifetime";

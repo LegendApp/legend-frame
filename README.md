@@ -1,16 +1,16 @@
 # Legend Frame
 
-Legend Frame is an experimental framework for building native desktop applications with React Native and Expo Desktop. It combines desktop APIs with an Expo-style development workflow: start in a supplied **prebuilt runtime**, switch to a custom development build when you need additional native code, and build a standalone application containing the native modules it needs.
+Legend Frame is an experimental framework for building native desktop applications with React Native and Expo Desktop. It combines desktop APIs with an Expo-style development workflow: start in **Frame Runner**, the shared development runtime, switch to a custom development build when you need additional native code, and build a standalone application containing the native modules it needs.
 
 The public package is `@legendapp/frame`; the CLI and short name are `frame`.
 APIs are imported from paths such as `@legendapp/frame/files` and
-`@legendapp/frame/ui`. Internal implementation packages use `@legendapp/frame-*`.
+`@legendapp/frame/ui`. Private implementation modules are bundled inside the single `@legendapp/frame` archive; they are not published separately.
 See the [rename and migration guide](docs/legend-frame-migration.md) when updating
 an existing prototype checkout.
 
 Application JavaScript runs in **Hermes**. Node and Bun are development tools; neither is embedded as the application's JavaScript runtime. The UI uses React Native's native renderer.
 
-**Current scope:** macOS 14+ on Apple Silicon. The packages, CLI, and native runtime are prototypes. A [transferable SDK with optional prebuilt runtimes](docs/sdk-distribution.md) works outside the checkout; public npm packages and hosted prebuilt releases are not available. Windows x64/ARM64 prebuilt and custom development builds are integrated, with native verification still pending; see the [Windows development guide](docs/windows-slice.md). Mobile/web development delegates to Expo. Intel macOS, Linux, and Mac App Store distribution are not supported by this framework's current workflow.
+**Current scope:** macOS 14+ on Apple Silicon. The packages, CLI, and native runtime are prototypes. A [transferable SDK with optional Frame Runner runtimes](docs/sdk-distribution.md) works outside the checkout; public npm packages and hosted prebuilt releases are not available. Windows x64/ARM64 prebuilt and custom development builds are integrated, with native verification still pending; see the [Windows development guide](docs/windows-slice.md). Mobile/web development delegates to Expo. Intel macOS, Linux, and Mac App Store distribution are not supported by this framework's current workflow.
 
 The checkout currently targets Expo SDK 54 / React Native 0.81 and pins **Expo Desktop 1.0.0-beta.6**. Expo Desktop owns template creation and native project generation; Expo CLI owns Metro and the development terminal. frame adds desktop actions, runtime compatibility checks, native capabilities, and build orchestration. See the [integration boundary](docs/expo-desktop-integration.md) for the remaining upstream launch requirements.
 
@@ -18,7 +18,7 @@ The checkout currently targets Expo SDK 54 / React Native 0.81 and pins **Expo D
 
 - **Build an app:** follow the [quick start](#quick-start) and [development guide](docs/development.md).
 - **Add desktop to an existing Expo app:** use [the integration guide](docs/add-desktop.md) to preserve its entry point and mobile/web setup.
-- **Test Windows development:** use the [integrated Windows workflow](docs/windows-slice.md) and `bun run test:windows`.
+- **Test Windows development:** use the [integrated Windows workflow](docs/windows-slice.md) and `npm run test:windows`.
 - **Use desktop APIs:** see the [SDK guide](docs/sdk.md) and [expanded API reference](docs/desktop-api-expansion.md).
 - **Try an application:** explore [Kitchen Sink](#explore-the-kitchen-sink), [Notes/Music/Diff Lite](#small-application-examples), or the [native helper example](#native-helper-example).
 - **Understand or change the framework:** read [ARCHITECTURE.md](ARCHITECTURE.md), including its source map and implementation invariants.
@@ -29,7 +29,7 @@ The checkout currently targets Expo SDK 54 / React Native 0.81 and pins **Expo D
 
 | Target | Native contents | JavaScript | When to use it |
 | --- | --- | --- | --- |
-| Prebuilt runtime | The supported SDK and its required native dependencies | Served by Metro | Start developing without compiling a native app |
+| Frame Runner | The supported SDK and its required native dependencies | Served by Metro | Start developing without compiling a native app |
 | Custom development build | The SDK plus the app's additional native dependencies and configuration | Served by Metro | Add a native library or an app-specific native capability |
 | Standalone application | The production-selected native module set | Embedded in the application | Run without Metro; prepare a distribution build |
 
@@ -45,60 +45,60 @@ This is a **local SDK workflow**. Run the following from a clone of this reposit
 
 ### 1. Prepare the SDK
 
-You need Bun 1.3.14 or newer and Node compatible with the pinned Expo/React Native toolchain. Building native binaries also requires an Apple Silicon Mac, full Xcode with first-launch setup completed, and CocoaPods. The SDK pack step uses Git and tar, and fetches pinned upstream Runtimes source and library archives on its first run. Patches are applied in JavaScript.
+You need Node 24.19.0 or newer and npm, pnpm, Yarn, or Bun as your package manager. Bun is optional; the CLI and SDK installer run on Node. The repository test harness still uses Bun. Building native binaries also requires an Apple Silicon Mac, full Xcode with first-launch setup completed, and CocoaPods. The SDK pack step uses Git and tar, and fetches pinned upstream Runtimes source and library archives on its first run. Patches are applied in JavaScript.
 
 ```sh
-bun install
-bun run typecheck
+npm install
+npm run typecheck
 bun test tests
-bun run frame sdk pack
-bun run frame sdk build-prebuilt
+npm run frame -- sdk pack
+npm run frame -- sdk build-runner
 ```
 
 Use Node 24.19.0 (`nvm install && nvm use` in this checkout). Older Node 24 releases can fail on Expo Desktop beta's CommonJS imports; see [native prerequisites](docs/development.md#native-prerequisites).
 
-`pack` creates SDK package archives and Expo Desktop-compatible application templates, then registers their manifest. `build-prebuilt` creates or refreshes the SDK's managed build project, compiles the generic native runtime, and registers it for app development.
+`pack` creates SDK package archives and Expo Desktop-compatible application templates, then registers their manifest. `build-runner` creates or refreshes the SDK's managed build project, compiles the generic native runtime, and registers it for app development.
 
 If you already have a compatible runtime, register it instead of building it:
 
 ```sh
-bun run frame sdk register /absolute/path/to/FramePrebuilt.app
+npm run frame -- sdk register /absolute/path/to/FrameRunner.app
 ```
 
-Registration records the path; keep the binary at that location. A compatible prebuilt runtime can be launched without invoking Xcode, CocoaPods, or codegen. Native build tools are needed when creating or rebuilding a binary.
+Registration records the path; keep the binary at that location. A compatible Frame Runner can be launched without invoking Xcode, CocoaPods, or codegen. Native build tools are needed when creating or rebuilding a binary.
 
 ### 2. Create and run an app
 
 After preparing the SDK, run from the framework checkout:
 
 ```sh
-bun run frame create /tmp/MyFrameApp
+npm run frame -- create /tmp/MyFrameApp
 cd /tmp/MyFrameApp
-bun run macos
+npm run macos
 ```
 
-`bun run macos`, `bun start`, and `bun dev` all run the same managed development session. The CLI discovers the registered runtime and chooses an available Metro port. The terminal provides actions to open, reload, debug, change runtime, build when required, and quit.
+`npm run macos`, `npm start`, and `npm run dev` all run the same managed development session. The CLI discovers the registered runtime and chooses an available Metro port. The terminal provides actions to open, reload, debug, change runtime, build when required, and quit.
 
-Edit `App.tsx` to change the application. The development terminal is Expo CLI with desktop actions: `d` opens macOS or Windows, `g` switches prebuilt runtime/development build, `b` builds when required, and Ctrl+C exits. Expo retains its normal reload, debugger, mobile, and web keys. See the [development guide](docs/development.md) for flags, logs, debugger behavior, and adding native dependencies.
+Edit `App.tsx` to change the application. The development terminal is Expo CLI with desktop actions: `d` opens macOS or Windows, `g` switches Frame Runner/development build, `b` builds when required, and Ctrl+C exits. Expo retains its normal reload, debugger, mobile, and web keys. See the [development guide](docs/development.md) for flags, logs, debugger behavior, and adding native dependencies.
 
 ### 3. Build a standalone app
 
 From the generated application:
 
 ```sh
-bun run build
+npm run build
 ```
 
 This produces a local ad-hoc-signed `.app` with embedded JavaScript and prints its path. It runs without the development server. To reopen the last standalone build:
 
 ```sh
-bunx --no-install frame open
+npx --no-install frame open
 ```
 
 To prepare a Developer ID-signed, notarized distribution ZIP:
 
 ```sh
-bun run package
+npm run package
 ```
 
 Packaging requires signing credentials and a notarization profile. It signs a staging copy, supports resuming a pending submission, and validates the final archive. It does not publish the app. Read the [packaging guide](docs/packaging.md), especially its validation status, before relying on this as a production release pipeline.
@@ -110,27 +110,27 @@ Windows uses the same CLI, starter, prebuilt registry, native compatibility chec
 On Windows 11 x64 or ARM64 (including Parallels), install the prerequisites in the [Windows guide](docs/windows-slice.md), including Visual Studio 2026 / MSVC v145 for the pinned RNW 0.81.35 template. Then run from the framework checkout:
 
 ```powershell
-bun install
-bun run frame sdk pack --platform windows
-bun run frame sdk build-prebuilt --platform windows
-bun run frame create C:\dev\MyFrameApp --platform windows
+npm install
+npm run frame -- sdk pack --platform windows
+npm run frame -- sdk build-runner --platform windows
+npm run frame -- create C:\dev\MyFrameApp --platform windows
 cd C:\dev\MyFrameApp
-bun run windows
+npm run windows
 ```
 
-Creation defaults to Windows on a Windows machine. `bun run windows`, `bun dev`, and `bun start` enter the normal `frame dev` session. Additional Windows native dependencies use the normal custom-build path: the session detects incompatible prebuilt code and offers `b`, or you can run `bunx --no-install frame build --dev` explicitly. Windows builds default to the native CPU architecture, including ARM64 on Apple Silicon Parallels; runtime registration distinguishes Windows/x64, Windows/arm64, and macOS/arm64. See the Windows guide for the ARM64 compiler tools and `FRAME_WINDOWS_ARCH` override.
+Creation defaults to Windows on a Windows machine. `npm run windows`, `npm run dev`, and `npm start` enter the normal `frame dev` session. Additional Windows native dependencies use the normal custom-build path: the session detects incompatible prebuilt code and offers `b`, or you can run `npx --no-install frame build --dev` explicitly. Windows builds default to the native CPU architecture, including ARM64 on Apple Silicon Parallels; runtime registration distinguishes Windows/x64, Windows/arm64, and macOS/arm64. See the Windows guide for the ARM64 compiler tools and `FRAME_WINDOWS_ARCH` override.
 
 For the automated prebuilt → Fast Refresh → added native module → custom-build check, run from the framework checkout with a fresh destination:
 
 ```powershell
-bun run test:windows --project C:\dev\FrameWindowsVerification
+npm run test:windows -- --project C:\dev\FrameWindowsVerification
 ```
 
-The verifier uses the real CLI and existing native-greeting fixture, and saves `.frame/windows-verification.json` plus `.frame/logs`. On macOS, `bun run test:windows:prepare --project /tmp/FrameWindowsCheck` checks generation and both development bundles without executing a native binary.
+The verifier uses the real CLI and existing native-greeting fixture, and saves `.frame/windows-verification.json` plus `.frame/logs`. On macOS, `npm run test:windows:prepare -- --project /tmp/FrameWindowsCheck` checks generation and both development bundles without executing a native binary.
 
-Windows host source now includes display enumeration, window frame/centering/fullscreen operations, size constraints and basic presentation options, menu following between React windows, and an atomic single-instance guard. The native UI package implements React Native Appearance overrides for WinUI controls. Run `bun run test:windows:features` on Windows to compile and exercise these additions, including simultaneous launches and owner-termination recovery.
+Windows host source now includes display enumeration, window frame/centering/fullscreen operations, size constraints and basic presentation options, menu following between React windows, and an atomic single-instance guard. The native UI package implements React Native Appearance overrides for WinUI controls. Run `npm run test:windows:features` on Windows to compile and exercise these additions, including simultaneous launches and owner-termination recovery.
 
-**Native Windows verification is still pending.** Local generation/bundle checks do not prove compilation, autolinking, Hermes startup, or Fast Refresh on Windows. Windows production builds, preview builds, signing/MSIX, and clean-machine runtime distribution are outside this development scope. Desktop modules, Nitro, SQLite, WebView2, and secondary Hermes runtimes now have Windows integrations; run `bun run test:platform --platform windows` to exercise their shared contracts. See the [Windows guide](docs/windows-slice.md) for the full setup, test, and diagnostic workflow.
+**Native Windows verification is still pending.** Local generation/bundle checks do not prove compilation, autolinking, Hermes startup, or Fast Refresh on Windows. Windows production builds, preview builds, signing/MSIX, and clean-machine runtime distribution are outside this development scope. Desktop modules, Nitro, SQLite, WebView2, and secondary Hermes runtimes now have Windows integrations; run `npm run test:platform -- --platform windows` to exercise their shared contracts. See the [Windows guide](docs/windows-slice.md) for the full setup, test, and diagnostic workflow.
 
 ## What the SDK provides
 
@@ -146,8 +146,8 @@ Framework-owned capabilities are imported from `@legendapp/frame/<feature>`. Use
 | User interaction | `dialogs`, `message-dialog`, `clipboard`, `drag-drop`: file panels, alerts, clipboard formats, drag sources and drop targets |
 | OS integration | `links`, `notifications`, `tray`, `system`: URLs/documents, local notifications, menu-bar items, Dock/startup/power integration |
 | Processes and distribution | `processes`, `updates`: child process I/O, timeouts and managed target-specific helper bundles, signed whole-app update integration |
-| Native controls and styling | `@legendapp/frame-ui`: native buttons, text inputs and selects; optional Uniwind bindings and system/light/dark themes |
-| Audio and authentication | `@legendapp/frame-audio`, `@legendapp/frame-auth-session`: playback and system media controls, external-browser authentication callback transport |
+| Native controls and styling | `@legendapp/frame/ui`: native buttons, text inputs and selects; optional Uniwind bindings and system/light/dark themes |
+| Audio and authentication | `@legendapp/frame/audio`, `@legendapp/frame/auth-session`: playback and system media controls, external-browser authentication callback transport |
 | External libraries | React Native WebView, OP-SQLite, and Margelo Runtimes; see [integrated external libraries](docs/external-libraries.md) |
 
 For example, application code can use project-scoped storage without a Node filesystem API:
@@ -175,9 +175,9 @@ For external libraries, prefer their upstream imports and documentation. frame s
 
 ## One app for mobile, web, and desktop
 
-`bun run settings /tmp/MySettings` packs the shared Settings template and creates it through Expo Desktop beta. It uses the existing capability adapters, ordinary React Native layout, and native `Button`, `TextInput`, and `Select` controls from `@legendapp/frame-ui`. Mobile controls use the pinned Expo UI backend; desktop and web select their own implementations. The starter uses [Uniwind](docs/styling.md) for responsive layout and light/dark/system themes, with optional native control bindings at `@legendapp/frame-ui/uniwind`. Ordinary `style` props remain supported.
+`npm run settings /tmp/MySettings` packs the shared Settings template and creates it through Expo Desktop beta. It uses the existing capability adapters, ordinary React Native layout, and native `Button`, `TextInput`, and `Select` controls from `@legendapp/frame/ui`. Mobile controls use the pinned Expo UI backend; desktop and web select their own implementations. The starter uses [Uniwind](docs/styling.md) for responsive layout and light/dark/system themes, with optional native control bindings at `@legendapp/frame/ui/uniwind`. Ordinary `style` props remain supported.
 
-Run `bun run web`, `bun run ios`, `bun run android`, or `bun run macos` inside the generated app. Native targets first need their development build. Windows uses WinUI controls with visible, noninteractive fallbacks if native initialization fails; native Windows acceptance is still pending. Track remaining work in [known Windows issues](docs/windows-issues.md). See [the shared Settings guide](docs/universal-settings.md) for build commands, platform status, and verification.
+Run `npm run web`, `npm run ios`, `npm run android`, or `npm run macos` inside the generated app. Native targets first need their development build. Windows uses WinUI controls with visible, noninteractive fallbacks if native initialization fails; native Windows acceptance is still pending. Track remaining work in [known Windows issues](docs/windows-issues.md). See [the shared Settings guide](docs/universal-settings.md) for build commands, platform status, and verification.
 
 A universal project declares all targets together. Switching with `--platform` preserves its shared configuration/source and the other generated native projects. Router integration and declarative windows remain deferred.
 
@@ -189,7 +189,7 @@ A typical generated configuration looks like this; retain the `projectId` assign
 
 ```json
 {
-  "$schema": "./node_modules/@legendapp/frame-desktop-config/schema.json",
+  "$schema": "./node_modules/@legendapp/frame/schema.json",
   "name": "MyFrameApp",
   "projectId": "f478dff4-f9a1-4ff2-8096-64df89e1c470",
   "version": "0.0.1",
@@ -198,7 +198,7 @@ A typical generated configuration looks like this; retain the `projectId` assign
 }
 ```
 
-The stable project ID scopes storage and runtime identity across renames and builds. Window settings can be supplied to the prebuilt runtime. Registering URL/document associations, configuring a menu-bar-only app or update feed, and embedding helper executables require a custom binary. The CLI also checks additional config plugins and native settings.
+The stable project ID scopes storage and runtime identity across renames and builds. Window settings can be supplied to the Frame Runner. Registering URL/document associations, configuring a menu-bar-only app or update feed, and embedding helper executables require a custom binary. The CLI also checks additional config plugins and native settings.
 
 See [desktop configuration](docs/desktop-api-expansion.md#configuration) for fields and [architecture](ARCHITECTURE.md#configuration-and-identity) for ownership rules. Dynamic application config and unrelated JavaScript entry bundles are outside the current supported model.
 
@@ -208,26 +208,26 @@ Kitchen Sink is a checked-in app. From the checkout:
 
 ```sh
 cd examples/kitchen-sink
-bun install
-bun run macos
+npm install
+npm run macos
 # Or on Windows:
-bun run windows
+npm run windows
 ```
 
 The app uses workspace packages and the repository lockfile. Installation applies
 checked-in desktop library adapters; startup delegates to the normal frame/Expo
 CLI. It does not create a second app, pack SDK archives, or compile native code.
-Edit the screens and CSS directly for Fast Refresh. `bun run kitchen-sink` from the
+Edit the screens and CSS directly for Fast Refresh. `npm run kitchen-sink` from the
 repository root is a shortcut for this app's `dev` command.
 
-A matching native prebuilt runtime must be registered. There is no hosted download
-service yet. If you do not have one, explicitly run `bun run rebuild:macos` or
-`bun run rebuild:windows` from the app directory with the native toolchain installed.
+A matching native Frame Runner must be registered. There is no hosted download
+service yet. If you do not have one, explicitly run `npm run rebuild:macos` or
+`npm run rebuild:windows` from the app directory with the native toolchain installed.
 That builds and registers its reusable runtime; repeat only after native changes.
 See the [Kitchen Sink guide](examples/kitchen-sink/README.md) for registration and
 startup options.
 
-`bun run kitchen-sink:prepare` remains a separate packed-SDK consumer test. It does
+`npm run kitchen-sink:prepare` remains a separate packed-SDK consumer test. It does
 not modify the checked-in app's manifest, configuration, or native projects.
 
 The example exercises desktop APIs with windows, an editor, menus, persistence, and an event log. **Test streaming files and Trash** runs binary file checks and recycles one clearly named disposable test file; it does not touch user-selected files. Its actions use native buttons and show progress, results, and errors beneath the button; each demo also shows its recent callback events, and the event log retains detailed output. The header theme button cycles System → Light → Dark → System, starting with the system appearance; Uniwind tokens theme the screen and React Native Appearance updates native controls.
@@ -238,37 +238,37 @@ Run framework commands from this repository; run app commands from a generated a
 
 | Location | Command | Purpose |
 | --- | --- | --- |
-| Framework | `bun run frame sdk pack` | Pack and register local SDK archives |
-| Framework | `bun run frame sdk build-prebuilt` | Build/register the generic runtime |
-| Framework | `bun run frame create <directory>` | Create a consumer from the packaged starter |
-| App | `bun run macos` / `bun run windows` / `bun dev` / `bun start` | Managed development session for the project target |
-| App | `bunx --no-install frame build --dev` | Build an app-specific development runtime |
-| Framework | `bun run test:windows` | Verify the integrated Windows native development path |
-| Framework | `bun run test:windows:prepare` | Check Windows generation and development bundles without native execution |
-| App | `bunx --no-install frame analyze` | Explain macOS production native module selection |
-| App | `bun run build` | Build a standalone macOS Release app |
-| App | `bun run package` | Prepare a signed, notarized macOS distribution archive |
-| App | `bun run doctor` | Diagnose native build prerequisites |
+| Framework | `npm run frame -- sdk pack` | Pack and register local SDK archives |
+| Framework | `npm run frame -- sdk build-runner` | Build/register the generic runtime |
+| Framework | `npm run frame -- create <directory>` | Create a consumer from the packaged starter |
+| App | `npm run macos` / `npm run windows` / `npm run dev` / `npm start` | Managed development session for the project target |
+| App | `npx --no-install frame build --dev` | Build an app-specific development runtime |
+| Framework | `npm run test:windows` | Verify the integrated Windows native development path |
+| Framework | `npm run test:windows:prepare` | Check Windows generation and development bundles without native execution |
+| App | `npx --no-install frame analyze` | Explain macOS production native module selection |
+| App | `npm run build` | Build a standalone macOS Release app |
+| App | `npm run package` | Prepare a signed, notarized macOS distribution archive |
+| App | `npm run doctor` | Diagnose native build prerequisites |
 
 For framework changes, begin with the checks relevant to the change:
 
 ```sh
-bun run typecheck
+npm run typecheck
 bun test tests
 ```
 
 Native integration checks are separate and require Xcode, CocoaPods, and an unlocked/logged-in macOS desktop where UI interaction is involved:
 
 ```sh
-bun run test:native
-bun run test:expansion
-bun run test:runtimes:all
+npm run test:native
+npm run test:expansion
+npm run test:runtimes:all
 # Streaming/Trash checks; builds a Kitchen Sink development runtime:
 bun scripts/test-file-streams.ts
 # Helper checks; reuses that development runtime:
 bun scripts/test-sidecars.ts
 # Complete configured suite, including native builds:
-bun run test:all
+npm run test:all
 ```
 
 `test:all` does not include every standalone probe above; run the file and helper probes separately when changing those APIs. `test:all` is substantial: it includes packaging/update tests, desktop integration tests, native application builds, and the Runtimes matrix. See [SDK tests](docs/sdk.md#tests), [Runtimes tests](docs/runtimes.md), and the root [package.json](package.json) for the current commands and prerequisites. Use an external packed consumer to verify distribution behavior; workspace symlinks alone cannot prove the CLI archive is complete.
@@ -311,7 +311,7 @@ Use the [implementation plan](docs/implementation-plan.md) for original decision
 
 `frame create MyEditor --example document-editor` creates a [shared document editor](docs/document-editor.md) using Expo adapters on mobile, browser file operations on web, and native desktop dialogs. The macOS example exercises windows, menus, shortcuts, file-open events, and unsaved-change guards. Windows includes native control/API/file-dialog implementations, with remaining native acceptance and lifecycle gaps listed in [known Windows issues](docs/windows-issues.md).
 
-[SDK export/import](docs/sdk-distribution.md) packages the CLI, module archives, and optional prebuilt runtimes into a transferable directory. The recipient installs it without this checkout; Expo Desktop beta still owns creation and desktop generation, and frame retains native compatibility checks.
+[SDK export/import](docs/sdk-distribution.md) packages the CLI, module archives, and optional Frame Runner runtimes into a transferable directory. The recipient installs it without this checkout; Expo Desktop beta still owns creation and desktop generation, and frame retains native compatibility checks.
 
 ## Small application examples
 
@@ -350,23 +350,23 @@ requests, timeouts, crash handling, explicit restart, and shutdown cleanup.
 From the framework checkout, with the native toolchain installed:
 
 ```sh
-bun run pack:local
+npm run pack:local
 bun scripts/prepare-sidecar.ts /absolute/path/to/HelperDemo
 cd /absolute/path/to/HelperDemo
-bun run macos
-# On Windows, use a fresh Windows path and run bun run windows instead.
+npm run macos
+# On Windows, use a fresh Windows path and run npm run windows instead.
 ```
 
 The preparer compiles the worker and creates an independent consumer app. On
 Windows, run it in a Visual Studio developer shell targeting the native architecture.
 Choose **Build** in the development terminal: app-owned helpers require a custom
-runtime and are not included in the generic prebuilt runtime. Later JavaScript
+runtime and are not included in the generic Frame Runner. Later JavaScript
 edits use Fast Refresh; helper binary changes require rebuilding. A helper is not
 a persistent background service. See [sidecar lifecycle limits](docs/sidecars.md).
 
 ## Cross-platform acceptance
 
-Run `bun run test:platform --platform macos` (or `windows`, `ios`, `android`, `web`) for a fresh shared test app. `--prepare-only` checks generation/bundling; `--api-only` runs API assertions without claiming UI acceptance. Collect JSON reports from each machine and run `bun run test:report --output .frame/platform-coverage.md` to see passed, failed, missing, inapplicable, and untested cases. See [platform testing](docs/platform-testing.md) for devices, commands, cleanup, and current coverage.
+Run `npm run test:platform -- --platform macos` (or `windows`, `ios`, `android`, `web`) for a fresh shared test app. `--prepare-only` checks generation/bundling; `--api-only` runs API assertions without claiming UI acceptance. Collect JSON reports from each machine and run `npm run test:report -- --output .frame/platform-coverage.md` to see passed, failed, missing, inapplicable, and untested cases. See [platform testing](docs/platform-testing.md) for devices, commands, cleanup, and current coverage.
 
 App-supplied backend executables can be packaged as target-specific helper bundles. See the [sidecar guide](docs/sidecars.md) for configuration, lifecycle, distribution limits, and a runnable C example. No Node runtime is included.
 

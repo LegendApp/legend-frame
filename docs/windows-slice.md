@@ -13,9 +13,9 @@ Use Windows 11 x64 or ARM64 with an interactive desktop, Node.js 24.19.0 (the te
 Use this repository normally. From its root in PowerShell:
 
 ```powershell
-bun install
-bun run frame sdk pack --platform windows
-bun run frame create C:\dev\FrameWindowsApp --platform windows
+npm install
+npm run frame -- sdk pack --platform windows
+npm run frame -- create C:\dev\FrameWindowsApp --platform windows
 cd C:\dev\FrameWindowsApp
 ```
 
@@ -39,7 +39,7 @@ To explicitly select a target in PowerShell (for example, to test x64 under Wind
 
 ```powershell
 $env:FRAME_WINDOWS_ARCH = "x64" # or "arm64"
-bun run frame sdk build-prebuilt --platform windows
+npm run frame -- sdk build-runner --platform windows
 ```
 
 Keep that environment variable set for subsequent build and dev commands. `Remove-Item Env:FRAME_WINDOWS_ARCH` restores automatic selection. On macOS, Windows project generation defaults to x64; set `FRAME_WINDOWS_ARCH=arm64` to check ARM64 metadata and generation. Native compilation still requires Windows and the matching compiler tools.
@@ -55,29 +55,29 @@ On 2026-09-15, the ARM64 prepare verifier passed packed starter creation, Expo D
 Inside the generated app:
 
 ```powershell
-bunx --bun frame sdk build-prebuilt --project .
-bun run windows
+npx --no-install frame sdk build-runner --project .
+npm run windows
 ```
 
-`windows`, `dev`, and `start` use the same `frame dev` implementation. The prebuilt runtime is saved under the selected platform’s state directory at `products/<arch>/go/FrameWindows`, with `go-build.json` recording the latest build, and registered in the normal frame runtime registry. Registry discovery checks the platform and architecture so a macOS runtime cannot be selected for Windows.
+`windows`, `dev`, and `start` use the same `frame dev` implementation. The Frame Runner is saved under the selected platform’s state directory at `products/<arch>/go/FrameWindows`, with `go-build.json` recording the latest build, and registered in the normal frame runtime registry. Registry discovery checks the platform and architecture so a macOS runtime cannot be selected for Windows.
 
-Edit `App.tsx` to test Fast Refresh. Click the counter first and confirm it retains its value after a text edit. The native window title uses the current project's launch identity even when the prebuilt runtime was built from another starter. The desktop SDK now includes Windows implementations; see the [acceptance matrix](windows-issues.md) for limits and unverified behavior.
+Edit `App.tsx` to test Fast Refresh. Click the counter first and confirm it retains its value after a text edit. The native window title uses the current project's launch identity even when the Frame Runner was built from another starter. The desktop SDK now includes Windows implementations; see the [acceptance matrix](windows-issues.md) for limits and unverified behavior.
 
-The session uses Expo CLI with desktop keys: `d` opens Windows, `g` switches between the prebuilt runtime and a custom development build, and `b` builds when required. Expo owns `r` for reload, `j` for debugging when supported by RNW/Expo, and Ctrl+C to exit. Its `w` still opens web and `s` still switches the mobile runtime. Adding a supported native dependency or changing its native source invalidates an incompatible runtime; the session stops its owned app and offers a development build.
+The session uses Expo CLI with desktop keys: `d` opens Windows, `g` switches between the Frame Runner and a custom development build, and `b` builds when required. Expo owns `r` for reload, `j` for debugging when supported by RNW/Expo, and Ctrl+C to exit. Its `w` still opens web and `s` still switches the mobile runtime. Adding a supported native dependency or changing its native source invalidates an incompatible runtime; the session stops its owned app and offers a development build.
 
 A direct custom build uses the same command as macOS:
 
 ```powershell
-bunx --bun frame build --dev
-bun run dev
+npx --no-install frame build --dev
+npm run dev
 ```
 
 Windows `frame build` without `--dev`, preview builds, and distribution packaging are intentionally unsupported. Native compilation must run on Windows. The selected target is stored in `desktop.config.json` as `"platforms": ["windows"]`; subsequent commands read that configuration. Universal projects preserve generated platform projects and configuration when switching targets.
 
-For a reusable generic SDK prebuilt runtime, run from the framework checkout:
+For a reusable generic SDK Frame Runner, run from the framework checkout:
 
 ```powershell
-bun run frame sdk build-prebuilt --platform windows
+npm run frame -- sdk build-runner --platform windows
 ```
 
 This uses the platform-specific SDK build directory and the same runtime registry. Apps created against the matching packed SDK discover it automatically.
@@ -87,10 +87,10 @@ This uses the platform-specific SDK build directory and the same runtime registr
 From the framework checkout, after packing the SDK and installing native prerequisites:
 
 ```powershell
-bun run test:windows --project C:\dev\FrameWindowsVerification
+npm run test:windows -- --project C:\dev\FrameWindowsVerification
 ```
 
-Choose a fresh destination. The verifier calls the real starter, builds the prebuilt runtime through `frame sdk build-prebuilt`, and launches the installed CLI's `frame dev` session. It checks the compiled native host identity and Hermes, edits a file to test Fast Refresh, installs the existing `native-greeting` fixture, waits for the shared session to reject the prebuilt runtime, then sends the normal `b` command and checks the custom native greeting. It also checks that building custom did not change the saved prebuilt executable.
+Choose a fresh destination. The verifier calls the real starter, builds the Frame Runner through `frame sdk build-runner`, and launches the installed CLI's `frame dev` session. It checks the compiled native host identity and Hermes, edits a file to test Fast Refresh, installs the existing `native-greeting` fixture, waits for the shared session to reject the Frame Runner, then sends the normal `b` command and checks the custom native greeting. It also checks that building custom did not change the saved prebuilt executable.
 
 Keep the desktop session unlocked. Native compilation and initial NuGet downloads can take several minutes. The verifier exits nonzero on failure. It installs a native fixture, so use a new destination for a complete second run.
 
@@ -105,8 +105,8 @@ If the GUI exits without console output, also include any error dialog or Window
 Generation and both Windows development bundles can be checked on macOS through the same framework code:
 
 ```sh
-bun run frame sdk pack --platform windows
-bun run test:windows:prepare --project /tmp/FrameWindowsCheck
+npm run frame -- sdk pack --platform windows
+npm run test:windows:prepare -- --project /tmp/FrameWindowsCheck
 ```
 
 This mode explicitly reports that native execution was not verified. RNW platform discovery may log that Windows PowerShell is unavailable on macOS; the project's platform declaration still lets Metro select the Windows sources.
@@ -121,7 +121,7 @@ The CLI's Windows build adapter uses the shared build lock, runtime schema, nati
 
 The development solution excludes the packaging project. The app uses `WindowsPackageType=None` and `WindowsAppSDKSelfContained=true`, following Microsoft's [unpackaged Windows App SDK guidance](https://learn.microsoft.com/en-us/windows/apps/package-and-deploy/self-contained-deploy/deploy-self-contained-apps). The entire native output directory is retained so its DLLs accompany the executable. These are Debug builds for a configured developer machine; compiler-free distribution to clean machines remains unverified.
 
-The framework detects supported Windows native packages and rejects directly installed native dependencies without a Windows implementation. This does not establish support for every third-party dependency graph or arbitrary native project customization. The SDK prebuilt profile includes the Windows modules. `bun run test:platform --platform windows` creates a fresh consumer and exercises their shared acceptance cases.
+The framework detects supported Windows native packages and rejects directly installed native dependencies without a Windows implementation. This does not establish support for every third-party dependency graph or arbitrary native project customization. The SDK prebuilt profile includes the Windows modules. `npm run test:platform -- --platform windows` creates a fresh consumer and exercises their shared acceptance cases.
 
 No upstream Expo Desktop change is needed to attempt this. Jamie can help if the native verification exposes a Windows bootstrap/prebuild problem, and later with the shared `expo-desktop run windows --binary` contract. The Windows report provides a concrete reproducer for that work.
 

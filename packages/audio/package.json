@@ -44,5 +44,6 @@
       "web"
     ],
     "requires": []
-  }
+  },
+  "private": true
 }

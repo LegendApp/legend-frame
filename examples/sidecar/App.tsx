@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import { ScrollView, Text, TextInput, View } from "react-native";
-import { Button } from "@legendapp/frame-ui";
+import { Button } from "@legendapp/frame/ui";
 import { getHelper, stopHelper } from "./service";
 /** Root of a standalone example app. Owns the service for its lifetime. */
 export default function App() {

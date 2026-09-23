@@ -1,6 +1,6 @@
 import { useMemo, useState } from "react";
 import { FlatList, SafeAreaView, StyleSheet, Text, View } from "react-native";
-import { Button } from "@legendapp/frame-ui";
+import { Button } from "@legendapp/frame/ui";
 import { io } from "./shared/io";
 import { Lifecycle } from "./shared/Lifecycle";
 import { compare } from "./compare";

@@ -10,5 +10,6 @@
   "dependencies": {
     "react-native-webview": "16.0.0",
     "@legendapp/frame-desktop-app": "0.1.0-prototype.0"
-  }
+  },
+  "private": true
 }
