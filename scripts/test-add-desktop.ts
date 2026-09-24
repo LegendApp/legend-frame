@@ -46,7 +46,7 @@ function nativeHash(dir: string): string {
   visit(dir); return hash.digest("hex");
 }
 const iosBefore = nativeHash(path.join(root, "ios"));
-const config = async (platform?: string) => JSON.parse(await run(root, nodeCommand(root, "expo", "expo", ["config", "--json"]), { capture: true, env: { FRAME_PLATFORM: platform ?? "", APP_ENV: "integration" } }));
+const config = async (platform?: string) => JSON.parse(await run(root, nodeCommand(root, "expo", "expo", ["config", "--json"]), { capture: true, env: { SPARK_PLATFORM: platform ?? "", APP_ENV: "integration" } }));
 const mobileBefore = await config();
 await run(framework, ["bun", "scripts/pack.ts"]);
 const manifest = path.join(framework, "artifacts/packages/manifest.json");
@@ -60,7 +60,7 @@ await addDesktop(root, manifest);
 const pkg = readJson(path.join(root, "package.json"));
 assert.equal(pkg.main, originalPkg.main);
 for (const [name, command] of Object.entries(originalPkg.scripts)) assert.equal(pkg.scripts[name], command);
-assert.equal(pkg.scripts["frame:macos"], "frame dev --platform macos");
+assert.equal(pkg.scripts["spark:macos"], "spark dev --platform macos");
 assert.deepEqual(await config(), mobileBefore);
 for (const platform of ["ios", "android", "web"]) assert.deepEqual(await config(platform), mobileBefore);
 for (const platform of ["macos", "windows"]) {
@@ -68,10 +68,10 @@ for (const platform of ["macos", "windows"]) {
   assert.deepEqual(value.platforms, [platform]);
   assert.equal(value.extra.environment, "integration");
   assert.equal(value.extra.pluginRetained, true);
-  assert.equal(value.extra.frame.projectId, readJson(path.join(root, "desktop.config.json")).projectId);
-  await run(root, ["node", "-e", `const assert = require('node:assert/strict'); const config = require('./metro.config'); const rewritten = config.server.rewriteRequestUrl('/index${platform === "windows" ? ".windows" : ""}.bundle?platform=${platform}&dev=true'); assert.ok(rewritten.startsWith('/src/bootstrap.bundle?'), rewritten); assert.ok(config.resolver.sourceExts.includes('custom'));`], { capture: true, env: { FRAME_PLATFORM: platform } });
+  assert.equal(value.extra.spark.projectId, readJson(path.join(root, "desktop.config.json")).projectId);
+  await run(root, ["node", "-e", `const assert = require('node:assert/strict'); const config = require('./metro.config'); const rewritten = config.server.rewriteRequestUrl('/index${platform === "windows" ? ".windows" : ""}.bundle?platform=${platform}&dev=true'); assert.ok(rewritten.startsWith('/src/bootstrap.bundle?'), rewritten); assert.ok(config.resolver.sourceExts.includes('custom'));`], { capture: true, env: { SPARK_PLATFORM: platform } });
 }
-await run(root, ["node", "-e", `const assert = require('node:assert/strict'); const { readConfig } = require('@legendapp/frame-desktop-config/config.cjs'); const a = readConfig(${JSON.stringify(root)}, 'macos'); const b = readConfig(${JSON.stringify(realpathSync(root))}, 'macos'); assert.deepEqual(a, b); assert.equal(a.expo._internal, undefined);`], { capture: true });
+await run(root, ["node", "-e", `const assert = require('node:assert/strict'); const { readConfig } = require('@legendapp/spark-desktop-config/config.cjs'); const a = readConfig(${JSON.stringify(root)}, 'macos'); const b = readConfig(${JSON.stringify(realpathSync(root))}, 'macos'); assert.deepEqual(a, b); assert.equal(a.expo._internal, undefined);`], { capture: true });
 const managed = ["package.json", "app.config.ts", "metro.config.js", "react-native.config.js", "desktop.config.json", ".gitignore"];
 const integrated = managed.map(file => readFileSync(path.join(root, file), "utf8"));
 await addDesktop(root, manifest);
@@ -79,16 +79,16 @@ assert.deepEqual(managed.map(file => readFileSync(path.join(root, file), "utf8")
 assert.deepEqual(unchanged.map(file => readFileSync(path.join(root, file), "utf8")), before);
 await run(root, ["node", "node_modules/typescript/bin/tsc", "--noEmit"], { capture: true });
 console.log("PASS existing Expo config, plugins, source entry, custom Metro, scripts, and repeated integration");
-const output = path.join(root, ".frame/adoption-checks"); mkdirSync(output, { recursive: true });
+const output = path.join(root, ".spark/adoption-checks"); mkdirSync(output, { recursive: true });
 for (const platform of ["ios", "android", "web", "macos", "windows"]) {
   const map = path.join(output, `${platform}.map`);
-  await run(root, nodeCommand(root, "expo", "expo", ["export:embed", "--entry-file", pkg.main, "--platform", platform, "--dev", "true", "--max-workers", "2", "--bundle-output", path.join(output, `${platform}.js`), "--sourcemap-output", map]), { capture: true, env: { FRAME_PLATFORM: platform, CI: "1" } });
+  await run(root, nodeCommand(root, "expo", "expo", ["export:embed", "--entry-file", pkg.main, "--platform", platform, "--dev", "true", "--max-workers", "2", "--bundle-output", path.join(output, `${platform}.js`), "--sourcemap-output", map]), { capture: true, env: { SPARK_PLATFORM: platform, CI: "1" } });
   const sources = readJson(map).sources as string[];
   assert.ok(sources.some(file => file.endsWith("src/bootstrap.ts")));
   assert.ok(sources.some(file => file.endsWith("src/label.ts")));
   console.log(`PASS ${platform}: original entry and custom Metro resolver`);
 }
-await run(root, ["bun", "node_modules/@legendapp/frame-cli/src/index.ts", "prebuild", "--platform", "windows"], { capture: true, env: { CI: "1" } });
+await run(root, ["bun", "node_modules/@legendapp/spark-cli/src/index.ts", "prebuild", "--platform", "windows"], { capture: true, env: { CI: "1" } });
 assert.equal(nativeHash(path.join(root, "ios")), iosBefore);
 assert.deepEqual(unchanged.map(file => readFileSync(path.join(root, file), "utf8")), before);
 assert.deepEqual(managed.map(file => readFileSync(path.join(root, file), "utf8")), integrated);
@@ -108,6 +108,6 @@ await run(simple, ["bun", "install"]);
 await addDesktop(simple, manifest);
 assert.equal(readFileSync(path.join(simple, "app.json"), "utf8"), simpleConfig);
 assert.equal(readJson(path.join(simple, "package.json")).main, undefined);
-await run(simple, ["node", "-e", "const assert = require('node:assert/strict'); const c = require('./metro.config'); assert.ok(c.server.rewriteRequestUrl('/index.bundle?platform=macos&dev=true').includes('/node_modules/expo/AppEntry.bundle?'));"], { capture: true, env: { FRAME_PLATFORM: "macos" } });
-await run(simple, nodeCommand(simple, "expo", "expo", ["export:embed", "--entry-file", "node_modules/expo/AppEntry.js", "--platform", "macos", "--dev", "true", "--max-workers", "2", "--bundle-output", path.join(simple, ".frame/static.js")]), { capture: true, env: { FRAME_PLATFORM: "macos", CI: "1" } });
+await run(simple, ["node", "-e", "const assert = require('node:assert/strict'); const c = require('./metro.config'); assert.ok(c.server.rewriteRequestUrl('/index.bundle?platform=macos&dev=true').includes('/node_modules/expo/AppEntry.bundle?'));"], { capture: true, env: { SPARK_PLATFORM: "macos" } });
+await run(simple, nodeCommand(simple, "expo", "expo", ["export:embed", "--entry-file", "node_modules/expo/AppEntry.js", "--platform", "macos", "--dev", "true", "--max-workers", "2", "--bundle-output", path.join(simple, ".spark/static.js")]), { capture: true, env: { SPARK_PLATFORM: "macos", CI: "1" } });
 console.log("PASS static app.json and default Expo entry without rewriting main or application source");

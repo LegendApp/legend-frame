@@ -24,7 +24,7 @@ test("Fabric patch updates pristine upstream lifecycle while preserving surround
 });
 
 test("consumer patch is version-gated and does not modify a hardlinked package cache", () => {
-  const root = mkdtempSync(path.join(os.tmpdir(), "frame-fabric-patch-"));
+  const root = mkdtempSync(path.join(os.tmpdir(), "spark-fabric-patch-"));
   try {
     const pkg = path.join(root, "node_modules/react-native-macos");
     const surface = path.join(pkg, "React/Fabric/Surface/RCTFabricSurface.mm");

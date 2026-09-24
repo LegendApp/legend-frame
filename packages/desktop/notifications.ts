@@ -1,1 +1,1 @@
-export * from "@legendapp/frame-notifications";
+export * from "@legendapp/spark-notifications";

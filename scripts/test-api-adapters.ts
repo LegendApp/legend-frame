@@ -10,22 +10,22 @@ import { readJson, writeJson, prepareConfig } from "../packages/cli/src/project"
 import { createReport, record, saveReport, installedVersions } from "./testing/report";
 
 // Focused checks run the actual kitchen-sink screen with a test-only native driver.
-const root = path.resolve(process.argv[2] ?? ".frame/api-tests/KitchenSink");
+const root = path.resolve(process.argv[2] ?? ".spark/api-tests/KitchenSink");
 await prepareKitchenSink(root);
 const pkgFile = path.join(root, "package.json");
 const pkg = readJson(pkgFile);
-pkg.dependencies["@legendapp/frame-sdk-test-driver"] = pkg.overrides["@legendapp/frame-sdk-test-driver"];
+pkg.dependencies["@legendapp/spark-sdk-test-driver"] = pkg.overrides["@legendapp/spark-sdk-test-driver"];
 writeJson(pkgFile, pkg);
 await run(root, ["bun", "install"]);
 const configFile = path.join(root, "desktop.config.json");
 const originalConfig = readFileSync(configFile, "utf8");
 const originalDriver = readFileSync(path.join(root, "test-driver.ts"), "utf8");
 const configuration = readJson(configFile);
-configuration.scheme = "frame-api-test";
-configuration.macos = { ...configuration.macos, bundleIdentifier: "so.legend.frame.prototype.apiadapters" };
+configuration.scheme = "spark-api-test";
+configuration.macos = { ...configuration.macos, bundleIdentifier: "so.legend.spark.prototype.apiadapters" };
 writeJson(configFile, configuration);
-writeFileSync(path.join(root, "test-driver.ts"), 'import driver from "@legendapp/frame-sdk-test-driver";\nexport type TestDriver = typeof driver;\nexport const testDriver = driver;\n');
-const directory = path.join(root, ".frame/api-results"); mkdirSync(directory, { recursive: true });
+writeFileSync(path.join(root, "test-driver.ts"), 'import driver from "@legendapp/spark-sdk-test-driver";\nexport type TestDriver = typeof driver;\nexport const testDriver = driver;\n');
+const directory = path.join(root, ".spark/api-results"); mkdirSync(directory, { recursive: true });
 const port = await availablePort();
 let metro: ReturnType<typeof Bun.spawn> | undefined;
 let directApp: ReturnType<typeof Bun.spawn> | undefined;
@@ -39,7 +39,7 @@ async function waitFor<T>(read: () => Promise<T | undefined>, description: strin
   throw new Error(`Timed out waiting for ${description}; see ${directory}`);
 }
 const coverage = createReport(path.resolve(import.meta.dir, ".."), root, { platform: "macos", arch: "arm64", device: "macOS desktop", mode: "dev" }, "runtime");
-const coverageFile = path.resolve(".frame/test-results", `${coverage.runId}.json`);
+const coverageFile = path.resolve(".spark/test-results", `${coverage.runId}.json`);
 coverage.versions = installedVersions(root);
 let coverageStage = "build.native";
 saveReport(coverageFile, coverage);
@@ -52,12 +52,12 @@ try {
   // LaunchServices excludes apps in /tmp from URL-handler lookup, even after registration.
   // A temporary user Applications copy exercises the same installed-app behavior as a consumer.
   const applications = path.join(homedir(), "Applications"); mkdirSync(applications, { recursive: true });
-  staging = mkdtempSync(path.join(applications, "FrameAPIChecks-"));
+  staging = mkdtempSync(path.join(applications, "SparkAPIChecks-"));
   application = path.join(staging, "KitchenSink.app");
   await run(root, ["ditto", product.app, application]);
   await run(root, [lsregister, "-f", application]);
   const executable = path.join(application, "Contents/MacOS", executableName);
-  writeJson(path.join(root, ".frame/session.json"), { compatible: true, target: "test", port });
+  writeJson(path.join(root, ".spark/session.json"), { compatible: true, target: "test", port });
   const log = Bun.file(path.join(directory, "metro.log"));
   metro = Bun.spawn([binary(root, "expo"), "start", "--localhost", "--port", String(port), "--max-workers", "2"], { cwd: root, env: { ...process.env, CI: "1" }, stdout: log, stderr: log });
   await waitFor(async () => fetch(`http://127.0.0.1:${port}/status`, { signal: AbortSignal.timeout(1000) }).then(r => r.ok ? true : undefined, () => undefined), "Metro", 60000);
@@ -66,17 +66,17 @@ try {
   for (const cold of [false, true]) {
     const phase = cold ? "cold-url" : "normal-launch";
     const report = path.join(directory, `${phase}-${Date.now()}.json`);
-    const initial = `frame-api-test://initial/${Date.now()}`;
-    const args = ["-RCT_jsLocation", `127.0.0.1:${port}`, "--frame-api-report", report];
+    const initial = `spark-api-test://initial/${Date.now()}`;
+    const args = ["-RCT_jsLocation", `127.0.0.1:${port}`, "--spark-api-report", report];
     if (cold) {
       // LaunchServices delivers a real cold-open Apple event, rather than simulating it in JS.
-      await run(root, ["open", "-n", "-a", application, "--env", `FRAME_BUNDLE_URL=${bundleURL}`, "--stdout", path.join(directory, `${phase}.log`), "--stderr", path.join(directory, `${phase}.log`), initial, "--args", ...args, "--frame-api-initial", initial]);
+      await run(root, ["open", "-n", "-a", application, "--env", `SPARK_BUNDLE_URL=${bundleURL}`, "--stdout", path.join(directory, `${phase}.log`), "--stderr", path.join(directory, `${phase}.log`), initial, "--args", ...args, "--spark-api-initial", initial]);
       const listing = await run(root, ["ps", "-axo", "pid=,command="], { capture: true });
       const owned = listing.split("\n").find(line => line.includes(executable) && line.includes(report));
       if (owned) launchedPID = Number(owned.trim().split(/\s+/)[0]);
     } else {
       const output = Bun.file(path.join(directory, `${phase}.log`));
-      directApp = Bun.spawn([executable, ...args], { cwd: root, env: { ...process.env, FRAME_BUNDLE_URL: bundleURL }, stdout: output, stderr: output });
+      directApp = Bun.spawn([executable, ...args], { cwd: root, env: { ...process.env, SPARK_BUNDLE_URL: bundleURL }, stdout: output, stderr: output });
     }
     const outcome = await waitFor(async () => existsSync(report) ? readJson(report) : undefined, phase);
     for (const check of outcome.results ?? []) console.log(`${check.passed ? "PASS" : "FAIL"} [${phase}] ${check.name}${check.error ? `: ${check.error}` : ""}`);

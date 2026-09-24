@@ -7,7 +7,7 @@ export async function prepareGoProfile(root: string, manifest: string, platform:
   const pkg = readJson(path.join(root, "package.json"));
   const archives = readJson(manifest);
   for (const suffix of ["ui", "clipboard", "secure-storage", "desktop-links", "file-dialog", "audio", "desktop"]) {
-    const name = suffix === "desktop" ? "@legendapp/frame" : `@legendapp/frame-${suffix}`;
+    const name = suffix === "desktop" ? "@legendapp/spark" : `@legendapp/spark-${suffix}`;
     if (!archives[name]) throw new Error(`Prebuilt runtime profile requires ${name}`);
     pkg.dependencies[name] = path.resolve(path.dirname(manifest), archives[name]);
   }

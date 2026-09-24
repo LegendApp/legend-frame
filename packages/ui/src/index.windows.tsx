@@ -1,14 +1,14 @@
 import { useCallback, useMemo, useState } from "react";
 import { Text, View, TurboModuleRegistry } from "react-native";
 import type { NativeSyntheticEvent, TurboModule, StyleProp, ViewStyle } from "react-native";
-import NativeButton from "./FrameButtonNativeComponent";
-import NativeTextInput from "./FrameTextInputNativeComponent";
-import NativeSelect from "./FrameSelectNativeComponent";
+import NativeButton from "./SparkButtonNativeComponent";
+import NativeTextInput from "./SparkTextInputNativeComponent";
+import NativeSelect from "./SparkSelectNativeComponent";
 import { selectionIndex } from "./select";
 import type { ButtonProps, TextInputProps, SelectProps } from "./types";
 export type { ButtonProps, TextInputProps, SelectProps } from "./types";
 interface Availability extends TurboModule { isAvailable(): boolean }
-const available = TurboModuleRegistry.get<Availability>("NativeFrameUI")?.isAvailable() === true;
+const available = TurboModuleRegistry.get<Availability>("NativeSparkUI")?.isAvailable() === true;
 function useAvailability() {
   const [failed, setFailed] = useState(!available);
   const unavailable = useCallback((event: NativeSyntheticEvent<{ message: string }>) => {

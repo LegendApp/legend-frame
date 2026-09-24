@@ -19,7 +19,7 @@
 #include <stdexcept>
 #include <algorithm>
 #include <cctype>
-namespace frame {
+namespace spark {
 #ifdef _WIN32
 using AuthSocket = SOCKET;
 static constexpr AuthSocket InvalidSocket = INVALID_SOCKET;

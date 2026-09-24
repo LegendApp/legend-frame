@@ -1,5 +1,5 @@
-import * as files from "@legendapp/frame/files";
-import * as windows from "@legendapp/frame/windows";
+import * as files from "@legendapp/spark/files";
+import * as windows from "@legendapp/spark/windows";
 const delay = (ms: number) => new Promise(resolve => setTimeout(resolve, ms));
 function assert(value: unknown, message: string): asserts value { if (!value) throw new Error(message); }
 async function until(predicate: () => boolean) {

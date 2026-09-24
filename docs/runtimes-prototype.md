@@ -16,31 +16,31 @@ desktop kitchen sink.
 From the framework checkout, with the normal macOS build prerequisites:
 
 ```sh
-bun run test:runtimes /tmp/FrameRuntimesProbe
+bun run test:runtimes /tmp/SparkRuntimesProbe
 # Also prove worker startup from an embedded bundle, with no Metro:
-bun run test:runtimes /tmp/FrameRuntimesProbe --release
+bun run test:runtimes /tmp/SparkRuntimesProbe --release
 # Run the checks and leave the example visible for interaction:
-bun run test:runtimes /tmp/FrameRuntimesProbe --interactive
+bun run test:runtimes /tmp/SparkRuntimesProbe --interactive
 ```
 
 The runner creates a managed kitchen-sink consumer, checks out the pinned upstream
-revision in its `.frame` directory, applies the patch, packs that source locally,
+revision in its `.spark` directory, applies the patch, packs that source locally,
 installs Nitro and configures Metro/CNG. It requires network access on first setup.
 It does not publish anything. `--prepare-only` stops after preparing the consumer.
 `--force` regenerates the native project if the prototype CNG hook is edited.
-Reports and logs go to `.frame/runtimes-proof/` inside the consumer.
+Reports and logs go to `.spark/runtimes-proof/` inside the consumer.
 
 The root framework typecheck excludes this optional example because its dependencies
 are only installed in the probe. Check the prepared consumer separately:
 
 ```sh
-cd /tmp/FrameRuntimesProbe
+cd /tmp/SparkRuntimesProbe
 bunx --no-install tsc --noEmit
 ```
 
 On this development Mac, Bun stalls in the Documents checkout, so the actual
-runner was executed from a synchronized `/tmp/frame-sdk-validation` copy.
-The permanent source, patch and documentation remain in `frame`.
+runner was executed from a synchronized `/tmp/spark-sdk-validation` copy.
+The permanent source, patch and documentation remain in `spark`.
 
 ## Compatibility patch
 
@@ -57,7 +57,7 @@ The patch applies at the upstream repository root:
 
 ```sh
 git checkout 58710c25c6e505dcc1292ee54d855408a6f7a42d
-git apply /path/to/frame/patches/react-native-runtimes-macos.patch
+git apply /path/to/spark/patches/react-native-runtimes-macos.patch
 ```
 
 The framework-specific [CNG hook](../examples/runtimes/runtimes.plugin.cjs)

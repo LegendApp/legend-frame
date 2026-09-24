@@ -3,16 +3,16 @@ import { createHash, createPublicKey, verify } from "node:crypto";
 import { cpSync, existsSync, mkdirSync, readFileSync, renameSync, rmSync } from "node:fs";
 import path from "node:path";
 import { createRequire } from "node:module";
-import { frameHome } from "./local.ts";
+import { sparkHome } from "./local.ts";
 import { run } from "./commands.ts";
 import { readJson, writeJson } from "./project.ts";
 import type { Runner } from "./credentials.ts";
 
-const { updateConfiguration } = createRequire(import.meta.url)("@legendapp/frame-desktop-config/updates.cjs");
+const { updateConfiguration } = createRequire(import.meta.url)("@legendapp/spark-desktop-config/updates.cjs");
 export const SPARKLE_VERSION = "2.9.6";
 const archiveHash = "52bf9e88cdd972fc0c81501377a880e90d47031bd8ca5462488f843e2609e192";
 export async function sparkleTools(root: string, execute: Runner = run) {
-  const directory = path.join(frameHome(), "tools", `sparkle-${SPARKLE_VERSION}`);
+  const directory = path.join(sparkHome(), "tools", `sparkle-${SPARKLE_VERSION}`);
   if (existsSync(path.join(directory, "bin/generate_appcast"))) return path.join(directory, "bin");
   const temporary = `${directory}-${crypto.randomUUID()}`;
   mkdirSync(temporary, { recursive: true });
@@ -30,18 +30,18 @@ export async function sparkleTools(root: string, execute: Runner = run) {
     return path.join(directory, "bin");
   } finally { rmSync(temporary, { recursive: true, force: true }); }
 }
-function account(expo: any) { return `frame.${expo.extra?.frame?.projectId ?? expo.macos.bundleIdentifier}`; }
+function account(expo: any) { return `spark.${expo.extra?.spark?.projectId ?? expo.macos.bundleIdentifier}`; }
 export async function initializeUpdates(root: string, feedURL: string, execute: Runner = run) {
   const config = readAppConfig(root);
   // Validate the URL before creating a Keychain entry. This placeholder is public.
-  updateConfiguration({ extra: { frame: { updates: { feedURL, publicKey: Buffer.alloc(32).toString("base64") } } } });
+  updateConfiguration({ extra: { spark: { updates: { feedURL, publicKey: Buffer.alloc(32).toString("base64") } } } });
   const bin = await sparkleTools(root, execute);
   await execute(root, [path.join(bin, "generate_keys"), "--account", account(config.expo)], { capture: true });
   const publicKey = (await execute(root, [path.join(bin, "generate_keys"), "--account", account(config.expo), "-p"], { capture: true })).trim();
-  updateConfiguration({ extra: { frame: { updates: { feedURL, publicKey } } } });
-  if (config.expo.extra?.frame?.updates?.publicKey && config.expo.extra.frame.updates.publicKey !== publicKey) throw new Error("This Mac's update key differs from the configured public key. Import the existing Sparkle key instead of replacing it.");
+  updateConfiguration({ extra: { spark: { updates: { feedURL, publicKey } } } });
+  if (config.expo.extra?.spark?.updates?.publicKey && config.expo.extra.spark.updates.publicKey !== publicKey) throw new Error("This Mac's update key differs from the configured public key. Import the existing Sparkle key instead of replacing it.");
   writeUpdates(root, { feedURL, publicKey });
-  console.log("Updates configured. The private key stays in Keychain. Import @legendapp/frame/updates and run frame package to generate a signed feed.");
+  console.log("Updates configured. The private key stays in Keychain. Import @legendapp/spark/updates and run spark package to generate a signed feed.");
 }
 export function verifyUpdateSignature(archive: string, signature: string, publicKey: string) {
   const key = createPublicKey({ key: Buffer.concat([Buffer.from("302a300506032b6570032100", "hex"), Buffer.from(publicKey, "base64")]), format: "der", type: "spki" });
@@ -62,7 +62,7 @@ export async function prepareUpdate(root: string, archive: string, buildVersion:
   const keyArgs = dependencies.keyFile ? ["--ed-key-file", dependencies.keyFile] : ["--account", account(expo)];
   const signature = (await dependencies.run(root, [path.join(bin, "sign_update"), ...keyArgs, "-p", archive], { capture: true })).trim();
   verifyUpdateSignature(archive, signature, updates.publicKey);
-  const staging = path.join(root, ".frame", `update-feed-${crypto.randomUUID()}`);
+  const staging = path.join(root, ".spark", `update-feed-${crypto.randomUUID()}`);
   mkdirSync(staging, { recursive: true });
   try {
     if (existsSync(directory)) cpSync(directory, staging, { recursive: true });

@@ -30,8 +30,8 @@ test("packaged consumers receive screens without workspace manifests or native p
 test("packaged preparation refuses an old live source consumer", async () => {
   const root = mkdtempSync(path.join(os.tmpdir(), "kitchen-live-"));
   try {
-    mkdirSync(path.join(root, ".frame"));
-    writeFileSync(path.join(root, ".frame/kitchen-sink.json"), JSON.stringify({ managed: true, mode: "live" }));
+    mkdirSync(path.join(root, ".spark"));
+    writeFileSync(path.join(root, ".spark/kitchen-sink.json"), JSON.stringify({ managed: true, mode: "live" }));
     await expect(prepareKitchenSink(root)).rejects.toThrow("separate directory");
   } finally { rmSync(root, { recursive: true, force: true }); }
 });

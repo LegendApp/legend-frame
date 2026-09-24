@@ -1,5 +1,5 @@
 #import "RNDesktopShortcuts.h"
-#import <RNDesktopApp/FrameDesktop.h>
+#import <RNDesktopApp/SparkDesktop.h>
 @interface RNDesktopShortcuts ()
 @property NSMutableDictionary *shortcuts;
 @property id monitor;
@@ -11,7 +11,7 @@ RCT_EXPORT_MODULE(NativeDesktopShortcuts)
 - (NSArray<NSString *> *)supportedEvents { return @[@"shortcut"]; }
 - (void)call:(NSString *)method args:(NSString *)json resolve:(RCTPromiseResolveBlock)resolve reject:(RCTPromiseRejectBlock)reject {
   dispatch_async(dispatch_get_main_queue(), ^{
-    NSDictionary *args = FrameArgs(json);
+    NSDictionary *args = SparkArgs(json);
     if ([method isEqual:@"register"]) {
       for (NSDictionary *existing in self.shortcuts.allValues) {
         if ([existing[@"key"] isEqual:args[@"key"]] && [existing[@"modifiers"] isEqual:args[@"modifiers"]] &&
@@ -25,7 +25,7 @@ RCT_EXPORT_MODULE(NativeDesktopShortcuts)
         self.monitor = [NSEvent addLocalMonitorForEventsMatchingMask:NSEventMaskKeyDown handler:^NSEvent *(NSEvent *event) {
           RNDesktopShortcuts *strongSelf = weakSelf;
           NSUInteger flags = event.modifierFlags & (NSEventModifierFlagCommand | NSEventModifierFlagControl | NSEventModifierFlagOption | NSEventModifierFlagShift);
-          NSString *windowID = [event.window.identifier hasPrefix:@"frame."] ? [event.window.identifier substringFromIndex:7] : nil;
+          NSString *windowID = [event.window.identifier hasPrefix:@"spark."] ? [event.window.identifier substringFromIndex:6] : nil;
           NSDictionary *match;
           for (NSDictionary *shortcut in strongSelf.shortcuts.allValues) {
             if ([shortcut[@"key"] isEqual:event.charactersIgnoringModifiers.lowercaseString] && flags == [shortcut[@"modifiers"] unsignedIntegerValue] &&
@@ -42,7 +42,7 @@ RCT_EXPORT_MODULE(NativeDesktopShortcuts)
     } else if ([method isEqual:@"remove"]) {
       [self.shortcuts removeObjectForKey:args[@"id"]];
       if (!self.shortcuts.count && self.monitor) { [NSEvent removeMonitor:self.monitor]; self.monitor = nil; }
-    } else { FrameInvalid(reject, @"Unknown shortcut operation"); return; }
+    } else { SparkInvalid(reject, @"Unknown shortcut operation"); return; }
     resolve(@"null");
   });
 }

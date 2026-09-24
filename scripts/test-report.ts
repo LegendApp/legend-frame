@@ -8,7 +8,7 @@ function read(file: string) {
   if (statSync(file).isDirectory()) { for (const item of readdirSync(file)) if (item.endsWith(".json")) read(path.join(file, item)); return; }
   const report = JSON.parse(readFileSync(file, "utf8")); validateReport(report); reports.push(report);
 }
-for (const file of positionals.length ? positionals : [".frame/test-results"]) read(path.resolve(file));
+for (const file of positionals.length ? positionals : [".spark/test-results"]) read(path.resolve(file));
 if (!reports.length) throw new Error("No platform reports found");
 const output = renderReports(reports);
 if (values.output) { writeFileSync(path.resolve(values.output), output); console.log(`Report: ${path.resolve(values.output)}`); }

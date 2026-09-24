@@ -2,13 +2,13 @@ import { statusListeners } from "./status-listeners";
 import { validateVolume, validateMetadata } from "./media-types";
 export { createMediaSession } from "./media-session";
 export type * from "./media-types";
-import Native from "./NativeFrameAudio";
+import Native from "./NativeSparkAudio";
 import { validateSource, validateTime, type AudioPlayer, type AudioSource, type AudioStatus } from "./types";
 export type { AudioPlayer, AudioSource, AudioStatus } from "./types";
 let sequence = 0;
 export async function createAudioPlayer(source: AudioSource): Promise<AudioPlayer> {
   validateSource(source);
-  if (!Native) throw Object.assign(new Error("Audio playback is unavailable. Build a client with @legendapp/frame-audio."), { code: "E_UNAVAILABLE" });
+  if (!Native) throw Object.assign(new Error("Audio playback is unavailable. Build a client with @legendapp/spark-audio."), { code: "E_UNAVAILABLE" });
   const native = Native, id = `audio-${Date.now()}-${++sequence}`;
   let removed = false;
   const call = async <T = void>(method: string, args = {}): Promise<T> => {

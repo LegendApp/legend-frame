@@ -8,7 +8,7 @@ import { architecture, projectPlatform, windowsArchitecture } from "../packages/
 import { buildWindows, isWindowsDebugProduct } from "../packages/cli/src/windows.ts";
 const { patchHost, withoutPackaging, unpackagedApp } = require("../packages/config-plugin/windows.plugin.cjs");
 function fixture() {
-  const root = mkdtempSync(path.join(os.tmpdir(), "frame-windows-test-"));
+  const root = mkdtempSync(path.join(os.tmpdir(), "spark-windows-test-"));
   writeJson(path.join(root, "package.json"), { name: "app", dependencies: {} });
   writeJson(path.join(root, "app.json"), { expo: { name: "App", platforms: ["windows"] } });
   return { root, close: () => rmSync(root, { recursive: true, force: true }) };
@@ -46,8 +46,8 @@ test("Windows rejects direct native dependencies without Windows implementations
 test("Windows includes host-provided SDK modules without separate native projects", () => {
   const f = fixture();
   try {
-    const names = ["@legendapp/frame-desktop-app", "@legendapp/frame-desktop-windows", "@legendapp/frame-desktop-shortcuts", "@legendapp/frame-native-menu", "@legendapp/frame-updates"];
-    for (const name of names) writeJson(path.join(f.root, "node_modules", name, "package.json"), { name, version: "1", frame: { nativeModules: [name] } });
+    const names = ["@legendapp/spark-desktop-app", "@legendapp/spark-desktop-windows", "@legendapp/spark-desktop-shortcuts", "@legendapp/spark-native-menu", "@legendapp/spark-updates"];
+    for (const name of names) writeJson(path.join(f.root, "node_modules", name, "package.json"), { name, version: "1", spark: { nativeModules: [name] } });
     writeJson(path.join(f.root, "package.json"), { dependencies: Object.fromEntries(names.map(name => [name, "1"])) });
     expect(nativePackages(f.root).map(pkg => pkg.name).sort()).toEqual(names.sort());
   } finally { f.close(); }
@@ -59,24 +59,24 @@ test("runtime surface hooks are conditional, repeatable, and removable", () => {
   const metadata = { mode: "dev", fingerprint: "b".repeat(64) };
   const first = patchHost(source, core + worker, metadata);
   expect(patchHost(first, core + worker, metadata)).toBe(first);
-  expect(first.match(/FrameWin::RegisterRuntimeSurface\(packageBuilder\)/g)).toHaveLength(1);
+  expect(first.match(/SparkWin::RegisterRuntimeSurface\(packageBuilder\)/g)).toHaveLength(1);
   expect(patchHost(first, core, metadata)).not.toContain("RegisterRuntimeSurface");
   expect(() => patchHost(source.replace("AddAttributedModules(packageBuilder, true);", ""), core + worker, metadata)).toThrow("cannot register runtime surfaces");
 });
 test("the shared Go registry keeps Windows and macOS runtimes separate", () => {
-  const f = fixture(), previous = process.env.FRAME_HOME;
-  process.env.FRAME_HOME = path.join(f.root, "registry");
+  const f = fixture(), previous = process.env.SPARK_HOME;
+  process.env.SPARK_HOME = path.join(f.root, "registry");
   try {
     const win = path.join(f.root, "windows-runtime"), mac = path.join(f.root, "mac-runtime.app");
-    writeJson(path.join(win, "frame-runtime.json"), { schema: 1, framework: VERSION, platform: "windows", arch: architecture("windows"), mode: "go", modules: {}, fingerprint: "win" });
+    writeJson(path.join(win, "spark-runtime.json"), { schema: 1, framework: VERSION, platform: "windows", arch: architecture("windows"), mode: "go", modules: {}, fingerprint: "win" });
     writeFileSync(path.join(win, "MyApp.exe"), "fixture, not executable");
-    writeJson(path.join(mac, "Contents/Resources/frame-runtime.json"), { schema: 1, framework: VERSION, platform: "macos", arch: "arm64", mode: "go", modules: {}, fingerprint: "mac" });
+    writeJson(path.join(mac, "Contents/Resources/spark-runtime.json"), { schema: 1, framework: VERSION, platform: "macos", arch: "arm64", mode: "go", modules: {}, fingerprint: "mac" });
     mkdirSync(path.join(mac, "Contents/MacOS"));
     registerRuntime(win); registerRuntime(mac);
     expect(findGo([], mac, "windows")?.app).toBe(win);
     expect(findGo([], win, "macos")?.app).toBe(mac);
     rmSync(path.join(win, "MyApp.exe")); expect(readRuntime(win)).toBeUndefined();
-  } finally { if (previous === undefined) delete process.env.FRAME_HOME; else process.env.FRAME_HOME = previous; f.close(); }
+  } finally { if (previous === undefined) delete process.env.SPARK_HOME; else process.env.SPARK_HOME = previous; f.close(); }
 });
 test("the config plugin embeds the shared runtime and keeps repeatable host hooks", () => {
   const source = '#include "NativeModules.h"\nint main() {\n  winrt::init_apartment(winrt::apartment_type::single_threaded);\n  auto settings{reactNativeWin32App.ReactNativeHost().InstanceSettings()};\n  appWindow.Title(L"Go");\n  appWindow.Resize({1000, 1000});\n}\n';
@@ -86,10 +86,10 @@ test("the config plugin embeds the shared runtime and keeps repeatable host hook
   const first = patchHost(source, embedded, metadata);
   expect(patchHost(first, embedded, metadata)).toBe(first);
   expect(first).toContain("void helper() { appWindow.Resize({400, 300}); }");
-  expect(first.match(/FrameWin::ForwardLaunch\(\)/g)).toHaveLength(1);
-  expect(first.indexOf("FrameWin::ForwardLaunch()")).toBeLessThan(first.indexOf("auto settings{"));
+  expect(first.match(/SparkWin::ForwardLaunch\(\)/g)).toHaveLength(1);
+  expect(first.indexOf("SparkWin::ForwardLaunch()")).toBeLessThan(first.indexOf("auto settings{"));
   expect(() => patchHost(source.replace("winrt::init_apartment(winrt::apartment_type::single_threaded);", ""), core, metadata)).toThrow("template changed");
-  expect(first).toContain('"mode":"dev"'); expect(first).toContain("NativeFrameRuntime");
+  expect(first).toContain('"mode":"dev"'); expect(first).toContain("NativeSparkRuntime");
   expect(() => patchHost("wrong template", core, metadata)).toThrow("template changed");
   const globals: any[] = [];
   const document = [{ Project: [{ PropertyGroup: globals, ":@": { "@_Label": "Globals" } }] }];
@@ -131,23 +131,23 @@ test("Windows architecture follows the native CPU, including emulated CLI proces
   expect(windowsArchitecture("win32", "x64", { PROCESSOR_ARCHITECTURE: "AMD64", PROCESSOR_ARCHITEW6432: "ARM64" })).toBe("arm64");
   expect(windowsArchitecture("win32", "x64", { PROCESSOR_ARCHITECTURE: "AMD64" })).toBe("x64");
   expect(windowsArchitecture("darwin", "arm64", {})).toBe("x64");
-  expect(windowsArchitecture("darwin", "arm64", { FRAME_WINDOWS_ARCH: "ARM64" })).toBe("arm64");
-  expect(windowsArchitecture("win32", "arm64", { FRAME_WINDOWS_ARCH: "x64" })).toBe("x64");
-  expect(() => windowsArchitecture("win32", "x64", { FRAME_WINDOWS_ARCH: "x86" })).toThrow("FRAME_WINDOWS_ARCH");
+  expect(windowsArchitecture("darwin", "arm64", { SPARK_WINDOWS_ARCH: "ARM64" })).toBe("arm64");
+  expect(windowsArchitecture("win32", "arm64", { SPARK_WINDOWS_ARCH: "x64" })).toBe("x64");
+  expect(() => windowsArchitecture("win32", "x64", { SPARK_WINDOWS_ARCH: "x86" })).toThrow("SPARK_WINDOWS_ARCH");
   expect(() => windowsArchitecture("win32", "ia32", {})).toThrow("Unsupported Windows architecture");
 });
 
 test("Windows runtime fingerprints and registry selection distinguish both architectures", () => {
-  const f = fixture(), previousHome = process.env.FRAME_HOME, previousArch = process.env.FRAME_WINDOWS_ARCH;
-  process.env.FRAME_HOME = path.join(f.root, "registry");
+  const f = fixture(), previousHome = process.env.SPARK_HOME, previousArch = process.env.SPARK_WINDOWS_ARCH;
+  process.env.SPARK_HOME = path.join(f.root, "registry");
   try {
-    process.env.FRAME_WINDOWS_ARCH = "x64";
+    process.env.SPARK_WINDOWS_ARCH = "x64";
     const x64 = runtimeFor(f.root, [], "go");
     const x64App = path.join(f.root, "x64-runtime");
-    writeJson(path.join(x64App, "frame-runtime.json"), x64);
+    writeJson(path.join(x64App, "spark-runtime.json"), x64);
     writeFileSync(path.join(x64App, "MyApp.exe"), "fixture");
     registerRuntime(x64App);
-    process.env.FRAME_WINDOWS_ARCH = "arm64";
+    process.env.SPARK_WINDOWS_ARCH = "arm64";
     const arm64 = runtimeFor(f.root, [], "go");
     expect(arm64.arch).toBe("arm64");
     expect(arm64.fingerprint).not.toBe(x64.fingerprint);
@@ -155,16 +155,16 @@ test("Windows runtime fingerprints and registry selection distinguish both archi
     expect(incompatible(x64, [], "windows")).not.toEqual([]);
     expect(findGo([], x64App, "windows")).toBeUndefined();
     const arm64App = path.join(f.root, "arm64-runtime");
-    writeJson(path.join(arm64App, "frame-runtime.json"), arm64);
+    writeJson(path.join(arm64App, "spark-runtime.json"), arm64);
     writeFileSync(path.join(arm64App, "MyApp.exe"), "fixture");
     registerRuntime(arm64App);
     expect(findGo([], x64App, "windows")?.app).toBe(arm64App);
-    process.env.FRAME_WINDOWS_ARCH = "x64";
+    process.env.SPARK_WINDOWS_ARCH = "x64";
     expect(readRuntime(arm64App)?.arch).toBe("arm64");
     expect(findGo([], arm64App, "windows")?.app).toBe(x64App);
   } finally {
-    if (previousHome === undefined) delete process.env.FRAME_HOME; else process.env.FRAME_HOME = previousHome;
-    if (previousArch === undefined) delete process.env.FRAME_WINDOWS_ARCH; else process.env.FRAME_WINDOWS_ARCH = previousArch;
+    if (previousHome === undefined) delete process.env.SPARK_HOME; else process.env.SPARK_HOME = previousHome;
+    if (previousArch === undefined) delete process.env.SPARK_WINDOWS_ARCH; else process.env.SPARK_WINDOWS_ARCH = previousArch;
     f.close();
   }
 });
@@ -181,22 +181,22 @@ test("Windows output discovery selects Debug executables for the requested archi
 
 test("Windows associations preserve project identity and validate shell inputs", async () => {
   const { associationPlan } = await import("../packages/cli/src/windows-associations");
-  const expo = { name: "Editor", scheme: ["frame-editor", "frame-editor"], extra: { frame: { projectId: "editor", documentTypes: [{ name: "Text", contentTypes: ["public.plain-text"] }, { name: "Custom", extensions: ["CUSTOM"] }] } } };
+  const expo = { name: "Editor", scheme: ["spark-editor", "spark-editor"], extra: { spark: { projectId: "editor", documentTypes: [{ name: "Text", contentTypes: ["public.plain-text"] }, { name: "Custom", extensions: ["CUSTOM"] }] } } };
   const plan = associationPlan(expo, String.raw`C:\Program Files\Editor\MyApp.exe`);
-  expect(plan.protocols).toEqual(["frame-editor"]);
+  expect(plan.protocols).toEqual(["spark-editor"]);
   expect(plan.extensions).toEqual(["txt", "custom"]);
-  expect(plan.appId).toMatch(/^Frame\.[a-f0-9]{64}$/);
+  expect(plan.appId).toMatch(/^Spark\.[a-f0-9]{64}$/);
   expect(associationPlan({ ...expo, name: "Renamed" }, plan.executable).appId).toBe(plan.appId);
   expect(() => associationPlan({ ...expo, scheme: "bad/path" }, plan.executable)).toThrow();
   expect(() => associationPlan(expo, 'C:\\app.exe" evil')).toThrow();
-  expect(() => associationPlan({ ...expo, extra: { frame: { projectId: "x", documentTypes: [{ name: "Unknown", contentTypes: ["custom.unknown"] }] } } }, plan.executable)).toThrow("Add extensions");
+  expect(() => associationPlan({ ...expo, extra: { spark: { projectId: "x", documentTypes: [{ name: "Unknown", contentTypes: ["custom.unknown"] }] } } }, plan.executable)).toThrow("Add extensions");
 });
 
 test("Windows cold-launch defaults cannot terminate the embedded C++ string", () => {
   const source = '#include "NativeModules.h"\nwinrt::init_apartment(winrt::apartment_type::single_threaded);\nappWindow.Resize({1000, 1000});\nauto settings{reactNativeWin32App.ReactNativeHost().InstanceSettings()};';
   const runtime = readFileSync(new URL("../packages/desktop-host/windows/runtime.inc", import.meta.url), "utf8");
-  const output = patchHost(source, runtime, { mode: "dev", fingerprint: "a".repeat(64) }, { FRAME_PROJECT_NAME: ')frame"; malicious();' });
-  expect(output).not.toContain(')frame"; malicious');
-  expect(output).toContain('\\u0029frame');
-  expect(output).toContain('FrameInitializeEnvironment();');
+  const output = patchHost(source, runtime, { mode: "dev", fingerprint: "a".repeat(64) }, { SPARK_PROJECT_NAME: ')spark"; malicious();' });
+  expect(output).not.toContain(')spark"; malicious');
+  expect(output).toContain('\\u0029spark');
+  expect(output).toContain('SparkInitializeEnvironment();');
 });

@@ -1,1 +1,1 @@
-export * from "@legendapp/frame-native-menu";
+export * from "@legendapp/spark-native-menu";

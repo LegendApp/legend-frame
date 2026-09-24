@@ -1,5 +1,5 @@
 {
-  "name": "@legendapp/frame-sdk-test-driver",
+  "name": "@legendapp/spark-sdk-test-driver",
   "version": "0.1.0-prototype.0",
   "license": "MIT",
   "main": "src/index.ts",
@@ -23,7 +23,7 @@
       }
     }
   },
-  "frame": {
+  "spark": {
     "sdk": false,
     "nativeModules": [
       "NativeSDKTestDriver"
@@ -33,11 +33,11 @@
       "macos"
     ],
     "requires": [
-      "@legendapp/frame-desktop-app"
+      "@legendapp/spark-desktop-app"
     ],
     "testOnly": true
   },
   "dependencies": {
-    "@legendapp/frame-desktop-app": "0.1.0-prototype.0"
+    "@legendapp/spark-desktop-app": "0.1.0-prototype.0"
   }
 }

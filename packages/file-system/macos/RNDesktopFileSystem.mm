@@ -1,5 +1,5 @@
 #import "RNDesktopFileSystem.h"
-#import <RNDesktopApp/FrameDesktop.h>
+#import <RNDesktopApp/SparkDesktop.h>
 #import <fcntl.h>
 #import <unistd.h>
 #import <stdlib.h>
@@ -8,18 +8,18 @@
 #import <math.h>
 #import <CoreServices/CoreServices.h>
 
-@interface FrameRecursiveWatch : NSObject
+@interface SparkRecursiveWatch : NSObject
 @property FSEventStreamRef stream;
 @property NSString *path;
 @property (copy) void (^changed)(void);
 - (void)stop;
 @end
-@implementation FrameRecursiveWatch
+@implementation SparkRecursiveWatch
 - (void)stop { if (_stream) { FSEventStreamStop(_stream); FSEventStreamInvalidate(_stream); FSEventStreamRelease(_stream); _stream = NULL; } }
 - (void)dealloc { [self stop]; }
 @end
 static void RecursiveChanges(ConstFSEventStreamRef stream, void *info, size_t count, void *paths, const FSEventStreamEventFlags flags[], const FSEventStreamEventId ids[]) {
-  FrameRecursiveWatch *watch = (__bridge FrameRecursiveWatch *)info;
+  SparkRecursiveWatch *watch = (__bridge SparkRecursiveWatch *)info;
   NSArray *changed = (__bridge NSArray *)paths;
   for (NSUInteger i = 0; i < count; i++) {
     NSString *path = changed[i];
@@ -27,19 +27,19 @@ static void RecursiveChanges(ConstFSEventStreamRef stream, void *info, size_t co
   }
 }
 
-@interface FrameOpenFile : NSObject
+@interface SparkOpenFile : NSObject
 @property int descriptor;
 @end
-@implementation FrameOpenFile
+@implementation SparkOpenFile
 - (instancetype)init { if (self = [super init]) _descriptor = -1; return self; }
 - (void)dealloc { if (_descriptor >= 0) close(_descriptor); }
 @end
 
 @interface RNDesktopFileSystem ()
 @property dispatch_queue_t ioQueue;
-@property NSMutableDictionary<NSString *, FrameOpenFile *> *files;
+@property NSMutableDictionary<NSString *, SparkOpenFile *> *files;
 @property NSMutableDictionary<NSString *, dispatch_source_t> *watches;
-@property NSMutableDictionary<NSString *, FrameRecursiveWatch *> *recursiveWatches;
+@property NSMutableDictionary<NSString *, SparkRecursiveWatch *> *recursiveWatches;
 @end
 static NSURL *FileURL(id value) {
   if (![value isKindOfClass:NSString.class] || ![value length]) return nil;
@@ -49,32 +49,32 @@ static NSURL *FileURL(id value) {
 @implementation RNDesktopFileSystem
 RCT_EXPORT_MODULE(NativeDesktopFileSystem)
 + (BOOL)requiresMainQueueSetup { return NO; }
-- (instancetype)init { if (self = [super init]) { _ioQueue = dispatch_queue_create("frame.files", DISPATCH_QUEUE_SERIAL); _files = [NSMutableDictionary new]; _watches = [NSMutableDictionary new]; _recursiveWatches = [NSMutableDictionary new]; } return self; }
+- (instancetype)init { if (self = [super init]) { _ioQueue = dispatch_queue_create("spark.files", DISPATCH_QUEUE_SERIAL); _files = [NSMutableDictionary new]; _watches = [NSMutableDictionary new]; _recursiveWatches = [NSMutableDictionary new]; } return self; }
 - (NSArray<NSString *> *)supportedEvents { return @[@"change"]; }
 - (void)call:(NSString *)method args:(NSString *)json resolve:(RCTPromiseResolveBlock)resolve reject:(RCTPromiseRejectBlock)reject {
   dispatch_async(self.ioQueue, ^{
-    NSDictionary *args = FrameArgs(json); NSFileManager *fm = NSFileManager.defaultManager;
+    NSDictionary *args = SparkArgs(json); NSFileManager *fm = NSFileManager.defaultManager;
     NSError *error = nil; id result = NSNull.null;
     if ([@[@"readChunk", @"writeChunk", @"flushFile", @"closeFile"] containsObject:method]) {
-      NSString *identifier = args[@"id"]; FrameOpenFile *file = self.files[identifier];
+      NSString *identifier = args[@"id"]; SparkOpenFile *file = self.files[identifier];
       if ([method isEqual:@"closeFile"]) { [self.files removeObjectForKey:identifier]; resolve(@"null"); return; }
       if (!file) { reject(@"E_CLOSED", @"Unknown or closed file handle", nil); return; }
       if ([method isEqual:@"flushFile"]) { if (fsync(file.descriptor)) error = [NSError errorWithDomain:NSPOSIXErrorDomain code:errno userInfo:nil]; }
       else {
         double position = [args[@"offset"] doubleValue];
-        if (![args[@"offset"] isKindOfClass:NSNumber.class] || !isfinite(position) || position < 0 || floor(position) != position || position > 9007199254740991.0) { FrameInvalid(reject, @"Invalid file offset"); return; }
+        if (![args[@"offset"] isKindOfClass:NSNumber.class] || !isfinite(position) || position < 0 || floor(position) != position || position > 9007199254740991.0) { SparkInvalid(reject, @"Invalid file offset"); return; }
         if ([method isEqual:@"readChunk"]) {
           double size = [args[@"length"] doubleValue];
-          if (!isfinite(size) || size < 1 || size > 1048576 || floor(size) != size || position + size > 9007199254740991.0) { FrameInvalid(reject, @"Invalid chunk length"); return; }
+          if (!isfinite(size) || size < 1 || size > 1048576 || floor(size) != size || position + size > 9007199254740991.0) { SparkInvalid(reject, @"Invalid chunk length"); return; }
           NSMutableData *data = [NSMutableData dataWithLength:(NSUInteger)size]; ssize_t count;
           do { count = pread(file.descriptor, data.mutableBytes, data.length, (off_t)position); } while (count < 0 && errno == EINTR);
           if (count < 0) error = [NSError errorWithDomain:NSPOSIXErrorDomain code:errno userInfo:nil];
           else { data.length = count; result = [data base64EncodedStringWithOptions:0]; }
         } else {
           NSString *base64 = args[@"base64"];
-          if (![base64 isKindOfClass:NSString.class] || base64.length > 1398104) { FrameInvalid(reject, @"Chunk exceeds 1 MiB"); return; }
+          if (![base64 isKindOfClass:NSString.class] || base64.length > 1398104) { SparkInvalid(reject, @"Chunk exceeds 1 MiB"); return; }
           NSData *data = [[NSData alloc] initWithBase64EncodedString:base64 options:0];
-          if (!data || data.length > 1048576 || position + data.length > 9007199254740991.0) { FrameInvalid(reject, @"Invalid chunk"); return; }
+          if (!data || data.length > 1048576 || position + data.length > 9007199254740991.0) { SparkInvalid(reject, @"Invalid chunk"); return; }
           NSUInteger written = 0;
           while (written < data.length) {
             ssize_t count = pwrite(file.descriptor, (const char *)data.bytes + written, data.length - written, (off_t)position + written);
@@ -91,8 +91,8 @@ RCT_EXPORT_MODULE(NativeDesktopFileSystem)
       if ([kind isEqual:@"data"]) base = [fm URLForDirectory:NSApplicationSupportDirectory inDomain:NSUserDomainMask appropriateForURL:nil create:YES error:&error];
       else if ([kind isEqual:@"cache"]) base = [fm URLForDirectory:NSCachesDirectory inDomain:NSUserDomainMask appropriateForURL:nil create:YES error:&error];
       else if ([kind isEqual:@"temp"]) base = [NSURL fileURLWithPath:NSTemporaryDirectory() isDirectory:YES];
-      else { FrameInvalid(reject, @"Unknown directory kind"); return; }
-      NSURL *url = [base URLByAppendingPathComponent:FrameNamespace() isDirectory:YES];
+      else { SparkInvalid(reject, @"Unknown directory kind"); return; }
+      NSURL *url = [base URLByAppendingPathComponent:SparkNamespace() isDirectory:YES];
       if (!error) [fm createDirectoryAtURL:url withIntermediateDirectories:YES attributes:nil error:&error];
       result = url.path;
     } else if ([method isEqual:@"unwatch"]) {
@@ -101,14 +101,14 @@ RCT_EXPORT_MODULE(NativeDesktopFileSystem)
       if (source) { dispatch_source_cancel(source); [self.watches removeObjectForKey:args[@"id"]]; }
     } else {
       NSURL *url = FileURL(args[@"path"]);
-      if (!url || !url.isFileURL || (url.host.length && ![url.host isEqual:@"localhost"])) { FrameInvalid(reject, @"Expected an absolute local path or file URL"); return; }
+      if (!url || !url.isFileURL || (url.host.length && ![url.host isEqual:@"localhost"])) { SparkInvalid(reject, @"Expected an absolute local path or file URL"); return; }
       if ([method isEqual:@"openFile"]) {
         NSString *mode = args[@"mode"]; int flags;
         if ([mode isEqual:@"read"]) flags = O_RDONLY;
         else if ([mode isEqual:@"readWrite"]) flags = O_RDWR;
         else if ([mode isEqual:@"write"]) flags = O_WRONLY | O_CREAT;
         else if ([mode isEqual:@"createNew"]) flags = O_WRONLY | O_CREAT | O_EXCL;
-        else { FrameInvalid(reject, @"Invalid file mode"); return; }
+        else { SparkInvalid(reject, @"Invalid file mode"); return; }
         int fd = open(url.fileSystemRepresentation, flags | O_CLOEXEC | O_NONBLOCK, 0666);
         if (fd < 0) error = [NSError errorWithDomain:NSPOSIXErrorDomain code:errno userInfo:nil];
         else {
@@ -117,7 +117,7 @@ RCT_EXPORT_MODULE(NativeDesktopFileSystem)
           else if (!S_ISREG(info.st_mode)) code = EINVAL;
           else if ([mode isEqual:@"write"] && ftruncate(fd, 0)) code = errno;
           if (code) { close(fd); error = [NSError errorWithDomain:NSPOSIXErrorDomain code:code userInfo:nil]; }
-          else { FrameOpenFile *file = [FrameOpenFile new]; file.descriptor = fd; NSString *identifier = NSUUID.UUID.UUIDString; self.files[identifier] = file; result = identifier; }
+          else { SparkOpenFile *file = [SparkOpenFile new]; file.descriptor = fd; NSString *identifier = NSUUID.UUID.UUIDString; self.files[identifier] = file; result = identifier; }
         }
       } else if ([method isEqual:@"trash"]) { [fm trashItemAtURL:url resultingItemURL:nil error:&error]; }
       else if ([method isEqual:@"readText"]) result = [NSString stringWithContentsOfURL:url encoding:NSUTF8StringEncoding error:&error];
@@ -128,7 +128,7 @@ RCT_EXPORT_MODULE(NativeDesktopFileSystem)
       else if ([method isEqual:@"writeText"]) [args[@"text"] writeToURL:url atomically:YES encoding:NSUTF8StringEncoding error:&error];
       else if ([method isEqual:@"writeBytes"]) {
         NSData *data = [[NSData alloc] initWithBase64EncodedString:args[@"base64"] options:0];
-        if (!data) { FrameInvalid(reject, @"Invalid base64 data"); return; }
+        if (!data) { SparkInvalid(reject, @"Invalid base64 data"); return; }
         [data writeToURL:url options:NSDataWritingAtomic error:&error];
       }
       else if ([method isEqual:@"mkdir"]) [fm createDirectoryAtURL:url withIntermediateDirectories:[args[@"recursive"] boolValue] attributes:nil error:&error];
@@ -142,7 +142,7 @@ RCT_EXPORT_MODULE(NativeDesktopFileSystem)
       }
       else if ([method isEqual:@"copy"] || [method isEqual:@"move"]) {
         NSURL *to = FileURL(args[@"to"]);
-        if (!to || !to.isFileURL || (to.host.length && ![to.host isEqual:@"localhost"])) { FrameInvalid(reject, @"Expected an absolute destination"); return; }
+        if (!to || !to.isFileURL || (to.host.length && ![to.host isEqual:@"localhost"])) { SparkInvalid(reject, @"Expected an absolute destination"); return; }
         if ([method isEqual:@"copy"]) [fm copyItemAtURL:url toURL:to error:&error];
         else [fm moveItemAtURL:url toURL:to error:&error];
       }
@@ -157,15 +157,15 @@ RCT_EXPORT_MODULE(NativeDesktopFileSystem)
       }
       else if ([method isEqual:@"watch"]) {
         NSString *watchID = args[@"id"];
-        if (self.watches[watchID] || self.recursiveWatches[watchID]) { FrameInvalid(reject, @"Watch id already exists"); return; }
+        if (self.watches[watchID] || self.recursiveWatches[watchID]) { SparkInvalid(reject, @"Watch id already exists"); return; }
         if ([args[@"recursive"] boolValue]) {
           BOOL directory = NO;
-          if (![fm fileExistsAtPath:url.path isDirectory:&directory] || !directory) { FrameInvalid(reject, @"Recursive watch requires an existing directory"); return; }
-          FrameRecursiveWatch *watch = [FrameRecursiveWatch new];
+          if (![fm fileExistsAtPath:url.path isDirectory:&directory] || !directory) { SparkInvalid(reject, @"Recursive watch requires an existing directory"); return; }
+          SparkRecursiveWatch *watch = [SparkRecursiveWatch new];
           // Keep real filesystem paths: Foundation can strip /private while a path
           // exists, then preserve it after deletion, breaking event comparisons.
           char *resolved = realpath(url.fileSystemRepresentation, NULL);
-          if (!resolved) { FrameReject(reject, [NSError errorWithDomain:NSPOSIXErrorDomain code:errno userInfo:nil]); return; }
+          if (!resolved) { SparkReject(reject, [NSError errorWithDomain:NSPOSIXErrorDomain code:errno userInfo:nil]); return; }
           watch.path = [NSString stringWithUTF8String:resolved]; free(resolved);
           __weak RNDesktopFileSystem *weakSelf = self;
           watch.changed = ^{ [weakSelf sendEventWithName:@"change" body:@{ @"id": watchID, @"path": url.path }]; };
@@ -184,7 +184,7 @@ RCT_EXPORT_MODULE(NativeDesktopFileSystem)
         [fm fileExistsAtPath:url.path isDirectory:&isDirectory];
         NSURL *observed = isDirectory ? url : [url URLByDeletingLastPathComponent];
         int fd = open(observed.fileSystemRepresentation, O_EVTONLY);
-        if (fd < 0) { FrameReject(reject, [NSError errorWithDomain:NSPOSIXErrorDomain code:errno userInfo:nil]); return; }
+        if (fd < 0) { SparkReject(reject, [NSError errorWithDomain:NSPOSIXErrorDomain code:errno userInfo:nil]); return; }
         dispatch_source_t source = dispatch_source_create(DISPATCH_SOURCE_TYPE_VNODE, fd,
           DISPATCH_VNODE_WRITE | DISPATCH_VNODE_DELETE | DISPATCH_VNODE_RENAME | DISPATCH_VNODE_EXTEND | DISPATCH_VNODE_ATTRIB,
           self.ioQueue);
@@ -196,13 +196,13 @@ RCT_EXPORT_MODULE(NativeDesktopFileSystem)
         dispatch_source_set_cancel_handler(source, ^{ close(fd); });
         self.watches[watchID] = source; dispatch_resume(source);
       }
-      else { FrameInvalid(reject, @"Unknown filesystem operation"); return; }
+      else { SparkInvalid(reject, @"Unknown filesystem operation"); return; }
     }
-    if (error) FrameReject(reject, error); else resolve(FrameJSON(result));
+    if (error) SparkReject(reject, error); else resolve(SparkJSON(result));
   });
 }
 - (void)invalidate {
-  dispatch_async(self.ioQueue, ^{ [self.files removeAllObjects]; for (FrameRecursiveWatch *watch in self.recursiveWatches.allValues) [watch stop]; [self.recursiveWatches removeAllObjects]; for (dispatch_source_t source in self.watches.allValues) dispatch_source_cancel(source); [self.watches removeAllObjects]; });
+  dispatch_async(self.ioQueue, ^{ [self.files removeAllObjects]; for (SparkRecursiveWatch *watch in self.recursiveWatches.allValues) [watch stop]; [self.recursiveWatches removeAllObjects]; for (dispatch_source_t source in self.watches.allValues) dispatch_source_cancel(source); [self.watches removeAllObjects]; });
   [super invalidate];
 }
 - (std::shared_ptr<facebook::react::TurboModule>)getTurboModule:(const facebook::react::ObjCTurboModule::InitParams &)params {

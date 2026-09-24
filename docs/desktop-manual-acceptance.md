@@ -71,7 +71,7 @@ bun scripts/test-keyboard-events.ts
 
 It builds a custom test runtime and checks nine native assertions, including
 untagged views, delivery once to a tagged ancestor, key-up/down, native filters,
-and dead keys. Its report is `.frame/keyboard-tests/report.json`. This does not
+and dead keys. Its report is `.spark/keyboard-tests/report.json`. This does not
 replace physical global-shortcut delivery testing.
 
 ## 3. Run the shared acceptance app
@@ -131,7 +131,7 @@ bun scripts/test-fabric-reload.ts
 On Windows also run the native feature/lifecycle suite with a fresh short path:
 
 ```powershell
-bun run test:windows:features --project C:\dev\FrameAcceptance
+bun run test:windows:features --project C:\dev\SparkAcceptance
 ```
 
 The [Windows issue matrix](windows-issues.md) records platform-specific pending
@@ -139,13 +139,13 @@ acceptance. These commands do not turn untested cases into passes.
 
 ## 5. Preserve results
 
-Collect `.frame/test-results/<run-id>.json` from each machine, plus any referenced
+Collect `.spark/test-results/<run-id>.json` from each machine, plus any referenced
 build/app logs. Record commit, OS, architecture, runtime mode, and manual pass/fail
 notes. For a crash include macOS `~/Library/Logs/DiagnosticReports` or the Windows
 crash/Event Viewer details and the exact focus/key/action sequence.
 
 ```sh
-bun run test:report --output .frame/platform-coverage.md
+bun run test:report --output .spark/platform-coverage.md
 ```
 
 Copy portable JSON reports into one directory to compare machines:

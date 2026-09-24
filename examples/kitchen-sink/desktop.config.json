@@ -1,5 +1,5 @@
 {
-  "$schema": "./node_modules/@legendapp/frame-desktop-config/schema.json",
+  "$schema": "./node_modules/@legendapp/spark-desktop-config/schema.json",
   "name": "KitchenSink",
   "version": "0.1.0",
   "window": {
@@ -8,7 +8,7 @@
     "restoreFrame": true
   },
   "macos": {
-    "bundleIdentifier": "so.legend.frame.examples.kitchensink"
+    "bundleIdentifier": "so.legend.spark.examples.kitchensink"
   },
   "platforms": [
     "macos",
@@ -16,7 +16,7 @@
   ],
   "expo": {
     "name": "KitchenSink",
-    "slug": "frame-kitchen-sink"
+    "slug": "spark-kitchen-sink"
   },
   "expoByPlatform": {
     "macos": {

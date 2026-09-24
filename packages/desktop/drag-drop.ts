@@ -1,1 +1,1 @@
-export * from "@legendapp/frame-drag-drop";
+export * from "@legendapp/spark-drag-drop";

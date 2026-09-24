@@ -1,5 +1,5 @@
 import Native from "./NativeDesktopLinks";
-import { callApp, onDesktopEvent, type DesktopEvent } from "@legendapp/frame-desktop-app";
+import { callApp, onDesktopEvent, type DesktopEvent } from "@legendapp/spark-desktop-app";
 export type OpenEvent = { type: "openFile" | "openURL"; id: string; url: string };
 function url(value: string) { if (!/^[a-zA-Z][a-zA-Z0-9+.-]*:/.test(value)) throw new Error("URL must include a scheme"); return value; }
 async function call<T = void>(method: string, args: object = {}): Promise<T> { return JSON.parse(await Native.call(method, JSON.stringify(args))) as T; }

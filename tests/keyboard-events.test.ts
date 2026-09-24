@@ -22,7 +22,7 @@ test("keyboard patch applies to clean source, is idempotent and rejects changed 
   }
 });
 test("keyboard patch validates all sources before writes and preserves package cache hardlinks", () => {
-  const root = mkdtempSync(path.join(os.tmpdir(), "frame-keyboard-"));
+  const root = mkdtempSync(path.join(os.tmpdir(), "spark-keyboard-"));
   try {
     const dependency = path.join(root, "node_modules/react-native-macos");
     mkdirSync(path.join(dependency, "React/Views"), { recursive: true });

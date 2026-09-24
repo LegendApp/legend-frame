@@ -1,4 +1,4 @@
-import type { AudioPlayer, AudioStatus } from "@legendapp/frame-audio";
+import type { AudioPlayer, AudioStatus } from "@legendapp/spark-audio";
 export type Track = { id: string; name: string; uri: string };
 export type Library = { version: 1; tracks: Track[]; currentId: string | null; position: number };
 export function decodeLibrary(value: unknown): Library {

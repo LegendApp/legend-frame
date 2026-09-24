@@ -2,11 +2,11 @@ import { useEffect, useRef, useState } from "react";
 import { Text, View } from "react-native";
 import { ActionButton } from "./ActionButton";
 import { EventResults, useEventResults } from "./EventResults";
-import * as files from "@legendapp/frame/files";
-import * as windows from "@legendapp/frame/windows";
-import { DragDropView, type DragOverEvent } from "@legendapp/frame/drag-drop";
-const source = { data: { "application/x-frame-example-item": '{"id":"sample","title":"Example item"}' } };
-const types = ["application/x-frame-example-item"];
+import * as files from "@legendapp/spark/files";
+import * as windows from "@legendapp/spark/windows";
+import { DragDropView, type DragOverEvent } from "@legendapp/spark/drag-drop";
+const source = { data: { "application/x-spark-example-item": '{"id":"sample","title":"Example item"}' } };
+const types = ["application/x-spark-example-item"];
 const move: "move"[] = ["move"];
 export function DesktopFoundations({ report }: { report: (value: unknown) => void }) {
   return <View style={{ gap: 10 }}>

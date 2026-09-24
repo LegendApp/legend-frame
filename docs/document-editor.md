@@ -1,7 +1,7 @@
 # Shared document editor
 
 ```sh
-frame create MyEditor --example document-editor
+spark create MyEditor --example document-editor
 cd MyEditor
 bun run web
 # Or: bun run ios / android / macos / windows

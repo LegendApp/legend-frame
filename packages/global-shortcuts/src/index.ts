@@ -1,6 +1,6 @@
 import { Platform } from "react-native";
 import Native from "./NativeDesktopGlobalShortcuts";
-import { onDesktopEvent } from "@legendapp/frame-desktop-app";
+import { onDesktopEvent } from "@legendapp/spark-desktop-app";
 import { parseAccelerator } from "./accelerator";
 let sequence = 0;
 export async function registerGlobalShortcut(accelerator: string, handler: () => void) {

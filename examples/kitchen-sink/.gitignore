@@ -1,5 +1,5 @@
 node_modules/
-.frame/
+.spark/
 .expo/
 .threaded-runtime/
 macos/

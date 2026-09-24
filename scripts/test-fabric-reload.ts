@@ -8,17 +8,17 @@ if (process.platform !== 'darwin') throw Error('Fabric reload acceptance require
 const framework=path.resolve(import.meta.dir,'..');
 const root=path.join(framework,'examples/kitchen-sink');
 const entry=root+'/FabricReloadAcceptance.tsx';
-const report=path.join(framework,'.frame/fabric-reload-report.json');
-const executable=root+'/.frame/platforms/macos/products/dev/KitchenSink.app/Contents/MacOS/KitchenSink';
-if(!existsSync(executable))throw Error('Build Kitchen Sink first: bun run frame build --dev --project examples/kitchen-sink');
+const report=path.join(framework,'.spark/fabric-reload-report.json');
+const executable=root+'/.spark/platforms/macos/products/dev/KitchenSink.app/Contents/MacOS/KitchenSink';
+if(!existsSync(executable))throw Error('Build Kitchen Sink first: bun run spark build --dev --project examples/kitchen-sink');
 if(existsSync(entry))throw Error('Temporary entry already exists');
 rmSync(report,{force:true});rmSync(report+'.count',{force:true});
-writeFileSync(entry,`import {registerRootComponent} from 'expo'; import {useEffect} from 'react'; import {Text,DevSettings} from 'react-native'; import * as files from '@legendapp/frame/files'; import * as windows from '@legendapp/frame/windows';
+writeFileSync(entry,`import {registerRootComponent} from 'expo'; import {useEffect} from 'react'; import {Text,DevSettings} from 'react-native'; import * as files from '@legendapp/spark/files'; import * as windows from '@legendapp/spark/windows';
 const report=${JSON.stringify(report)};
 function App({windowId}){return windowId&&windowId!=='main'?<Text>Child</Text>:<Checks/>;}
 function Checks(){useEffect(()=>{const timer=setTimeout(()=>{void(async()=>{try{const n=await files.exists(report+'.count')?Number(await files.readText(report+'.count')):0;for(let i=0;i<10;i++){await windows.openWindow({id:'reload-race'});await windows.closeWindow('reload-race');}if(n<3){await files.writeText(report+'.count',String(n+1));DevSettings.reload();}else await files.writeText(report,JSON.stringify({passed:true,reloads:n,cycles:40}));}catch(error){await files.writeText(report,JSON.stringify({passed:false,error:String(error)}));}})();},500);return()=>clearTimeout(timer)},[]);return <Text>Fabric reload acceptance</Text>};registerRootComponent(App);`);
-const port=await availablePort();const log=Bun.file(path.join(framework,'.frame/fabric-reload-metro.log'));
-const metro=Bun.spawn(nodeCommand(root,'expo','expo',['start','--localhost','--port',String(port),'--max-workers','2']),{cwd:root,env:{...process.env,CI:'1',FRAME_PLATFORM:'macos'},stdout:log,stderr:log});let app;
+const port=await availablePort();const log=Bun.file(path.join(framework,'.spark/fabric-reload-metro.log'));
+const metro=Bun.spawn(nodeCommand(root,'expo','expo',['start','--localhost','--port',String(port),'--max-workers','2']),{cwd:root,env:{...process.env,CI:'1',SPARK_PLATFORM:'macos'},stdout:log,stderr:log});let app;
 try{const end=Date.now()+60000;while(!await fetch(`http://127.0.0.1:${port}/status`).then(r=>r.ok,()=>false)){if(Date.now()>end)throw Error('Metro timeout');await Bun.sleep(200);}
-const output=Bun.file(path.join(framework,'.frame/fabric-reload-app.log'));app=Bun.spawn([executable,'-RCT_jsLocation',`127.0.0.1:${port}`],{cwd:root,env:{...process.env,...projectEnvironment(root),FRAME_BUNDLE_URL:`http://127.0.0.1:${port}/FabricReloadAcceptance.bundle?platform=macos&dev=true&minify=false`},stdout:output,stderr:output});const deadline=Date.now()+90000;while(!existsSync(report)){if(Date.now()>deadline||app.exitCode!==null||app.signalCode!==null)throw Error('Reload probe did not report');await Bun.sleep(200);}console.log(readFileSync(report,'utf8'));if(!JSON.parse(readFileSync(report,'utf8')).passed)throw Error('Reload failed');
+const output=Bun.file(path.join(framework,'.spark/fabric-reload-app.log'));app=Bun.spawn([executable,'-RCT_jsLocation',`127.0.0.1:${port}`],{cwd:root,env:{...process.env,...projectEnvironment(root),SPARK_BUNDLE_URL:`http://127.0.0.1:${port}/FabricReloadAcceptance.bundle?platform=macos&dev=true&minify=false`},stdout:output,stderr:output});const deadline=Date.now()+90000;while(!existsSync(report)){if(Date.now()>deadline||app.exitCode!==null||app.signalCode!==null)throw Error('Reload probe did not report');await Bun.sleep(200);}console.log(readFileSync(report,'utf8'));if(!JSON.parse(readFileSync(report,'utf8')).passed)throw Error('Reload failed');
 }finally{app?.kill();if(app)await app.exited;metro.kill();await metro.exited;rmSync(entry,{force:true});}

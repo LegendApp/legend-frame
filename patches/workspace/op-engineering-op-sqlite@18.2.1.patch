@@ -164,7 +164,7 @@ index f62f7e1..b4c838c 100644
  
  void log_to_console(jsi::Runtime &runtime, const std::string &message) {
 diff --git a/package.json b/package.json
-index b30a29d..32e5a36 100644
+index b30a29d..23a1dc6 100644
 --- a/package.json
 +++ b/package.json
 @@ -39,7 +39,8 @@
@@ -183,7 +183,7 @@ index b30a29d..32e5a36 100644
    },
 -  "packageManager": "yarn@4.11.0"
 +  "packageManager": "yarn@4.11.0",
-+  "frame": {
++  "spark": {
 +    "sdk": true,
 +    "windowsAdapter": true,
 +    "upstreamIntegrity": "sha512-atVOtXyFzO0e454eVS27AMwRs515URCKrkvLLG+mGKcyiF5UPfC53oukpNp2UmVzlLebyTEXNkTYs6n0dVGd0g=="
@@ -191,14 +191,14 @@ index b30a29d..32e5a36 100644
  }
 diff --git a/react-native.config.js b/react-native.config.js
 new file mode 100644
-index 0000000..ee8ee91
+index 0000000..93c7170
 --- /dev/null
 +++ b/react-native.config.js
 @@ -0,0 +1,4 @@
 +module.exports = {};
 +
 +module.exports.dependency ??= {}; module.exports.dependency.platforms ??= {};
-+module.exports.dependency.platforms.windows = {"sourceDir":"windows","solutionFile":"FrameOPSQLite.sln","projects":[{"projectFile":"FrameOPSQLite/FrameOPSQLite.vcxproj","directDependency":true}]};
++module.exports.dependency.platforms.windows = {"sourceDir":"windows","solutionFile":"SparkOPSQLite.sln","projects":[{"projectFile":"SparkOPSQLite/SparkOPSQLite.vcxproj","directDependency":true}]};
 diff --git a/windows/.gitignore b/windows/.gitignore
 new file mode 100644
 index 0000000..0fd0acf
@@ -321,28 +321,99 @@ index 0000000..b4f554e
 +LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 +OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 +SOFTWARE.
-diff --git a/windows/FrameOPSQLite/FrameOPSQLite.cpp b/windows/FrameOPSQLite/FrameOPSQLite.cpp
+diff --git a/windows/SparkOPSQLite/ReactPackageProvider.cpp b/windows/SparkOPSQLite/ReactPackageProvider.cpp
 new file mode 100644
-index 0000000..c75ead2
+index 0000000..bb3b576
 --- /dev/null
-+++ b/windows/FrameOPSQLite/FrameOPSQLite.cpp
++++ b/windows/SparkOPSQLite/ReactPackageProvider.cpp
+@@ -0,0 +1,20 @@
++#include "pch.h"
++
++#include "ReactPackageProvider.h"
++#if __has_include("ReactPackageProvider.g.cpp")
++#include "ReactPackageProvider.g.cpp"
++#endif
++
++#include "SparkOPSQLite.h"
++
++using namespace winrt::Microsoft::ReactNative;
++
++namespace winrt::SparkOPSQLite::implementation
++{
++
++void ReactPackageProvider::CreatePackage(IReactPackageBuilder const &packageBuilder) noexcept
++{
++  AddAttributedModules(packageBuilder, true);
++}
++
++} // namespace winrt::SparkOPSQLite::implementation
+diff --git a/windows/SparkOPSQLite/ReactPackageProvider.h b/windows/SparkOPSQLite/ReactPackageProvider.h
+new file mode 100644
+index 0000000..6099554
+--- /dev/null
++++ b/windows/SparkOPSQLite/ReactPackageProvider.h
+@@ -0,0 +1,24 @@
++#pragma once
++
++#include "ReactPackageProvider.g.h"
++
++using namespace winrt::Microsoft::ReactNative;
++
++namespace winrt::SparkOPSQLite::implementation
++{
++
++struct ReactPackageProvider : ReactPackageProviderT<ReactPackageProvider>
++{
++  ReactPackageProvider() = default;
++
++  void CreatePackage(IReactPackageBuilder const &packageBuilder) noexcept;
++};
++
++} // namespace winrt::SparkOPSQLite::implementation
++
++namespace winrt::SparkOPSQLite::factory_implementation
++{
++
++struct ReactPackageProvider : ReactPackageProviderT<ReactPackageProvider, implementation::ReactPackageProvider> {};
++
++} // namespace winrt::SparkOPSQLite::factory_implementation
+diff --git a/windows/SparkOPSQLite/ReactPackageProvider.idl b/windows/SparkOPSQLite/ReactPackageProvider.idl
+new file mode 100644
+index 0000000..797d2c9
+--- /dev/null
++++ b/windows/SparkOPSQLite/ReactPackageProvider.idl
+@@ -0,0 +1,9 @@
++namespace SparkOPSQLite
++{
++  [webhosthidden]
++  [default_interface]
++  runtimeclass ReactPackageProvider : Microsoft.ReactNative.IReactPackageProvider
++  {
++    ReactPackageProvider();
++  };
++}
+diff --git a/windows/SparkOPSQLite/SparkOPSQLite.cpp b/windows/SparkOPSQLite/SparkOPSQLite.cpp
+new file mode 100644
+index 0000000..7378fdd
+--- /dev/null
++++ b/windows/SparkOPSQLite/SparkOPSQLite.cpp
 @@ -0,0 +1,2 @@
 +#include "pch.h"
-+#include "FrameOPSQLite.h"
-diff --git a/windows/FrameOPSQLite/FrameOPSQLite.def b/windows/FrameOPSQLite/FrameOPSQLite.def
++#include "SparkOPSQLite.h"
+diff --git a/windows/SparkOPSQLite/SparkOPSQLite.def b/windows/SparkOPSQLite/SparkOPSQLite.def
 new file mode 100644
 index 0000000..24e7c12
 --- /dev/null
-+++ b/windows/FrameOPSQLite/FrameOPSQLite.def
++++ b/windows/SparkOPSQLite/SparkOPSQLite.def
 @@ -0,0 +1,3 @@
 +﻿EXPORTS
 +DllCanUnloadNow = WINRT_CanUnloadNow                    PRIVATE
 +DllGetActivationFactory = WINRT_GetActivationFactory    PRIVATE
-diff --git a/windows/FrameOPSQLite/FrameOPSQLite.h b/windows/FrameOPSQLite/FrameOPSQLite.h
+diff --git a/windows/SparkOPSQLite/SparkOPSQLite.h b/windows/SparkOPSQLite/SparkOPSQLite.h
 new file mode 100644
-index 0000000..d3cbb51
+index 0000000..0b59e88
 --- /dev/null
-+++ b/windows/FrameOPSQLite/FrameOPSQLite.h
++++ b/windows/SparkOPSQLite/SparkOPSQLite.h
 @@ -0,0 +1,48 @@
 +#pragma once
 +#include "NativeModules.h"
@@ -353,19 +424,19 @@ index 0000000..d3cbb51
 +#include <winrt/Windows.Security.Cryptography.h>
 +#include <winrt/Windows.Security.Cryptography.Core.h>
 +#pragma comment(lib, "Shell32.lib")
-+REACT_MODULE(FrameOPSQLiteModule, L"OPSQLite")
-+struct FrameOPSQLiteModule {
++REACT_MODULE(SparkOPSQLiteModule, L"OPSQLite")
++struct SparkOPSQLiteModule {
 +  winrt::Microsoft::ReactNative::ReactContext context;
 +  std::shared_ptr<std::atomic<bool>> generation;
 +  REACT_INIT(Initialize) void Initialize(winrt::Microsoft::ReactNative::ReactContext const &value) noexcept { context = value; }
-+  ~FrameOPSQLiteModule() { if (generation) opsqlite::invalidate(generation); }
++  ~SparkOPSQLiteModule() { if (generation) opsqlite::invalidate(generation); }
 +  static std::filesystem::path Directory() {
-+    wchar_t project[32768]{}; if (!GetEnvironmentVariableW(L"FRAME_PROJECT_ID", project, 32768)) throw winrt::hresult_invalid_argument(L"Missing project identity");
++    wchar_t project[32768]{}; if (!GetEnvironmentVariableW(L"SPARK_PROJECT_ID", project, 32768)) throw winrt::hresult_invalid_argument(L"Missing project identity");
 +    using namespace winrt::Windows::Security::Cryptography;
 +    auto hash = Core::HashAlgorithmProvider::OpenAlgorithm(Core::HashAlgorithmNames::Sha256());
 +    auto id = CryptographicBuffer::EncodeToHexString(hash.HashData(CryptographicBuffer::ConvertStringToBinary(project, BinaryStringEncoding::Utf8)));
 +    PWSTR raw = nullptr; winrt::check_hresult(SHGetKnownFolderPath(FOLDERID_LocalAppData, 0, nullptr, &raw)); std::filesystem::path path(raw); CoTaskMemFree(raw);
-+    path /= L"Frame"; path /= id.c_str(); path /= L"data"; std::filesystem::create_directories(path); return path;
++    path /= L"Spark"; path /= id.c_str(); path /= L"data"; std::filesystem::create_directories(path); return path;
 +  }
 +  REACT_SYNC_METHOD(getConstants) winrt::Microsoft::ReactNative::JSValueObject getConstants() { return {{"WINDOWS_DATABASE_PATH", winrt::to_string(Directory().wstring())}}; }
 +  REACT_SYNC_METHOD(install) bool install() {
@@ -392,20 +463,20 @@ index 0000000..d3cbb51
 +    return winrt::to_string((std::filesystem::path(executable).parent_path() / (file.wstring() + L".dll")).wstring());
 +  }
 +};
-diff --git a/windows/FrameOPSQLite/FrameOPSQLite.rc b/windows/FrameOPSQLite/FrameOPSQLite.rc
+diff --git a/windows/SparkOPSQLite/SparkOPSQLite.rc b/windows/SparkOPSQLite/SparkOPSQLite.rc
 new file mode 100644
 index 0000000..23aece1
 --- /dev/null
-+++ b/windows/FrameOPSQLite/FrameOPSQLite.rc
++++ b/windows/SparkOPSQLite/SparkOPSQLite.rc
 @@ -0,0 +1,3 @@
 +// Microsoft Visual C++ generated resource script.
 +//
 +#include "resource.h"
-diff --git a/windows/FrameOPSQLite/FrameOPSQLite.vcxproj b/windows/FrameOPSQLite/FrameOPSQLite.vcxproj
+diff --git a/windows/SparkOPSQLite/SparkOPSQLite.vcxproj b/windows/SparkOPSQLite/SparkOPSQLite.vcxproj
 new file mode 100644
-index 0000000..c2b75ad
+index 0000000..5e1cf83
 --- /dev/null
-+++ b/windows/FrameOPSQLite/FrameOPSQLite.vcxproj
++++ b/windows/SparkOPSQLite/SparkOPSQLite.vcxproj
 @@ -0,0 +1,148 @@
 +<?xml version="1.0" encoding="utf-8"?>
 +<!-- This project was created with react-native-windows 0.81.35 -->
@@ -415,9 +486,9 @@ index 0000000..c2b75ad
 +    <CppWinRTOptimized>true</CppWinRTOptimized>
 +    <MinimalCoreWin>true</MinimalCoreWin>
 +    <ProjectGuid>{96CE5E20-C675-425D-B566-7D0C8263959F}</ProjectGuid>
-+    <ProjectName>FrameOPSQLite</ProjectName>
++    <ProjectName>SparkOPSQLite</ProjectName>
 +    <Keyword>Win32Proj</Keyword>
-+    <RootNamespace>FrameOPSQLite</RootNamespace>
++    <RootNamespace>SparkOPSQLite</RootNamespace>
 +    <WindowsTargetPlatformVersion>10.0</WindowsTargetPlatformVersion>
 +    <DefaultLanguage>en-US</DefaultLanguage>
 +    <MinimumVisualStudioVersion>17.0</MinimumVisualStudioVersion>
@@ -498,7 +569,7 @@ index 0000000..c2b75ad
 +      <AdditionalDependencies>shell32.lib;user32.lib;windowsapp.lib;%(AdditionalDependencies)</AdditionalDependencies>
 +      <SubSystem>Console</SubSystem>
 +      <GenerateWindowsMetadata>true</GenerateWindowsMetadata>
-+      <ModuleDefinitionFile>FrameOPSQLite.def</ModuleDefinitionFile>
++      <ModuleDefinitionFile>SparkOPSQLite.def</ModuleDefinitionFile>
 +    </Link>
 +  </ItemDefinitionGroup>
 +  <ItemDefinitionGroup Condition="'$(Configuration)'=='Debug'">
@@ -513,7 +584,7 @@ index 0000000..c2b75ad
 +  </ItemDefinitionGroup>
 +  <PropertyGroup Label="UserMacros" />
 +  <ItemGroup>
-+    <ClInclude Include="FrameOPSQLite.h" />
++    <ClInclude Include="SparkOPSQLite.h" />
 +    <ClInclude Include="ReactPackageProvider.h">
 +      <DependentUpon>ReactPackageProvider.idl</DependentUpon>
 +    </ClInclude>
@@ -522,7 +593,7 @@ index 0000000..c2b75ad
 +    <ClInclude Include="targetver.h" />
 +  </ItemGroup>
 +  <ItemGroup>
-+    <ClCompile Include="FrameOPSQLite.cpp" />
++    <ClCompile Include="SparkOPSQLite.cpp" />
 +    <ClCompile Include="pch.cpp">
 +      <PrecompiledHeader>Create</PrecompiledHeader>
 +    </ClCompile>
@@ -535,7 +606,7 @@ index 0000000..c2b75ad
 +    <Midl Include="ReactPackageProvider.idl" />
 +  </ItemGroup>
 +  <ItemGroup>
-+    <ResourceCompile Include="FrameOPSQLite.rc" />
++    <ResourceCompile Include="SparkOPSQLite.rc" />
 +  </ItemGroup>
 +  <ItemGroup>
 +<ClCompile Include="$(MSBuildThisFileDirectory)..\..\cpp\*.cpp"><PrecompiledHeader>NotUsing</PrecompiledHeader></ClCompile>
@@ -556,11 +627,11 @@ index 0000000..c2b75ad
 +  </Target>
 +</Project>
 \ No newline at end of file
-diff --git a/windows/FrameOPSQLite/FrameOPSQLite.vcxproj.filters b/windows/FrameOPSQLite/FrameOPSQLite.vcxproj.filters
+diff --git a/windows/SparkOPSQLite/SparkOPSQLite.vcxproj.filters b/windows/SparkOPSQLite/SparkOPSQLite.vcxproj.filters
 new file mode 100644
-index 0000000..8696a66
+index 0000000..c99c53c
 --- /dev/null
-+++ b/windows/FrameOPSQLite/FrameOPSQLite.vcxproj.filters
++++ b/windows/SparkOPSQLite/SparkOPSQLite.vcxproj.filters
 @@ -0,0 +1,44 @@
 +﻿<?xml version="1.0" encoding="utf-8"?>
 +<Project ToolsVersion="4.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
@@ -585,7 +656,7 @@ index 0000000..8696a66
 +    <ClInclude Include="resource.h">
 +      <Filter>Header Files</Filter>
 +    </ClInclude>
-+    <ClInclude Include="FrameOPSQLite.h">
++    <ClInclude Include="SparkOPSQLite.h">
 +      <Filter>Header Files</Filter>
 +    </ClInclude>
 +    <ClInclude Include="pch.h">
@@ -593,7 +664,7 @@ index 0000000..8696a66
 +    </ClInclude>
 +  </ItemGroup>
 +  <ItemGroup>
-+    <ClCompile Include="FrameOPSQLite.cpp">
++    <ClCompile Include="SparkOPSQLite.cpp">
 +      <Filter>Source Files</Filter>
 +    </ClCompile>
 +    <ClCompile Include="pch.cpp">
@@ -601,95 +672,24 @@ index 0000000..8696a66
 +    </ClCompile>
 +  </ItemGroup>
 +  <ItemGroup>
-+    <ResourceCompile Include="FrameOPSQLite.rc">
++    <ResourceCompile Include="SparkOPSQLite.rc">
 +      <Filter>Resource Files</Filter>
 +    </ResourceCompile>
 +  </ItemGroup>
 +</Project>
 \ No newline at end of file
-diff --git a/windows/FrameOPSQLite/ReactPackageProvider.cpp b/windows/FrameOPSQLite/ReactPackageProvider.cpp
-new file mode 100644
-index 0000000..ab1d2c6
---- /dev/null
-+++ b/windows/FrameOPSQLite/ReactPackageProvider.cpp
-@@ -0,0 +1,20 @@
-+#include "pch.h"
-+
-+#include "ReactPackageProvider.h"
-+#if __has_include("ReactPackageProvider.g.cpp")
-+#include "ReactPackageProvider.g.cpp"
-+#endif
-+
-+#include "FrameOPSQLite.h"
-+
-+using namespace winrt::Microsoft::ReactNative;
-+
-+namespace winrt::FrameOPSQLite::implementation
-+{
-+
-+void ReactPackageProvider::CreatePackage(IReactPackageBuilder const &packageBuilder) noexcept
-+{
-+  AddAttributedModules(packageBuilder, true);
-+}
-+
-+} // namespace winrt::FrameOPSQLite::implementation
-diff --git a/windows/FrameOPSQLite/ReactPackageProvider.h b/windows/FrameOPSQLite/ReactPackageProvider.h
-new file mode 100644
-index 0000000..d3c820c
---- /dev/null
-+++ b/windows/FrameOPSQLite/ReactPackageProvider.h
-@@ -0,0 +1,24 @@
-+#pragma once
-+
-+#include "ReactPackageProvider.g.h"
-+
-+using namespace winrt::Microsoft::ReactNative;
-+
-+namespace winrt::FrameOPSQLite::implementation
-+{
-+
-+struct ReactPackageProvider : ReactPackageProviderT<ReactPackageProvider>
-+{
-+  ReactPackageProvider() = default;
-+
-+  void CreatePackage(IReactPackageBuilder const &packageBuilder) noexcept;
-+};
-+
-+} // namespace winrt::FrameOPSQLite::implementation
-+
-+namespace winrt::FrameOPSQLite::factory_implementation
-+{
-+
-+struct ReactPackageProvider : ReactPackageProviderT<ReactPackageProvider, implementation::ReactPackageProvider> {};
-+
-+} // namespace winrt::FrameOPSQLite::factory_implementation
-diff --git a/windows/FrameOPSQLite/ReactPackageProvider.idl b/windows/FrameOPSQLite/ReactPackageProvider.idl
-new file mode 100644
-index 0000000..ebd494a
---- /dev/null
-+++ b/windows/FrameOPSQLite/ReactPackageProvider.idl
-@@ -0,0 +1,9 @@
-+namespace FrameOPSQLite
-+{
-+  [webhosthidden]
-+  [default_interface]
-+  runtimeclass ReactPackageProvider : Microsoft.ReactNative.IReactPackageProvider
-+  {
-+    ReactPackageProvider();
-+  };
-+}
-diff --git a/windows/FrameOPSQLite/pch.cpp b/windows/FrameOPSQLite/pch.cpp
+diff --git a/windows/SparkOPSQLite/pch.cpp b/windows/SparkOPSQLite/pch.cpp
 new file mode 100644
 index 0000000..1d9f38c
 --- /dev/null
-+++ b/windows/FrameOPSQLite/pch.cpp
++++ b/windows/SparkOPSQLite/pch.cpp
 @@ -0,0 +1 @@
 +#include "pch.h"
-diff --git a/windows/FrameOPSQLite/pch.h b/windows/FrameOPSQLite/pch.h
+diff --git a/windows/SparkOPSQLite/pch.h b/windows/SparkOPSQLite/pch.h
 new file mode 100644
 index 0000000..61d356d
 --- /dev/null
-+++ b/windows/FrameOPSQLite/pch.h
++++ b/windows/SparkOPSQLite/pch.h
 @@ -0,0 +1,30 @@
 +// pch.h : include file for standard system include files,
 +// or project specific include files that are used frequently, but
@@ -721,22 +721,22 @@ index 0000000..61d356d
 +#include <tchar.h>
 +
 +// Reference additional headers your project requires here
-diff --git a/windows/FrameOPSQLite/resource.h b/windows/FrameOPSQLite/resource.h
+diff --git a/windows/SparkOPSQLite/resource.h b/windows/SparkOPSQLite/resource.h
 new file mode 100644
-index 0000000..f58c207
+index 0000000..bb510d6
 --- /dev/null
-+++ b/windows/FrameOPSQLite/resource.h
++++ b/windows/SparkOPSQLite/resource.h
 @@ -0,0 +1,5 @@
 +//
 +// Microsoft Visual C++ generated include file.
-+// Used by FrameOPSQLite.rc
++// Used by SparkOPSQLite.rc
 +
 +#pragma once
-diff --git a/windows/FrameOPSQLite/targetver.h b/windows/FrameOPSQLite/targetver.h
+diff --git a/windows/SparkOPSQLite/targetver.h b/windows/SparkOPSQLite/targetver.h
 new file mode 100644
 index 0000000..87c0086
 --- /dev/null
-+++ b/windows/FrameOPSQLite/targetver.h
++++ b/windows/SparkOPSQLite/targetver.h
 @@ -0,0 +1,8 @@
 +#pragma once
 +
@@ -746,18 +746,18 @@ index 0000000..87c0086
 +// set the _WIN32_WINNT macro to the platform you wish to support before including SDKDDKVer.h.
 +
 +#include <SDKDDKVer.h>
-diff --git a/windows/FrameOPSQLite.sln b/windows/FrameOPSQLite.sln
+diff --git a/windows/SparkOPSQLite.sln b/windows/SparkOPSQLite.sln
 new file mode 100644
-index 0000000..ef4ed11
+index 0000000..3839806
 --- /dev/null
-+++ b/windows/FrameOPSQLite.sln
++++ b/windows/SparkOPSQLite.sln
 @@ -0,0 +1,43 @@
 +﻿
 +Microsoft Visual Studio Solution File, Format Version 12.00
 +# Visual Studio Version 17
 +VisualStudioVersion = 17.3.32929.385
 +MinimumVisualStudioVersion = 10.0.40219.1
-+Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "FrameOPSQLite", "FrameOPSQLite\FrameOPSQLite.vcxproj", "{96CE5E20-C675-425D-B566-7D0C8263959F}"
++Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "SparkOPSQLite", "SparkOPSQLite\SparkOPSQLite.vcxproj", "{96CE5E20-C675-425D-B566-7D0C8263959F}"
 +EndProject
 +Global
 +	GlobalSection(SolutionConfigurationPlatforms) = preSolution

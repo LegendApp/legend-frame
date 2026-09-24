@@ -46,4 +46,4 @@ Windows ARM64 and macOS generation/main bundles, a separate Windows worker bundl
 and the full 30-package Windows prebuilt dependency profile/prebuild passed.
 The prepare reports have no runtime passes: Windows records 38 untested cases and
 two deferred distribution implementations; macOS records 40 untested cases.
-Reports are generated under `.frame/test-results` and are not committed.
+Reports are generated under `.spark/test-results` and are not committed.

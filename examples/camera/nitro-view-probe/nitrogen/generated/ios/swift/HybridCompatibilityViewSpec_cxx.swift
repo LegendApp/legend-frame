@@ -18,11 +18,11 @@ import NitroModules
  */
 open class HybridCompatibilityViewSpec_cxx {
   /**
-   * The Swift <> C++ bridge's namespace (`margelo::nitro::frameprobe::bridge::swift`)
-   * from `FrameNitroProbe-Swift-Cxx-Bridge.hpp`.
+   * The Swift <> C++ bridge's namespace (`margelo::nitro::sparkprobe::bridge::swift`)
+   * from `SparkNitroProbe-Swift-Cxx-Bridge.hpp`.
    * This contains specialized C++ templates, and C++ helper functions that can be accessed from Swift.
    */
-  public typealias bridge = margelo.nitro.frameprobe.bridge.swift
+  public typealias bridge = margelo.nitro.sparkprobe.bridge.swift
 
   /**
    * Holds an instance of the `HybridCompatibilityViewSpec` Swift protocol.

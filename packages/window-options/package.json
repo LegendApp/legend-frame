@@ -1,5 +1,5 @@
 {
-  "name": "@legendapp/frame-window-options",
+  "name": "@legendapp/spark-window-options",
   "version": "0.1.0-prototype.0",
   "license": "MIT",
   "main": "index.cjs",

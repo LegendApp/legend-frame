@@ -1,7 +1,7 @@
 const { createRequire } = require('node:module');
 const path = require('node:path');
 const defaults = new Map();
-const desktopSession = () => process.env.FRAME_DEV_SESSION === '1' || ['macos', 'windows'].includes(process.env.FRAME_PLATFORM);
+const desktopSession = () => process.env.SPARK_DEV_SESSION === '1' || ['macos', 'windows'].includes(process.env.SPARK_PLATFORM);
 
 // A drop-in getDefaultConfig import: let upstream supply each target's defaults
 // before the application's existing Metro customizations are applied.
@@ -14,12 +14,12 @@ exports.getDefaultConfig = (root, ...options) => {
   return config;
 };
 
-exports.withFrameMetro = config => {
+exports.withSparkMetro = config => {
   if (!desktopSession()) return config;
-  if (config && typeof config.then === 'function') return config.then(exports.withFrameMetro);
-  if (!config || typeof config !== 'object') throw new Error('Frame needs an object or promise from metro.config');
+  if (config && typeof config.then === 'function') return config.then(exports.withSparkMetro);
+  if (!config || typeof config !== 'object') throw new Error('Spark needs an object or promise from metro.config');
   const upstream = defaults.get(path.resolve(config.projectRoot || process.cwd()));
-  if (!upstream) throw new Error('Compose Metro with getDefaultConfig from @legendapp/frame-cli/src/expo-metro.cjs');
+  if (!upstream) throw new Error('Compose Metro with getDefaultConfig from @legendapp/spark-cli/src/expo-metro.cjs');
   const customResolve = config.resolver?.resolveRequest;
   if (customResolve && customResolve !== upstream.resolveRequest) {
     const desktopResolve = upstream.resolveRequest;

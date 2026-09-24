@@ -1,6 +1,6 @@
 import { useEffect, useRef } from "react";
 import { Text, View } from "react-native";
-import { createMediaSession, type MediaSession } from "@legendapp/frame-audio";
+import { createMediaSession, type MediaSession } from "@legendapp/spark-audio";
 import { ActionButton } from "./ActionButton";
 import { EventResults, useEventResults } from "./EventResults";
 export function MediaSessionDemo({ report }: { report: (value: unknown) => void }) {
@@ -11,7 +11,7 @@ export function MediaSessionDemo({ report }: { report: (value: unknown) => void 
   return <View style={{ gap: 8 }}>
     <Text className="text-foreground">System media controls (external-engine demo)</Text>
     <ActionButton onPress={async () => {
-      const next = await createMediaSession({ metadata: { title: "Kitchen Sink", artist: "Frame" }, playbackState: "paused", duration: 120,
+      const next = await createMediaSession({ metadata: { title: "Kitchen Sink", artist: "Spark" }, playbackState: "paused", duration: 120,
         commands: ["play", "pause", "nextTrack", "previousTrack", "seekTo"] }, command => {
           log(command);
           if (command.command === "play" || command.command === "pause") void session.current?.update({ playbackState: command.command === "play" ? "playing" : "paused" }).catch(log);

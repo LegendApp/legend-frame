@@ -1,17 +1,17 @@
 import { fileConflict } from "./contract-cases";
 import { runAPIChecks } from "./api-checks";
 import { runIntegrationChecks } from "./integration-checks";
-import * as app from "@legendapp/frame/app";
-import * as windows from "@legendapp/frame/windows";
-import * as files from "@legendapp/frame/files";
-import { settings } from "@legendapp/frame/settings";
-import * as clipboard from "@legendapp/frame/clipboard";
-import * as links from "@legendapp/frame/links";
-import * as secureStore from "@legendapp/frame/secure-storage";
-import { registerShortcut } from "@legendapp/frame/shortcuts";
-import { showContextMenu } from "@legendapp/frame/context-menu";
-import { configureMenus, clearMenus, addNativeMenuActionListener } from "@legendapp/frame/menus";
-import { openFileDialog, saveFileDialog, readTextFile, writeTextFile, writeTextFileIfUnchanged } from "@legendapp/frame/dialogs";
+import * as app from "@legendapp/spark/app";
+import * as windows from "@legendapp/spark/windows";
+import * as files from "@legendapp/spark/files";
+import { settings } from "@legendapp/spark/settings";
+import * as clipboard from "@legendapp/spark/clipboard";
+import * as links from "@legendapp/spark/links";
+import * as secureStore from "@legendapp/spark/secure-storage";
+import { registerShortcut } from "@legendapp/spark/shortcuts";
+import { showContextMenu } from "@legendapp/spark/context-menu";
+import { configureMenus, clearMenus, addNativeMenuActionListener } from "@legendapp/spark/menus";
+import { openFileDialog, saveFileDialog, readTextFile, writeTextFile, writeTextFileIfUnchanged } from "@legendapp/spark/dialogs";
 import type { TestDriver } from "./test-driver";
 export type Check = { name: string; passed: boolean; error?: string; duration: number };
 const delay = (ms: number) => new Promise(resolve => setTimeout(resolve, ms));
@@ -43,11 +43,11 @@ export async function runChecks(onResult: (result: Check) => void | Promise<void
     await check("app: identity and runtime metadata", async () => {
       const context = await app.getAppContext();
       assert(context.projectId.length && context.name.length && context.runtime.mode, "Missing host identity");
-      assert(context.runtime.modules?.["@legendapp/frame-desktop-app"], "Host core missing from runtime inventory");
+      assert(context.runtime.modules?.["@legendapp/spark-desktop-app"], "Host core missing from runtime inventory");
     });
     await check("files: scoped directories, text, binary, stat, list, copy, move, deletion", async () => {
       const data = await files.getDirectory("data"); const cache = await files.getDirectory("cache");
-      assert(data !== cache && data.includes("frame.desktop."), "Directories are not namespaced");
+      assert(data !== cache && data.includes("spark.desktop."), "Directories are not namespaced");
       await files.writeText(`${root}/text.txt`, "Hello 🌍\n");
       assert(await files.readText(`${root}/text.txt`) === "Hello 🌍\n", "UTF-8 roundtrip");
       assert((await files.stat(`${root}/text.txt`)).type === "file", "File stat");
@@ -139,7 +139,7 @@ export async function runChecks(onResult: (result: Check) => void | Promise<void
     });
     await check("links: URL resolution and recent-document listing", async () => {
       assert(await links.canOpenURL("https://example.com"), "No HTTPS handler");
-      assert(!await links.canOpenURL("frame-sdk-unknown-scheme://test"), "Unexpected scheme handler");
+      assert(!await links.canOpenURL("spark-sdk-unknown-scheme://test"), "Unexpected scheme handler");
       await links.clearRecentDocuments();
       try {
         const url = `file://${root}/text.txt`;
@@ -212,11 +212,11 @@ export async function runChecks(onResult: (result: Check) => void | Promise<void
       });
       await check("links: cold and warm delivery through AppDelegate", async () => {
         const seen: links.OpenEvent[] = [];
-        await driverCall("openURLs", { urls: [`frame-test://${token}/cold`] });
+        await driverCall("openURLs", { urls: [`spark-test://${token}/cold`] });
         const sub = await links.onOpen(event => { seen.push(event); });
         try {
           await until(() => seen.some(event => event.url.endsWith("/cold")), "Queued launch was lost");
-          await driverCall("openURLs", { urls: [`frame-test://${token}/warm`, `file://${root}/text.txt`] });
+          await driverCall("openURLs", { urls: [`spark-test://${token}/warm`, `file://${root}/text.txt`] });
           await until(() => seen.some(event => event.type === "openFile") && seen.some(event => event.url.endsWith("/warm")), "Warm events missing");
           assert(seen.filter(event => event.url.endsWith("/cold")).length === 1, "Queued launch duplicated");
         } finally { sub.remove(); }

@@ -9,8 +9,8 @@ import { run } from "../packages/cli/src/commands.ts";
 import { architecture } from "../packages/cli/src/platform.ts";
 
 const { values } = parseArgs({ args: process.argv.slice(2), options: { project: { type: "string" }, "prepare-only": { type: "boolean" } } });
-const root = path.resolve(values.project ?? ".frame/windows-probe/WindowsProbe");
-const cli = path.join(root, "node_modules/@legendapp/frame-cli/src/index.ts");
+const root = path.resolve(values.project ?? ".spark/windows-probe/WindowsProbe");
+const cli = path.join(root, "node_modules/@legendapp/spark-cli/src/index.ts");
 const prepareOnly = !!values["prepare-only"];
 if (!prepareOnly && process.platform !== "win32") throw new Error("Run the native verifier on Windows x64 or ARM64, or pass --prepare-only to check generation and bundles here.");
 if (existsSync(path.join(root, "package.json"))) throw new Error("Choose a fresh --project directory; this test installs a native fixture.");
@@ -22,7 +22,7 @@ let originalApp: string | undefined;
 let proof: any;
 const token = crypto.randomUUID();
 function startSession(extra: string[] = []) {
-  const child = Bun.spawn(["bun", cli, "dev", "--project", root, ...extra], { cwd: root, env: { ...process.env, FRAME_SESSION_TOKEN: token }, stdin: "pipe", stdout: "pipe", stderr: "pipe" });
+  const child = Bun.spawn(["bun", cli, "dev", "--project", root, ...extra], { cwd: root, env: { ...process.env, SPARK_SESSION_TOKEN: token }, stdin: "pipe", stdout: "pipe", stderr: "pipe" });
   for (const stream of [child.stdout, child.stderr]) void (async () => {
     for await (const chunk of stream) appendFileSync(stateFile(root, "logs/windows-session.log"), chunk);
   })();
@@ -31,7 +31,7 @@ function startSession(extra: string[] = []) {
 async function wait(check: () => boolean | Promise<boolean>, message: string, timeout = 120000) {
   const end = Date.now() + timeout;
   while (Date.now() < end) {
-    if (session && session.exitCode !== null) throw new Error("frame dev exited; inspect .frame/logs/windows-session.log");
+    if (session && session.exitCode !== null) throw new Error("spark dev exited; inspect .spark/logs/windows-session.log");
     if (await check()) return;
     await Bun.sleep(250);
   }
@@ -60,13 +60,13 @@ try {
     if (runtimeFor(root, nativePackages(root), "go").fingerprint !== baseline.fingerprint) throw new Error("Native fingerprint changed during prebuild");
     pass();
   } else {
-    stage("Build and register the prebuilt runtime with frame sdk build-prebuilt");
+    stage("Build and register the prebuilt runtime with spark sdk build-prebuilt");
     await run(root, ["bun", cli, "sdk", "build-prebuilt", "--project", root]);
     go = readJson(stateFile(root, "go-build.json"));
     goHash = digest(readFileSync(path.join(go.app, "MyApp.exe")).toString("base64"));
     pass({ app: go.app });
     server = Bun.serve({ hostname: "127.0.0.1", port: 0, async fetch(request) {
-      if (request.method !== "POST" || request.headers.get("x-frame-token") !== token) return new Response("Wrong session", { status: 403 });
+      if (request.method !== "POST" || request.headers.get("x-spark-token") !== token) return new Response("Wrong session", { status: 403 });
       proof = await request.json();
       return new Response("ok");
     } });
@@ -76,16 +76,16 @@ try {
 import { View, Text, Button, TurboModuleRegistry } from "react-native";
 import marker from "./Marker";
 import { greeting } from "./WindowsExtra";
-const host = TurboModuleRegistry.getEnforcing<any>("NativeFrameRuntime");
+const host = TurboModuleRegistry.getEnforcing<any>("NativeSparkRuntime");
 export default function App() {
   const [clicks, setClicks] = useState(0);
   useEffect(() => {
-    void fetch("http://127.0.0.1:${server.port}", { method: "POST", headers: { "Content-Type": "application/json", "x-frame-token": host.session() }, body: JSON.stringify({ native: JSON.parse(host.describe()), marker, greeting: greeting(), hermes: !!(globalThis as any).HermesInternal }) });
+    void fetch("http://127.0.0.1:${server.port}", { method: "POST", headers: { "Content-Type": "application/json", "x-spark-token": host.session() }, body: JSON.stringify({ native: JSON.parse(host.describe()), marker, greeting: greeting(), hermes: !!(globalThis as any).HermesInternal }) });
   }, [marker]);
   return <View><Text>{marker}</Text><Button title={String(clicks)} onPress={() => setClicks(v => v + 1)} /></View>;
 }
 `);
-    stage("Launch through frame dev and execute the native core with Hermes");
+    stage("Launch through spark dev and execute the native core with Hermes");
     mkdirSync(stateFile(root, "logs"), { recursive: true });
     session = startSession(["--prebuilt-binary", go.app]);
     await wait(() => proof?.marker === "initial", "The native prebuilt app did not report");
@@ -96,21 +96,21 @@ export default function App() {
     await wait(() => proof?.marker === "refreshed", "Fast Refresh did not reach the native app"); pass(proof);
   }
   stage("Install the existing native-greeting fixture and invalidate prebuilt");
-  const archive = path.resolve(path.dirname(manifest), readJson(manifest)["@legendapp/frame-native-greeting"]);
+  const archive = path.resolve(path.dirname(manifest), readJson(manifest)["@legendapp/spark-native-greeting"]);
   await run(root, ["bun", "add", archive]);
   const issues = incompatible(baseline, nativePackages(root), "windows");
-  if (!issues.includes("@legendapp/frame-native-greeting")) throw new Error("Shared compatibility check did not detect the new module");
+  if (!issues.includes("@legendapp/spark-native-greeting")) throw new Error("Shared compatibility check did not detect the new module");
   if (prepareOnly) {
-    writeFileSync(path.join(root, "App.tsx"), 'import React from "react";\nimport { Text } from "react-native";\nimport { getGreeting } from "@legendapp/frame-native-greeting";\nexport default function App() { return <Text>{getGreeting()}</Text>; }\n');
+    writeFileSync(path.join(root, "App.tsx"), 'import React from "react";\nimport { Text } from "react-native";\nimport { getGreeting } from "@legendapp/spark-native-greeting";\nexport default function App() { return <Text>{getGreeting()}</Text>; }\n');
     pass(issues);
     stage("Prebuild and bundle the custom Windows graph");
     await prepareWindows(root, "dev"); await bundle(); pass();
   } else {
     await wait(() => {
       try { const s = readJson(stateFile(root, "session.json")); return s.target === "go" && !s.compatible && s.reason.includes("native-greeting"); } catch { return false; }
-    }, "frame dev did not reject the incompatible prebuilt runtime");
+    }, "spark dev did not reject the incompatible prebuilt runtime");
     pass(issues);
-    writeFileSync(path.join(root, "WindowsExtra.ts"), 'import { getGreeting } from "@legendapp/frame-native-greeting";\nexport const greeting = getGreeting;\n');
+    writeFileSync(path.join(root, "WindowsExtra.ts"), 'import { getGreeting } from "@legendapp/spark-native-greeting";\nexport const greeting = getGreeting;\n');
     stage("Build explicitly and reopen through Expo's noninteractive development session");
     session!.kill();
     await session!.exited;

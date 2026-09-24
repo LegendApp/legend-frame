@@ -26,7 +26,7 @@ explicit rebuild.
 JavaScript dependencies do not include a native executable. There is no hosted
 prebuilt download service yet. If a matching runtime is already registered, the
 run command uses it without compiling. You can register one supplied by another
-machine with `bunx --no-install frame sdk register <runtime-directory>`.
+machine with `bunx --no-install spark sdk register <runtime-directory>`.
 
 To build and register a matching prebuilt runtime locally, run one of these **once**
 with the platform's native toolchain installed, and again after native changes:
@@ -44,7 +44,7 @@ port. An old incompatible runtime stays gated until you explicitly rebuild; star
 never silently compiles. See [Windows setup and acceptance](../../docs/windows-slice.md).
 
 The application identity and configuration live in `desktop.config.json`. Switching
-platforms preserves them. Generated native projects and `.frame` state stay local
+platforms preserves them. Generated native projects and `.spark` state stay local
 and ignored by Git. The example currently exercises desktop-only APIs; the separate
 Settings example demonstrates mobile/web sharing.
 
@@ -52,7 +52,7 @@ Settings example demonstrates mobile/web sharing.
 
 From the repository root, `bun run kitchen-sink` is a shortcut for this app's `dev`
 script. `bun run kitchen-sink:prepare` deliberately packs the SDK and creates a
-separate consumer under `.frame/examples/KitchenSinkPackaged` for integration tests.
+separate consumer under `.spark/examples/KitchenSinkPackaged` for integration tests.
 It never overwrites this app's manifest, identity, or native projects.
 
 External-library adapter changes use `bun run sync:workspace-patches`, then

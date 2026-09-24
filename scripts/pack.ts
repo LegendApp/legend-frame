@@ -36,4 +36,4 @@ for (const dir of packages) {
 writeJson(path.join(output, "manifest.json"), manifest);
 await packTemplates(root, output, manifest);
 registerPackages(path.join(output, "manifest.json"));
-console.log("Local SDK packages registered. Create an app with frame create MyApp.");
+console.log("Local SDK packages registered. Create an app with spark create MyApp.");

@@ -1,4 +1,4 @@
-import * as files from "@legendapp/frame-file-system";
+import * as files from "@legendapp/spark-file-system";
 import { settingsFilename } from "./filename";
 import { createSettingsStore } from "./store";
 export { createSettingsStore, type Json, type SettingsStorage } from "./store";

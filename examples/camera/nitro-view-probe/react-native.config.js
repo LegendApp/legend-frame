@@ -1,1 +1,1 @@
-module.exports = { dependency: { platforms: { macos: { podspecPath: __dirname + '/FrameNitroProbe.podspec' } } } };
+module.exports = { dependency: { platforms: { macos: { podspecPath: __dirname + '/SparkNitroProbe.podspec' } } } };

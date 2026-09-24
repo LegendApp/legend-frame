@@ -39,7 +39,7 @@ Arguments/results use JSON serialization in this pinned version. Use plain seria
 New projects have the required Metro wrapper and worker-aware entry. No app config flag, config plugin or manual native-module manifest entry is needed.
 
 - prebuilt and custom dev builds include the SDK's patched Runtimes and Nitro native code. Workers start lazily.
-- `frame build` / `frame package` first bundle the actual application with worker registrations suppressed. They then generate registrations from reachable source files, rebundle, and select native modules from that graph.
+- `spark build` / `spark package` first bundle the actual application with worker registrations suppressed. They then generate registrations from reachable source files, rebundle, and select native modules from that graph.
 - If the app does not import Runtimes, production excludes its JS, native pod and native startup hook. Nitro is also excluded unless another retained native package requires it.
 - Files left in `src/` or `tasks.ts`, installed SDK packages and development-generated registrations do not by themselves retain Runtimes in production. Imports used only inside reachable worker functions retain their native dependencies.
 - This is module reachability, not per-function dead-code elimination. An imported module that imports Runtimes retains it even if one exported function is never called. An explicit native `include` override remains authoritative.
@@ -49,20 +49,20 @@ Only source modules reachable from the app are worker entry points in production
 
 ## Existing projects
 
-Replace `@legendapp/frame/runtimes` imports with `@react-native-runtimes/core`. The previous framework `createRuntime` helper has been removed; use upstream `ThreadedRuntime.run(name, task, ...args)` and `ThreadedRuntime.destroy(name)` as above. Declare core in the app dependencies when migrating an older project with `bun add @react-native-runtimes/core@0.1.0-alpha.2`; retain the SDK-pinned archive override installed by the SDK refresh.
+Replace `@legendapp/spark/runtimes` imports with `@react-native-runtimes/core`. The previous framework `createRuntime` helper has been removed; use upstream `ThreadedRuntime.run(name, task, ...args)` and `ThreadedRuntime.destroy(name)` as above. Declare core in the app dependencies when migrating an older project with `bun add @react-native-runtimes/core@0.1.0-alpha.2`; retain the SDK-pinned archive override installed by the SDK refresh.
 
 Refreshing local SDK packages upgrades the exact original generated entry/Metro pair. For customized projects, compose these changes manually while retaining your other configuration:
 
 ```js
 // metro.config.js
 const { makeMetroConfig } = require("expo-desktop-metro-config");
-const { withDesktop } = require("@legendapp/frame-cli/src/metro.cjs");
+const { withDesktop } = require("@legendapp/spark-cli/src/metro.cjs");
 module.exports = withDesktop(makeMetroConfig(__dirname));
 ```
 
 ```ts
 // index.ts — do not eagerly import your main App in secondary runtimes.
-require("@legendapp/frame-cli/src/runtime-entry.cjs");
+require("@legendapp/spark-cli/src/runtime-entry.cjs");
 if (!(globalThis as any).__THREADED_RUNTIME_ENV__) {
   const { registerRootComponent } = require("expo");
   registerRootComponent(require("./App").default);
@@ -79,11 +79,11 @@ The SDK pack step fetches Margelo's repository at `58710c25c6e505dcc1292ee54d855
 
 ```sh
 bun run pack:local
-bun run frame sdk build-prebuilt
-bun run test:runtimes /tmp/FrameRuntimesProbe --prebuilt
-bun run test:runtimes /tmp/FrameRuntimesProbe
-bun run test:runtimes /tmp/FrameRuntimesProbe --release
-bun run test:runtimes:pruning /tmp/FrameRuntimesProbe
+bun run spark sdk build-prebuilt
+bun run test:runtimes /tmp/SparkRuntimesProbe --prebuilt
+bun run test:runtimes /tmp/SparkRuntimesProbe
+bun run test:runtimes /tmp/SparkRuntimesProbe --release
+bun run test:runtimes:pruning /tmp/SparkRuntimesProbe
 ```
 
 `bun run test:runtimes:all` prepares the prebuilt runtime and runs the complete matrix; it is also included in `test:all`.

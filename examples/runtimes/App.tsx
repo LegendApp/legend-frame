@@ -1,12 +1,12 @@
 import React, { useEffect, useRef, useState } from "react";
 import { Button, DevSettings, ScrollView, Text, View } from "react-native";
 import { ThreadedRuntime } from "@react-native-runtimes/core";
-import { getDirectory, writeText, remove, exists } from "@legendapp/frame/files";
+import { getDirectory, writeText, remove, exists } from "@legendapp/spark/files";
 import { identify, heavy, echo, fail, readNativeFile } from "./tasks";
 import KitchenSink from "./KitchenSink";
 
 type Result = { name: string; passed: boolean; detail?: unknown; error?: string };
-const worker = "frame-background-proof";
+const worker = "spark-background-proof";
 function assert(value: unknown, message: string): asserts value { if (!value) throw new Error(message); }
 function Heartbeat() {
   const [ticks, setTicks] = useState(0);
@@ -17,7 +17,7 @@ export default function App(props: { launchArguments?: string[] }) {
   const [results, setResults] = useState<Result[]>([]), [running, setRunning] = useState(false), [kitchen, setKitchen] = useState(false);
   const started = useRef(false);
   const args = props.launchArguments ?? [];
-  const reportIndex = args.indexOf("--frame-runtimes-report");
+  const reportIndex = args.indexOf("--spark-runtimes-report");
   const reportPath = reportIndex >= 0 ? args[reportIndex + 1] : undefined;
   async function run() {
     if (started.current) return;
@@ -30,7 +30,7 @@ export default function App(props: { launchArguments?: string[] }) {
       setResults([...output]);
     };
     try {
-      if (reportPath && args.includes("--frame-runtimes-reload")) {
+      if (reportPath && args.includes("--spark-runtimes-reload")) {
         const marker = `${reportPath}.before-reload`;
         if (!(await exists(marker))) {
           await ThreadedRuntime.run("reload-survivor", identify);

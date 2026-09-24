@@ -24,7 +24,7 @@
 #pragma comment(lib, "Shell32.lib")
 #pragma comment(lib, "Shlwapi.lib")
 #pragma comment(lib, "Shcore.lib")
-namespace FrameWin {
+namespace SparkWin {
 namespace React = winrt::Microsoft::ReactNative;
 namespace Json = winrt::Windows::Data::Json;
 namespace UI = winrt::Microsoft::UI::Windowing;
@@ -33,7 +33,7 @@ struct WindowResources : winrt::implements<WindowResources, React::Composition::
   int theme = -1;
   winrt::event<winrt::Windows::Foundation::EventHandler<winrt::Windows::Foundation::IInspectable>> changed;
   void GetResource(winrt::hstring const &id, React::Composition::ResourceType, React::Composition::CustomResourceResult const &result) {
-    if (id == L"FrameWindowTheme") result.Resource(winrt::box_value(winrt::Windows::UI::Color{static_cast<uint8_t>(theme < 0 ? 0 : 255), static_cast<uint8_t>(theme == 1 ? 255 : 0), 0, 0}));
+    if (id == L"SparkWindowTheme") result.Resource(winrt::box_value(winrt::Windows::UI::Color{static_cast<uint8_t>(theme < 0 ? 0 : 255), static_cast<uint8_t>(theme == 1 ? 255 : 0), 0, 0}));
   }
   winrt::event_token ResourcesChanged(winrt::Windows::Foundation::EventHandler<winrt::Windows::Foundation::IInspectable> const &handler) { return changed.add(handler); }
   void ResourcesChanged(winrt::event_token const &token) noexcept { changed.remove(token); }
@@ -166,13 +166,13 @@ static void ApplyAppearance(Window &window) {
   if (!window.resources) { window.resources = winrt::make_self<WindowResources>(); window.view.ReactNativeIsland().Resources(window.resources.as<React::Composition::ICustomResourceLoader>()); }
   window.resources->SetTheme(window.theme);
 }
-static std::filesystem::path FrameFile(std::string const &id) {
+static std::filesystem::path SparkFile(std::string const &id) {
   return dataDirectory / (id == "main" ? L"window.json" : L"window-" + std::wstring(to_hstring(id)) + L".json");
 }
 static void RestoreFrame(std::string const &id) {
   auto &window = windows.at(id); if (!window.restoreFrame) return;
   try {
-    std::ifstream stream(FrameFile(id)); std::string text((std::istreambuf_iterator<char>(stream)), std::istreambuf_iterator<char>());
+    std::ifstream stream(SparkFile(id)); std::string text((std::istreambuf_iterator<char>(stream)), std::istreambuf_iterator<char>());
     auto frame = Json::JsonObject::Parse(to_hstring(text));
     double x = frame.GetNamedNumber(L"x"), y = frame.GetNamedNumber(L"y");
     if (!std::isfinite(x) || !std::isfinite(y) || std::abs(x) > INT32_MAX / 2 || std::abs(y) > INT32_MAX / 2) return;
@@ -243,7 +243,7 @@ static void QueueLaunch(std::wstring const &commandLine, bool initial) {
   else Emit({{"type", "secondInstance"}});
   for (int i = 1; i < count; ++i) {
     std::wstring candidate(argv[i]);
-    if (candidate.rfind(L"--frame-dock-action=", 0) == 0) {
+    if (candidate.rfind(L"--spark-dock-action=", 0) == 0) {
       auto payload = candidate.substr(21); auto separator = payload.find(L':');
       if (separator != std::wstring::npos) try { Emit({{"type", "dockAction"}, {"owner", to_string(winrt::Windows::Foundation::Uri::UnescapeComponent(payload.substr(0, separator)))}, {"id", to_string(winrt::Windows::Foundation::Uri::UnescapeComponent(payload.substr(separator + 1)))}}); } catch (...) {}
       continue;
@@ -263,14 +263,14 @@ static void QueueLaunch(std::wstring const &commandLine, bool initial) {
 // crash; a slow/hung owner must never cause us to start a second notebook writer.
 static winrt::handle instanceMutex;
 static std::wstring ProjectKey() {
-  auto identity = FrameWindowsEnv(L"FRAME_PROJECT_ID");
-  if (identity.empty()) throw winrt::hresult_invalid_argument(L"Missing Frame project identity");
+  auto identity = SparkWindowsEnv(L"SPARK_PROJECT_ID");
+  if (identity.empty()) throw winrt::hresult_invalid_argument(L"Missing Spark project identity");
   auto algorithm = winrt::Windows::Security::Cryptography::Core::HashAlgorithmProvider::OpenAlgorithm(winrt::Windows::Security::Cryptography::Core::HashAlgorithmNames::Sha256());
   auto bytes = winrt::Windows::Security::Cryptography::CryptographicBuffer::ConvertStringToBinary(identity, winrt::Windows::Security::Cryptography::BinaryStringEncoding::Utf8);
   return std::wstring(winrt::Windows::Security::Cryptography::CryptographicBuffer::EncodeToHexString(algorithm.HashData(bytes)));
 }
 static bool ForwardLaunch() {
-  auto key = L"Frame.Project." + ProjectKey();
+  auto key = L"Spark.Project." + ProjectKey();
   instanceMutex.attach(CreateMutexW(nullptr, FALSE, (L"Local\\" + key).c_str()));
   if (!instanceMutex) winrt::throw_last_error();
   const auto deadline = GetTickCount64() + 60000;
@@ -284,18 +284,18 @@ static bool ForwardLaunch() {
       DWORD process = 0; GetWindowThreadProcessId(search.target, &process); AllowSetForegroundWindow(process);
       auto text = GetCommandLineW(); COPYDATASTRUCT data{0x4C47, static_cast<DWORD>((wcslen(text) + 1) * sizeof(wchar_t)), text}; DWORD_PTR result = 0;
       if (!SendMessageTimeoutW(search.target, WM_COPYDATA, 0, reinterpret_cast<LPARAM>(&data), SMTO_ABORTIFHUNG | SMTO_BLOCK, 5000, &result) || !result)
-        throw winrt::hresult_error(HRESULT_FROM_WIN32(ERROR_TIMEOUT), L"The existing Frame app did not accept this launch. Close it before retrying.");
+        throw winrt::hresult_error(HRESULT_FROM_WIN32(ERROR_TIMEOUT), L"The existing Spark app did not accept this launch. Close it before retrying.");
       return true;
     }
     if (GetTickCount64() >= deadline)
-      throw winrt::hresult_error(HRESULT_FROM_WIN32(ERROR_TIMEOUT), L"The existing Frame app is still starting. A second instance was not opened.");
+      throw winrt::hresult_error(HRESULT_FROM_WIN32(ERROR_TIMEOUT), L"The existing Spark app is still starting. A second instance was not opened.");
     // Waiting for the main window also covers simultaneous first launches.
     Sleep(50);
   }
 }
 static void SaveFrame(std::string const &id, HWND hwnd) {
   if (dataDirectory.empty() || !windows.at(id).restoreFrame || IsIconic(hwnd) || IsZoomed(hwnd) || windows.at(id).fullscreen) return;
-  auto file = FrameFile(id), temporary = file; temporary += L".pending";
+  auto file = SparkFile(id), temporary = file; temporary += L".pending";
   auto text = to_string(Info(id).GetNamedObject(L"frame").Stringify()); std::ofstream stream(temporary, std::ios::binary | std::ios::trunc); stream << text; stream.close();
   if (stream) MoveFileExW(temporary.c_str(), file.c_str(), MOVEFILE_REPLACE_EXISTING | MOVEFILE_WRITE_THROUGH);
 }
@@ -352,8 +352,8 @@ static LRESULT CALLBACK WindowProc(HWND hwnd, UINT message, WPARAM wParam, LPARA
 }
 static void Attach(std::string id, React::ReactNativeWindow view) {
   Window window; window.view = view; window.app = view.AppWindow(); window.normal = window.app.Presenter().as<UI::OverlappedPresenter>(); window.monitor = MonitorFromWindow(Hwnd(window), MONITOR_DEFAULTTONEAREST); windows.emplace(id, window);
-  SetPropW(Hwnd(window), (L"Frame.Window." + std::wstring(to_hstring(id))).c_str(), reinterpret_cast<HANDLE>(1));
-  SetPropW(Hwnd(window), L"Frame.ReactWindow", reinterpret_cast<HANDLE>(1));
+  SetPropW(Hwnd(window), (L"Spark.Window." + std::wstring(to_hstring(id))).c_str(), reinterpret_cast<HANDLE>(1));
+  SetPropW(Hwnd(window), L"Spark.ReactWindow", reinterpret_cast<HANDLE>(1));
   if (id == "main") SetNotificationWindow(Hwnd(window));
   auto app = window.app;
   app.Changed([id](auto const &, auto const &) { WindowTransitions(id); });
@@ -446,7 +446,7 @@ static void RebuildMenus() {
         }
       }
       AppendMenuW(popup, flags, command, title.c_str());
-      actions.emplace(command++, React::JSValueObject{{"ownerId", to_string(item.GetNamedString(L"_frameOwner", to_hstring(menuOwner)))}, {"menuId", to_string(item.GetNamedString(L"_frameMenu", menu.GetNamedString(L"id")))}, {"itemId", to_string(item.GetNamedString(L"id"))}, {"payload", Value(item.GetNamedObject(L"payload", Json::JsonObject()))}});
+      actions.emplace(command++, React::JSValueObject{{"ownerId", to_string(item.GetNamedString(L"_sparkOwner", to_hstring(menuOwner)))}, {"menuId", to_string(item.GetNamedString(L"_sparkMenu", menu.GetNamedString(L"id")))}, {"itemId", to_string(item.GetNamedString(L"id"))}, {"payload", Value(item.GetNamedObject(L"payload", Json::JsonObject()))}});
     }
     AppendMenuW(next, MF_POPUP, reinterpret_cast<UINT_PTR>(popup), MenuTitle(menu.GetNamedString(L"title")).c_str());
   }
@@ -464,15 +464,15 @@ static void Initialize(React::ReactNativeWin32App const &app) {
   // AsyncStorage's documented override supports unpackaged Win32 applications.
   PWSTR raw = nullptr; winrt::check_hresult(SHGetKnownFolderPath(FOLDERID_LocalAppData, 0, nullptr, &raw));
   std::filesystem::path directory(raw); CoTaskMemFree(raw);
-  auto identity = FrameWindowsEnv(L"FRAME_PROJECT_ID"); if (identity.empty()) throw winrt::hresult_invalid_argument(L"Missing Frame project identity");
+  auto identity = SparkWindowsEnv(L"SPARK_PROJECT_ID"); if (identity.empty()) throw winrt::hresult_invalid_argument(L"Missing Spark project identity");
   auto algorithm = winrt::Windows::Security::Cryptography::Core::HashAlgorithmProvider::OpenAlgorithm(winrt::Windows::Security::Cryptography::Core::HashAlgorithmNames::Sha256());
   auto bytes = winrt::Windows::Security::Cryptography::CryptographicBuffer::ConvertStringToBinary(identity, winrt::Windows::Security::Cryptography::BinaryStringEncoding::Utf8);
   auto safe = winrt::Windows::Security::Cryptography::CryptographicBuffer::EncodeToHexString(algorithm.HashData(bytes));
-  directory /= L"Frame"; directory /= std::wstring(safe); std::filesystem::create_directories(directory); dataDirectory = directory;
-  SetPropW(Hwnd(windows.at("main")), (L"Frame.Project." + ProjectKey()).c_str(), reinterpret_cast<HANDLE>(1));
-  winrt::check_hresult(SetCurrentProcessExplicitAppUserModelID((L"Frame." + ProjectKey()).c_str()));
+  directory /= L"Spark"; directory /= std::wstring(safe); std::filesystem::create_directories(directory); dataDirectory = directory;
+  SetPropW(Hwnd(windows.at("main")), (L"Spark.Project." + ProjectKey()).c_str(), reinterpret_cast<HANDLE>(1));
+  winrt::check_hresult(SetCurrentProcessExplicitAppUserModelID((L"Spark." + ProjectKey()).c_str()));
   QueueLaunch(GetCommandLineW(), true);
-  auto config = Json::JsonObject::Parse(winrt::hstring(FrameWindowsEnv(L"FRAME_WINDOW_CONFIG").empty() ? L"{}" : FrameWindowsEnv(L"FRAME_WINDOW_CONFIG")));
+  auto config = Json::JsonObject::Parse(winrt::hstring(SparkWindowsEnv(L"SPARK_WINDOW_CONFIG").empty() ? L"{}" : SparkWindowsEnv(L"SPARK_WINDOW_CONFIG")));
   auto appWindow = windows.at("main").app;
   Json::JsonObject style;
   style.SetNamedValue(L"width", Json::JsonValue::CreateNumberValue(config.GetNamedNumber(L"width", 1000)));
@@ -485,16 +485,16 @@ static void Initialize(React::ReactNativeWin32App const &app) {
   winrt::Windows::ApplicationModel::Core::CoreApplication::Properties().Insert(L"React-Native-Community-Async-Storage-Database-Path", winrt::box_value(winrt::hstring((directory / L"AsyncStorage.db").wstring())));
 }
 }
-REACT_MODULE(FrameDesktopApp, L"NativeDesktopApp")
-struct FrameDesktopApp {
+REACT_MODULE(SparkDesktopApp, L"NativeDesktopApp")
+struct SparkDesktopApp {
   REACT_INIT(Initialize)
-  void Initialize(winrt::Microsoft::ReactNative::ReactContext const &context) noexcept { if (context.Properties().Get(winrt::Microsoft::ReactNative::ReactPropertyId<bool>{L"Frame", L"SecondaryRuntime"}).value_or(false)) return; FrameWin::context = context; FrameWin::quitGuard = false; FrameWin::quitPending = false; FrameWin::shortcuts.clear(); for (auto &[id, window] : FrameWin::windows) { window.guard = false; window.pending = false; } }
+  void Initialize(winrt::Microsoft::ReactNative::ReactContext const &context) noexcept { if (context.Properties().Get(winrt::Microsoft::ReactNative::ReactPropertyId<bool>{L"Spark", L"SecondaryRuntime"}).value_or(false)) return; SparkWin::context = context; SparkWin::quitGuard = false; SparkWin::quitPending = false; SparkWin::shortcuts.clear(); for (auto &[id, window] : SparkWin::windows) { window.guard = false; window.pending = false; } }
   REACT_METHOD(addListener) void addListener(std::string) noexcept {}
   REACT_METHOD(removeListeners) void removeListeners(double) noexcept {}
   REACT_METHOD(call)
   void call(std::string method, std::string encoded, winrt::Microsoft::ReactNative::ReactPromise<std::string> promise) noexcept {
-    FrameWin::context.UIDispatcher().Post([method, encoded, promise]() {
-      using namespace FrameWin;
+    SparkWin::context.UIDispatcher().Post([method, encoded, promise]() {
+      using namespace SparkWin;
       try {
         auto args = Json::JsonObject::Parse(to_hstring(encoded));
         if (method == "notificationResponses") { promise.Resolve(NotificationResponses()); return; }
@@ -505,7 +505,7 @@ struct FrameDesktopApp {
         } else if (method == "hide") HideApplication();
         else if (method == "activate") ActivateApplication();
         else if (method == "context") {
-          Json::JsonObject result; result.SetNamedValue(L"projectId", Json::JsonValue::CreateStringValue(FrameWindowsEnv(L"FRAME_PROJECT_ID"))); result.SetNamedValue(L"name", Json::JsonValue::CreateStringValue(FrameWindowsEnv(L"FRAME_PROJECT_NAME"))); result.SetNamedValue(L"version", Json::JsonValue::CreateStringValue(FrameWindowsEnv(L"FRAME_PROJECT_VERSION"))); result.SetNamedValue(L"runtime", Json::JsonObject::Parse(to_hstring(NativeFrameRuntime{}.describe()))); result.SetNamedValue(L"launchArguments", launchArguments); promise.Resolve(to_string(result.Stringify())); return;
+          Json::JsonObject result; result.SetNamedValue(L"projectId", Json::JsonValue::CreateStringValue(SparkWindowsEnv(L"SPARK_PROJECT_ID"))); result.SetNamedValue(L"name", Json::JsonValue::CreateStringValue(SparkWindowsEnv(L"SPARK_PROJECT_NAME"))); result.SetNamedValue(L"version", Json::JsonValue::CreateStringValue(SparkWindowsEnv(L"SPARK_PROJECT_VERSION"))); result.SetNamedValue(L"runtime", Json::JsonObject::Parse(to_hstring(NativeSparkRuntime{}.describe()))); result.SetNamedValue(L"launchArguments", launchArguments); promise.Resolve(to_string(result.Stringify())); return;
         } else if (method == "pendingURLs") { promise.Resolve(to_string(pendingURLs.Stringify())); return; }
         else if (method == "initialURL") { promise.Resolve(initialURL.empty() ? "null" : to_string(Json::JsonValue::CreateStringValue(to_hstring(initialURL)).Stringify())); return; }
         else throw winrt::hresult_invalid_argument(L"Unsupported application operation");
@@ -514,13 +514,13 @@ struct FrameDesktopApp {
     });
   }
 };
-REACT_MODULE(FrameDesktopWindows, L"NativeDesktopWindowManager")
-struct FrameDesktopWindows {
-  REACT_INIT(Initialize) void Initialize(winrt::Microsoft::ReactNative::ReactContext const &context) noexcept { if (context.Properties().Get(winrt::Microsoft::ReactNative::ReactPropertyId<bool>{L"Frame", L"SecondaryRuntime"}).value_or(false)) return; FrameWin::context = context; }
+REACT_MODULE(SparkDesktopWindows, L"NativeDesktopWindowManager")
+struct SparkDesktopWindows {
+  REACT_INIT(Initialize) void Initialize(winrt::Microsoft::ReactNative::ReactContext const &context) noexcept { if (context.Properties().Get(winrt::Microsoft::ReactNative::ReactPropertyId<bool>{L"Spark", L"SecondaryRuntime"}).value_or(false)) return; SparkWin::context = context; }
   REACT_METHOD(call)
   void call(std::string method, std::string encoded, winrt::Microsoft::ReactNative::ReactPromise<std::string> promise) noexcept {
-    FrameWin::context.UIDispatcher().Post([method, encoded, promise]() {
-      using namespace FrameWin;
+    SparkWin::context.UIDispatcher().Post([method, encoded, promise]() {
+      using namespace SparkWin;
       try {
         auto args = Json::JsonObject::Parse(to_hstring(encoded)); auto id = to_string(args.GetNamedString(L"id", L"main"));
         if (method == "open") {
@@ -538,7 +538,7 @@ struct FrameDesktopWindows {
           if (!parentId.empty() && !windows.count(parentId)) { promise.Reject(React::ReactError{"E_NOT_FOUND", "Parent window not found"}); return; }
           if (modal) for (auto const &[childId, child] : windows) if (child.parentId == parentId && child.modal) { promise.Reject(React::ReactError{"E_BUSY", "Parent already has a modal window"}); return; }
           auto view = React::ReactNativeWindow::CreateFromCompositor(compositor); auto app = view.AppWindow();
-          app.Title(args.GetNamedString(L"title", FrameWindowsEnv(L"FRAME_PROJECT_NAME"))); app.Resize({static_cast<int32_t>(args.GetNamedNumber(L"width", 640)), static_cast<int32_t>(args.GetNamedNumber(L"height", 480))});
+          app.Title(args.GetNamedString(L"title", SparkWindowsEnv(L"SPARK_PROJECT_NAME"))); app.Resize({static_cast<int32_t>(args.GetNamedNumber(L"width", 640)), static_cast<int32_t>(args.GetNamedNumber(L"height", 480))});
           React::ReactViewOptions options; options.ComponentName(L"main");
           Json::JsonObject props; props.SetNamedValue(L"windowId", Json::JsonValue::CreateStringValue(to_hstring(id))); props.SetNamedValue(L"windowProps", args.GetNamedObject(L"props", Json::JsonObject()));
           // Write JSON props through the public JSValue writer contract.
@@ -600,15 +600,15 @@ struct FrameDesktopWindows {
     });
   }
 };
-REACT_MODULE(FrameDesktopShortcuts, L"NativeDesktopShortcuts")
-struct FrameDesktopShortcuts {
-  REACT_INIT(Initialize) void Initialize(winrt::Microsoft::ReactNative::ReactContext const &context) noexcept { if (context.Properties().Get(winrt::Microsoft::ReactNative::ReactPropertyId<bool>{L"Frame", L"SecondaryRuntime"}).value_or(false)) return; FrameWin::context = context; }
+REACT_MODULE(SparkDesktopShortcuts, L"NativeDesktopShortcuts")
+struct SparkDesktopShortcuts {
+  REACT_INIT(Initialize) void Initialize(winrt::Microsoft::ReactNative::ReactContext const &context) noexcept { if (context.Properties().Get(winrt::Microsoft::ReactNative::ReactPropertyId<bool>{L"Spark", L"SecondaryRuntime"}).value_or(false)) return; SparkWin::context = context; }
   REACT_METHOD(addListener) void addListener(std::string) noexcept {}
   REACT_METHOD(removeListeners) void removeListeners(double) noexcept {}
   REACT_METHOD(call)
   void call(std::string method, std::string encoded, winrt::Microsoft::ReactNative::ReactPromise<std::string> promise) noexcept {
-    FrameWin::context.UIDispatcher().Post([method, encoded, promise]() {
-      using namespace FrameWin;
+    SparkWin::context.UIDispatcher().Post([method, encoded, promise]() {
+      using namespace SparkWin;
       try { auto args = Json::JsonObject::Parse(to_hstring(encoded)); auto id = to_string(args.GetNamedString(L"id"));
         if (method == "remove") shortcuts.erase(id);
         else if (method == "register") {
@@ -620,27 +620,27 @@ struct FrameDesktopShortcuts {
     });
   }
 };
-REACT_MODULE(FrameNativeMenu, L"NativeMenu")
-struct FrameNativeMenu {
-  REACT_INIT(Initialize) void Initialize(winrt::Microsoft::ReactNative::ReactContext const &context) noexcept { if (context.Properties().Get(winrt::Microsoft::ReactNative::ReactPropertyId<bool>{L"Frame", L"SecondaryRuntime"}).value_or(false)) return; FrameWin::context = context; }
+REACT_MODULE(SparkNativeMenu, L"NativeMenu")
+struct SparkNativeMenu {
+  REACT_INIT(Initialize) void Initialize(winrt::Microsoft::ReactNative::ReactContext const &context) noexcept { if (context.Properties().Get(winrt::Microsoft::ReactNative::ReactPropertyId<bool>{L"Spark", L"SecondaryRuntime"}).value_or(false)) return; SparkWin::context = context; }
   REACT_METHOD(addListener) void addListener(std::string) noexcept {}
   REACT_METHOD(removeListeners) void removeListeners(double) noexcept {}
-  REACT_METHOD(configureMenus) void configureMenus(std::string owner, std::string json) noexcept { FrameWin::context.UIDispatcher().Post([owner, json]() { FrameWin::menuOwner = owner; FrameWin::menus = FrameWin::Json::JsonArray::Parse(winrt::to_hstring(json)); FrameWin::RebuildMenus(); }); }
-  REACT_METHOD(clearMenus) void clearMenus(std::string owner) noexcept { FrameWin::context.UIDispatcher().Post([owner]() { if (owner == FrameWin::menuOwner) { FrameWin::menus.Clear(); FrameWin::RebuildMenus(); } }); }
-  REACT_METHOD(clearAllMenus) void clearAllMenus() noexcept { clearMenus(FrameWin::menuOwner); }
-  REACT_METHOD(updateMenuItems) void updateMenuItems(std::string owner, std::string json) noexcept { FrameWin::context.UIDispatcher().Post([owner, json]() {
-    if (owner != FrameWin::menuOwner) return; auto patches = FrameWin::Json::JsonArray::Parse(winrt::to_hstring(json));
-    for (auto const &menu : FrameWin::menus) for (auto const &value : menu.GetObject().GetNamedArray(L"items")) for (auto const &patchValue : patches) { auto item = value.GetObject(), patch = patchValue.GetObject(); if (item.GetNamedString(L"id") == patch.GetNamedString(L"id")) for (auto const &pair : patch) item.SetNamedValue(pair.Key(), pair.Value()); }
-    FrameWin::RebuildMenus();
+  REACT_METHOD(configureMenus) void configureMenus(std::string owner, std::string json) noexcept { SparkWin::context.UIDispatcher().Post([owner, json]() { SparkWin::menuOwner = owner; SparkWin::menus = SparkWin::Json::JsonArray::Parse(winrt::to_hstring(json)); SparkWin::RebuildMenus(); }); }
+  REACT_METHOD(clearMenus) void clearMenus(std::string owner) noexcept { SparkWin::context.UIDispatcher().Post([owner]() { if (owner == SparkWin::menuOwner) { SparkWin::menus.Clear(); SparkWin::RebuildMenus(); } }); }
+  REACT_METHOD(clearAllMenus) void clearAllMenus() noexcept { clearMenus(SparkWin::menuOwner); }
+  REACT_METHOD(updateMenuItems) void updateMenuItems(std::string owner, std::string json) noexcept { SparkWin::context.UIDispatcher().Post([owner, json]() {
+    if (owner != SparkWin::menuOwner) return; auto patches = SparkWin::Json::JsonArray::Parse(winrt::to_hstring(json));
+    for (auto const &menu : SparkWin::menus) for (auto const &value : menu.GetObject().GetNamedArray(L"items")) for (auto const &patchValue : patches) { auto item = value.GetObject(), patch = patchValue.GetObject(); if (item.GetNamedString(L"id") == patch.GetNamedString(L"id")) for (auto const &pair : patch) item.SetNamedValue(pair.Key(), pair.Value()); }
+    SparkWin::RebuildMenus();
   }); }
 };
 
 // Development clients never update themselves. Match the macOS development API
 // without implying Windows standalone distribution is implemented.
-REACT_MODULE(FrameDesktopUpdates, L"NativeDesktopUpdates")
-struct FrameDesktopUpdates {
+REACT_MODULE(SparkDesktopUpdates, L"NativeDesktopUpdates")
+struct SparkDesktopUpdates {
   REACT_METHOD(call) void call(std::string method, std::string, winrt::Microsoft::ReactNative::ReactPromise<std::string> promise) noexcept {
-    if (method == "status") promise.Resolve(std::string("{\"available\":false,\"started\":false,\"canCheck\":false,\"automaticallyChecks\":false,\"reason\":\"") + (FrameWindowsEnv(L"FRAME_RUNTIME_MODE") == L"go" ? "go" : "development") + "\"}");
+    if (method == "status") promise.Resolve(std::string("{\"available\":false,\"started\":false,\"canCheck\":false,\"automaticallyChecks\":false,\"reason\":\"") + (SparkWindowsEnv(L"SPARK_RUNTIME_MODE") == L"go" ? "go" : "development") + "\"}");
     else promise.Reject(winrt::Microsoft::ReactNative::ReactError{"E_UPDATES_UNAVAILABLE", "Updates are unavailable in a development runtime"});
   }
 };

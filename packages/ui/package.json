@@ -1,5 +1,5 @@
 {
-  "name": "@legendapp/frame-ui",
+  "name": "@legendapp/spark-ui",
   "version": "0.1.0-prototype.0",
   "license": "MIT",
   "main": "src/index",
@@ -28,21 +28,21 @@
     }
   },
   "codegenConfig": {
-    "name": "RNFrameUISpec",
+    "name": "RNSparkUISpec",
     "type": "components",
     "jsSrcsDir": "src",
     "ios": {
       "componentProvider": {
-        "FrameButton": "RNFrameButton",
-        "FrameTextInput": "RNFrameTextInput",
-        "FrameSelect": "RNFrameSelect"
+        "SparkButton": "RNSparkButton",
+        "SparkTextInput": "RNSparkTextInput",
+        "SparkSelect": "RNSparkSelect"
       }
     }
   },
-  "frame": {
+  "spark": {
     "sdk": true,
     "nativeModules": [],
-    "pod": "RNFrameUI",
+    "pod": "RNSparkUI",
     "platforms": [
       "macos",
       "windows"

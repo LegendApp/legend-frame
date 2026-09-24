@@ -1,5 +1,5 @@
 import Native from "./NativeDesktopUpdates";
-import { onDesktopEvent } from "@legendapp/frame-desktop-app";
+import { onDesktopEvent } from "@legendapp/spark-desktop-app";
 
 export type UpdateStatus = {
   available: boolean;

@@ -1,29 +1,29 @@
 import path from "node:path";
-import { prepareConfig, selectTarget, supportedPlatforms } from "@legendapp/frame-desktop-config/config.cjs";
+import { prepareConfig, selectTarget, supportedPlatforms } from "@legendapp/spark-desktop-config/config.cjs";
 import { dev } from "./dev";
 import { findProject } from "./local";
 import { hostPlatform } from "./platform";
 import { nodeCommand } from "./windows";
 
-// Consume only frame options. Expo validates its flags, aliases and values.
+// Consume only spark options. Expo validates its flags, aliases and values.
 export function devArguments(args: string[]) {
-  const frame: { project?: string; platform?: string; prebuiltBinary?: string; noOpen?: boolean } = {};
+  const spark: { project?: string; platform?: string; prebuiltBinary?: string; noOpen?: boolean } = {};
   const expo: string[] = [];
   for (let i = 0; i < args.length; i++) {
     const arg = args[i]!;
     const [key, ...inline] = arg.split("=");
     if (key === "--no-open") {
       if (inline.length) throw new Error("--no-open does not take a value");
-      frame.noOpen = true;
+      spark.noOpen = true;
     } else if (["--project", "--platform", "--prebuilt-binary", "--go-binary"].includes(key!)) {
       const value = inline.length ? inline.join("=") : args[++i];
       if (!value || value.startsWith("-")) throw new Error(`${key} needs a value`);
-      if (key === "--project") frame.project = value;
-      else if (key === "--platform") frame.platform = value;
-      else frame.prebuiltBinary = value;
+      if (key === "--project") spark.project = value;
+      else if (key === "--platform") spark.platform = value;
+      else spark.prebuiltBinary = value;
     } else expo.push(arg);
   }
-  return { ...frame, expo };
+  return { ...spark, expo };
 }
 
 export function devTargets(platforms: string[], initial?: string, host = hostPlatform()) {
@@ -37,16 +37,16 @@ export async function devCommand(args: string[]) {
   const options = devArguments(args);
   const start = path.resolve(options.project ?? process.cwd());
   if (options.expo.includes("--help") || options.expo.includes("-h")) {
-    console.log("frame dev options:\n  --project <directory>    Application directory\n  --platform <platform>    Initial launch target; all declared platforms stay available\n  --prebuilt-binary <path>  Register and use a prebuilt desktop runtime\n  --no-open                Wait for a launch key (explicit Expo launch flags still apply)\n\nAll other options belong to expo start:\n");
+    console.log("spark dev options:\n  --project <directory>    Application directory\n  --platform <platform>    Initial launch target; all declared platforms stay available\n  --prebuilt-binary <path>  Register and use a prebuilt desktop runtime\n  --no-open                Wait for a launch key (explicit Expo launch flags still apply)\n\nAll other options belong to expo start:\n");
     const child = Bun.spawn(nodeCommand(start, "expo", "expo", ["start", "--help"]), { cwd: start, stdin: "inherit", stdout: "inherit", stderr: "inherit" });
     process.exitCode = await child.exited;
     return;
   }
   const root = findProject(start);
-  const { desktop, initial } = devTargets(supportedPlatforms(root), options.platform ?? process.env.FRAME_PLATFORM);
+  const { desktop, initial } = devTargets(supportedPlatforms(root), options.platform ?? process.env.SPARK_PLATFORM);
   // This selects only desktop build/signature state in the supervisor. Expo's
   // child uses shared development config and chooses each JS graph per request.
-  process.env.FRAME_PLATFORM = desktop ?? initial;
+  process.env.SPARK_PLATFORM = desktop ?? initial;
   const expo = [...options.expo];
   if (!options.noOpen && ["ios", "android", "web"].includes(initial)) expo.push(`--${initial}`);
   if (desktop) {
@@ -55,7 +55,7 @@ export async function devCommand(args: string[]) {
     if (options.prebuiltBinary) throw new Error("--prebuilt-binary needs a desktop platform in desktop.config.json");
     prepareConfig(root);
     const child = Bun.spawn(nodeCommand(root, "expo", "expo", ["start", root, ...expo]), {
-      cwd: root, env: { ...process.env, FRAME_DEV_SESSION: "1" }, stdin: "inherit", stdout: "inherit", stderr: "inherit",
+      cwd: root, env: { ...process.env, SPARK_DEV_SESSION: "1" }, stdin: "inherit", stdout: "inherit", stderr: "inherit",
     });
     const stop = () => child.kill();
     process.on("SIGINT", stop); process.on("SIGTERM", stop);

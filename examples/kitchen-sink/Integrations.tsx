@@ -2,10 +2,10 @@ import { ActionButton } from "./ActionButton";
 import { EventResults, useEventResults } from "./EventResults";
 import React, { useEffect, useRef, useState } from "react";
 import { Text, View } from "react-native";
-import * as notifications from "@legendapp/frame/notifications";
-import { createTray } from "@legendapp/frame/tray";
-import * as updates from "@legendapp/frame/updates";
-import { showWindow } from "@legendapp/frame/windows";
+import * as notifications from "@legendapp/spark/notifications";
+import { createTray } from "@legendapp/spark/tray";
+import * as updates from "@legendapp/spark/updates";
+import { showWindow } from "@legendapp/spark/windows";
 
 export function Integrations({ report }: { report: (value: unknown) => void }) {
   const [permission, setPermission] = useState<string>("Loading…");

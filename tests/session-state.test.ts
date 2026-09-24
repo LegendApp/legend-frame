@@ -5,8 +5,8 @@ import path from "node:path";
 import { writeJson } from "../packages/cli/src/project.ts";
 
 test("repeated runtime checks leave unchanged session files untouched but publish compatibility changes", () => {
-  const root = mkdtempSync(path.join(os.tmpdir(), "frame-session-"));
-  const file = path.join(root, ".frame/session.json");
+  const root = mkdtempSync(path.join(os.tmpdir(), "spark-session-"));
+  const file = path.join(root, ".spark/session.json");
   const state = { compatible: true, reason: "Fast Refresh enabled", target: "go", port: 19120 };
   try {
     writeJson(file, state);

@@ -17,7 +17,7 @@ export const io: DocumentIO = {
     const directory = FileSystem.documentDirectory;
     if (!directory) throw new Error("Document storage is unavailable");
     const name = file.name.replace(/[^a-zA-Z0-9._-]/g, "_") || "Untitled.txt";
-    const location = `${directory}frame-${name}`;
+    const location = `${directory}spark-${name}`;
     await FileSystem.writeAsStringAsync(location, text);
     await Sharing.shareAsync(location, { mimeType: "text/plain", UTI: "public.plain-text" });
     // Save commits the app's durable copy, regardless of share-sheet dismissal.

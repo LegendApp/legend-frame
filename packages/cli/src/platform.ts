@@ -1,7 +1,7 @@
 import { existsSync } from "node:fs";
 import path from "node:path";
 import { machine } from "node:os";
-import { readConfig } from "@legendapp/frame-desktop-config/config.cjs";
+import { readConfig } from "@legendapp/spark-desktop-config/config.cjs";
 export type AppPlatform = "ios" | "android" | "web" | DesktopPlatform;
 export type DesktopPlatform = "macos" | "windows";
 export const hostPlatform = (): DesktopPlatform => process.platform === "win32" ? "windows" : "macos";
@@ -11,10 +11,10 @@ export function windowsArchitecture(
   machineArch: string = machine(),
   env: Partial<NodeJS.ProcessEnv> = process.env,
 ): WindowsArchitecture {
-  const explicit = env.FRAME_WINDOWS_ARCH?.toLowerCase();
+  const explicit = env.SPARK_WINDOWS_ARCH?.toLowerCase();
   if (explicit !== undefined) {
     if (explicit === "arm64" || explicit === "x64") return explicit;
-    throw new Error("FRAME_WINDOWS_ARCH must be arm64 or x64.");
+    throw new Error("SPARK_WINDOWS_ARCH must be arm64 or x64.");
   }
   // Use the OS CPU rather than process.arch: Node/Bun may run under emulation.
   if (host === "win32") {

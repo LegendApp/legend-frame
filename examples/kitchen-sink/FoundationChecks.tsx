@@ -1,13 +1,13 @@
 import { useEffect, useRef } from "react";
 import { Text, View, TurboModuleRegistry, type TurboModule } from "react-native";
-import { DragDropView, type DropEvent, type DragOverEvent } from "@legendapp/frame/drag-drop";
-import { writeText } from "@legendapp/frame/files";
-import { openWindow, closeWindow } from "@legendapp/frame/windows";
+import { DragDropView, type DropEvent, type DragOverEvent } from "@legendapp/spark/drag-drop";
+import { writeText } from "@legendapp/spark/files";
+import { openWindow, closeWindow } from "@legendapp/spark/windows";
 import type { TestDriver } from "./test-driver";
 const testDriver = TurboModuleRegistry.get<TestDriver & TurboModule>("NativeSDKTestDriver");
 import { runFoundationChecks } from "./foundation-checks";
-const source = { data: { "application/x-frame-test-item": '{"id":42}' } };
-const types = ["application/x-frame-test-item"];
+const source = { data: { "application/x-spark-test-item": '{"id":42}' } };
+const types = ["application/x-spark-test-item"];
 const move: "move"[] = ["move"];
 export function FoundationChecks({ report }: { report: string }) {
   const drag = useRef<{ drop?: DropEvent; over?: DragOverEvent; operation?: string }>({});
@@ -25,7 +25,7 @@ export function FoundationChecks({ report }: { report: string }) {
           await check("AppKit overlay is transparent, borderless, nonactivating and status-level", async () => {
             try {
               await openWindow({ id: "foundation-overlay", kind: "overlay", width: 340, height: 140 });
-              const info = JSON.parse(await driver.call("overlayInfo", JSON.stringify({ identifier: "frame.foundation-overlay" })));
+              const info = JSON.parse(await driver.call("overlayInfo", JSON.stringify({ identifier: "spark.foundation-overlay" })));
               if (!info.panel || info.canBecomeKey || !info.borderless || !info.transparent || !info.statusLevel) throw new Error(JSON.stringify(info));
             } finally { await closeWindow("foundation-overlay"); }
           });

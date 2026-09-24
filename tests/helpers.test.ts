@@ -4,9 +4,9 @@ import os from "node:os";
 import path from "node:path";
 import { copyHelpers, resolveHelpers, type Helpers } from "../packages/cli/src/helpers";
 import { runtimeFor } from "../packages/cli/src/project";
-import { toExpo } from "@legendapp/frame-desktop-config/config.cjs";
+import { toExpo } from "@legendapp/spark-desktop-config/config.cjs";
 function fixture(run: (root: string) => void) {
-  const root = mkdtempSync(path.join(os.tmpdir(), "frame-helpers-"));
+  const root = mkdtempSync(path.join(os.tmpdir(), "spark-helpers-"));
   try { for (const target of ["mac", "win"]) { mkdirSync(path.join(root, target, "bin"), { recursive: true }); writeFileSync(path.join(root, target, "bin/backend"), target); writeFileSync(path.join(root, target, "data.json"), "{}"); } run(root); }
   finally { rmSync(root, { recursive: true, force: true }); }
 }
@@ -21,7 +21,7 @@ test("helper selection uses target architecture and fingerprints all assets", ()
   copyHelpers(root, path.join(root, "App.app"), helpers);
   const output = path.join(root, "App.app/Contents/Helpers/backend.helper");
   expect(existsSync(path.join(output, "empty"))).toBe(true);
-  expect(readFileSync(path.join(output, ".frame-entry"), "utf8")).toBe("bin/backend");
+  expect(readFileSync(path.join(output, ".spark-entry"), "utf8")).toBe("bin/backend");
   expect(readFileSync(path.join(output, "data.json"), "utf8")).toBe("{}");
   copyHelpers(root, path.join(root, "App.app"), {});
   expect(existsSync(output)).toBe(false);
@@ -35,7 +35,7 @@ test("helper bundles reject escaping paths, parent symlinks and asset symlinks",
 }));
 test("configuration accepts target bundles and catches invalid declarations early", () => {
   const base = { name: "Helpers", projectId: "helpers", version: "1", macos: { bundleIdentifier: "com.test.helpers" } };
-  expect(toExpo({ ...base, helpers }).expo.extra.frame.helpers).toEqual(helpers);
+  expect(toExpo({ ...base, helpers }).expo.extra.spark.helpers).toEqual(helpers);
   for (const value of [{ backend: "mac/bin/backend", BACKEND: "mac/bin/backend" }, { backend: {} }, { backend: { windows: { directory: "win", executable: "backend" } } }, { backend: { "windows-x64": { directory: "win", executable: "backend", typo: true } } }]) expect(() => toExpo({ ...base, helpers: value })).toThrow();
 });
 
@@ -47,5 +47,5 @@ test("changing bundled assets invalidates a custom runtime fingerprint", () => f
   expect(runtimeFor(root, [], "dev").fingerprint).not.toBe(before);
   copyHelpers(root, path.join(root, "Win"), helpers, "windows", "x64");
   expect(readFileSync(path.join(root, "Win/Helpers/backend.helper/bin/backend"), "utf8")).toBe("win");
-  expect(readFileSync(path.join(root, "Win/Helpers/backend.helper/.frame-entry"), "utf8")).toBe("bin/backend");
+  expect(readFileSync(path.join(root, "Win/Helpers/backend.helper/.spark-entry"), "utf8")).toBe("bin/backend");
 }));

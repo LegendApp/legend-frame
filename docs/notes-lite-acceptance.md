@@ -1,6 +1,6 @@
 # Notes Lite acceptance
 
-Create an isolated app with `frame create NotesAcceptance --example notes-lite`,
+Create an isolated app with `spark create NotesAcceptance --example notes-lite`,
 install/select its compatible prebuilt runtime or build a development runtime,
 and run `bun run macos` or `bun run windows`. Use disposable notes. The example
 source is in `packages/cli/templates/notes-lite`; an already-created app does not
@@ -10,7 +10,7 @@ receive template edits automatically.
 
 Run `bun test tests/example-models.test.ts`. It covers snapshot recovery, failed
 save/retry, concurrent close/quit during edits, old notebook compatibility, shared
-view notifications, persisted theme/session, disconnected-display frame fitting,
+view notifications, persisted theme/session, disconnected-display spark fitting,
 idempotent restoration, filtering deleted notes, and retaining the open-window
 set during quit. Window orchestration uses an injected host; these tests do not
 claim OS-native acceptance.

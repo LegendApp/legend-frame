@@ -1,10 +1,10 @@
 # Styling with Uniwind
 
-React Native `style` remains the framework's styling contract. Uniwind is an optional application dependency that adds Tailwind classes; importing `@legendapp/frame-ui` does not load it. The universal Settings starter includes Uniwind 1.6.3 and Tailwind CSS 4.2.4, following the setup in legend-apps. It continues to use the pinned Expo 54 / Expo Desktop beta toolchain.
+React Native `style` remains the framework's styling contract. Uniwind is an optional application dependency that adds Tailwind classes; importing `@legendapp/spark-ui` does not load it. The universal Settings starter includes Uniwind 1.6.3 and Tailwind CSS 4.2.4, following the setup in legend-apps. It continues to use the pinned Expo 54 / Expo Desktop beta toolchain.
 
 ## Application setup
 
-New universal projects are already configured. To add the same setup to a universal project that uses frame's Metro factory:
+New universal projects are already configured. To add the same setup to a universal project that uses spark's Metro factory:
 
 ```sh
 bun add uniwind@1.6.3 tailwindcss@4.2.4
@@ -13,7 +13,7 @@ bun add uniwind@1.6.3 tailwindcss@4.2.4
 ```js
 // metro.config.js
 const { withUniwindConfig } = require('uniwind/metro');
-const { metroConfig } = require('@legendapp/frame-cli/src/universal.cjs');
+const { metroConfig } = require('@legendapp/spark-cli/src/universal.cjs');
 
 module.exports = withUniwindConfig(metroConfig(__dirname), {
   cssEntryFile: './global.css',
@@ -21,7 +21,7 @@ module.exports = withUniwindConfig(metroConfig(__dirname), {
 });
 ```
 
-Wrap your final Metro configuration with `withUniwindConfig`. Existing Expo projects should keep their own configuration and apply this wrapper after any frame composition. Uniwind supplies the CSS transformer and React Native component mapping; frame still delegates platform defaults to Expo or Expo Desktop. frame adds the missing `react-native` package export conditions for macOS/Windows to the pinned Metro defaults, preventing desktop imports from selecting a web runtime. No additional Babel preset or custom styling runtime is needed.
+Wrap your final Metro configuration with `withUniwindConfig`. Existing Expo projects should keep their own configuration and apply this wrapper after any spark composition. Uniwind supplies the CSS transformer and React Native component mapping; spark still delegates platform defaults to Expo or Expo Desktop. spark adds the missing `react-native` package export conditions for macOS/Windows to the pinned Metro defaults, preventing desktop imports from selecting a web runtime. No additional Babel preset or custom styling runtime is needed.
 
 Import `./global.css` once, before application imports in the root entry. Begin that file with:
 
@@ -38,7 +38,7 @@ Keep the generated `uniwind-types.d.ts` in the application's TypeScript includes
 
 ## Kitchen sink
 
-`bun run kitchen-sink` also configures Uniwind while preserving the desktop runtime Metro integration. The header native button cycles System → Light → Dark → System. Every launch begins in System; the selection is shared by React windows in the current JavaScript runtime and is not persisted. Cards, text, editors, status colors, drag targets, and the embedded WebView demo follow the theme. All application action buttons use `@legendapp/frame-ui/uniwind`; the embedded HTML demo retains its browser button. API actions add example-local pending, result, and error feedback below the native button, so responses remain visible without scrolling to the event log. Repeat presses are disabled while an action is pending; the framework Button contract is unchanged. Each event-driven demo also keeps its six most recent events beside the controls: window/file/link activity, menu and shortcut actions, notification responses, tray/Dock choices, update progress, drag/drop, process output, and WebView messages. Process stdout/stderr is decoded as streaming UTF-8; the full event log retains the shared history. The native-controls demo shows its remount count.
+`bun run kitchen-sink` also configures Uniwind while preserving the desktop runtime Metro integration. The header native button cycles System → Light → Dark → System. Every launch begins in System; the selection is shared by React windows in the current JavaScript runtime and is not persisted. Cards, text, editors, status colors, drag targets, and the embedded WebView demo follow the theme. All application action buttons use `@legendapp/spark-ui/uniwind`; the embedded HTML demo retains its browser button. API actions add example-local pending, result, and error feedback below the native button, so responses remain visible without scrolling to the event log. Repeat presses are disabled while an action is pending; the framework Button contract is unchanged. Each event-driven demo also keeps its six most recent events beside the controls: window/file/link activity, menu and shortcut actions, notification responses, tray/Dock choices, update progress, drag/drop, process output, and WebView messages. Process stdout/stderr is decoded as streaming UTF-8; the full event log retains the shared history. The native-controls demo shows its remount count.
 
 ## Components
 
@@ -46,7 +46,7 @@ Ordinary React Native views and text accept classes through Uniwind:
 
 ```tsx
 import { View, Text } from 'react-native';
-import { Button, TextInput } from '@legendapp/frame-ui/uniwind';
+import { Button, TextInput } from '@legendapp/spark-ui/uniwind';
 
 <View className="gap-3 rounded-xl bg-surface p-4">
   <Text className="text-xl font-semibold text-foreground">Profile</Text>
@@ -57,7 +57,7 @@ import { Button, TextInput } from '@legendapp/frame-ui/uniwind';
 
 The optional `/ui/uniwind` entry exports `Button`, `TextInput`, and `Select` wrapped once with upstream `withUniwind` on native platforms. Web uses Uniwind's `useResolveClassNames` so responsive classes override inline default frames correctly. It retains each platform's native backend and original props, adding `className` for its `style` prop. Explicit `style` takes precedence over classes, so measured sizes and dynamic values can remain ordinary React Native styles.
 
-For these native controls, classes allocate the **layout frame**. Use their documented props for native chrome; `text-*`, rounded corners, and background classes do not imply arbitrary styling of the internal AppKit, WinUI, SwiftUI, or Compose control. Style surrounding views/text with classes. Windows fallbacks receive the same frame styles.
+For these native controls, classes allocate the **layout spark**. Use their documented props for native chrome; `text-*`, rounded corners, and background classes do not imply arbitrary styling of the internal AppKit, WinUI, SwiftUI, or Compose control. Style surrounding views/text with classes. Windows fallbacks receive the same spark styles.
 
 ## Appearance and responsive layout
 
@@ -72,7 +72,7 @@ Use standard spacing, size, and responsive utilities for static layout. The Sett
 ## Recorded validation — 2026-09-14
 
 - Workspace and generated consumer TypeScript checks passed; 157 unit/codegen tests passed.
-- The kitchen sink passed all six native UI checks. A separate AppKit action check exercised its real header button through System → Light → Dark → System, verifying the native hit target, 288-point frame, label updates, app colors, and native Appearance.
+- The kitchen sink passed all six native UI checks. A separate AppKit action check exercised its real header button through System → Light → Dark → System, verifying the native hit target, 288-point spark, label updates, app colors, and native Appearance.
 - A fresh packed consumer generated iOS, Android, and Windows projects and bundled Settings for all five targets. Shared CSS, manifests, Metro configuration, and prior generated projects were preserved. Desktop bundles select Uniwind's native runtime.
 - The iOS simulator app built and ran. Native text entry, light/dark/system menu selection, copying preferences, and the themed native controls were checked interactively.
 - Browser input and theme change events passed. At 1100 pixels wide, button frames were 224 pixels; at 500 pixels, they stacked at 434 pixels with no horizontal overflow. Browser controls retain native chrome because the starter omits Tailwind Preflight.

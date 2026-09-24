@@ -3,17 +3,17 @@ import { ActionButton } from "./ActionButton";
 import { EventResults, useEventResults } from "./EventResults";
 import React, { useCallback, useEffect, useRef, useState } from "react";
 import { Alert, ScrollView, StyleSheet, Text, TextInput, View } from "react-native";
-import * as app from "@legendapp/frame/app";
-import * as windows from "@legendapp/frame/windows";
-import * as files from "@legendapp/frame/files";
-import { settings } from "@legendapp/frame/settings";
-import * as clipboard from "@legendapp/frame/clipboard";
-import * as links from "@legendapp/frame/links";
-import * as secureStore from "@legendapp/frame/secure-storage";
-import { registerShortcut } from "@legendapp/frame/shortcuts";
-import { showContextMenu } from "@legendapp/frame/context-menu";
-import { configureMenus, clearMenus, addNativeMenuActionListener } from "@legendapp/frame/menus";
-import { openFileDialog, saveFileDialog, revealInFinder } from "@legendapp/frame/dialogs";
+import * as app from "@legendapp/spark/app";
+import * as windows from "@legendapp/spark/windows";
+import * as files from "@legendapp/spark/files";
+import { settings } from "@legendapp/spark/settings";
+import * as clipboard from "@legendapp/spark/clipboard";
+import * as links from "@legendapp/spark/links";
+import * as secureStore from "@legendapp/spark/secure-storage";
+import { registerShortcut } from "@legendapp/spark/shortcuts";
+import { showContextMenu } from "@legendapp/spark/context-menu";
+import { configureMenus, clearMenus, addNativeMenuActionListener } from "@legendapp/spark/menus";
+import { openFileDialog, saveFileDialog, revealInFinder } from "@legendapp/spark/dialogs";
 import { AuthChecks } from "./AuthChecks";
 import { AudioChecks } from "./AudioChecks";
 import { FileStreamChecks } from "./FileStreamChecks";
@@ -32,21 +32,21 @@ type Props = Partial<app.AppContext> & { windowId?: string; windowProps?: { over
 function argument(args: string[], name: string) { const at = args.indexOf(name); return at < 0 ? undefined : args[at + 1]; }
 export default function App(props: Props) {
   const args = props.launchArguments ?? [];
-  const report = argument(args, "--frame-test-report");
+  const report = argument(args, "--spark-test-report");
   if (props.windowId && props.windowId !== "main") return <SecondaryWindow {...props} />;
-  const authReport = argument(args, "--frame-auth-report");
-  if (authReport) return <AuthChecks report={authReport} provider={argument(args, "--frame-auth-provider")!} />;
-  const audioReport = argument(args, "--frame-audio-report");
-  if (audioReport) return <AudioChecks report={audioReport} source={argument(args, "--frame-audio-source")!} />;
-  const filesReport = argument(args, "--frame-files-report");
+  const authReport = argument(args, "--spark-auth-report");
+  if (authReport) return <AuthChecks report={authReport} provider={argument(args, "--spark-auth-provider")!} />;
+  const audioReport = argument(args, "--spark-audio-report");
+  if (audioReport) return <AudioChecks report={audioReport} source={argument(args, "--spark-audio-source")!} />;
+  const filesReport = argument(args, "--spark-files-report");
   if (filesReport) return <FileStreamChecks report={filesReport} />;
-  const foundationReport = argument(args, "--frame-foundation-report");
+  const foundationReport = argument(args, "--spark-foundation-report");
   if (foundationReport) return <FoundationChecks report={foundationReport} />;
-  const uiReport = argument(args, "--frame-ui-report");
+  const uiReport = argument(args, "--spark-ui-report");
   if (uiReport) return <NativeControls report={uiReport} />;
-  const apiReport = argument(args, "--frame-api-report");
-  if (apiReport) return <APIChecks report={apiReport} expectedInitial={argument(args, "--frame-api-initial") ?? null} />;
-  const expansionReport = argument(args, "--frame-expansion-report");
+  const apiReport = argument(args, "--spark-api-report");
+  if (apiReport) return <APIChecks report={apiReport} expectedInitial={argument(args, "--spark-api-initial") ?? null} />;
+  const expansionReport = argument(args, "--spark-expansion-report");
   if (expansionReport) return <ExpansionChecks report={expansionReport} />;
   if (report) return <AutomatedChecks report={report} args={args} />;
   return <KitchenSink {...props} />;
@@ -75,10 +75,10 @@ function AutomatedChecks({ report, args }: { report: string; args: string[] }) {
     // Let the main React window mount before opening secondary roots.
     const timer = setTimeout(() => {
       if (started) return; started = true;
-      void (args.includes("--frame-sidecar-probe") ? runSidecarChecks() : runChecks(async result => { setChecks(previous => [...previous, result]); await files.writeText(`${report}.progress`, JSON.stringify(result)); }, testDriver, argument(args, "--frame-isolation-expect") ? { expect: argument(args, "--frame-isolation-expect") as "absent" | "present", cleanup: args.includes("--frame-isolation-cleanup") } : undefined))
+      void (args.includes("--spark-sidecar-probe") ? runSidecarChecks() : runChecks(async result => { setChecks(previous => [...previous, result]); await files.writeText(`${report}.progress`, JSON.stringify(result)); }, testDriver, argument(args, "--spark-isolation-expect") ? { expect: argument(args, "--spark-isolation-expect") as "absent" | "present", cleanup: args.includes("--spark-isolation-cleanup") } : undefined))
         .then(async result => {
           await files.writeText(report, JSON.stringify(result, null, 2));
-          if (args.includes("--frame-test-quit-on-complete")) { await new Promise(resolve => setTimeout(resolve, 2500)); await app.beforeQuit(() => true); await app.quit(); }
+          if (args.includes("--spark-test-quit-on-complete")) { await new Promise(resolve => setTimeout(resolve, 2500)); await app.beforeQuit(() => true); await app.quit(); }
         })
         .catch(error => files.writeText(report, JSON.stringify({ passed: false, error: String(error), results: [] })));
     }, 500);

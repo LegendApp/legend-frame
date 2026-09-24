@@ -7,13 +7,13 @@ import { availablePort, findGo } from "../packages/cli/src/local";
 import { readJson, writeJson, prepareConfig, projectEnvironment, nativePackages, incompatible } from "../packages/cli/src/project";
 
 const framework = path.resolve(import.meta.dir, "..");
-const root = path.resolve(process.argv[2] ?? ".frame/runtimes-probe/FrameRuntimesProbe");
+const root = path.resolve(process.argv[2] ?? ".spark/runtimes-probe/SparkRuntimesProbe");
 const mode = process.argv.includes("--release") ? "release" : "dev";
 const prepareOnly = process.argv.includes("--prepare-only");
 await prepareKitchenSink(root);
 cpSync(path.join(root, "App.tsx"), path.join(root, "KitchenSink.tsx"));
 cpSync(path.join(framework, "examples/runtimes"), root, { recursive: true });
-const directory = path.join(root, ".frame/runtimes-proof"); mkdirSync(directory, { recursive: true });
+const directory = path.join(root, ".spark/runtimes-proof"); mkdirSync(directory, { recursive: true });
 const pkg = readJson(path.join(root, "package.json"));
 pkg.dependencies["@react-native-runtimes/core"] = pkg.overrides["@react-native-runtimes/core"];
 delete pkg.dependencies["react-native-nitro-modules"];
@@ -27,7 +27,7 @@ writeJson(path.join(root, "tsconfig.json"), { extends: "expo/tsconfig.base", com
 if (prepareOnly) { console.log(`Prepared ${root}`); process.exit(0); }
 const prebuilt = process.argv.includes("--prebuilt") || process.argv.includes("--go");
 const result = prebuilt ? findGo(nativePackages(root)) : await build(root, mode, process.argv.includes("--force"));
-if (!result || (prebuilt && incompatible(result.runtime, nativePackages(root)).length)) throw new Error("Build a compatible prebuilt runtime with frame sdk build-prebuilt first.");
+if (!result || (prebuilt && incompatible(result.runtime, nativePackages(root)).length)) throw new Error("Build a compatible prebuilt runtime with spark sdk build-prebuilt first.");
 const port = await availablePort();
 const report = path.join(directory, `${prebuilt ? "go" : mode}.json`); rmSync(report, { force: true });
 rmSync(`${report}.before-reload`, { force: true });
@@ -35,7 +35,7 @@ let metro: ReturnType<typeof Bun.spawn> | undefined;
 let app: ReturnType<typeof Bun.spawn> | undefined;
 try {
   if (mode === "dev") {
-    writeJson(path.join(root, ".frame/session.json"), { compatible: true, target: "test", port });
+    writeJson(path.join(root, ".spark/session.json"), { compatible: true, target: "test", port });
     const log = Bun.file(path.join(directory, "metro.log"));
     metro = Bun.spawn([binary(root, "expo"), "start", "--localhost", "--port", String(port), "--max-workers", "2"], { cwd: root, env: { ...process.env, CI: "1" }, stdout: log, stderr: log });
     let ready = false;
@@ -48,7 +48,7 @@ try {
   }
   const executable = (await run(root, ["/usr/libexec/PlistBuddy", "-c", "Print CFBundleExecutable", path.join(result.app, "Contents/Info.plist")], { capture: true })).trim();
   const log = Bun.file(path.join(directory, `${mode}.log`));
-  app = Bun.spawn([path.join(result.app, "Contents/MacOS", executable), "-RCT_jsLocation", `127.0.0.1:${port}`, "--frame-runtimes-report", report, ...(mode === "dev" ? ["--frame-runtimes-reload"] : [])], { cwd: root, env: { ...process.env, ...projectEnvironment(root), FRAME_BUNDLE_URL: `http://127.0.0.1:${port}/index.bundle?platform=macos&dev=true&minify=false` }, stdout: log, stderr: log });
+  app = Bun.spawn([path.join(result.app, "Contents/MacOS", executable), "-RCT_jsLocation", `127.0.0.1:${port}`, "--spark-runtimes-report", report, ...(mode === "dev" ? ["--spark-runtimes-reload"] : [])], { cwd: root, env: { ...process.env, ...projectEnvironment(root), SPARK_BUNDLE_URL: `http://127.0.0.1:${port}/index.bundle?platform=macos&dev=true&minify=false` }, stdout: log, stderr: log });
   if (process.argv.includes("--interactive")) {
     process.once("SIGINT", () => app?.kill());
     process.once("SIGTERM", () => app?.kill());
@@ -70,5 +70,5 @@ try {
 } finally {
   if (app) { app.kill(); await app.exited; }
   if (metro) { metro.kill(); await metro.exited; }
-  rmSync(path.join(root, ".frame/session.json"), { force: true });
+  rmSync(path.join(root, ".spark/session.json"), { force: true });
 }

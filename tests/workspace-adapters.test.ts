@@ -4,9 +4,9 @@ import path from "node:path";
 import os from "node:os";
 import { installWorkspaceAdapters } from "../scripts/install-workspace-adapters";
 function fixture() {
-  const root = mkdtempSync(path.join(os.tmpdir(), "frame-workspace-adapter-"));
+  const root = mkdtempSync(path.join(os.tmpdir(), "spark-workspace-adapter-"));
   const pkg = path.join(root, "node_modules/probe"); mkdirSync(pkg, { recursive: true });
-  writeFileSync(path.join(root, "package.json"), JSON.stringify({ dependencies: { probe: "1.0.0" }, frameWorkspacePatches: { "probe@1.0.0": "probe.patch" } }));
+  writeFileSync(path.join(root, "package.json"), JSON.stringify({ dependencies: { probe: "1.0.0" }, sparkWorkspacePatches: { "probe@1.0.0": "probe.patch" } }));
   writeFileSync(path.join(pkg, "package.json"), JSON.stringify({ name: "probe", version: "1.0.0" }));
   writeFileSync(path.join(root, "cache.js"), "old\n"); linkSync(path.join(root, "cache.js"), path.join(pkg, "index.js"));
   writeFileSync(path.join(root, "probe.patch"), "diff --git a/index.js b/index.js\n--- a/index.js\n+++ b/index.js\n@@ -1 +1 @@\n-old\n+new\ndiff --git a/windows/nested/module.cpp b/windows/nested/module.cpp\nnew file mode 100644\n--- /dev/null\n+++ b/windows/nested/module.cpp\n@@ -0,0 +1 @@\n+native\n");

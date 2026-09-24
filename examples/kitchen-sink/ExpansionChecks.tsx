@@ -1,10 +1,10 @@
 import React, { useEffect, useRef } from "react";
 import { Text, View, TurboModuleRegistry, type TurboModule } from "react-native";
-import { WebView } from "@legendapp/frame/webview";
-import { writeText } from "@legendapp/frame/files";
+import { WebView } from "@legendapp/spark/webview";
+import { writeText } from "@legendapp/spark/files";
 import { runExpansionChecks } from "./expansion-checks";
-import { DragDropView } from "@legendapp/frame/drag-drop";
-import { showMessage } from "@legendapp/frame/dialogs";
+import { DragDropView } from "@legendapp/spark/drag-drop";
+import { showMessage } from "@legendapp/spark/dialogs";
 const dragSource = { text: "Drag this text" };
 const driver = TurboModuleRegistry.get<TurboModule & { call(method: string, args: string): Promise<string> }>("NativeSDKTestDriver");
 const source = { html: '<html><body><p id="value">initial</p></body></html>' };

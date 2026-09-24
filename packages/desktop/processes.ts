@@ -1,1 +1,1 @@
-export * from "@legendapp/frame-processes";
+export * from "@legendapp/spark-processes";

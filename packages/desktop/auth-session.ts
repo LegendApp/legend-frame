@@ -1,1 +1,1 @@
-export * from "@legendapp/frame-auth-session";
+export * from "@legendapp/spark-auth-session";

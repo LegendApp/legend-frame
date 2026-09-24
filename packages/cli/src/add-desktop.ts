@@ -5,7 +5,7 @@ import ts from "typescript";
 import { run } from "./commands";
 import { readJson } from "./project";
 
-export const integrationMarker = "// frame: existing Expo project";
+export const integrationMarker = "// spark: existing Expo project";
 
 /** Wrap an existing export without reprinting or moving the application's code. */
 export function composeExport(source: string, file: string, module: string, fn: string, root = true) {
@@ -37,8 +37,8 @@ export function composeMetro(source: string, file: string) {
   }
   visit(parsed);
   if (!replacements.length) throw new Error(`Cannot safely compose ${file}: use Expo's getDefaultConfig before adding desktop support. No files were changed.`);
-  for (const { start, end } of replacements.sort((a, b) => b.start - a.start)) source = source.slice(0, start) + '"@legendapp/frame-cli/src/expo-metro.cjs"' + source.slice(end);
-  return composeExport(source, file, "@legendapp/frame-cli/src/expo-metro.cjs", "withFrameMetro", false);
+  for (const { start, end } of replacements.sort((a, b) => b.start - a.start)) source = source.slice(0, start) + '"@legendapp/spark-cli/src/expo-metro.cjs"' + source.slice(end);
+  return composeExport(source, file, "@legendapp/spark-cli/src/expo-metro.cjs", "withSparkMetro", false);
 }
 
 function packageManager(root: string, pkg: any) {
@@ -69,37 +69,37 @@ export async function addDesktop(root: string, manifestFile: string) {
   }
   const desktopFile = path.join(root, "desktop.config.json");
   if (existsSync(desktopFile)) {
-    if (readJson(desktopFile).extends !== "expo") throw new Error("This app already uses frame-owned configuration; add desktop is for existing Expo projects.");
+    if (readJson(desktopFile).extends !== "expo") throw new Error("This app already uses spark-owned configuration; add desktop is for existing Expo projects.");
     await run(root, [manager, "install"]);
     console.log("Desktop integration already exists; dependencies installed. Existing configuration preserved.");
     return;
   }
-  for (const file of ["macos", "windows"]) if (existsSync(path.join(root, file))) throw new Error(`Existing ${file} project needs explicit host composition before adopting frame. No files were changed.`);
+  for (const file of ["macos", "windows"]) if (existsSync(path.join(root, file))) throw new Error(`Existing ${file} project needs explicit host composition before adopting spark. No files were changed.`);
   const expoRequire = createRequire(req.resolve("expo/package.json"));
   const { getConfig } = expoRequire("@expo/config");
   const base = getConfig(root, { skipPlugins: true }).exp;
-  if (base.newArchEnabled === false) throw new Error("frame's desktop host requires the New Architecture. Align that setting before adding desktop.");
+  if (base.newArchEnabled === false) throw new Error("spark's desktop host requires the New Architecture. Align that setting before adding desktop.");
   const files = new Map<string, string>();
   const configNames = ["app.config.ts", "app.config.js"].filter(file => existsSync(path.join(root, file)));
   if (configNames.length > 1) throw new Error("Keep one dynamic Expo configuration file before adding desktop.");
   const configFile = configNames[0] ?? "app.config.js";
   const configSource = configNames.length ? readFileSync(path.join(root, configFile), "utf8") : "module.exports = ({ config }) => config;\n";
-  files.set(configFile, composeExport(configSource, configFile, "@legendapp/frame-desktop-config/expo.cjs", "withFrameExpo"));
+  files.set(configFile, composeExport(configSource, configFile, "@legendapp/spark-desktop-config/expo.cjs", "withSparkExpo"));
   for (const file of ["metro.config.ts", "metro.config.mjs", "metro.config.cjs", "react-native.config.ts", "react-native.config.cjs"]) {
     if (existsSync(path.join(root, file))) throw new Error(`Compose ${file} explicitly; automatic integration currently supports metro.config.js and react-native.config.js. No files were changed.`);
   }
   const metro = "metro.config.js";
   files.set(metro, composeMetro(existsSync(path.join(root, metro)) ? readFileSync(path.join(root, metro), "utf8") : 'const { getDefaultConfig } = require("expo/metro-config");\nmodule.exports = getDefaultConfig(__dirname);\n', metro));
   const native = "react-native.config.js";
-  files.set(native, composeExport(existsSync(path.join(root, native)) ? readFileSync(path.join(root, native), "utf8") : "module.exports = {};\n", native, "@legendapp/frame-cli/src/expo-native.cjs", "withFrameNative"));
+  files.set(native, composeExport(existsSync(path.join(root, native)) ? readFileSync(path.join(root, native), "utf8") : "module.exports = {};\n", native, "@legendapp/spark-cli/src/expo-native.cjs", "withSparkNative"));
 
   const template = path.resolve(import.meta.dir, "../templates/universal");
   const defaults = readJson(path.join(template, "package.json"));
   const archives = readJson(manifestFile);
-  const local = ["@legendapp/frame-cli", "@legendapp/frame-desktop-config", "@legendapp/frame-desktop-host", "@legendapp/frame-desktop-app", "@legendapp/frame-window-options"];
+  const local = ["@legendapp/spark-cli", "@legendapp/spark-desktop-config", "@legendapp/spark-desktop-host", "@legendapp/spark-desktop-app", "@legendapp/spark-window-options"];
   const dependencies: Record<string, string> = {};
   for (const name of local) {
-    if (!archives[name]) throw new Error(`SDK is missing ${name}; run frame sdk pack first.`);
+    if (!archives[name]) throw new Error(`SDK is missing ${name}; run spark sdk pack first.`);
     const file = path.resolve(path.dirname(manifestFile), archives[name]);
     if (!existsSync(file)) throw new Error(`Missing SDK archive: ${file}`);
     dependencies[name] = file;
@@ -109,7 +109,7 @@ export async function addDesktop(root: string, manifestFile: string) {
   }
   pkg.dependencies ??= {};
   for (const [name, version] of Object.entries(dependencies)) {
-    if (["@legendapp/frame-desktop-app", "@legendapp/frame-window-options"].includes(name)) continue;
+    if (["@legendapp/spark-desktop-app", "@legendapp/spark-window-options"].includes(name)) continue;
     const previous = pkg.dependencies[name] ?? pkg.devDependencies?.[name];
     if (previous && previous !== version) throw new Error(`Existing ${name} dependency conflicts with the tested desktop version. Resolve it explicitly before retrying. No files were changed.`);
     if (!previous) pkg.dependencies[name] = version;
@@ -122,8 +122,8 @@ export async function addDesktop(root: string, manifestFile: string) {
   owner[overrideField] = { ...owner[overrideField], ...overrides };
   pkg.scripts ??= {};
   for (const platform of ["macos", "windows"]) {
-    const name = pkg.scripts[platform] ? `frame:${platform}` : platform;
-    const command = `frame dev --platform ${platform}`;
+    const name = pkg.scripts[platform] ? `spark:${platform}` : platform;
+    const command = `spark dev --platform ${platform}`;
     if (pkg.scripts[name] && pkg.scripts[name] !== command) throw new Error(`Script ${name} already exists; resolve the script conflict before adding desktop.`);
     pkg.scripts[name] = command;
   }
@@ -134,14 +134,14 @@ export async function addDesktop(root: string, manifestFile: string) {
   desktop.extends = "expo";
   desktop.projectId = projectId;
   desktop.platforms = [...new Set([...(base.platforms ?? ["ios", "android", "web"]), "macos", "windows"])];
-  desktop.macos = { bundleIdentifier: base.macos?.bundleIdentifier ?? base.ios?.bundleIdentifier ?? `app.frame.id${projectId.replaceAll("-", "")}` };
+  desktop.macos = { bundleIdentifier: base.macos?.bundleIdentifier ?? base.ios?.bundleIdentifier ?? `app.spark.id${projectId.replaceAll("-", "")}` };
   files.set("desktop.config.json", JSON.stringify(desktop, null, 2) + "\n");
   const ignoreFile = path.join(root, ".gitignore");
   const ignore = existsSync(ignoreFile) ? readFileSync(ignoreFile, "utf8") : "";
-  files.set(".gitignore", `${ignore}${ignore.endsWith("\n") || !ignore ? "" : "\n"}\n# frame generated desktop state\n/.frame/\n/macos/\n/windows/\n`);
+  files.set(".gitignore", `${ignore}${ignore.endsWith("\n") || !ignore ? "" : "\n"}\n# spark generated desktop state\n/.spark/\n/macos/\n/windows/\n`);
   // All conflicts are checked before the first write. The integration is kept
   // reviewable/retryable if the package manager fails; never regenerate mobile.
   for (const [file, content] of files) writeFileSync(path.join(root, file), content);
   await run(root, [manager, "install"]);
-  console.log(`Added desktop support to ${root}. Existing entry point and mobile/web scripts are unchanged.\nRun frame build --dev --platform macos, then frame dev --platform macos. Windows native builds run on Windows.`);
+  console.log(`Added desktop support to ${root}. Existing entry point and mobile/web scripts are unchanged.\nRun spark build --dev --platform macos, then spark dev --platform macos. Windows native builds run on Windows.`);
 }

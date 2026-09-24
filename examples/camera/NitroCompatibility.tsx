@@ -1,9 +1,9 @@
 import React, { useEffect, useMemo, useRef, useState } from "react";
 import { View } from "react-native";
 import { Text } from "./CameraText";
-import { CompatibilityViewComponent, type CompatibilityView } from "@legendapp/frame-nitro-view-probe";
+import { CompatibilityViewComponent, type CompatibilityView } from "@legendapp/spark-nitro-view-probe";
 import { callback } from "react-native-nitro-modules";
-import { writeText } from "@legendapp/frame/files";
+import { writeText } from "@legendapp/spark/files";
 
 export type ProofCheck = { name: string; passed: boolean; detail?: unknown };
 export function NitroCompatibility({ report, onComplete }: { report?: string; onComplete?: (passed: boolean) => void }) {

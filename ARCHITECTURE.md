@@ -1,25 +1,25 @@
 # Architecture
 
-This document explains the current Legend Frame source, its ownership boundaries, and the constraints that changes must preserve. Start with [README.md](README.md) for setup and application usage. Feature guides under [docs](docs) contain API details and dated validation evidence.
+This document explains the current Legend Spark source, its ownership boundaries, and the constraints that changes must preserve. Start with [README.md](README.md) for setup and application usage. Feature guides under [docs](docs) contain API details and dated validation evidence.
 
 The implementation is a local macOS 14+ / Apple Silicon prototype with an integrated Windows x64/ARM64 development adapter. Windows prebuilt and custom builds use the shared framework flow, but native Windows acceptance remains pending. Production Windows builds are not implemented. Windows SDK ports are implemented in source and await native compilation and acceptance. Treat original plans and older prototype reports as historical context when a newer implementation or validation report supersedes them.
 
 ## Purpose and system boundaries
 
-frame supplies a desktop application framework on top of React Native and Expo Desktop. The central workflow is:
+spark supplies a desktop application framework on top of React Native and Expo Desktop. The central workflow is:
 
 1. Start an application in a compatible prebuilt runtime.
 2. Detect when app-specific native dependencies or configuration require a custom development binary.
 3. Build a standalone app from a production-selected native dependency graph.
 4. Prepare a signed distribution artifact through a separate packaging workflow.
 
-React Native owns the renderer and JavaScript/native integration. Hermes executes application JavaScript. Expo/Metro provide bundling and the development server. Expo Desktop provides desktop-aware configuration, native project templates, and prebuild. frame owns the desktop SDK, host customization, runtime selection, build orchestration, and packaging policy.
+React Native owns the renderer and JavaScript/native integration. Hermes executes application JavaScript. Expo/Metro provide bundling and the development server. Expo Desktop provides desktop-aware configuration, native project templates, and prebuild. spark owns the desktop SDK, host customization, runtime selection, build orchestration, and packaging policy.
 
 Node and Bun execute developer tooling. They are not embedded application runtimes. The child-process API can launch external programs, and helpers can be bundled explicitly; neither implies a Node-compatible application environment.
 
 ```mermaid
 flowchart TD
-  App[Application source and desktop config] --> CLI[frame CLI]
+  App[Application source and desktop config] --> CLI[spark CLI]
   CLI --> Metro[Expo and Metro]
   CLI --> Check[Runtime compatibility and native selection]
   Check --> prebuilt[Registered prebuilt runtime]
@@ -54,17 +54,17 @@ flowchart TD
 | Local distribution | [scripts/pack.ts](scripts/pack.ts), [scripts/prepare-runtimes.ts](scripts/prepare-runtimes.ts) | Content-addressed archives, patched upstream source, SDK registration |
 | Validation | [tests](tests), [fixtures](fixtures), [scripts](scripts), [examples](examples) | Unit/config/codegen checks, native fixtures, external consumers, interactive examples |
 
-Directory names do not always match published package names. In particular, `packages/config-plugin` is the `@legendapp/frame-desktop-config` package. `packages/desktop-windows` implements application windows; its name does not mean Microsoft Windows support.
+Directory names do not always match published package names. In particular, `packages/config-plugin` is the `@legendapp/spark-desktop-config` package. `packages/desktop-windows` implements application windows; its name does not mean Microsoft Windows support.
 
 ## Application creation and local distribution
 
 The CLI ships complete macOS, Windows, and universal template sources under `templates/`. Each owns its dependencies, scripts, source, and configuration defaults. The pack step resolves local SDK archive references and produces ordinary npm template tarballs listed in `artifacts/packages/templates.json`.
 
-`frame create` selects a template and invokes the pinned `expo-desktop create-app --template` command. Expo Desktop owns directory/name validation, extraction (including `gitignore` renaming), native identifiers, dependency installation, and Git initialization. A template postinstall initializes only frame's canonical configuration once, using the upstream-assigned name, bundle identifiers, and project GUID. It preserves later user configuration edits. Application directories follow Expo Desktop's alphanumeric basename requirement; parent directories can contain spaces.
+`spark create` selects a template and invokes the pinned `expo-desktop create-app --template` command. Expo Desktop owns directory/name validation, extraction (including `gitignore` renaming), native identifiers, dependency installation, and Git initialization. A template postinstall initializes only spark's canonical configuration once, using the upstream-assigned name, bundle identifiers, and project GUID. It preserves later user configuration edits. Application directories follow Expo Desktop's alphanumeric basename requirement; parent directories can contain spaces.
 
-The current distribution mechanism is local tarballs. `scripts/pack.ts` writes content-hashed SDK archives and template archives under `artifacts/packages`, then registers the SDK manifest under the local frame home. Templates use absolute local archive references during this unpublished development phase; moving a template alone does not distribute the SDK. Repack on the destination machine.
+The current distribution mechanism is local tarballs. `scripts/pack.ts` writes content-hashed SDK archives and template archives under `artifacts/packages`, then registers the SDK manifest under the local spark home. Templates use absolute local archive references during this unpublished development phase; moving a template alone does not distribute the SDK. Repack on the destination machine.
 
-`~/.frame` is the default global registry; `FRAME_HOME` overrides it. SDK records are versioned. Runtime registration records a path rather than copying an application. The managed prebuilt build project is created under the frame home unless a project is supplied explicitly. App-local `.frame` data and the global frame home are different scopes.
+`~/.spark` is the default global registry; `SPARK_HOME` overrides it. SDK records are versioned. Runtime registration records a path rather than copying an application. The managed prebuilt build project is created under the spark home unless a project is supplied explicitly. App-local `.spark` data and the global spark home are different scopes.
 
 The template manifests and `scripts/prepare-runtimes.ts` are the authoritative pins. We remain on Expo Desktop `1.0.0-beta.5` and native template `54.81.1-beta.5`, with Expo 54.0.37, React Native 0.81.6, React Native macOS 0.81.7, and React Native Windows 0.81.35. Creation uses a subprocess-scoped npm 11 executable because beta.5 misreads npm 12's local-tarball metadata. Bun still installs dependencies. This compatibility adapter does not patch upstream or change the host npm installation.
 
@@ -74,7 +74,7 @@ Direct `expo-desktop create-app --template` consumption is validated against loc
 
 ## Configuration and identity
 
-Existing Expo apps can opt into an Expo-owned configuration mode through `frame add desktop`. Their `desktop.config.json` declares `extends: "expo"` and contains only desktop options, target declarations, and stable identity. `withFrameExpo` composes the original dynamic/static Expo config for desktop builds and shared frame development sessions. Expo's installed config reader evaluates the app's original logic; ordinary mobile/web Expo commands retain their existing behavior. Metro and React Native exports are composed in place, and Expo's virtual entry resolver preserves `package.json` main for desktop launches. See [existing Expo integration](docs/add-desktop.md) for automatic-composition limits and validation.
+Existing Expo apps can opt into an Expo-owned configuration mode through `spark add desktop`. Their `desktop.config.json` declares `extends: "expo"` and contains only desktop options, target declarations, and stable identity. `withSparkExpo` composes the original dynamic/static Expo config for desktop builds and shared spark development sessions. Expo's installed config reader evaluates the app's original logic; ordinary mobile/web Expo commands retain their existing behavior. Metro and React Native exports are composed in place, and Expo's virtual entry resolver preserves `package.json` main for desktop launches. See [existing Expo integration](docs/add-desktop.md) for automatic-composition limits and validation.
 
 For new apps, `desktop.config.json` is the canonical source. [config.cjs](packages/config-plugin/config.cjs) validates it and produces the Expo `app.json` transport file. Existing static `app.json` projects remain readable when desktop config is absent. Single-target desktop-config projects reject competing dynamic Expo config files. Universal starters use the managed dynamic config described below.
 
@@ -97,7 +97,7 @@ There are four internal build modes:
 | `preview` | Production-selected native set | Debug | Metro bundle requested with production JS settings |
 | `release` | Production-selected native set | Release | Embedded `main.jsbundle` and assets |
 
-Bare `frame build` selects `release`. `--preview` is useful for inspecting native pruning with a Debug binary; it is not the standalone distribution mode. Packaging consumes the standalone release and works on a separate staging copy.
+Bare `spark build` selects `release`. `--preview` is useful for inspecting native pruning with a Debug binary; it is not the standalone distribution mode. Packaging consumes the standalone release and works on a separate staging copy.
 
 The current macOS host configures a React Native factory and mounts the registered `main` component. Secondary windows mount additional React roots from the same application entry bundle. Root props identify the window and project. Module-level JavaScript state is shared across those main-runtime roots; React component state belongs to each root. Secondary window closure stops that surface. The main window can remain mounted while hidden/closed, and closing all windows does not automatically quit the application.
 
@@ -105,11 +105,11 @@ App/window close guards, incoming launch events, and single-instance forwarding 
 
 ## Development session and compatibility
 
-`frame dev` supervises the installed Expo CLI and the native application it launches. Expo inherits the terminal and owns its keyboard handling, command table, prompts, Metro, reload, debugger, and mobile/web actions. A version- and source-checked process-local patch adds `d` (open desktop), `g` (switch desktop runtime), and `b` (build when required). JSON IPC carries desktop actions/results and runtime status between Expo under Node and the frame supervisor under Bun; there is no second stdin handler. Metro workers skip the inherited preload. Closing Expo closes the owned app. Ordinary Expo commands outside this launcher are unpatched. Expo chooses its host and port (LAN and 8081 by default); IPC reports the actual Metro port for desktop launches. frame consumes only `--project`, `--platform`, `--prebuilt-binary`, and `--no-open`, forwarding Expo options unchanged. Expo’s boolean `--go` keeps its mobile meaning. It can discover registered prebuilt binaries or reuse a recorded custom build; the selected target is remembered per project.
+`spark dev` supervises the installed Expo CLI and the native application it launches. Expo inherits the terminal and owns its keyboard handling, command table, prompts, Metro, reload, debugger, and mobile/web actions. A version- and source-checked process-local patch adds `d` (open desktop), `g` (switch desktop runtime), and `b` (build when required). JSON IPC carries desktop actions/results and runtime status between Expo under Node and the spark supervisor under Bun; there is no second stdin handler. Metro workers skip the inherited preload. Closing Expo closes the owned app. Ordinary Expo commands outside this launcher are unpatched. Expo chooses its host and port (LAN and 8081 by default); IPC reports the actual Metro port for desktop launches. spark consumes only `--project`, `--platform`, `--prebuilt-binary`, and `--no-open`, forwarding Expo options unchanged. Expo’s boolean `--go` keeps its mobile meaning. It can discover registered prebuilt binaries or reuse a recorded custom build; the selected target is remembered per project.
 
 The public shared-client name is **prebuilt runtime**. Legacy `build-go`/`--go-binary` commands alias the new `build-prebuilt`/`--prebuilt-binary` spellings. Persisted `"go"` mode values and existing build/registry paths remain stable; this is a terminology change, not a runtime schema migration.
 
-Each binary embeds `frame-runtime.json`. The current schema contains the framework version, platform, architecture, mode, native package signatures, and a build fingerprint. Runtime discovery also validates the expected application layout. The supported layouts are macOS/arm64 (`Contents/Resources/frame-runtime.json` inside a `.app`) and Windows/x64 or Windows/arm64 (`frame-runtime.json` alongside `MyApp.exe` and its DLLs). Prebuilt runtime discovery filters by platform and target architecture before checking module signatures; it must never select a macOS binary for a Windows project.
+Each binary embeds `spark-runtime.json`. The current schema contains the framework version, platform, architecture, mode, native package signatures, and a build fingerprint. Runtime discovery also validates the expected application layout. The supported layouts are macOS/arm64 (`Contents/Resources/spark-runtime.json` inside a `.app`) and Windows/x64 or Windows/arm64 (`spark-runtime.json` alongside `MyApp.exe` and its DLLs). Prebuilt runtime discovery filters by platform and target architecture before checking module signatures; it must never select a macOS binary for a Windows project.
 
 Native signatures include package metadata, native sources/specs, relevant configuration, and host integration. The build fingerprint additionally includes pinned framework/runtime versions, app configuration, and helper inputs. Matching a semver range is not sufficient proof of native compatibility.
 
@@ -125,13 +125,13 @@ The session watches dependency/configuration files and also reevaluates state pe
 
 A user-selected build action performs native work. Dependency watcher events do not automatically compile. A changed dependency or Metro configuration can require a managed server restart, including when desktop is incompatible; mobile/web must receive the new configuration too. Switching targets launches another binary and may reset state; it does not retrofit native modules into the existing prebuilt process.
 
-The macOS launcher supplies both `FRAME_BUNDLE_URL` and React Native's packager location. These serve different native connections. It launches the exact executable inside the chosen `.app` to retain process ownership. Replacing this with an upstream launch command requires equivalent connection, failure, and cleanup behavior.
+The macOS launcher supplies both `SPARK_BUNDLE_URL` and React Native's packager location. These serve different native connections. It launches the exact executable inside the chosen `.app` to retain process ownership. Replacing this with an upstream launch command requires equivalent connection, failure, and cleanup behavior.
 
-The Windows launcher starts the exact saved `MyApp.exe` with the product directory as its working directory. `FRAME_METRO_PORT` configures the host’s bundle connection; project identity is supplied by the same launching CLI. The Windows template keeps the native project/executable name `MyApp` while configuring display identity separately.
+The Windows launcher starts the exact saved `MyApp.exe` with the product directory as its working directory. `SPARK_METRO_PORT` configures the host’s bundle connection; project identity is supplied by the same launching CLI. The Windows template keeps the native project/executable name `MyApp` while configuring display identity separately.
 
 ## Native generation and build ownership
 
-For macOS, Expo Desktop prebuild expands the pinned bare-minimum template. frame's config plugin supplies the host AppDelegate and generated identity/entitlements. CocoaPods and React Native codegen resolve the selected native dependencies; Xcode builds the resulting workspace for arm64.
+For macOS, Expo Desktop prebuild expands the pinned bare-minimum template. spark's config plugin supplies the host AppDelegate and generated identity/entitlements. CocoaPods and React Native codegen resolve the selected native dependencies; Xcode builds the resulting workspace for arm64.
 
 The generated `macos` project is disposable. Implement durable changes in feature packages, host source, config, and config plugins. Manual edits to generated Xcode files will not survive a clean prebuild.
 
@@ -166,17 +166,17 @@ Test-only packages must not ship in prebuilt or distribution artifacts. Keep the
 
 ## Universal application target selection
 
-The [shared Settings starter](docs/universal-settings.md) owns one application source and manifest for five targets. It uses the existing desktop session/build pipeline and Expo's mobile/web pipeline. Styling remains an application concern: the starter wraps the existing Metro factory with Uniwind, owns its Tailwind theme tokens, and uses optional `@legendapp/frame-ui/uniwind` bindings for native control layout. The base UI contract stays `style` and does not import Uniwind. See [styling](docs/styling.md). The starter has an ordinary Expo root entry; Runtimes and Router integration are not part of this slice.
+The [shared Settings starter](docs/universal-settings.md) owns one application source and manifest for five targets. It uses the existing desktop session/build pipeline and Expo's mobile/web pipeline. Styling remains an application concern: the starter wraps the existing Metro factory with Uniwind, owns its Tailwind theme tokens, and uses optional `@legendapp/spark-ui/uniwind` bindings for native control layout. The base UI contract stays `style` and does not import Uniwind. See [styling](docs/styling.md). The starter has an ordinary Expo root entry; Runtimes and Router integration are not part of this slice.
 
-`desktop.config.json.platforms` describes application support. Native builds select one target through `FRAME_PLATFORM`, merging shared `expo` configuration with `expoByPlatform[target]` without mutating either. `dev --platform` only chooses the initial launch; desktop build/signature state remains separate. The Expo child receives `FRAME_DEV_SESSION=1`: its dynamic config exposes every declared platform, uses shared `expo` settings, and omits build overlays/native-selection exclusions. Metro uses Expo Desktop’s multi-platform defaults and resolves each request’s platform independently. Root Metro and React Native configuration are not replaced when switching. Mobile autolinking excludes AppKit pods, and desktop configuration excludes the mobile-only Expo backends.
+`desktop.config.json.platforms` describes application support. Native builds select one target through `SPARK_PLATFORM`, merging shared `expo` configuration with `expoByPlatform[target]` without mutating either. `dev --platform` only chooses the initial launch; desktop build/signature state remains separate. The Expo child receives `SPARK_DEV_SESSION=1`: its dynamic config exposes every declared platform, uses shared `expo` settings, and omits build overlays/native-selection exclusions. Metro uses Expo Desktop’s multi-platform defaults and resolves each request’s platform independently. Root Metro and React Native configuration are not replaced when switching. Mobile autolinking excludes AppKit pods, and desktop configuration excludes the mobile-only Expo backends.
 
-Universal desktop state paths are `.frame/platforms/<target>/...`, including native selection, sessions, build fingerprints, products, and logs. Single-target projects retain their existing paths. Build adapters restore the root manifest after upstream generation, including failure; native generation must run sequentially because upstream temporarily writes shared files. Selected native projects can change during prebuild, while other platform directories remain intact. Configuration preservation does not imply preservation of live React state across processes.
+Universal desktop state paths are `.spark/platforms/<target>/...`, including native selection, sessions, build fingerprints, products, and logs. Single-target projects retain their existing paths. Build adapters restore the root manifest after upstream generation, including failure; native generation must run sequentially because upstream temporarily writes shared files. Selected native projects can change during prebuild, while other platform directories remain intact. Configuration preservation does not imply preservation of live React state across processes.
 
 Windows adapters with explicit platform entry points can coexist in a universal dependency graph without pretending to supply native capabilities. The Settings screen renders on Windows without a platform exclusion. WinUI Button/TextBox/ComboBox and clipboard, credential, linking, and file-dialog backends now have Windows implementations. UI initialization failures render visible, noninteractive placeholders; unfinished capabilities still report unavailability. Native Windows acceptance is pending. Track missing implementations and native verification in [known Windows issues](docs/windows-issues.md). Desktop-only projects retain the stricter rejection of unsupported native dependencies.
 
 ## External libraries and background runtimes
 
-[`@legendapp/frame-ui`](docs/ui.md) uses the same contract/adapter boundary for native controls. Its initial controls are `Button`, uncontrolled `TextInput`, and value-based `Select`: AppKit Fabric components on macOS, Expo UI SwiftUI/Compose adapters on mobile, native HTML controls on web, and WinUI controls with visible unavailable-state fallbacks on Windows. The capability package is installed separately; it does not require consumers to adopt a framework layout or routing system.
+[`@legendapp/spark-ui`](docs/ui.md) uses the same contract/adapter boundary for native controls. Its initial controls are `Button`, uncontrolled `TextInput`, and value-based `Select`: AppKit Fabric components on macOS, Expo UI SwiftUI/Compose adapters on mobile, native HTML controls on web, and WinUI controls with visible unavailable-state fallbacks on Windows. The capability package is installed separately; it does not require consumers to adopt a framework layout or routing system.
 
 The framework owns a curated set of public capability contracts, with replaceable platform implementations. The [clipboard, secure-storage, and linking adapters](docs/expo-api-adapters.md) are implemented; they use existing native desktop backends and selected Expo backends on mobile/web, with explicit platform gaps. The [universal API plan](docs/universal-api-plan.md) retains the deferred broader UI and Router-based window proposals. The earlier [API structure review](docs/api-structure-review.md) is historical; its source inventory remains useful.
 
@@ -192,7 +192,7 @@ Follow [Runtimes](docs/runtimes.md) and its [current validation](docs/runtimes-v
 
 ## Signing, packaging, and updates
 
-`frame build` produces a locally runnable application. `frame package` adds the distribution workflow: credential preflight, release build/reuse, signing a staging copy, notarization submission/resumption, stapling, ZIP extraction, and final verification. Keychain identities/profiles are referenced by configuration; private credentials do not belong in application source.
+`spark build` produces a locally runnable application. `spark package` adds the distribution workflow: credential preflight, release build/reuse, signing a staging copy, notarization submission/resumption, stapling, ZIP extraction, and final verification. Keychain identities/profiles are referenced by configuration; private credentials do not belong in application source.
 
 A pending submission is durable state. Preserve its immutable upload, submission identity, and hash checks. An uncertain upload must not be submitted again blindly. Package changes and signature changes affect whether a saved result can be reused.
 
@@ -205,19 +205,19 @@ See [packaging](docs/packaging.md) and [desktop integrations](docs/desktop-integ
 | Location | Meaning |
 | --- | --- |
 | `artifacts/packages/manifest.json` | Local package-name-to-archive map |
-| `~/.frame/sdks/`, `~/.frame/runtimes/` | Global registrations, or equivalents under `FRAME_HOME` |
-| App `.frame/settings.json` | Remembered runtime target/preferences |
-| App `.frame/session.json` | Live compatibility state consumed by the Metro gate |
-| App `.frame/native-selection.json` | Selected/excluded native modules consumed by build integration |
-| App `.frame/selection-report.json` | Selection reasons and resolved production sources |
-| App `.frame/analysis/` | Bundle/source map and worker reachability analysis outputs |
-| App `.frame/windows-build-input.json` | Runtime metadata compiled into the Windows host during prebuild |
-| App `.frame/windows-verification.json` | Windows verification stages and native reports; distinguishes prepare-only runs |
-| App `.frame/native-preparation.json` | Native generation/dependency preparation fingerprint |
-| App `.frame/*-build.json` | Successful artifacts and runtime fingerprints |
-| App `.frame/commands.jsonl`, `.frame/logs/` | Invoked commands and full process diagnostics |
-| App `.frame/products/`, `.frame/DerivedData/` | Local app products and Xcode build outputs |
-| App `.frame/packaging/`, `dist/` | Resumable packaging state and final distribution artifacts |
+| `~/.spark/sdks/`, `~/.spark/runtimes/` | Global registrations, or equivalents under `SPARK_HOME` |
+| App `.spark/settings.json` | Remembered runtime target/preferences |
+| App `.spark/session.json` | Live compatibility state consumed by the Metro gate |
+| App `.spark/native-selection.json` | Selected/excluded native modules consumed by build integration |
+| App `.spark/selection-report.json` | Selection reasons and resolved production sources |
+| App `.spark/analysis/` | Bundle/source map and worker reachability analysis outputs |
+| App `.spark/windows-build-input.json` | Runtime metadata compiled into the Windows host during prebuild |
+| App `.spark/windows-verification.json` | Windows verification stages and native reports; distinguishes prepare-only runs |
+| App `.spark/native-preparation.json` | Native generation/dependency preparation fingerprint |
+| App `.spark/*-build.json` | Successful artifacts and runtime fingerprints |
+| App `.spark/commands.jsonl`, `.spark/logs/` | Invoked commands and full process diagnostics |
+| App `.spark/products/`, `.spark/DerivedData/` | Local app products and Xcode build outputs |
+| App `.spark/packaging/`, `dist/` | Resumable packaging state and final distribution artifacts |
 | App `.threaded-runtime/` | Generated worker entry/registration files |
 | `docs/evidence/` | Ignored machine-specific validation artifacts |
 
@@ -225,16 +225,16 @@ For a missing runtime, inspect SDK registration and binary metadata. For an inco
 
 ## Windows development boundary and remaining work
 
-Windows support is part of the existing framework. `frame create --platform windows`, `frame sdk build-prebuilt --platform windows`, `frame dev`, and `frame build --dev` share project discovery, runtime metadata, registry, compatibility policy, Metro gating, terminal actions, and build records with macOS. There is no second session implementation or external source kit. See the [Windows guide](docs/windows-slice.md) for commands and prerequisites.
+Windows support is part of the existing framework. `spark create --platform windows`, `spark sdk build-prebuilt --platform windows`, `spark dev`, and `spark build --dev` share project discovery, runtime metadata, registry, compatibility policy, Metro gating, terminal actions, and build records with macOS. There is no second session implementation or external source kit. See the [Windows guide](docs/windows-slice.md) for commands and prerequisites.
 
-The development targets are Windows 11 x64 and ARM64, RNW 0.81.35, New Architecture/Hermes, and the pinned Expo Desktop template. That RNW template uses MSVC v145 / Visual Studio 2026. The minimal starter provides the native host; the SDK prebuilt profile adds the desktop SDK and external libraries. Universal projects preserve configuration and generated projects across platform switches. Windows architecture defaults to the OS CPU (including ARM64 when the CLI is emulated) and can be overridden with `FRAME_WINDOWS_ARCH=x64|arm64`. It participates in the native fingerprint and product path. Build records retain the latest build per mode; registered binaries for the other architecture remain intact. Expo Desktop beta owns generation and RNW receives the corresponding `--arch x64` or `--arch ARM64`.
+The development targets are Windows 11 x64 and ARM64, RNW 0.81.35, New Architecture/Hermes, and the pinned Expo Desktop template. That RNW template uses MSVC v145 / Visual Studio 2026. The minimal starter provides the native host; the SDK prebuilt profile adds the desktop SDK and external libraries. Universal projects preserve configuration and generated projects across platform switches. Windows architecture defaults to the OS CPU (including ARM64 when the CLI is emulated) and can be overridden with `SPARK_WINDOWS_ARCH=x64|arm64`. It participates in the native fingerprint and product path. Build records retain the latest build per mode; registered binaries for the other architecture remain intact. Expo Desktop beta owns generation and RNW receives the corresponding `--arch x64` or `--arch ARM64`.
 
 Windows signatures include Windows native sources/project files and host/config integration; generated build outputs and NuGet lockfiles do not invalidate the source signature. Framework/runtime version changes participate in the mandatory host signature. Directly installed native packages without a Windows implementation fail clearly. This remains a constrained development graph, not acceptance of every third-party dependency arrangement or custom native project modification.
 
 The acceptance gate for this slice is deliberately development-only:
 
 1. Create and build/register the baseline through the framework CLI.
-2. Launch it through the real `frame dev` session and verify the compiled native host identity and Hermes.
+2. Launch it through the real `spark dev` session and verify the compiled native host identity and Hermes.
 3. Deliver a JavaScript edit through Fast Refresh.
 4. Install the existing native-greeting fixture and observe the shared session reject the prebuilt runtime.
 5. Use the session’s normal build action, execute the added native API in the custom binary, and verify the saved prebuilt executable was unchanged.
@@ -300,7 +300,7 @@ Window operations now enumerate monitors (physical virtual-screen coordinates an
 per-monitor scale), move/resize/center, preserve the overlapped presenter across
 fullscreen, and apply size constraints, resizability, minimization and topmost state.
 Native menus move to the focused React window. Unsupported presentation options
-remain explicit errors. Windows frame coordinates use pixels and a top-left origin;
+remain explicit errors. Windows spark coordinates use pixels and a top-left origin;
 macOS retains screen points and its bottom-left origin.
 
 The UI package supplies an Appearance TurboModule through RNW's package builder,
@@ -318,9 +318,9 @@ acceptance; all open native checks remain in [Windows issues](docs/windows-issue
 
 ## Shared application and SDK transfer
 
-`frame create MyEditor --example document-editor` creates a [shared document editor](docs/document-editor.md) using Expo adapters on mobile, browser file operations on web, and native desktop dialogs. The macOS example exercises windows, menus, shortcuts, file-open events, and unsaved-change guards. Windows includes native control/API/file-dialog implementations, with remaining native acceptance and lifecycle gaps listed in [known Windows issues](docs/windows-issues.md).
+`spark create MyEditor --example document-editor` creates a [shared document editor](docs/document-editor.md) using Expo adapters on mobile, browser file operations on web, and native desktop dialogs. The macOS example exercises windows, menus, shortcuts, file-open events, and unsaved-change guards. Windows includes native control/API/file-dialog implementations, with remaining native acceptance and lifecycle gaps listed in [known Windows issues](docs/windows-issues.md).
 
-[SDK export/import](docs/sdk-distribution.md) packages the CLI, module archives, and optional prebuilt runtimes into a transferable directory. The recipient installs it without this checkout; Expo Desktop beta still owns creation and desktop generation, and frame retains native compatibility checks.
+[SDK export/import](docs/sdk-distribution.md) packages the CLI, module archives, and optional prebuilt runtimes into a transferable directory. The recipient installs it without this checkout; Expo Desktop beta still owns creation and desktop generation, and spark retains native compatibility checks.
 
 ## Kitchen sink development
 
@@ -340,7 +340,7 @@ nested-file patching failure. `scripts/sync-workspace-patches.ts` is a maintaine
 command deriving those patches from the same pinned recipes as SDK packing.
 Neither command generates an application or compiles native code during install.
 
-`bun run macos` and `bun run windows` invoke the existing frame/Expo development
+`bun run macos` and `bun run windows` invoke the existing spark/Expo development
 session and prebuilt registry. Native dependencies come from the compatible binary;
 Metro supplies live JavaScript and CSS. No hosted download service exists yet.
 The explicit `rebuild:macos` / `rebuild:windows` commands build and register a
@@ -352,13 +352,13 @@ The root `kitchen-sink` script only delegates to this app. SDK integration tests
 `scripts/prepare-kitchen-sink.ts` to create a separate packed consumer and copy only
 screens/assets/Metro config, preserving generated identity and archive dependencies.
 The helper rejects the checkout app, unmanaged directories, and old live-source
-consumers. The old `.frame/examples/KitchenSink` daily-development indirection is
+consumers. The old `.spark/examples/KitchenSink` daily-development indirection is
 no longer used.
 
 ## Small application examples
 
 [Notes Lite, Music Lite, and Diff Lite](docs/example-apps.md) are standalone universal
-CLI examples, created with `frame create MyApp --example notes-lite` (or
+CLI examples, created with `spark create MyApp --example notes-lite` (or
 `music-lite` / `diff-lite`). They share application models and screens, with
 platform files for native lifecycle, selected-file access, and playback. Source
 ships with the CLI and depends only on public package imports.
@@ -371,7 +371,7 @@ note models remain application-owned. The maintained prebuilt profile now includ
 and AsyncStorage; existing clients require a rebuild for those native additions.
 
 Windows host source also supplies window roots sharing the host's React runtime,
-close/quit guards, focused shortcuts, basic menus, frame restoration, and launch
+close/quit guards, focused shortcuts, basic menus, spark restoration, and launch
 forwarding. Native compilation and acceptance remain tracked in
 [known Windows issues](docs/windows-issues.md); generated bundles do not prove them.
 See [extension development](docs/extensions.md) for adding a native library or
@@ -379,7 +379,7 @@ replacing a backend while preserving a framework contract.
 
 ## Shared platform acceptance
 
-`examples/kitchen-sink/contract-cases.ts` owns portable assertions against public API bindings. The kitchen-sink API checks and Windows feature verifier reuse those functions; `PlatformChecks.tsx` exercises the shared adapters and native/browser controls in a fresh universal consumer through `scripts/test-platforms.ts`. Expo Desktop beta generates desktop projects, frame builds desktop binaries, and Expo builds/launches mobile targets. Browser and mobile execution are distinct from bundle checks.
+`examples/kitchen-sink/contract-cases.ts` owns portable assertions against public API bindings. The kitchen-sink API checks and Windows feature verifier reuse those functions; `PlatformChecks.tsx` exercises the shared adapters and native/browser controls in a fresh universal consumer through `scripts/test-platforms.ts`. Expo Desktop beta generates desktop projects, spark builds desktop binaries, and Expo builds/launches mobile targets. Browser and mobile execution are distinct from bundle checks.
 
 `contract-report.ts` declares stable case IDs and intended platform support. `scripts/testing/report.ts` records execution scope, source-content fingerprint, target architecture/device, installed versions, runtime identity, and per-case evidence. Missing implementations and unexecuted cases cannot become passes merely because preparation succeeded. A failure remains visible across phases. `scripts/test-report.ts` produces a matrix without merging different source trees or collapsing retries into best-case results. Existing runners without an explicit case mapping do not contribute coverage. See [platform testing](docs/platform-testing.md) for the commands and remaining automation work.
 

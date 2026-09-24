@@ -1,5 +1,5 @@
 import type { NativeMenuConfig, NativeMenuItem, NativeMenuItemPatch } from "./api";
-type Item = NativeMenuItem & { _frameOwner: string; _frameMenu: string };
+type Item = NativeMenuItem & { _sparkOwner: string; _sparkMenu: string };
 type Menu = Omit<NativeMenuConfig, "items"> & { items: Item[] };
 const titleKey = (title = "") => title.replaceAll("…", "...").trim().toLowerCase();
 function insertion<T extends { title?: string }>(items: T[], placement?: { before?: string; after?: string }) {
@@ -27,7 +27,7 @@ export function composeWindowsMenus(owners: ReadonlyMap<string, NativeMenuConfig
       const targets = !!(input.targetTitle || input.targetTitles?.length || input.targetPath?.length);
       const target = candidates.map(title => menu.items.find(item => titleKey(item.title) === titleKey(title))).find(Boolean);
       if (targets && !target) { diagnose({ code: "E_MENU_TARGET_NOT_FOUND", ownerId: owner, menuId: config.id, itemId: input.id, targets: candidates }); continue; }
-      const identity = input.targetPath?.length && target ? { _frameOwner: target._frameOwner, _frameMenu: target._frameMenu, id: target.id, payload: target.payload } : { _frameOwner: owner, _frameMenu: config.id, id: input.id };
+      const identity = input.targetPath?.length && target ? { _sparkOwner: target._sparkOwner, _sparkMenu: target._sparkMenu, id: target.id, payload: target.payload } : { _sparkOwner: owner, _sparkMenu: config.id, id: input.id };
       const item: Item = { ...target, ...input, ...identity };
       if (target) {
         const index = menu.items.indexOf(target);

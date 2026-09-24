@@ -1,6 +1,6 @@
 # App-supplied helper processes
 
-frame packages and launches executables supplied by the application. It does not
+spark packages and launches executables supplied by the application. It does not
 include Node, choose a backend language, download binaries, or compile helper
 projects. A Rust, Go, C/C++, or self-contained executable can use the same API.
 A runtime-dependent executable must bring its runtime and dependent files.
@@ -20,15 +20,15 @@ A runtime-dependent executable must bring its runtime and dependent files.
 ```
 
 Put this under `desktop.config.json`. Existing Expo-owned projects use the same
-frame overlay. Selection uses the **build target**, including
-`FRAME_WINDOWS_ARCH`, rather than the architecture of the running CLI process.
+spark overlay. Selection uses the **build target**, including
+`SPARK_WINDOWS_ARCH`, rather than the architecture of the running CLI process.
 A missing target fails the build. macOS currently builds arm64; accepting a
 `macos-x64` declaration does not add x64 app-build support.
 
 `directory` is relative to the project; `executable` is relative to that directory.
 Keep assets, shared libraries, and child executables in the bundle. Entries must
 be plain files/directories, with no symlinks, traversal, or special files. Helper
-names are case-insensitively unique. `.frame-entry` is reserved metadata.
+names are case-insensitively unique. `.spark-entry` is reserved metadata.
 Legacy `"helpers": { "tool": "bin/tool" }` declarations still copy one file.
 
 The layout is `Contents/Helpers/backend.helper/...` on macOS and
@@ -46,7 +46,7 @@ at JavaScript startup. Fast Refresh still handles JavaScript-only edits.
 ## API and ownership
 
 ```ts
-import { spawn } from '@legendapp/frame/processes';
+import { spawn } from '@legendapp/spark/processes';
 
 const child = await spawn({ executable: 'helper:backend', args: ['--stdio'] }, chunk => {
   // chunk.stream is stdout or stderr; chunk.base64 contains bytes.
@@ -82,7 +82,7 @@ binary stdin is not a public API yet. Writes resolve after the native pipe write
 so await them rather than queuing unbounded writes.
 
 Output callbacks receive base64 chunks of arbitrary boundaries. Decode bytes and
-frame messages yourself; a chunk is neither a UTF-8 character boundary nor a JSON
+spark messages yourself; a chunk is neither a UTF-8 character boundary nor a JSON
 message boundary. Both streams continue draining after their captured result
 reaches 8 MiB per stream; `outputTruncated` reports that cap. Streaming callbacks
 still receive the full output. Use `stdoutBase64`/`stderrBase64` for captured binary
@@ -109,13 +109,13 @@ feature does not claim to implement that pipeline.
 See [the standalone C example](../examples/sidecar/README.md). On macOS:
 
 ```sh
-bun run frame build --dev --project examples/kitchen-sink
+bun run spark build --dev --project examples/kitchen-sink
 bun scripts/test-sidecars.ts
 ```
 
 The probe copies the built app, installs the compiled example bundle, ad-hoc signs
 it, runs real React Native API checks, and removes the disposable app. Logs and
-`report.json` stay under `.frame/sidecar-tests`. It tests helper lookup, failures,
+`report.json` stay under `.spark/sidecar-tests`. It tests helper lookup, failures,
 Unicode input, binary output beyond the capture cap, timeout, window ownership,
 macOS descendant cleanup, prompt readiness delivery, and cleanup of a live helper
 on normal application quit. It does not validate Developer ID notarization or
@@ -123,8 +123,8 @@ abrupt macOS crash cleanup.
 
 On Windows, compile `echo.c` and `worker.c` for the host target, add both to Kitchen Sink's helpers
 configuration using the example, build a **custom development app**, and launch
-its executable with `--frame-test-report <absolute-report-path>
---frame-sidecar-probe` while Metro is running. The portable probe covers lookup,
+its executable with `--spark-test-report <absolute-report-path>
+--spark-sidecar-probe` while Metro is running. The portable probe covers lookup,
 I/O, failures, timeout, window ownership, and the worker readiness/request protocol. Separately verify Job Object cleanup
 by closing/reloading the host and by killing the host while helpers and their
 children are running. These native Windows results are pending.

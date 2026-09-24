@@ -1,5 +1,5 @@
 {
-  "name": "@legendapp/frame-desktop-app",
+  "name": "@legendapp/spark-desktop-app",
   "version": "0.1.0-prototype.0",
   "license": "MIT",
   "main": "src/index",
@@ -24,7 +24,7 @@
       }
     }
   },
-  "frame": {
+  "spark": {
     "sdk": false,
     "nativeModules": [
       "NativeDesktopApp"

@@ -1,9 +1,9 @@
 import { useEffect } from "react";
 import { Platform } from "react-native";
-import { beforeWindowClose, setWindowTitle, onWindowEvent } from "@legendapp/frame-desktop-windows";
-import { beforeQuit } from "@legendapp/frame-desktop-app";
-import { configureMenus, clearMenus, addNativeMenuActionListener } from "@legendapp/frame-native-menu";
-import { registerShortcut, parseAccelerator } from "@legendapp/frame-desktop-shortcuts";
+import { beforeWindowClose, setWindowTitle, onWindowEvent } from "@legendapp/spark-desktop-windows";
+import { beforeQuit } from "@legendapp/spark-desktop-app";
+import { configureMenus, clearMenus, addNativeMenuActionListener } from "@legendapp/spark-native-menu";
+import { registerShortcut, parseAccelerator } from "@legendapp/spark-desktop-shortcuts";
 import { mountSerial } from "./lifetime";
 import type { LifecycleProps } from "./lifecycle-types";
 let activeMenuOwner: string | undefined;

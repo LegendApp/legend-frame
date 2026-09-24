@@ -6,8 +6,8 @@ final class SDKUITests: XCTestCase {
     let file = Bundle(for: Self.self).url(forResource: "configuration", withExtension: "json")!
     let config = try JSONSerialization.jsonObject(with: Data(contentsOf: file)) as! [String: String]
     let app = XCUIApplication(url: URL(fileURLWithPath: config["app"]!))
-    app.launchEnvironment = ["FRAME_BUNDLE_URL": config["bundleURL"]!]
-    app.launchArguments = ["-RCT_jsLocation", config["location"]!, "--frame-test-report", config["report"]!, "--frame-test-quit-on-complete"]
+    app.launchEnvironment = ["SPARK_BUNDLE_URL": config["bundleURL"]!]
+    app.launchArguments = ["-RCT_jsLocation", config["location"]!, "--spark-test-report", config["report"]!, "--spark-test-quit-on-complete"]
     app.launch()
     defer { if app.state != .notRunning { app.terminate() } }
 

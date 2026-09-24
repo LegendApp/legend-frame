@@ -1,5 +1,5 @@
 {
-  "name": "@legendapp/frame-desktop-host",
+  "name": "@legendapp/spark-desktop-host",
   "version": "0.1.0-prototype.0",
   "license": "MIT",
   "files": [
@@ -7,6 +7,6 @@
     "windows"
   ],
   "dependencies": {
-    "@legendapp/frame-desktop-app": "0.1.0-prototype.0"
+    "@legendapp/spark-desktop-app": "0.1.0-prototype.0"
   }
 }

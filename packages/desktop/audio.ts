@@ -1,1 +1,1 @@
-export * from "@legendapp/frame-audio";
+export * from "@legendapp/spark-audio";

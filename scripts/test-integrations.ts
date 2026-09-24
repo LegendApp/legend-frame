@@ -5,21 +5,21 @@ import { build } from "../packages/cli/src/build";
 import { availablePort } from "../packages/cli/src/local";
 import { binary, run } from "../packages/cli/src/commands";
 import { readJson, writeJson } from "../packages/cli/src/project";
-const root = path.resolve(process.argv[2] ?? ".frame/integration-tests/Integrations");
+const root = path.resolve(process.argv[2] ?? ".spark/integration-tests/Integrations");
 await prepareKitchenSink(root);
 const packageFile = path.join(root, "package.json");
 const pkg = readJson(packageFile);
-if (pkg.dependencies["@legendapp/frame-sdk-test-driver"]) { delete pkg.dependencies["@legendapp/frame-sdk-test-driver"]; writeJson(packageFile, pkg); await run(root, ["bun", "install"]); }
+if (pkg.dependencies["@legendapp/spark-sdk-test-driver"]) { delete pkg.dependencies["@legendapp/spark-sdk-test-driver"]; writeJson(packageFile, pkg); await run(root, ["bun", "install"]); }
 const appFile = path.join(root, "App.tsx");
 const original = readFileSync(appFile, "utf8");
-const report = path.join(root, ".frame/integration-report.json");
+const report = path.join(root, ".spark/integration-report.json");
 const port = await availablePort();
 let metro: ReturnType<typeof Bun.spawn> | undefined;
 let appProcess: ReturnType<typeof Bun.spawn> | undefined;
 try {
   writeFileSync(appFile, `import React, { useEffect } from "react";
 import { Text } from "react-native";
-import { writeText } from "@legendapp/frame/files";
+import { writeText } from "@legendapp/spark/files";
 import { runIntegrationChecks } from "./integration-checks";
 export default function App() {
   useEffect(() => { const results = []; runIntegrationChecks(async (name, action) => {
@@ -28,7 +28,7 @@ export default function App() {
   }).then(() => writeText(${JSON.stringify(report)}, JSON.stringify({ passed: results.every(result => result.passed), results }))).catch(error => writeText(${JSON.stringify(report)}, JSON.stringify({ passed: false, error: String(error) }))); }, []);
   return <Text>Native desktop integration checks</Text>;
 }`);
-  const log = Bun.file(path.join(root, ".frame/integration-metro.log"));
+  const log = Bun.file(path.join(root, ".spark/integration-metro.log"));
   metro = Bun.spawn([binary(root, "expo"), "start", "--localhost", "--port", String(port), "--max-workers", "2"], { cwd: root, env: { ...globalThis.process.env, CI: "1" }, stdout: log, stderr: log });
   let ready = false;
   const readyBy = Date.now() + 60000;
@@ -41,15 +41,15 @@ export default function App() {
     const result = await build(root, mode);
     const name = (await run(root, ["/usr/libexec/PlistBuddy", "-c", "Print CFBundleExecutable", path.join(result.app, "Contents/Info.plist")], { capture: true })).trim();
     rmSync(report, { force: true });
-    const appLog = Bun.file(path.join(root, `.frame/integrations-${mode}.log`));
-    appProcess = Bun.spawn([path.join(result.app, "Contents/MacOS", name), "-RCT_jsLocation", `127.0.0.1:${port}`], { cwd: root, env: { ...globalThis.process.env, FRAME_BUNDLE_URL: `http://127.0.0.1:${port}/index.bundle?platform=macos&dev=true&minify=false` }, stdout: appLog, stderr: appLog });
+    const appLog = Bun.file(path.join(root, `.spark/integrations-${mode}.log`));
+    appProcess = Bun.spawn([path.join(result.app, "Contents/MacOS", name), "-RCT_jsLocation", `127.0.0.1:${port}`], { cwd: root, env: { ...globalThis.process.env, SPARK_BUNDLE_URL: `http://127.0.0.1:${port}/index.bundle?platform=macos&dev=true&minify=false` }, stdout: appLog, stderr: appLog });
     const deadline = Date.now() + 45000;
     while (!existsSync(report) && Date.now() < deadline) {
       if (appProcess.exitCode !== null || appProcess.signalCode !== null) throw new Error(`${mode} exited before reporting`);
       await Bun.sleep(100);
     }
-    if (!existsSync(report)) throw new Error(`${mode} timed out; inspect ${root}/.frame/integrations-${mode}.log`);
-    const outcome = readJson(report); writeJson(path.join(root, `.frame/integration-${mode}-report.json`), outcome);
+    if (!existsSync(report)) throw new Error(`${mode} timed out; inspect ${root}/.spark/integrations-${mode}.log`);
+    const outcome = readJson(report); writeJson(path.join(root, `.spark/integration-${mode}-report.json`), outcome);
     for (const check of outcome.results ?? []) console.log(`${check.passed ? "PASS" : "FAIL"} [${mode}] ${check.name}${check.error ? `: ${check.error}` : ""}`);
     if (!outcome.passed) throw new Error(`Integration suite failed: ${JSON.stringify(outcome)}`);
     appProcess.kill(); await appProcess.exited; appProcess = undefined;

@@ -1,1 +1,1 @@
-export * from "@legendapp/frame-file-system";
+export * from "@legendapp/spark-file-system";

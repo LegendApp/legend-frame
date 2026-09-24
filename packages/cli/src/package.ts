@@ -58,9 +58,9 @@ async function packageUnlocked(root: string, options: { force?: boolean; submiss
   console.log(`Signing identity: ${identity.name}`);
   const result = await deps.build(root, "release", options.force);
   const config = readAppConfig(root).expo;
-  if (config.extra?.frame?.updates && !result.runtime.modules["@legendapp/frame-updates"]) throw new Error("Updates are configured but the module was pruned. Import @legendapp/frame/updates from the app entry.");
+  if (config.extra?.spark?.updates && !result.runtime.modules["@legendapp/spark-updates"]) throw new Error("Updates are configured but the module was pruned. Import @legendapp/spark/updates from the app entry.");
   const entitlements = distributionEntitlements(appEntitlements(root, result.runtime.modules));
-  const byPath = config.extra?.frame?.signing?.macos?.entitlementsByPath ?? {};
+  const byPath = config.extra?.spark?.signing?.macos?.entitlementsByPath ?? {};
   const info = JSON.parse(await execute(root, ["plutil", "-convert", "json", "-o", "-", path.join(result.app, "Contents/Info.plist")], { capture: true }));
   const expected = { bundleId: config.macos.bundleIdentifier, version: config.version, buildVersion: info.CFBundleVersion, entitlements, byPath };
   if (!expected.bundleId || !expected.version || !expected.buildVersion) throw new Error("Bundle identifier and release version metadata must be configured before packaging.");
@@ -107,12 +107,12 @@ async function packageUnlocked(root: string, options: { force?: boolean; submiss
     writeJson(statePath, state);
   }
   if (!state.submissionId) {
-    if (state.phase !== "signed") throw new Error("The previous notarization submission has an unknown outcome. Find its ID using notarytool history, then run frame package --submission-id <id>. frame will not submit it twice automatically.");
+    if (state.phase !== "signed") throw new Error("The previous notarization submission has an unknown outcome. Find its ID using notarytool history, then run spark package --submission-id <id>. spark will not submit it twice automatically.");
     state.phase = "submitting";
     writeJson(statePath, state);
     console.log("Submitting the signed app to Apple for notarization…");
     const submitted = await notary("submit", upload, "--no-wait");
-    if (typeof submitted.id !== "string" || !/^[0-9a-f-]{36}$/i.test(submitted.id)) throw new Error("Apple did not return a valid submission ID. Run frame package again for recovery instructions.");
+    if (typeof submitted.id !== "string" || !/^[0-9a-f-]{36}$/i.test(submitted.id)) throw new Error("Apple did not return a valid submission ID. Run spark package again for recovery instructions.");
     state.submissionId = submitted.id;
     state.phase = "submitted";
     writeJson(statePath, state);
@@ -130,7 +130,7 @@ async function packageUnlocked(root: string, options: { force?: boolean; submiss
     }
     console.log(`Apple is processing submission ${state.submissionId}…`);
     if (Date.now() >= deadline) {
-      console.log("Notarization is still pending. Run frame package again to resume; the app will not be rebuilt or resubmitted if its inputs are unchanged.");
+      console.log("Notarization is still pending. Run spark package again to resume; the app will not be rebuilt or resubmitted if its inputs are unchanged.");
       return { pending: true as const, submissionId: state.submissionId };
     }
     await deps.wait(Math.min(15_000, Math.max(0, deadline - Date.now())));

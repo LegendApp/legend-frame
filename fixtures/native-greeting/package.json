@@ -1,5 +1,5 @@
 {
-  "name": "@legendapp/frame-native-greeting",
+  "name": "@legendapp/spark-native-greeting",
   "version": "0.1.0-prototype.0",
   "license": "MIT",
   "main": "src/index.ts",

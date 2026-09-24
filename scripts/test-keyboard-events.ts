@@ -7,14 +7,14 @@ import { nodeCommand } from "../packages/cli/src/windows";
 import { projectEnvironment } from "../packages/cli/src/project";
 if (process.platform !== "darwin") throw Error("This regression targets RN macOS; use the manual acceptance checklist on Windows.");
 const root = path.resolve("examples/kitchen-sink");
-const directory = path.resolve(".frame/keyboard-tests");
+const directory = path.resolve(".spark/keyboard-tests");
 mkdirSync(directory, { recursive: true });
 const manifest = path.join(root, "package.json");
 const original = readFileSync(manifest, "utf8");
 let executable: string;
 try {
   const pkg = JSON.parse(original);
-  pkg.devDependencies = { ...pkg.devDependencies, "@legendapp/frame-sdk-test-driver": "workspace:*" };
+  pkg.devDependencies = { ...pkg.devDependencies, "@legendapp/spark-sdk-test-driver": "workspace:*" };
   writeFileSync(manifest, JSON.stringify(pkg, null, 2) + "\n");
   executable = path.join((await build(root, "dev")).app, "Contents/MacOS/KitchenSink");
 } finally { writeFileSync(manifest, original); }
@@ -24,14 +24,14 @@ const report = path.join(directory, "report.json");
 rmSync(report, { force: true });
 writeFileSync(entry, `import {registerRootComponent} from 'expo';
 import {useEffect} from 'react'; import {Text} from 'react-native';
-import driver from '@legendapp/frame-sdk-test-driver'; import {writeText} from '@legendapp/frame/files';
+import driver from '@legendapp/spark-sdk-test-driver'; import {writeText} from '@legendapp/spark/files';
 function App(){useEffect(()=>{void driver.call('keyboardRegression','{}').then(async raw=>{
 const checks=JSON.parse(raw); await writeText(${JSON.stringify(report)},JSON.stringify({passed:Object.keys(checks).length===9&&Object.values(checks).every(v=>v===true),checks}));
 });},[]);return <Text>Native keyboard regression</Text>;}registerRootComponent(App);`);
 const port = await availablePort();
 const metroLog = Bun.file(path.join(directory, "metro.log"));
 const metro = Bun.spawn(nodeCommand(root, "expo", "expo", ["start", "--localhost", "--port", String(port), "--max-workers", "2"]), {
-  cwd: root, env: { ...process.env, CI: "1", FRAME_PLATFORM: "macos" }, stdout: metroLog, stderr: metroLog,
+  cwd: root, env: { ...process.env, CI: "1", SPARK_PLATFORM: "macos" }, stdout: metroLog, stderr: metroLog,
 });
 let app: ReturnType<typeof Bun.spawn> | undefined;
 try {
@@ -42,7 +42,7 @@ try {
   }
   const log = Bun.file(path.join(directory, "app.log"));
   app = Bun.spawn([executable, "-RCT_jsLocation", `127.0.0.1:${port}`], {
-    cwd: root, env: { ...process.env, ...projectEnvironment(root), FRAME_BUNDLE_URL: `http://127.0.0.1:${port}/KeyboardNativeRegression.bundle?platform=macos&dev=true&minify=false` }, stdout: log, stderr: log,
+    cwd: root, env: { ...process.env, ...projectEnvironment(root), SPARK_BUNDLE_URL: `http://127.0.0.1:${port}/KeyboardNativeRegression.bundle?platform=macos&dev=true&minify=false` }, stdout: log, stderr: log,
   });
   const deadlineReport = Date.now() + 90000;
   while (!existsSync(report)) {

@@ -5,7 +5,7 @@ package = JSON.parse(File.read(File.join(__dir__, "package.json")))
 Pod::Spec.new do |s|
   s.name = "RNFileDialog"
   s.version = package["version"]
-  s.summary = "Frame Desktop file dialog bindings"
+  s.summary = "Spark Desktop file dialog bindings"
   s.license = { :type => "MIT" }
   s.author = "Legend"
   s.homepage = "https://legendapp.com"

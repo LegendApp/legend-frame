@@ -1,5 +1,5 @@
 {
-  "name": "@legendapp/frame-settings",
+  "name": "@legendapp/spark-settings",
   "version": "0.1.0-prototype.0",
   "license": "MIT",
   "main": "src/index.ts",
@@ -7,6 +7,6 @@
     "src"
   ],
   "dependencies": {
-    "@legendapp/frame-file-system": "0.1.0-prototype.0"
+    "@legendapp/spark-file-system": "0.1.0-prototype.0"
   }
 }

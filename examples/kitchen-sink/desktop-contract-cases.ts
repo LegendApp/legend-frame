@@ -1,5 +1,5 @@
-import type * as FileSystem from "@legendapp/frame-file-system";
-import type { settings } from "@legendapp/frame-settings";
+import type * as FileSystem from "@legendapp/spark-file-system";
+import type { settings } from "@legendapp/spark-settings";
 import { assertContract } from "./contract-cases";
 
 async function rejectsCode(action: () => Promise<unknown>, code: string) {
@@ -12,7 +12,7 @@ export async function filesystemLifecycle(files: typeof FileSystem, token: strin
   const dirs = await Promise.all(["data", "cache", "temp"].map(kind => files.getDirectory(kind as "data" | "cache" | "temp")));
   assertContract(new Set(dirs).size === 3, "App directories must be distinct");
   for (const dir of dirs) assertContract((await files.stat(dir)).type === "directory", "App directory missing");
-  const root = `${dirs[2]}/frame-contract-${token}`, file = `${root}/space ü.txt`;
+  const root = `${dirs[2]}/spark-contract-${token}`, file = `${root}/space ü.txt`;
   let watch: Awaited<ReturnType<typeof files.watch>> | undefined;
   try {
     await files.mkdir(`${root}/nested/child`);
@@ -87,10 +87,10 @@ export async function settingsLifecycle(store: typeof settings, token: string) {
   } finally { await store.remove(key); await store.remove(reserved); await store.remove(escaped); }
 }
 
-export async function recentDocumentsLifecycle(files: typeof FileSystem, links: typeof import("@legendapp/frame-desktop-links"), token: string) {
+export async function recentDocumentsLifecycle(files: typeof FileSystem, links: typeof import("@legendapp/spark-desktop-links"), token: string) {
   // The platform runner uses a disposable project identity. Kitchen Sink runs explicitly.
   const original = await links.getRecentDocuments();
-  const file = `${await files.getDirectory("temp")}/frame-recent-${token}.txt`;
+  const file = `${await files.getDirectory("temp")}/spark-recent-${token}.txt`;
   const normalized = file.replaceAll("\\", "/");
   const url = `file://${normalized.startsWith("/") ? "" : "/"}${normalized.split("/").map((part, i) => i === 0 && /^[a-z]:$/i.test(part) ? part : encodeURIComponent(part)).join("/")}`;
   try {
@@ -107,7 +107,7 @@ export async function recentDocumentsLifecycle(files: typeof FileSystem, links: 
   }
 }
 
-export async function richClipboardLifecycle(files: typeof FileSystem, clipboard: typeof import("@legendapp/frame-clipboard/src/desktop"), token: string) {
+export async function richClipboardLifecycle(files: typeof FileSystem, clipboard: typeof import("@legendapp/spark-clipboard/src/desktop"), token: string) {
   const original = await clipboard.readClipboard();
   const file = `${await files.getDirectory("temp")}/clipboard-${token}.txt`;
   try {
@@ -127,11 +127,11 @@ export async function richClipboardLifecycle(files: typeof FileSystem, clipboard
   }
 }
 
-export async function processLifecycle(files: typeof FileSystem, processes: typeof import("@legendapp/frame-processes"), executable: string, windows: boolean, token: string) {
+export async function processLifecycle(files: typeof FileSystem, processes: typeof import("@legendapp/spark-processes"), executable: string, windows: boolean, token: string) {
   const command = (script: string) => windows ? ["-NoProfile", "-NonInteractive", "-Command", script] : ["-c", script];
-  const env = { FRAME_PROCESS_TEST: "space ü & $value" };
-  const result = await processes.runCommand({ executable, env, args: command(windows ? "[Console]::OutputEncoding=[Text.UTF8Encoding]::new($false); [Console]::Out.Write($env:FRAME_PROCESS_TEST); [Console]::Error.Write('err'); exit 7" : 'printf %s "$FRAME_PROCESS_TEST"; printf err >&2; exit 7') });
-  assertContract(result.exitCode === 7 && result.stdout === env.FRAME_PROCESS_TEST && result.stderr === "err" && !result.signal, "Process environment, output or exit status changed");
+  const env = { SPARK_PROCESS_TEST: "space ü & $value" };
+  const result = await processes.runCommand({ executable, env, args: command(windows ? "[Console]::OutputEncoding=[Text.UTF8Encoding]::new($false); [Console]::Out.Write($env:SPARK_PROCESS_TEST); [Console]::Error.Write('err'); exit 7" : 'printf %s "$SPARK_PROCESS_TEST"; printf err >&2; exit 7') });
+  assertContract(result.exitCode === 7 && result.stdout === env.SPARK_PROCESS_TEST && result.stderr === "err" && !result.signal, "Process environment, output or exit status changed");
   const stdin = await processes.runCommand({ executable, input: "input ü\n", args: command(windows ? "[Console]::InputEncoding=[Text.UTF8Encoding]::new($false); [Console]::OutputEncoding=[Text.UTF8Encoding]::new($false); [Console]::Out.Write([Console]::In.ReadToEnd())" : "cat") });
   assertContract(stdin.stdout === "input ü\n", "Initial stdin was not drained before EOF");
   const binary = await processes.runCommand({ executable, args: command(windows ? "$o=[Console]::OpenStandardOutput(); $o.Write([byte[]](0,255,1),0,3)" : "printf '\\000\\377\\001'") });
@@ -145,7 +145,7 @@ export async function processLifecycle(files: typeof FileSystem, processes: type
   const stopped = await processes.spawn({ executable, args: command(windows ? "Start-Sleep -Seconds 30" : "sleep 30") });
   await stopped.terminate(); assertContract((await stopped.exited).signal, "Explicit termination did not complete");
   if (windows) {
-    const script = `${await files.getDirectory("temp")}/frame-args-${token}.ps1`;
+    const script = `${await files.getDirectory("temp")}/spark-args-${token}.ps1`;
     try {
       await files.writeText(script, "[Console]::OutputEncoding=[Text.UTF8Encoding]::new($false); ConvertTo-Json -InputObject @($args) -Compress");
       const args = ["with spaces", 'embedded"quote', "ends\\", "", "ü&$()"];

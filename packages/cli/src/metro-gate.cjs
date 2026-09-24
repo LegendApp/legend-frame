@@ -1,5 +1,5 @@
 const fs = require("node:fs");
-const { statePath, supportedPlatforms } = require("@legendapp/frame-desktop-config/config.cjs");
+const { statePath, supportedPlatforms } = require("@legendapp/spark-desktop-config/config.cjs");
 // Builds/export operate independently. Only a managed live session enables this gate.
 exports.gate = (root, middleware) => (req, res, next) => {
   if (/\.(bundle|delta)(\?|$)/.test(req.url || "")) {
@@ -15,14 +15,14 @@ exports.gate = (root, middleware) => (req, res, next) => {
       } catch {
         res.statusCode = 503;
         res.end(
-          "frame: runtime compatibility is being checked. Retry in a moment.",
+          "spark: runtime compatibility is being checked. Retry in a moment.",
         );
         return;
       }
       if (session && !session.compatible) {
         res.statusCode = 409;
         res.end(
-          "frame: custom development build required. Press g to switch desktop runtime or b to build in the development terminal. " +
+          "spark: custom development build required. Press g to switch desktop runtime or b to build in the development terminal. " +
             (session.reason || ""),
         );
         return;

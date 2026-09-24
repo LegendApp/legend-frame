@@ -9,7 +9,7 @@ packaging or complete platform parity.
 - Workspace typecheck and model/API/CLI tests pass. Persistence tests cover a
   corrupt snapshot, unreadable storage, unknown schema, edits during a pending
   save, retry, deleted-note restoration, and asynchronous resource teardown.
-- `bun run pack:local` followed by `bun scripts/test-examples.ts /tmp/FrameExamplesFinal` creates three independently
+- `bun run pack:local` followed by `bun scripts/test-examples.ts /tmp/SparkExamplesFinal` creates three independently
   installed consumers from SDK archives outside the checkout. All three consumer
   typechecks and all 15 platform bundles pass. Mobile/web bundles are checked for
   accidental desktop native bindings. Platform switching preserves configuration.
@@ -55,7 +55,7 @@ AsyncStorage's unpackaged path, and audio transport controls. Android and mobile
 Music background/lock-screen behavior have bundle coverage, not runtime acceptance
 in this session. OS file-association registration on Windows is now implemented in source; native acceptance remains pending. See [Windows acceptance](windows-issues.md).
 
-No cloud services or sibling frame application repositories are required.
+No cloud services or sibling spark application repositories are required.
 
 ## Notes desktop behavior follow-up (2026-09-17)
 

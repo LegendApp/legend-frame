@@ -1,1 +1,1 @@
-export * from "@legendapp/frame-ui/uniwind";
+export * from "@legendapp/spark-ui/uniwind";

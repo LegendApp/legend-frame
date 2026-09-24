@@ -23,7 +23,7 @@
 #include <functional>
 #include <optional>
 
-namespace margelo::nitro::frameprobe::views {
+namespace margelo::nitro::sparkprobe::views {
 
   using namespace facebook;
 
@@ -82,4 +82,4 @@ namespace margelo::nitro::frameprobe::views {
 
   /* The actual view for "CompatibilityView" needs to be implemented in platform-specific code. */
 
-} // namespace margelo::nitro::frameprobe::views
+} // namespace margelo::nitro::sparkprobe::views

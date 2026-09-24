@@ -1,20 +1,20 @@
 {
-  "name": "frame-template-windows",
+  "name": "spark-template-windows",
   "version": "0.0.1",
   "private": true,
   "main": "index.ts",
   "scripts": {
-    "start": "frame dev",
-    "dev": "frame dev",
-    "build": "frame build",
-    "package": "frame package",
-    "doctor": "frame doctor",
-    "windows": "frame dev",
-    "postinstall": "node node_modules/@legendapp/frame-cli/src/init-template.cjs"
+    "start": "spark dev",
+    "dev": "spark dev",
+    "build": "spark build",
+    "package": "spark package",
+    "doctor": "spark doctor",
+    "windows": "spark dev",
+    "postinstall": "node node_modules/@legendapp/spark-cli/src/init-template.cjs"
   },
   "dependencies": {
-    "@legendapp/frame-cli": "0.1.0-prototype.0",
-    "@legendapp/frame-desktop-config": "0.1.0-prototype.0",
+    "@legendapp/spark-cli": "0.1.0-prototype.0",
+    "@legendapp/spark-desktop-config": "0.1.0-prototype.0",
     "expo": "54.0.37",
     "expo-desktop": "1.0.0-beta.6",
     "expo-desktop-prebuild-config": "1.1.0-beta.1",
@@ -29,7 +29,7 @@
     "react-native-windows": "0.81.35",
     "expo-desktop-modules-core": "54.0.14-beta.0",
     "expo-desktop-stubs": "54.0.14-beta.0",
-    "@legendapp/frame-desktop-host": "0.1.0-prototype.0"
+    "@legendapp/spark-desktop-host": "0.1.0-prototype.0"
   },
   "overrides": {
     "@expo/cli": "54.0.27",

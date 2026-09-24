@@ -1,5 +1,5 @@
 {
-  "name": "@legendapp/frame-drag-drop",
+  "name": "@legendapp/spark-drag-drop",
   "version": "0.1.0-prototype.0",
   "license": "MIT",
   "main": "src/index.tsx",
@@ -25,7 +25,7 @@
       }
     }
   },
-  "frame": {
+  "spark": {
     "sdk": true,
     "nativeModules": [],
     "pod": "RNDesktopDrag",
@@ -34,10 +34,10 @@
       "windows"
     ],
     "requires": [
-      "@legendapp/frame-desktop-app"
+      "@legendapp/spark-desktop-app"
     ]
   },
   "dependencies": {
-    "@legendapp/frame-desktop-app": "0.1.0-prototype.0"
+    "@legendapp/spark-desktop-app": "0.1.0-prototype.0"
   }
 }

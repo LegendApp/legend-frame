@@ -2,12 +2,12 @@ import React, { useState } from "react";
 import { Button, StyleSheet, Text, TurboModuleRegistry, View } from "react-native";
 import type { TurboModule } from "react-native";
 interface Host extends TurboModule { describe(): string; }
-const host = TurboModuleRegistry.getEnforcing<Host>("NativeFrameRuntime");
+const host = TurboModuleRegistry.getEnforcing<Host>("NativeSparkRuntime");
 const runtime = JSON.parse(host.describe());
 export default function App() {
   const [clicks, setClicks] = useState(0);
   return <View style={styles.root}>
-    <Text style={styles.title}>Hello, Frame on Windows</Text>
+    <Text style={styles.title}>Hello, Spark on Windows</Text>
     <Text>Runtime: {runtime.mode}</Text>
     <Button title={`Clicked ${clicks} times`} onPress={() => setClicks(value => value + 1)} />
     <Text>Edit App.tsx to test Fast Refresh.</Text>

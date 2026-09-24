@@ -1,9 +1,9 @@
 # Native UI
 
-`@legendapp/frame-ui` defines only the three controls used by the [shared Settings starter](universal-settings.md): `Button`, `TextInput`, and `Select`. It owns their small contracts and selects replaceable implementations. Buttons are actual native controls, with no React Native `Pressable` implementation.
+`@legendapp/spark-ui` defines only the three controls used by the [shared Settings starter](universal-settings.md): `Button`, `TextInput`, and `Select`. It owns their small contracts and selects replaceable implementations. Buttons are actual native controls, with no React Native `Pressable` implementation.
 
 ```tsx
-import { Button, TextInput, Select } from '@legendapp/frame-ui';
+import { Button, TextInput, Select } from '@legendapp/spark-ui';
 
 <TextInput defaultValue="" onChangeText={setName} accessibilityLabel="Display name" />
 <Select options={themes} value={theme} onValueChange={setTheme} accessibilityLabel="Appearance" />
@@ -22,9 +22,9 @@ The macOS controls are Fabric components in a standalone pod. Mobile application
 
 ## Contracts
 
-All controls accept `style` for React Native layout and `testID`. Layout styles allocate the frame; they do not promise arbitrary styling of OS-rendered chrome. The iOS adapters own their SwiftUI Host boundaries so controls can sit beside ordinary React Native content. Android/web use React Native layout wrappers. Native appearance and selection presentation can differ by platform.
+All controls accept `style` for React Native layout and `testID`. Layout styles allocate the spark; they do not promise arbitrary styling of OS-rendered chrome. The iOS adapters own their SwiftUI Host boundaries so controls can sit beside ordinary React Native content. Android/web use React Native layout wrappers. Native appearance and selection presentation can differ by platform.
 
-**Button** accepts string `children`, optional argument-free `onPress`, `disabled` (default false), and `variant` (`default`, `bordered`, `borderless`). Disabled controls do not invoke the action. Defaults are 160 points wide and 36 high on desktop/web, 44 high on iOS, and 48 high on Android. Set a wider frame for longer labels. Icons and arbitrary React children are deferred.
+**Button** accepts string `children`, optional argument-free `onPress`, `disabled` (default false), and `variant` (`default`, `bordered`, `borderless`). Disabled controls do not invoke the action. Defaults are 160 points wide and 36 high on desktop/web, 44 high on iOS, and 48 high on Android. Set a wider spark for longer labels. Icons and arbitrary React children are deferred.
 
 **TextInput** accepts `defaultValue`, optional `onChangeText`, and `accessibilityLabel`. It is deliberately uncontrolled: `defaultValue` initializes the native editor, and changing it after mounting does not replace an edit. Use `onChangeText` to keep application state; remount with a new key to reset the field. Expo UI 54 does not provide a fully controlled text field contract, so this API does not pretend to support `value`. Secure entry, validation, multiline input, and imperative focus/reset are deferred.
 
@@ -45,7 +45,7 @@ see [Windows issues](windows-issues.md#foundation-work--2026-09-15).
 
 ## Optional Uniwind bindings
 
-Import the same three controls from `@legendapp/frame-ui/uniwind` to add `className` through upstream `withUniwind` on native platforms and `useResolveClassNames` on web. Classes map to the existing layout `style`, with explicit styles taking precedence. The base entry has no Uniwind dependency at runtime. See [styling setup, themes, and limitations](styling.md).
+Import the same three controls from `@legendapp/spark-ui/uniwind` to add `className` through upstream `withUniwind` on native platforms and `useResolveClassNames` on web. Classes map to the existing layout `style`, with explicit styles taking precedence. The base entry has no Uniwind dependency at runtime. See [styling setup, themes, and limitations](styling.md).
 
 ## Integration and verification
 
@@ -60,7 +60,7 @@ bun test tests
 
 `test:ui` builds a packed kitchen-sink consumer with the test-only driver. It checks a mounted NSButton hit target, dispatches AppKit actions, and verifies React updates. Text/selection checks invoke the native delegate/action paths, including changed defaults and reordered options with duplicate labels. This is in-app native verification; it does not replace real pointer/keyboard and accessibility testing.
 
-`test:universal` generates real mobile/Windows projects and bundles the shared Settings entry for all five targets. It verifies that shared files and existing generated projects survive target switching and that platform bundles select the expected UI backend. Reports live under the consumer's `.frame` directory.
+`test:universal` generates real mobile/Windows projects and bundles the shared Settings entry for all five targets. It verifies that shared files and existing generated projects survive target switching and that platform bundles select the expected UI backend. Reports live under the consumer's `.spark` directory.
 
 Native Android and Windows execution remain pending. Windows uses WinUI controls hosted through RNW ContentIsland, with labeled, disabled placeholders if the UI module is absent or native initialization fails. Placeholders preserve layout/test IDs, do not attach action handlers, and do not load unavailable native bindings. Remaining implementations are tracked in [known Windows issues](windows-issues.md). Router, declarative windows, and a larger UI catalog remain deferred.
 
@@ -72,6 +72,6 @@ Native Android and Windows execution remain pending. Windows uses WinUI controls
 - Web typing, selection, copying, and unavailable secure storage behavior passed through the browser UI.
 - All five shared-screen bundles passed. Real iOS/Android/Windows generation preserved shared files and earlier native projects. A separate check also preserved the already-built macOS project and build record while generating Android/Windows.
 
-Bun execution used the synchronized `/tmp/frame-api-clean` checkout because Bun stalled in Documents on this host. Native Android/Windows execution and macOS pointer/keyboard inspection remain unverified; native Mac UI automation was blocked by the locked desktop. These checks do not establish mobile production distribution or Windows UI support.
+Bun execution used the synchronized `/tmp/spark-api-clean` checkout because Bun stalled in Documents on this host. Native Android/Windows execution and macOS pointer/keyboard inspection remain unverified; native Mac UI automation was blocked by the locked desktop. These checks do not establish mobile production distribution or Windows UI support.
 
 The new Windows implementations are source-complete for the three contracts but await native compilation and UI acceptance. Run `bun run test:windows:features` on an interactive Windows machine. These are WinUI controls, not Pressable wrappers.

@@ -1,5 +1,5 @@
 {
-  "name": "@legendapp/frame-file-dialog",
+  "name": "@legendapp/spark-file-dialog",
   "version": "0.1.0-prototype.0",
   "main": "src/index",
   "react-native": "src/index",
@@ -8,7 +8,7 @@
     "type": "modules",
     "jsSrcsDir": "src",
     "android": {
-      "javaPackageName": "so.legend.frame.apps.filedialog"
+      "javaPackageName": "so.legend.spark.apps.filedialog"
     },
     "ios": {
       "modulesProvider": {
@@ -27,7 +27,7 @@
     "*.podspec",
     "windows"
   ],
-  "frame": {
+  "spark": {
     "sdk": true,
     "nativeModules": [
       "NativeFileDialog"

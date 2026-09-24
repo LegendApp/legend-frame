@@ -5,7 +5,7 @@ Pod::Spec.new do |s|
   s.version = package["version"]
   s.summary = "Desktop sdk-test-driver"
   s.license = { :type => "MIT" }
-  s.author = "Frame"
+  s.author = "Spark"
   s.homepage = "https://legendapp.com"
   s.frameworks = "UniformTypeIdentifiers", "MediaPlayer"
   s.source = { :path => "." }

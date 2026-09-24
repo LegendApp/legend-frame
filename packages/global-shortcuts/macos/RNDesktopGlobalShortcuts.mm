@@ -1,5 +1,5 @@
 #import "RNDesktopGlobalShortcuts.h"
-#import <RNDesktopApp/FrameDesktop.h>
+#import <RNDesktopApp/SparkDesktop.h>
 #import <Carbon/Carbon.h>
 static OSStatus Hotkey(EventHandlerCallRef next, EventRef event, void *context);
 static NSInteger KeyCode(NSString *key) {
@@ -30,11 +30,11 @@ RCT_EXPORT_MODULE(NativeDesktopGlobalShortcuts)
 - (void)handle:(EventRef)event {
   EventHotKeyID key;
   if (GetEventParameter(event, kEventParamDirectObject, typeEventHotKeyID, NULL, sizeof(key), NULL, &key) != noErr || key.signature != 'LGDS') return;
-  for (NSString *name in self.registrations) if ([self.registrations[name][@"number"] unsignedIntValue] == key.id) FrameEmit(@{ @"type": @"globalShortcut", @"id": name });
+  for (NSString *name in self.registrations) if ([self.registrations[name][@"number"] unsignedIntValue] == key.id) SparkEmit(@{ @"type": @"globalShortcut", @"id": name });
 }
 - (void)call:(NSString *)method args:(NSString *)json resolve:(RCTPromiseResolveBlock)resolve reject:(RCTPromiseRejectBlock)reject {
   dispatch_async(dispatch_get_main_queue(), ^{
-    NSDictionary *args = FrameArgs(json); NSString *key = args[@"id"];
+    NSDictionary *args = SparkArgs(json); NSString *key = args[@"id"];
     if ([method isEqual:@"register"]) {
       NSInteger code = KeyCode(args[@"key"]);
       if (code < 0) { reject(@"E_KEY", @"Key is unavailable in the current keyboard layout", nil); return; }
@@ -52,7 +52,7 @@ RCT_EXPORT_MODULE(NativeDesktopGlobalShortcuts)
       self.registrations[key] = @{ @"code": @(code), @"modifiers": @(modifiers), @"number": @(identity.id), @"reference": [NSValue valueWithPointer:reference] };
     } else if ([method isEqual:@"remove"]) {
       NSDictionary *value = self.registrations[key]; if (value) UnregisterEventHotKey((EventHotKeyRef)[value[@"reference"] pointerValue]); [self.registrations removeObjectForKey:key];
-    } else { FrameInvalid(reject, @"Unknown global shortcut operation"); return; }
+    } else { SparkInvalid(reject, @"Unknown global shortcut operation"); return; }
     resolve(@"null");
   });
 }

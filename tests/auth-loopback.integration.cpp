@@ -1,7 +1,7 @@
 #include "../packages/desktop-links/common/AuthLoopback.h"
 #include <iostream>
 int main() {
-  frame::AuthLoopback callback(0, "/auth/callback");
+  spark::AuthLoopback callback(0, "/auth/callback");
   std::cout << callback.RedirectURI() << std::endl;
   std::string line;
   while (std::getline(std::cin, line)) {

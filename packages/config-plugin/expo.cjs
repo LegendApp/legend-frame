@@ -2,12 +2,12 @@ const fs = require('node:fs');
 const path = require('node:path');
 
 // Existing Expo projects keep their Expo configuration as the source of truth.
-// Only an explicitly selected desktop command applies the Frame overlay.
-function withFrameExpo(original, root) {
+// Only an explicitly selected desktop command applies the Spark overlay.
+function withSparkExpo(original, root) {
   return context => {
     const base = typeof original === 'function' ? original(context) : original;
-    const target = process.env.FRAME_PLATFORM;
-    const development = process.env.FRAME_DEV_SESSION === '1';
+    const target = process.env.SPARK_PLATFORM;
+    const development = process.env.SPARK_DEV_SESSION === '1';
     if (!development && target !== 'macos' && target !== 'windows') return base;
     const { extends: source, ...desktop } = JSON.parse(fs.readFileSync(path.join(root, 'desktop.config.json'), 'utf8'));
     if (source !== 'expo') throw new Error('Expected an Expo-owned desktop configuration');
@@ -23,4 +23,4 @@ function withFrameExpo(original, root) {
     return applySelection(root, toExpo(value, target).expo);
   };
 }
-module.exports = { withFrameExpo };
+module.exports = { withSparkExpo };

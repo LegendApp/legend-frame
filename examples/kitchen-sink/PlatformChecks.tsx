@@ -1,9 +1,9 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import { Platform, ScrollView, Text, View, TurboModuleRegistry, type TurboModule } from "react-native";
-import { Button, TextInput, Select } from "@legendapp/frame-ui";
-import * as Clipboard from "@legendapp/frame-clipboard";
-import * as Storage from "@legendapp/frame-secure-storage";
-import * as Linking from "@legendapp/frame-desktop-links";
+import { Button, TextInput, Select } from "@legendapp/spark-ui";
+import * as Clipboard from "@legendapp/spark-clipboard";
+import * as Storage from "@legendapp/spark-secure-storage";
+import * as Linking from "@legendapp/spark-desktop-links";
 import { clipboardRead, clipboardRoundTrip, secureStorageLifecycle, linkingResolution, assertContract } from "./contract-cases";
 import { catalog, executeCase, initialResults, updateResult, summarize, type CaseResult, type TestPlatform } from "./contract-report";
 import { runDesktopContracts } from "./desktop-contracts";
@@ -86,9 +86,9 @@ function MainChecks() {
     <Text accessibilityRole="header" style={{ fontSize: 24 }}>Platform acceptance: {platform}</Text>
     <Text>Press the native button, enter “Native edit”, and select “Second”. Then finish the run. Untested cases will stay untested.</Text>
     <View style={{ gap: 12 }}>
-      <Button testID="frame-button" onPress={() => interaction("ui.button")}>Native button</Button>
-      <TextInput testID="frame-input" accessibilityLabel="Test input" defaultValue="Initial" onChangeText={text => { if (text === "Native edit") interaction("ui.input"); }} />
-      <Select testID="frame-select" accessibilityLabel="Test selection" options={options} value={value} onValueChange={next => { setValue(next); if (next === "second") interaction("ui.select"); }} />
+      <Button testID="spark-button" onPress={() => interaction("ui.button")}>Native button</Button>
+      <TextInput testID="spark-input" accessibilityLabel="Test input" defaultValue="Initial" onChangeText={text => { if (text === "Native edit") interaction("ui.input"); }} />
+      <Select testID="spark-select" accessibilityLabel="Test selection" options={options} value={value} onValueChange={next => { setValue(next); if (next === "second") interaction("ui.select"); }} />
       {platform === "web" && <Button disabled={running} onPress={() => {
         setRunning(true);
         void check("clipboard.roundtrip", () => clipboardRoundTrip(Clipboard, testConfig.runId))

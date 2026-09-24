@@ -31,9 +31,9 @@ suite on both platforms.
 Evidence: [shared API](../packages/desktop-app/src/api.ts),
 [macOS events](../packages/desktop-host/AppDelegate.mm),
 [macOS calls](../packages/desktop-app/macos/RNDesktopApp.mm),
-[macOS context](../packages/desktop-app/macos/FrameDesktop.mm),
+[macOS context](../packages/desktop-app/macos/SparkDesktop.mm),
 [Windows application host](../packages/desktop-host/windows/application.inc)
-(`WindowProc`, `FrameDesktopApp::call`).
+(`WindowProc`, `SparkDesktopApp::call`).
 
 Acceptance: two visible windows plus one intentionally hidden window; switch
 focus within/outside the app; hide/activate; launch with arguments; forward a
@@ -85,7 +85,7 @@ framework gap. Preserve the existing export as an alias if adding one.
 
 Evidence: [public options](../packages/file-dialog/src/index.ts),
 [macOS picker](../packages/file-dialog/ios/RNFileDialog.mm),
-[Windows picker](../packages/file-dialog/windows/FrameFileDialog/FrameFileDialog.h).
+[Windows picker](../packages/file-dialog/windows/SparkFileDialog/SparkFileDialog.h).
 
 Acceptance: non-default starting directories, custom confirmation text, file-only,
 folder-only and mixed requests, cancellation, filters, and Explorer reveal if added.
@@ -107,7 +107,7 @@ differences and should stay explicitly scoped.
 Evidence: [public style](../packages/window-options/index.d.ts),
 [Windows validation](../packages/desktop-windows/src/windows-options.ts),
 [native Windows allowlist](../packages/desktop-host/windows/application.inc),
-[macOS style/persistence](../packages/desktop-app/macos/FrameWindow.mm).
+[macOS style/persistence](../packages/desktop-app/macos/SparkWindow.mm).
 
 Acceptance: apply each option at creation and update; reopen persisted windows;
 confirm disabled close behavior, theme overrides, and default/system appearance.
@@ -140,7 +140,7 @@ restoring the previous contribution, shortcuts, payloads, and owner routing.
 | Secondary runtimes | Independent Windows Hermes hosts exist; shared-main-module mode explicitly rejects | Defer `useMainNativeModules`, `prewarmBusinessRuntime`, and worker-to-main routing until a concrete app requires them. Do not claim macOS behavioral validation merely because upstream Apple code exposes them. |
 
 Evidence: [Windows library packaging](../scripts/prepare-windows-libraries.ts),
-[Nitro adapter](../patches/windows/nitro/windows/FrameNitro),
+[Nitro adapter](../patches/windows/nitro/windows/SparkNitro),
 [SQLite wrapper](../packages/sqlite/src/index.ts),
 [WebView exports](../packages/webview/src/index.ts),
 [WebView patches](../patches/windows/webview.patch),
@@ -162,7 +162,7 @@ Known differences to document rather than indiscriminately port:
 
 - Window/display geometry is macOS points with a bottom-left origin versus Windows
   virtual-screen pixels with a top-left origin. It is documented on `setWindowFrame`
-  but should also be prominent on `frame`/`Display`; normalization would be an API
+  but should also be prominent on `Frame`/`Display`; normalization would be an API
   design change, not a small missing method.
 - Tray `symbol` is an SF Symbol; Windows uses the executable icon and maps title
   to a tooltip. A portable custom-image API is a possible enhancement, not an
@@ -209,7 +209,7 @@ and [platform tests](platform-testing.md) for execution and report collection.
   requests must set canChooseFiles:false. Added revealInFileManager on both
   desktops, with Explorer selection on Windows and the legacy alias retained.
 - Group 4: Windows accepts closable, restoreFrame, appearance and backgroundColor.
-  Appearance controls native titlebar and frame UI islands per window; React
+  Appearance controls native titlebar and spark UI islands per window; React
   styles and arbitrary third-party platform-color tokens are not rewritten.
   AppKit materials, custom titlebar/transparency/shadow options remain unsupported.
   frame persistence is opt-in and per window ID. Closability governs OS close

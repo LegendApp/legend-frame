@@ -1,7 +1,7 @@
 # Desktop configuration and additional APIs
 
 The SDK targets macOS 14+ on Apple Silicon. APIs are independently imported from
-`@legendapp/frame/<feature>`. These additions do not embed Node.
+`@legendapp/spark/<feature>`. These additions do not embed Node.
 
 ## Configuration
 
@@ -9,7 +9,7 @@ New projects use `desktop.config.json`:
 
 ```json
 {
-  "$schema": "./node_modules/@legendapp/frame-desktop-config/schema.json",
+  "$schema": "./node_modules/@legendapp/spark-desktop-config/schema.json",
   "name": "My App",
   "projectId": "keep-the-id-assigned-by-create",
   "version": "1.0.0",
@@ -31,7 +31,7 @@ only have `app.json` continue to work. If both exist, desktop.config.json wins.
 There is no dynamic TypeScript config support yet.
 
 Top-level fields include `scheme`, `documentTypes`, `menuBarOnly`, `updates`,
-`include`, `signing`, and `helpers`. These replace `expo.extra.frame.*` nesting.
+`include`, `signing`, and `helpers`. These replace `expo.extra.spark.*` nesting.
 `macos` retains platform-specific bundle metadata and entitlements. Advanced
 Expo plugin overrides live under `expo`; framework identity remains authoritative.
 The `updates init` command edits the canonical source.
@@ -55,7 +55,7 @@ activation, update feeds and bundled helpers still need custom builds.
 - `title`, `restoreFrame` (restoration is configured when creating a window)
 
 ```ts
-import { openWindow, setWindowOptions } from "@legendapp/frame/windows";
+import { openWindow, setWindowOptions } from "@legendapp/spark/windows";
 await openWindow({ id: "settings", parentId: "main", modal: true,
   title: "Settings", width: 600, height: 450 });
 await setWindowOptions("main", { titleBarStyle: "overlay" });
@@ -70,7 +70,7 @@ must use transparent backgrounds where native material should show through.
 ## Global shortcuts
 
 ```ts
-import { registerGlobalShortcut } from "@legendapp/frame/global-shortcuts";
+import { registerGlobalShortcut } from "@legendapp/spark/global-shortcuts";
 const shortcut = await registerGlobalShortcut("Cmd+Shift+K", () => showWindow());
 await shortcut.remove();
 ```
@@ -83,7 +83,7 @@ Focused-app shortcuts remain under `shortcuts`.
 ## Drag and drop
 
 ```tsx
-import { DragDropView } from "@legendapp/frame/drag-drop";
+import { DragDropView } from "@legendapp/spark/drag-drop";
 <DragDropView onDrop={({ files, text, urls }) => handleDrop(files, text, urls)}>
   <Text>Drop here</Text>
 </DragDropView>
@@ -102,7 +102,7 @@ recycling resets retained drag state.
 ## Processes and helpers
 
 ```ts
-import { spawn, runCommand } from "@legendapp/frame/processes";
+import { spawn, runCommand } from "@legendapp/spark/processes";
 const result = await runCommand({ executable: "/usr/bin/uname", args: ["-a"] });
 const child = await spawn({ executable: "helper:indexer", args: ["--watch"] }, chunk => {
   // chunk.stream is stdout/stderr; chunk.base64 preserves arbitrary bytes.
@@ -130,7 +130,7 @@ require Node; native Rust, Swift, C/C++ or other standalone executables work.
 ## Message dialogs and clipboard
 
 ```ts
-import { showMessage, confirm } from "@legendapp/frame/dialogs";
+import { showMessage, confirm } from "@legendapp/spark/dialogs";
 const result = await showMessage({ title: "Save changes?", windowId: "main",
   buttons: ["Cancel", "Save"], defaultButton: 1, cancelButton: 0,
   checkbox: { label: "Remember my choice" } });
@@ -178,7 +178,7 @@ SQLite uses @op-engineering/op-sqlite 18.2.1 with plain SQLite. openDatabase req
 a simple .sqlite filename and places it in the current project's data directory:
 
 ```ts
-import { openDatabase } from "@legendapp/frame/sqlite";
+import { openDatabase } from "@legendapp/spark/sqlite";
 const db = await openDatabase("notes.sqlite");
 try {
   await db.execute("CREATE TABLE IF NOT EXISTS notes (body TEXT)");

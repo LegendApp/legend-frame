@@ -7,7 +7,7 @@
 
 #include "HybridCompatibilityViewSpec.hpp"
 
-namespace margelo::nitro::frameprobe {
+namespace margelo::nitro::sparkprobe {
 
   void HybridCompatibilityViewSpec::loadHybridMethods() {
     // load base methods/properties
@@ -20,4 +20,4 @@ namespace margelo::nitro::frameprobe {
     });
   }
 
-} // namespace margelo::nitro::frameprobe
+} // namespace margelo::nitro::sparkprobe

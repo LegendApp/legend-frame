@@ -8,14 +8,14 @@ const source = path.join(framework, "examples/kitchen-sink");
 
 // Integration runners deliberately use a fresh, copied consumer they can modify.
 export async function prepareKitchenSink(root: string) {
-  const marker = path.join(root, ".frame/kitchen-sink.json");
+  const marker = path.join(root, ".spark/kitchen-sink.json");
   if (existsSync(marker) && readJson(marker).mode === "live")
     throw new Error("Use a separate directory for packaged validation; this app links to the live kitchen sink source.");
   return prepareKitchenSinkConsumer(root);
 }
 
 async function prepareKitchenSinkConsumer(root: string) {
-  const marker = path.join(root, ".frame/kitchen-sink.json");
+  const marker = path.join(root, ".spark/kitchen-sink.json");
   if (existsSync(path.join(root, "package.json")) && !existsSync(marker))
     throw new Error(`Refusing to overwrite an existing app. Choose a new kitchen-sink directory: ${root}`);
   await run(framework, ["bun", "scripts/pack.ts"]);
@@ -23,7 +23,7 @@ async function prepareKitchenSinkConsumer(root: string) {
   if (!existsSync(path.join(root, "package.json"))) await create(root, manifest);
   else await refreshLocalPackages(root, manifest);
   const pkg = readJson(path.join(root, "package.json"));
-  for (const name of ["@legendapp/frame-ui", "@legendapp/frame-audio", "@legendapp/frame-auth-session"]) {
+  for (const name of ["@legendapp/spark-ui", "@legendapp/spark-audio", "@legendapp/spark-auth-session"]) {
     if (!pkg.overrides[name]) throw new Error(`Kitchen Sink needs the packed ${name} archive`);
     pkg.dependencies[name] = pkg.overrides[name];
   }
@@ -50,7 +50,7 @@ if (import.meta.main) {
   if (args.includes("--help")) console.log("bun run kitchen-sink:prepare [fresh-directory]\nPack the SDK and prepare a separate copied consumer for integration tests.");
   else {
     if (args.length > 1 || args[0]?.startsWith("--")) throw new Error("Use bun run kitchen-sink:prepare [fresh-directory]. Everyday development runs directly from examples/kitchen-sink.");
-    const root = path.resolve(args[0] ?? ".frame/examples/KitchenSinkPackaged");
+    const root = path.resolve(args[0] ?? ".spark/examples/KitchenSinkPackaged");
     await prepareKitchenSink(root);
     console.log(`Packaged kitchen sink ready at ${root}`);
   }

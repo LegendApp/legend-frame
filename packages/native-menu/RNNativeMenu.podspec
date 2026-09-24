@@ -5,7 +5,7 @@ package = JSON.parse(File.read(File.join(__dir__, "package.json")))
 Pod::Spec.new do |s|
   s.name = "RNNativeMenu"
   s.version = package["version"]
-  s.summary = "Frame Desktop native menu bindings"
+  s.summary = "Spark Desktop native menu bindings"
   s.license = { :type => "MIT" }
   s.author = "Legend"
   s.homepage = "https://legendapp.com"

@@ -1,5 +1,5 @@
 #import "RNDesktopSystem.h"
-#import <RNDesktopApp/FrameDesktop.h>
+#import <RNDesktopApp/SparkDesktop.h>
 #import <ServiceManagement/ServiceManagement.h>
 #import <IOKit/pwr_mgt/IOPMLib.h>
 #import <IOKit/ps/IOPowerSources.h>
@@ -20,7 +20,7 @@ static NSDictionary *Power(void) {
   }
   return @{ @"onBattery": @(battery), @"batteryLevel": level };
 }
-static void PowerChanged(void *context) { FrameEmit(@{ @"type": @"powerChanged" }); }
+static void PowerChanged(void *context) { SparkEmit(@{ @"type": @"powerChanged" }); }
 @interface RNDesktopSystem ()
 @property NSMutableArray *observers;
 @property NSMutableSet *assertions;
@@ -45,55 +45,55 @@ RCT_EXPORT_MODULE(NativeDesktopSystem)
   ];
   for (NSArray *definition in definitions) {
     NSNotificationCenter *center = definition[0]; NSString *type = definition[2];
-    id observer = [center addObserverForName:definition[1] object:nil queue:NSOperationQueue.mainQueue usingBlock:^(NSNotification *note) { FrameEmit(@{ @"type": type }); }];
+    id observer = [center addObserverForName:definition[1] object:nil queue:NSOperationQueue.mainQueue usingBlock:^(NSNotification *note) { SparkEmit(@{ @"type": type }); }];
     [self.observers addObject:@[center, observer]];
   }
   self.powerSource = IOPSNotificationCreateRunLoopSource(PowerChanged, NULL);
   if (self.powerSource) CFRunLoopAddSource(CFRunLoopGetMain(), self.powerSource, kCFRunLoopCommonModes);
 }
-- (void)dockAction:(NSMenuItem *)sender { FrameEmit(@{ @"type": @"dockAction", @"id": sender.representedObject, @"owner": self.dockOwner ?: @"" }); }
+- (void)dockAction:(NSMenuItem *)sender { SparkEmit(@{ @"type": @"dockAction", @"id": sender.representedObject, @"owner": self.dockOwner ?: @"" }); }
 - (void)call:(NSString *)method args:(NSString *)json resolve:(RCTPromiseResolveBlock)resolve reject:(RCTPromiseRejectBlock)reject {
   dispatch_async(dispatch_get_main_queue(), ^{
-    NSDictionary *args = FrameArgs(json);
+    NSDictionary *args = SparkArgs(json);
     if ([method isEqual:@"info"]) {
       NSMutableDictionary *value = [Power() mutableCopy];
       [value addEntriesFromDictionary:@{ @"osVersion": NSProcessInfo.processInfo.operatingSystemVersionString, @"architecture": @"arm64", @"locale": NSLocale.currentLocale.localeIdentifier,
         @"dark": @([[NSApp.effectiveAppearance bestMatchFromAppearancesWithNames:@[NSAppearanceNameAqua, NSAppearanceNameDarkAqua]] isEqual:NSAppearanceNameDarkAqua]),
         @"idleSeconds": @(CGEventSourceSecondsSinceLastEventType(kCGEventSourceStateCombinedSessionState, kCGAnyInputEventType)) }];
-      resolve(FrameJSON(value)); return;
+      resolve(SparkJSON(value)); return;
     }
     if ([method isEqual:@"observe"]) [self observe];
     else if ([method isEqual:@"loginStatus"] || [method isEqual:@"login"]) {
-      BOOL available = [FrameContext()[@"runtime"][@"mode"] isEqual:@"release"];
+      BOOL available = [SparkContext()[@"runtime"][@"mode"] isEqual:@"release"];
       if ([method isEqual:@"loginStatus"]) {
         NSArray *statuses = @[@"disabled", @"enabled", @"requiresApproval", @"notFound"];
         NSInteger status = SMAppService.mainAppService.status;
-        resolve(FrameJSON(available && status < statuses.count ? statuses[status] : @"unavailable")); return;
+        resolve(SparkJSON(available && status < statuses.count ? statuses[status] : @"unavailable")); return;
       }
       if (!available) { reject(@"E_UNAVAILABLE", @"Login startup requires a standalone distribution app", nil); return; }
       NSError *error;
       BOOL success = [args[@"enabled"] boolValue] ? [SMAppService.mainAppService registerAndReturnError:&error] : [SMAppService.mainAppService unregisterAndReturnError:&error];
-      if (!success) { FrameReject(reject, error); return; }
+      if (!success) { SparkReject(reject, error); return; }
     }
     else if ([method isEqual:@"badge"]) NSApp.dockTile.badgeLabel = args[@"label"];
-    else if ([method isEqual:@"attention"]) { NSInteger token = [NSApp requestUserAttention:[args[@"critical"] boolValue] ? NSCriticalRequest : NSInformationalRequest]; [self.attention addObject:@(token)]; resolve(FrameJSON(@(token))); return; }
+    else if ([method isEqual:@"attention"]) { NSInteger token = [NSApp requestUserAttention:[args[@"critical"] boolValue] ? NSCriticalRequest : NSInformationalRequest]; [self.attention addObject:@(token)]; resolve(SparkJSON(@(token))); return; }
     else if ([method isEqual:@"cancelAttention"]) { if ([self.attention containsObject:args[@"id"]]) [NSApp cancelUserAttentionRequest:[args[@"id"] integerValue]]; [self.attention removeObject:args[@"id"]]; }
-    else if ([method isEqual:@"clearDockMenu"]) { if ([self.dockOwner isEqual:args[@"owner"]]) { FrameDockMenu = nil; self.dockOwner = nil; } }
+    else if ([method isEqual:@"clearDockMenu"]) { if ([self.dockOwner isEqual:args[@"owner"]]) { SparkDockMenu = nil; self.dockOwner = nil; } }
     else if ([method isEqual:@"dockMenu"]) {
       if (self.dockOwner) { reject(@"E_DOCK_MENU_EXISTS", @"Remove the existing Dock menu before replacing it", nil); return; }
       self.dockOwner = args[@"owner"];
       NSMenu *menu = [NSMenu new]; menu.autoenablesItems = NO;
       for (NSDictionary *item in args[@"items"]) { NSMenuItem *entry = [[NSMenuItem alloc] initWithTitle:item[@"title"] action:@selector(dockAction:) keyEquivalent:@""]; entry.target = self; entry.representedObject = item[@"id"]; entry.enabled = !item[@"enabled"] || [item[@"enabled"] boolValue]; entry.state = [item[@"checked"] boolValue] ? NSControlStateValueOn : NSControlStateValueOff; [menu addItem:entry]; }
-      FrameDockMenu = menu;
+      SparkDockMenu = menu;
     }
     else if ([method isEqual:@"preventSleep"]) {
       IOPMAssertionID assertion; CFStringRef kind = [args[@"kind"] isEqual:@"system"] ? kIOPMAssertionTypePreventUserIdleSystemSleep : kIOPMAssertionTypePreventUserIdleDisplaySleep;
       IOReturn status = IOPMAssertionCreateWithName(kind, kIOPMAssertionLevelOn, (__bridge CFStringRef)args[@"reason"], &assertion);
       if (status != kIOReturnSuccess) { reject(@"E_POWER", @"Could not create sleep assertion", nil); return; }
-      [self.assertions addObject:@(assertion)]; resolve(FrameJSON(@(assertion))); return;
+      [self.assertions addObject:@(assertion)]; resolve(SparkJSON(@(assertion))); return;
     }
     else if ([method isEqual:@"allowSleep"]) { if ([self.assertions containsObject:args[@"id"]]) IOPMAssertionRelease([args[@"id"] unsignedIntValue]); [self.assertions removeObject:args[@"id"]]; }
-    else { FrameInvalid(reject, @"Unknown system operation"); return; }
+    else { SparkInvalid(reject, @"Unknown system operation"); return; }
     resolve(@"null");
   });
 }
@@ -102,7 +102,7 @@ RCT_EXPORT_MODULE(NativeDesktopSystem)
   if (self.powerSource) { CFRunLoopRemoveSource(CFRunLoopGetMain(), self.powerSource, kCFRunLoopCommonModes); CFRelease(self.powerSource); self.powerSource = NULL; }
   for (NSNumber *value in self.assertions) IOPMAssertionRelease(value.unsignedIntValue); [self.assertions removeAllObjects];
   for (NSNumber *value in self.attention) [NSApp cancelUserAttentionRequest:value.integerValue]; [self.attention removeAllObjects];
-  FrameDockMenu = nil; NSApp.dockTile.badgeLabel = nil;
+  SparkDockMenu = nil; NSApp.dockTile.badgeLabel = nil;
 }); }
 - (std::shared_ptr<facebook::react::TurboModule>)getTurboModule:(const facebook::react::ObjCTurboModule::InitParams &)params { return std::make_shared<facebook::react::NativeDesktopSystemSpecJSI>(params); }
 @end

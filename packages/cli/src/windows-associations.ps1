@@ -7,7 +7,7 @@ try {
   foreach ($scheme in $plan.protocols) {
     $key = $classes.OpenSubKey($scheme)
     if ($key) {
-      try { if ($key.GetValue('FrameOwner') -ne $plan.appId) { throw "Protocol '$scheme' belongs to another app" } } finally { $key.Dispose() }
+      try { if ($key.GetValue('SparkOwner') -ne $plan.appId) { throw "Protocol '$scheme' belongs to another app" } } finally { $key.Dispose() }
     }
   }
   $command = '"' + $plan.executable + '" "%1"'
@@ -22,7 +22,7 @@ try {
   } else {
     $key = $classes.CreateSubKey($progId)
     try {
-      $key.SetValue('', [string]$plan.name); $key.SetValue('FrameOwner', [string]$plan.appId)
+      $key.SetValue('', [string]$plan.name); $key.SetValue('SparkOwner', [string]$plan.appId)
       $open = $key.CreateSubKey('shell\open\command'); try { $open.SetValue('', $command) } finally { $open.Dispose() }
     } finally { $key.Dispose() }
     foreach ($extension in $plan.extensions) {
@@ -32,7 +32,7 @@ try {
     foreach ($scheme in $plan.protocols) {
       $key = $classes.CreateSubKey($scheme)
       try {
-        $key.SetValue('', 'URL:' + $plan.name); $key.SetValue('URL Protocol', ''); $key.SetValue('FrameOwner', [string]$plan.appId)
+        $key.SetValue('', 'URL:' + $plan.name); $key.SetValue('URL Protocol', ''); $key.SetValue('SparkOwner', [string]$plan.appId)
         $open = $key.CreateSubKey('shell\open\command'); try { $open.SetValue('', $command) } finally { $open.Dispose() }
       } finally { $key.Dispose() }
     }
@@ -43,7 +43,7 @@ try {
       if ($plan.protocols -contains $scheme) { continue }
       $key = $classes.OpenSubKey($scheme)
       $owned = $false
-      if ($key) { try { $owned = $key.GetValue('FrameOwner') -eq $plan.previous.appId } finally { $key.Dispose() } }
+      if ($key) { try { $owned = $key.GetValue('SparkOwner') -eq $plan.previous.appId } finally { $key.Dispose() } }
       if ($owned) { $classes.DeleteSubKeyTree($scheme, $false) }
     }
     foreach ($extension in $plan.previous.extensions) {
@@ -52,6 +52,6 @@ try {
       if ($key) { try { $key.DeleteValue($plan.previous.appId + '.Document', $false) } finally { $key.Dispose() } }
     }
   }
-  Add-Type -TypeDefinition '[System.Runtime.InteropServices.DllImport("shell32.dll")] public static extern void SHChangeNotify(uint e, uint f, System.IntPtr a, System.IntPtr b);' -Name Shell -Namespace Frame
-  [Frame.Shell]::SHChangeNotify(0x08000000, 0, [IntPtr]::Zero, [IntPtr]::Zero)
+  Add-Type -TypeDefinition '[System.Runtime.InteropServices.DllImport("shell32.dll")] public static extern void SHChangeNotify(uint e, uint f, System.IntPtr a, System.IntPtr b);' -Name Shell -Namespace Spark
+  [Spark.Shell]::SHChangeNotify(0x08000000, 0, [IntPtr]::Zero, [IntPtr]::Zero)
 } finally { $classes.Dispose() }

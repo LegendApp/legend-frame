@@ -42,11 +42,11 @@ test("cancel and discard have distinct behavior", async () => {
 });
 
 test('mobile React Native codegen excludes desktop providers alongside Expo autolinking', () => {
-  const root = mkdtempSync(path.join(tmpdir(), 'frame-codegen-'));
+  const root = mkdtempSync(path.join(tmpdir(), 'spark-codegen-'));
   try {
-    writeFileSync(path.join(root, 'app.json'), JSON.stringify({ expo: { platforms: ['ios'], autolinking: { exclude: ['@legendapp/frame-message-dialog'] } } }));
+    writeFileSync(path.join(root, 'app.json'), JSON.stringify({ expo: { platforms: ['ios'], autolinking: { exclude: ['@legendapp/spark-message-dialog'] } } }));
     const config = require('../packages/cli/src/universal.cjs').nativeConfig(root);
-    expect(config.dependencies['@legendapp/frame-message-dialog'].platforms.ios).toBeNull();
-    expect(config.dependencies['@legendapp/frame-message-dialog'].platforms.android).toBeNull();
+    expect(config.dependencies['@legendapp/spark-message-dialog'].platforms.ios).toBeNull();
+    expect(config.dependencies['@legendapp/spark-message-dialog'].platforms.android).toBeNull();
   } finally { rmSync(root, { recursive: true, force: true }); }
 });

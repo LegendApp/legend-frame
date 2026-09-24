@@ -1,21 +1,21 @@
 #import "RNDesktopClipboard.h"
-#import <RNDesktopApp/FrameDesktop.h>
+#import <RNDesktopApp/SparkDesktop.h>
 @implementation RNDesktopClipboard
 RCT_EXPORT_MODULE(NativeDesktopClipboard)
 - (void)call:(NSString *)method args:(NSString *)json resolve:(RCTPromiseResolveBlock)resolve reject:(RCTPromiseRejectBlock)reject {
   dispatch_async(dispatch_get_main_queue(), ^{
     NSPasteboard *board = NSPasteboard.generalPasteboard;
-    NSDictionary *args = FrameArgs(json);
+    NSDictionary *args = SparkArgs(json);
     if ([method isEqual:@"hasString"]) {
-      resolve(FrameJSON(@([board availableTypeFromArray:@[NSPasteboardTypeString, NSPasteboardTypeHTML, NSPasteboardTypeRTF]] != nil))); return;
+      resolve(SparkJSON(@([board availableTypeFromArray:@[NSPasteboardTypeString, NSPasteboardTypeHTML, NSPasteboardTypeRTF]] != nil))); return;
     }
     if ([method isEqual:@"getString"] || [method isEqual:@"setString"]) {
       NSString *format = args[@"format"];
-      if (![@[@"plainText", @"html"] containsObject:format]) { FrameInvalid(reject, @"Invalid clipboard string format"); return; }
+      if (![@[@"plainText", @"html"] containsObject:format]) { SparkInvalid(reject, @"Invalid clipboard string format"); return; }
       BOOL html = [format isEqual:@"html"];
       if ([method isEqual:@"setString"]) {
         NSString *text = args[@"text"];
-        if (![text isKindOfClass:NSString.class]) { FrameInvalid(reject, @"Expected clipboard text"); return; }
+        if (![text isKindOfClass:NSString.class]) { SparkInvalid(reject, @"Expected clipboard text"); return; }
         NSPasteboardItem *item = [NSPasteboardItem new];
         [item setString:text forType:html ? NSPasteboardTypeHTML : NSPasteboardTypeString];
         if (html) {
@@ -40,9 +40,9 @@ RCT_EXPORT_MODULE(NativeDesktopClipboard)
           text = [[NSString alloc] initWithData:encoded encoding:NSUTF8StringEncoding];
         } else text = rich.string;
       }
-      resolve(FrameJSON(text ?: @"")); return;
+      resolve(SparkJSON(text ?: @"")); return;
     }
-    if ([method isEqual:@"formats"]) { resolve(FrameJSON(board.types ?: @[])); return; }
+    if ([method isEqual:@"formats"]) { resolve(SparkJSON(board.types ?: @[])); return; }
     if ([method isEqual:@"clear"]) { [board clearContents]; resolve(@"null"); return; }
     NSDictionary *types = @{ @"text": NSPasteboardTypeString, @"html": NSPasteboardTypeHTML, @"rtf": NSPasteboardTypeRTF };
     if ([method isEqual:@"read"]) {
@@ -53,7 +53,7 @@ RCT_EXPORT_MODULE(NativeDesktopClipboard)
       if (image) content[@"imagePNG"] = [image base64EncodedStringWithOptions:0];
       NSArray *urls = [board readObjectsForClasses:@[NSURL.class] options:@{ NSPasteboardURLReadingFileURLsOnlyKey: @YES }];
       if (urls.count) content[@"files"] = [urls valueForKey:@"path"];
-      resolve(FrameJSON(content)); return;
+      resolve(SparkJSON(content)); return;
     }
     if ([method isEqual:@"write"]) {
       NSMutableArray *objects = [NSMutableArray new];
@@ -63,7 +63,7 @@ RCT_EXPORT_MODULE(NativeDesktopClipboard)
         for (NSString *key in types) if (args[key]) [item setString:args[key] forType:types[key]];
         if (args[@"imagePNG"]) {
           NSData *image = [[NSData alloc] initWithBase64EncodedString:args[@"imagePNG"] options:0];
-          if (!image || ![NSBitmapImageRep imageRepWithData:image]) { FrameInvalid(reject, @"Invalid clipboard image"); return; }
+          if (!image || ![NSBitmapImageRep imageRepWithData:image]) { SparkInvalid(reject, @"Invalid clipboard image"); return; }
           [item setData:image forType:NSPasteboardTypePNG];
         }
         if (item.types.count) [objects addObject:item];
@@ -71,14 +71,14 @@ RCT_EXPORT_MODULE(NativeDesktopClipboard)
       [board clearContents]; if (objects.count && ![board writeObjects:objects]) { reject(@"E_CLIPBOARD", @"Could not write clipboard", nil); return; }
       resolve(@"null"); return;
     }
-    if ([method isEqual:@"readText"]) resolve(FrameJSON([board stringForType:NSPasteboardTypeString] ?: @""));
-    else if ([method isEqual:@"hasText"]) resolve(FrameJSON(@([board availableTypeFromArray:@[NSPasteboardTypeString]] != nil)));
+    if ([method isEqual:@"readText"]) resolve(SparkJSON([board stringForType:NSPasteboardTypeString] ?: @""));
+    else if ([method isEqual:@"hasText"]) resolve(SparkJSON(@([board availableTypeFromArray:@[NSPasteboardTypeString]] != nil)));
     else if ([method isEqual:@"writeText"]) {
-      if (![args[@"text"] isKindOfClass:NSString.class]) { FrameInvalid(reject, @"Expected clipboard text"); return; }
+      if (![args[@"text"] isKindOfClass:NSString.class]) { SparkInvalid(reject, @"Expected clipboard text"); return; }
       [board clearContents];
       if (![board setString:args[@"text"] forType:NSPasteboardTypeString]) { reject(@"E_CLIPBOARD", @"Could not write clipboard", nil); return; }
       resolve(@"null");
-    } else FrameInvalid(reject, @"Unknown clipboard operation");
+    } else SparkInvalid(reject, @"Unknown clipboard operation");
   });
 }
 - (std::shared_ptr<facebook::react::TurboModule>)getTurboModule:(const facebook::react::ObjCTurboModule::InitParams &)params {

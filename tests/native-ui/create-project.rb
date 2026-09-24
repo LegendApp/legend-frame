@@ -7,7 +7,7 @@ target.resources_build_phase.add_file_reference(project.main_group.new_file("con
 target.build_configurations.each do |config|
   config.build_settings["SWIFT_VERSION"] = "5.0"
   config.build_settings["GENERATE_INFOPLIST_FILE"] = "YES"
-  config.build_settings["PRODUCT_BUNDLE_IDENTIFIER"] = "so.legend.frame.sdk.ui-tests"
+  config.build_settings["PRODUCT_BUNDLE_IDENTIFIER"] = "so.legend.spark.sdk.ui-tests"
   config.build_settings["CODE_SIGN_IDENTITY"] = "-"
   config.build_settings["CODE_SIGN_STYLE"] = "Manual"
   config.build_settings["ENABLE_HARDENED_RUNTIME"] = "NO"

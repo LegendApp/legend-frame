@@ -17,7 +17,7 @@ The core product decisions are already agreed:
 - Expo Router owns route discovery, links, parameters, and navigation integration.
 - A declarative `Windows` navigator expresses presentation policy across platforms.
 - `/ui` provides Expo-aligned controls and framework presentation components.
-- Framework APIs can delegate to Expo/community implementations on mobile/web and frame implementations on desktop.
+- Framework APIs can delegate to Expo/community implementations on mobile/web and spark implementations on desktop.
 - Implementation quality and dependency cost still matter. Alignment does not require using an unsuitable backend or wrapping every external package.
 
 ## What exists and what must change
@@ -41,11 +41,11 @@ Names below are working names for review, not a package rename commitment.
 
 | Public boundary | Ownership |
 | --- | --- |
-| `@legendapp/frame-api/<feature>` | Expo-aligned shared capability contracts and platform-selected adapters |
-| `@legendapp/frame-ui` | Shared controls backed by Expo UI where suitable, with desktop adapters and explicit extensions |
-| `@legendapp/frame-ui/router` | Expo Router integration exporting `Windows`; plain control imports must not import Router |
+| `@legendapp/spark-api/<feature>` | Expo-aligned shared capability contracts and platform-selected adapters |
+| `@legendapp/spark-ui` | Shared controls backed by Expo UI where suitable, with desktop adapters and explicit extensions |
+| `@legendapp/spark-ui/router` | Expo Router integration exporting `Windows`; plain control imports must not import Router |
 | Existing native feature packages | Internal desktop implementations reused behind the new contracts |
-| Existing `@legendapp/frame/*` | Compatibility entry points while internal consumers migrate |
+| Existing `@legendapp/spark/*` | Compatibility entry points while internal consumers migrate |
 | Original external package imports | Library-specific APIs such as database operations and background runtimes, unless a real universal contract justifies an adapter |
 
 A universal import must resolve without evaluating another platform's native module. Use platform files/exports and verify actual Metro, TypeScript, web bundler, and native autolinking behavior. Avoid an eager barrel that loads every optional native feature. Keep capabilities granular: platform support, native-module presence, and permission state are different questions.
@@ -73,7 +73,7 @@ Favor exact Expo names, signatures, and result behavior for the supported shared
 
 - Add a universal starter/sample mode with one `app/` route tree, shared app identity and shared dependency declarations. Start with the platform set proven in Phase 0; record Windows gaps explicitly.
 - Separate supported platforms from the selected run target. Keep generated native projects, compatibility signatures, build metadata, and runtime selection target-specific so one target cannot overwrite another's artifacts or claim another's compatibility.
-- Use standard Expo workflows for mobile/web and the existing frame orchestration for desktop. Compose configuration rather than replacing mobile/web Expo configuration with a desktop-only generated transport config.
+- Use standard Expo workflows for mobile/web and the existing spark orchestration for desktop. Compose configuration rather than replacing mobile/web Expo configuration with a desktop-only generated transport config.
 - Integrate Router startup with the current desktop runtime initialization. Maintain prebuilt/custom selection and keep worker entry behavior separate.
 - Introduce the public package boundaries and safe platform resolution with one capability adapter: clipboard text. Delegate mobile/web behavior to the selected Expo Clipboard version; reuse current desktop clipboard code behind the equivalent contract.
 - Establish typed unsupported/missing-module failures and resource cleanup internally. Preserve documented Expo result and error behavior where promised; do not silently report a failed operation as success or cancellation.
@@ -89,7 +89,7 @@ Clipboard is small enough to expose real platform differences without distractin
 Proposed layout shape:
 
 ```tsx
-import { Windows } from '@legendapp/frame-ui/router';
+import { Windows } from '@legendapp/spark-ui/router';
 
 export default function Layout() {
   return (

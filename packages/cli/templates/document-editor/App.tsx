@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { Platform, SafeAreaView, StyleSheet, Text, TextInput, View } from "react-native";
-import { Button } from "@legendapp/frame-ui";
+import { Button } from "@legendapp/spark-ui";
 import { Integration } from "./Integration";
 import { sessionFor } from "./sessions";
 import { useDocument } from "./useDocument";

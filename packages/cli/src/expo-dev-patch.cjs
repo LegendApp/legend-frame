@@ -24,12 +24,12 @@ function preparePatch(root) {
   const expoRequire = createRequire(appRequire.resolve('expo/package.json'));
   const manifest = expoRequire.resolve('@expo/cli/package.json');
   const version = JSON.parse(fs.readFileSync(manifest, 'utf8')).version;
-  if (version !== VERSION) throw new Error(`frame desktop keys require @expo/cli ${VERSION}; found ${version}. Restore the supported version or update the frame Expo patch.`);
+  if (version !== VERSION) throw new Error(`spark desktop keys require @expo/cli ${VERSION}; found ${version}. Restore the supported version or update the spark Expo patch.`);
   return new Map(patches.map(([relative, hash, before, after]) => {
     const file = fs.realpathSync(path.join(path.dirname(manifest), 'build/src/start', relative));
     const source = fs.readFileSync(file, 'utf8');
     if (createHash('sha256').update(source).digest('hex') !== hash || source.split(before).length !== 2) {
-      throw new Error(`Unsupported Expo CLI source: ${relative}. Update the frame Expo patch before starting desktop development.`);
+      throw new Error(`Unsupported Expo CLI source: ${relative}. Update the spark Expo patch before starting desktop development.`);
     }
     return [file, source.replace(before, after)];
   }));

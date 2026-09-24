@@ -19,6 +19,6 @@ export const echo = runtimeFunction(async (value: { message: string; count: numb
 });
 export const fail = runtimeFunction(() => { throw new Error("Intentional worker error"); });
 export const readNativeFile = runtimeFunction(async (file: string) => {
-  const { readText } = require("@legendapp/frame/files");
+  const { readText } = require("@legendapp/spark/files");
   return await readText(file);
 });

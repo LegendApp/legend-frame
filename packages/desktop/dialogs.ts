@@ -1,2 +1,2 @@
-export * from "@legendapp/frame-file-dialog";
-export * from "@legendapp/frame-message-dialog";
+export * from "@legendapp/spark-file-dialog";
+export * from "@legendapp/spark-message-dialog";

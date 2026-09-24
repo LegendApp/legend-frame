@@ -1,6 +1,6 @@
 # Music Lite
 
-Create a standalone project with `frame create MyApp --example music-lite`.
+Create a standalone project with `spark create MyApp --example music-lite`.
 
 Source ships in [`packages/cli/templates/music-lite`](../../packages/cli/templates/music-lite).
 See the [example guide](../../docs/example-apps.md) for behavior, platform differences,

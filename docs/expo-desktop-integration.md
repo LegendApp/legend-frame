@@ -1,34 +1,34 @@
 # Expo Desktop integration
 
-frame delegates project creation and native generation to the tested Expo Desktop beta. The pinned CLI is `expo-desktop@1.0.0-beta.6`; desktop native generation uses `expo-desktop-template-bare-minimum@54.81.1-beta.6`. Config plugins are pinned to `expo-desktop-config-plugins@1.2.0-beta.1`. Expo 54 / React Native 0.81 remain unchanged.
+spark delegates project creation and native generation to the tested Expo Desktop beta. The pinned CLI is `expo-desktop@1.0.0-beta.6`; desktop native generation uses `expo-desktop-template-bare-minimum@54.81.1-beta.6`. Config plugins are pinned to `expo-desktop-config-plugins@1.2.0-beta.1`. Expo 54 / React Native 0.81 remain unchanged.
 
 ## Ownership
 
 | Responsibility | Owner |
 | --- | --- |
 | Validate destination/name, extract starter, assign native IDs, install dependencies, initialize Git | Expo Desktop `create-app --template` |
-| Starter files, scripts, dependency matrix, Settings screen | frame's macOS/Windows/universal template packages |
-| Initialize stable frame identity and canonical config | One-time template postinstall, using upstream-assigned identity |
-| Generate desktop native projects | Expo Desktop `prebuild --template` with frame config plugins |
-| Development terminal, Metro lifecycle, reload/debugger, mobile/web actions | Installed Expo CLI; process-local frame desktop-key patch |
+| Starter files, scripts, dependency matrix, Settings screen | spark's macOS/Windows/universal template packages |
+| Initialize stable spark identity and canonical config | One-time template postinstall, using upstream-assigned identity |
+| Generate desktop native projects | Expo Desktop `prebuild --template` with spark config plugins |
+| Development terminal, Metro lifecycle, reload/debugger, mobile/web actions | Installed Expo CLI; process-local spark desktop-key patch |
 | Mobile prebuild/build/run and web development | Installed Expo CLI |
-| Standard desktop Metro configuration | Expo Desktop Metro, extended for frame sessions/runtimes |
-| Native SDK module selection, compatibility checks, runtime registration, prebuilt switching | frame |
-| Desktop build/launch orchestration | frame pending upstream binary/session and build-only contracts (see below) |
+| Standard desktop Metro configuration | Expo Desktop Metro, extended for spark sessions/runtimes |
+| Native SDK module selection, compatibility checks, runtime registration, prebuilt switching | spark |
+| Desktop build/launch orchestration | spark pending upstream binary/session and build-only contracts (see below) |
 
-The native bare-minimum template remains upstream-owned. frame config plugins add the host and selected capabilities. The small `/ui` and capability adapters are independent of the creation mechanism.
+The native bare-minimum template remains upstream-owned. spark config plugins add the host and selected capabilities. The small `/ui` and capability adapters are independent of the creation mechanism.
 
-Existing applications can use [`frame add desktop`](add-desktop.md) to compose desktop support into their Expo config and Metro setup. This path preserves the original entry point and mobile/web commands; it does not create an app from a frame template.
+Existing applications can use [`spark add desktop`](add-desktop.md) to compose desktop support into their Expo config and Metro setup. This path preserves the original entry point and mobile/web commands; it does not create an app from a spark template.
 
 ## Templates
 
 `packages/cli/templates/blank-typescript`, `windows`, and `universal` are complete application templates. `scripts/pack.ts` first packs SDK dependencies, then `scripts/pack-templates.ts` resolves the local archive paths into the template manifests and packs them. `artifacts/packages/templates.json` maps each variant to its archive.
 
-`frame create` selects that archive and invokes the real Expo Desktop CLI. It does not copy the starter, rename files, replace platform source files, or maintain an extraction implementation. Upstream validates alphanumeric application directory names; parent paths may include spaces.
+`spark create` selects that archive and invokes the real Expo Desktop CLI. It does not copy the starter, rename files, replace platform source files, or maintain an extraction implementation. Upstream validates alphanumeric application directory names; parent paths may include spaces.
 
-Each template has an initial `app.json` for upstream naming and native identifier generation, plus frame configuration defaults. After installation, `init-template.cjs` adopts the assigned name, bundle identifiers, and Windows project GUID into frame configuration. It then prepares the existing Expo configuration bridge. An existing frame project ID makes initialization a no-op, preserving subsequent user edits. If installing with lifecycle scripts disabled or creating with `--no-install`, run the template's postinstall after installing dependencies.
+Each template has an initial `app.json` for upstream naming and native identifier generation, plus spark configuration defaults. After installation, `init-template.cjs` adopts the assigned name, bundle identifiers, and Windows project GUID into spark configuration. It then prepares the existing Expo configuration bridge. An existing spark project ID makes initialization a no-op, preserving subsequent user edits. If installing with lifecycle scripts disabled or creating with `--no-install`, run the template's postinstall after installing dependencies.
 
-The same tarball works with `expo-desktop create-app --template` without going through `frame create`. Local archives contain absolute SDK tarball references, so keep those archives available and repack on another machine. Publishing templates/packages is outside this change.
+The same tarball works with `expo-desktop create-app --template` without going through `spark create`. Local archives contain absolute SDK tarball references, so keep those archives available and repack on another machine. Publishing templates/packages is outside this change.
 
 ## Narrow beta compatibility handling
 
@@ -36,17 +36,17 @@ The same tarball works with `expo-desktop create-app --template` without going t
 
 For direct template creation, use npm 11 on PATH. The installed CLI's `src/npm-bin` directory supplies the same scoped compatibility launcher; `test:templates` exercises this path. Remove this adapter once the beta accepts npm 12 local-tarball metadata and the direct-creation checks pass.
 
-**Prebuild dependency preservation.** The pinned beta accepts `skipDependencyUpdate`, but its dependency update implementation does not use it. Its bare-minimum template can add dependencies for other platforms even with `--no-install`. frame therefore retains manifest restoration around native generation. On macOS it runs CocoaPods after restoring the intended graph and clearing stale generated bindings. Native generation/build commands against one checkout must remain sequential.
+**Prebuild dependency preservation.** The pinned beta accepts `skipDependencyUpdate`, but its dependency update implementation does not use it. Its bare-minimum template can add dependencies for other platforms even with `--no-install`. spark therefore retains manifest restoration around native generation. On macOS it runs CocoaPods after restoring the intended graph and clearing stale generated bindings. Native generation/build commands against one checkout must remain sequential.
 
-**Desktop run/launch.** Beta.6 adds `run macos --binary` and a WIP `run windows`. This is the right upstream direction, but the macOS binary path still ensures a native project and resolves Xcode metadata before launching. A JavaScript-only binary probe enters prebuild and fails on a missing Windows-config assertion. With existing Xcode metadata it reaches launch, but starts Metro despite `--no-bundler`. The launcher uses `open` without our app arguments, connection settings, or an owned app process. There is also no macOS build-only switch to let frame finalize/register the artifact before launching it.
+**Desktop run/launch.** Beta.6 adds `run macos --binary` and a WIP `run windows`. This is the right upstream direction, but the macOS binary path still ensures a native project and resolves Xcode metadata before launching. A JavaScript-only binary probe enters prebuild and fails on a missing Windows-config assertion. With existing Xcode metadata it reaches launch, but starts Metro despite `--no-bundler`. The launcher uses `open` without our app arguments, connection settings, or an owned app process. There is also no macOS build-only switch to let spark finalize/register the artifact before launching it.
 
-frame therefore retains desktop compilation and process ownership, module selection, build records, and prebuilt compatibility checks. App scripts continue to use frame's development command, which delegates the terminal and Metro to Expo. Changing them directly to `expo-desktop run macos` would bypass this integration. Mobile/web already delegate to Expo's supported commands. See the [beta.6 handoff](expo-desktop-beta6-handoff.md) for reproductions and the proposed delegation boundary.
+spark therefore retains desktop compilation and process ownership, module selection, build records, and prebuilt compatibility checks. App scripts continue to use spark's development command, which delegates the terminal and Metro to Expo. Changing them directly to `expo-desktop run macos` would bypass this integration. Mobile/web already delegate to Expo's supported commands. See the [beta.6 handoff](expo-desktop-beta6-handoff.md) for reproductions and the proposed delegation boundary.
 
 ## React Native macOS Fabric lifecycle compatibility
 
 The pinned `react-native-macos@0.81.7` starts Fabric surfaces asynchronously. An
 immediate secondary-window close can stop the shadow tree before startup finishes
-installing its animation driver. frame applies `fabric-lifecycle.cjs` from its
+installing its animation driver. spark applies `fabric-lifecycle.cjs` from its
 config plugin during macOS Podfile generation, before compilation. It serializes
 startup/setup with stop, cancels obsolete queued starts and detaches, and tracks
 attachment so repeated stops are safe. No timer or minimum window lifetime is
@@ -83,9 +83,9 @@ the native regression; see [macOS evidence](macos-readiness-2026-09-18.md#webvie
 
 ## Expo development terminal patch
 
-`frame dev` launches the app's installed `expo start` under Node, inheriting stdin/stdout/stderr. Its Bun supervisor retains desktop runtime discovery, compatibility enforcement, native builds and owned app processes. It has no keyboard interface. Desktop actions and results travel over a private JSON IPC channel; no HTTP command endpoint is exposed.
+`spark dev` launches the app's installed `expo start` under Node, inheriting stdin/stdout/stderr. Its Bun supervisor retains desktop runtime discovery, compatibility enforcement, native builds and owned app processes. It has no keyboard interface. Desktop actions and results travel over a private JSON IPC channel; no HTTP command endpoint is exposed.
 
-frame consumes its own `--project`, `--platform`, `--prebuilt-binary`, and `--no-open` options and forwards the remaining arguments to Expo. Expo retains `--go`/`--dev-client`, networking, cache clearing, validation, and port selection. Its readiness message supplies the actual port and bundle options.
+spark consumes its own `--project`, `--platform`, `--prebuilt-binary`, and `--no-open` options and forwards the remaining arguments to Expo. Expo retains `--go`/`--dev-client`, networking, cache clearing, validation, and port selection. Its readiness message supplies the actual port and bundle options.
 
 The shared development config advertises all declared platforms and omits native build overlays. Expo Desktop supplies multi-platform Metro defaults; the desktop runtime gate is selected per request and does not block mobile/web. `desktop.config.json` remains separate. Native builds keep target-specific config and state.
 
@@ -104,16 +104,16 @@ Noninteractive sessions still start Expo and can auto-open a compatible runtime,
 ## Work to pair on with Jamie
 
 - Accept npm 12's record-shaped metadata for local template paths.
-- Honor dependency-preservation options during prebuild, including template-only additions, so frame can remove manifest restoration and delegate installation more fully.
-- Replace the temporary Expo CLI patch with supported desktop development-session actions and lifecycle hooks. Expo CLI owns the terminal; Expo Desktop could register desktop targets and frame could provide the prebuilt launcher.
-- Finish the existing `run macos --binary` contract: skip native generation/Xcode resolution, honor external Metro ownership, and support launch arguments/environment and process lifecycle. Add a macOS build-only mode so frame can finalize and register artifacts before opening them.
+- Honor dependency-preservation options during prebuild, including template-only additions, so spark can remove manifest restoration and delegate installation more fully.
+- Replace the temporary Expo CLI patch with supported desktop development-session actions and lifecycle hooks. Expo CLI owns the terminal; Expo Desktop could register desktop targets and spark could provide the prebuilt launcher.
+- Finish the existing `run macos --binary` contract: skip native generation/Xcode resolution, honor external Metro ownership, and support launch arguments/environment and process lifecycle. Add a macOS build-only mode so spark can finalize and register artifacts before opening them.
 - Verify a prebuilt launch from a JavaScript-only directory without Xcode, CocoaPods, codegen, or implicit prebuild. Exercise reload, Fast Refresh, custom-build switching, and two apps sharing a runtime at different ports.
 
-frame should retain runtime selection and compatibility policy while handing standard operations to upstream as those contracts become available. No upstream changes are required for the template creation path implemented here.
+spark should retain runtime selection and compatibility policy while handing standard operations to upstream as those contracts become available. No upstream changes are required for the template creation path implemented here.
 
 ## Verification
 
-`bun run test:templates` packs the SDK, creates macOS and Windows consumers through `frame create`, and creates a universal consumer directly through Expo Desktop. It checks identity, ignore-file extraction, configuration preservation, absence of native generation during creation, and consumer TypeScript. The consumers use a parent directory containing spaces.
+`bun run test:templates` packs the SDK, creates macOS and Windows consumers through `spark create`, and creates a universal consumer directly through Expo Desktop. It checks identity, ignore-file extraction, configuration preservation, absence of native generation during creation, and consumer TypeScript. The consumers use a parent directory containing spaces.
 
 `bun run test:universal` checks real mobile/Windows generation, all five shared-screen bundles, and preservation across target switching. `bun run test:windows:prepare` checks the Windows starter, native fixture addition, and runtime compatibility metadata without claiming Windows native execution.
 
@@ -124,6 +124,6 @@ Validated the Expo terminal patch on macOS on 2026-09-14: workspace TypeScript a
 
 Validated shared development sessions on macOS on 2026-09-14: TypeScript and 168 unit tests (750 assertions) passed. `test:universal:dev` served all five Settings graphs from one Expo process, preserved the platform UI/Uniwind backends, blocked only the incompatible host desktop's bundle, delivered one source edit to iOS and web HMR clients, restarted with desktop still incompatible, and removed the session/server on shutdown. Expo `--clear`, `--offline`, `--go`, and `-p` were exercised. `test:add-desktop` also passed; an additional live shared session preserved the adopted app's original entry, custom Metro resolver, plugin output, and all-platform manifest. These checks do not claim native app execution.
 
-Configuration bridge code participates in frame's conservative native signatures. Rebuild/re-register prebuilt against the repacked SDK when updating existing consumers to this change; the compatibility gate will reject an older host signature.
+Configuration bridge code participates in spark's conservative native signatures. Rebuild/re-register prebuilt against the repacked SDK when updating existing consumers to this change; the compatibility gate will reject an older host signature.
 
 Validated beta.6 on macOS on 2026-09-16: workspace TypeScript, 226 unit tests (1,017 assertions), and Kitchen Sink native generation/build passed. All four desktop-foundation native probes passed (recursive watching, overlay focus, panel transparency/level, and custom drag negotiation). The upstream binary orchestration probe reproduced the blockers documented above; OS launch was intercepted, so it does not establish upstream native launch correctness. Windows native acceptance remains pending.

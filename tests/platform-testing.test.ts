@@ -4,7 +4,7 @@ import { catalog, executeCase, initialResults, summarize } from "../examples/kit
 import { acceptRuntimeMessage, record, renderReports, validateReport, type TestReport } from "../scripts/testing/report";
 function fixture(platform: "windows" | "web" = "windows", scope: "prepare" | "runtime" = "runtime"): TestReport {
   const results = initialResults(platform);
-  return { schema: "frame-platform-tests/v1", runId: crypto.randomUUID(), source: { commit: "abc123", dirty: false, fingerprint: "source-one" },
+  return { schema: "spark-platform-tests/v1", runId: crypto.randomUUID(), source: { commit: "abc123", dirty: false, fingerprint: "source-one" },
     target: { platform, arch: "arm64", device: "test", mode: "dev" }, host: { platform: "darwin", arch: "arm64" },
     scope, startedAt: "2026-09-15", execution: "running", project: "fixture", versions: {}, results, summary: summarize(results) };
 }

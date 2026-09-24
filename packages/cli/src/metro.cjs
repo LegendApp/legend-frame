@@ -1,14 +1,14 @@
 const fs = require("node:fs");
 const path = require("node:path");
 const { gate } = require("./metro-gate.cjs");
-const ENTRY = "@legendapp/frame-cli/src/runtime-entry.cjs";
+const ENTRY = "@legendapp/spark-cli/src/runtime-entry.cjs";
 
 // Production discovery omits the registry: otherwise scanning an unused task
 // would itself make that task (and all its native dependencies) reachable.
 function runtimePlan(root, env = process.env) {
-  if (env.FRAME_RUNTIME_DISCOVERY === "1") return { enabled: false, roots: [] };
-  if (env.FRAME_RUNTIME_SOURCES) {
-    const sources = JSON.parse(fs.readFileSync(env.FRAME_RUNTIME_SOURCES, "utf8"));
+  if (env.SPARK_RUNTIME_DISCOVERY === "1") return { enabled: false, roots: [] };
+  if (env.SPARK_RUNTIME_SOURCES) {
+    const sources = JSON.parse(fs.readFileSync(env.SPARK_RUNTIME_SOURCES, "utf8"));
     return { enabled: sources.enabled, roots: sources.roots, production: true };
   }
   return { enabled: true, roots: fs.readdirSync(root, { withFileTypes: true })

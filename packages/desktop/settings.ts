@@ -1,1 +1,1 @@
-export * from "@legendapp/frame-settings";
+export * from "@legendapp/spark-settings";

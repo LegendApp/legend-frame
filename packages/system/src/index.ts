@@ -1,5 +1,5 @@
 import Native from "./NativeDesktopSystem";
-import { onDesktopEvent } from "@legendapp/frame-desktop-app";
+import { onDesktopEvent } from "@legendapp/spark-desktop-app";
 export type SystemInfo = { osVersion: string; architecture: string; locale: string; dark: boolean; idleSeconds: number; onBattery: boolean; batteryLevel: number | null };
 export type SystemEvent = { type: "sleep" | "wake" | "lock" | "unlock" | "powerChanged" | "appearanceChanged" | "displaysChanged" };
 export type DockMenuItem = { id: string; title: string; enabled?: boolean; checked?: boolean };

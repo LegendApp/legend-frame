@@ -1,1 +1,1 @@
-export * from "@legendapp/frame-desktop-links";
+export * from "@legendapp/spark-desktop-links";

@@ -4,7 +4,7 @@ import { Text } from "./CameraText";
 import { Images, NitroImage, type Image } from "react-native-nitro-image";
 import { NativePreviewView, VisionCamera, type CameraPreviewOutput, type PreviewView } from "react-native-vision-camera";
 import { callback } from "react-native-nitro-modules";
-import { writeText } from "@legendapp/frame/files";
+import { writeText } from "@legendapp/spark/files";
 import KitchenSink from "./KitchenSink";
 import { NitroCompatibility, type ProofCheck } from "./NitroCompatibility";
 import { CameraDemo } from "./CameraDemo";
@@ -12,7 +12,7 @@ import { CameraDemo } from "./CameraDemo";
 export default function App(props: React.ComponentProps<typeof KitchenSink>) {
   const [tab, setTab] = useState("camera");
   const args = props.launchArguments ?? [];
-  const at = args.indexOf("--frame-camera-proof");
+  const at = args.indexOf("--spark-camera-proof");
   const report = at >= 0 ? args[at + 1] : undefined;
   if (props.windowId && props.windowId !== "main") return <KitchenSink {...props} />;
   return <View style={{ flex: 1, backgroundColor: "#f4f6f8" }}>

@@ -1,6 +1,6 @@
 import { useEffect } from "react";
 import { Platform } from "react-native";
-import { onOpen } from "@legendapp/frame-desktop-links";
+import { onOpen } from "@legendapp/spark-desktop-links";
 import { mountSerial } from "./lifetime";
 import type { OpenFilesProps } from "./OpenFiles";
 // onOpen replays queued launches to each subscription. Remounts must not import twice.

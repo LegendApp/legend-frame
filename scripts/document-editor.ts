@@ -10,5 +10,5 @@ export async function prepareDocumentEditor(root: string) {
 if (import.meta.main) {
   const framework = path.resolve(import.meta.dir, "..");
   await run(framework, ["bun", "scripts/pack.ts", ...(process.platform === "win32" ? ["--platform=windows"] : [])]);
-  await prepareDocumentEditor(path.resolve(process.argv[2] ?? ".frame/examples/DocumentEditor"));
+  await prepareDocumentEditor(path.resolve(process.argv[2] ?? ".spark/examples/DocumentEditor"));
 }

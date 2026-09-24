@@ -8,12 +8,12 @@ import { readJson, writeJson } from "../packages/cli/src/project";
 
 // Fresh packed consumer: real native generation plus the same App.tsx in all five bundles.
 const framework = path.resolve(import.meta.dir, "..");
-const root = path.resolve(process.argv[2] ?? `.frame/universal-tests/Settings${Date.now()}`);
+const root = path.resolve(process.argv[2] ?? `.spark/universal-tests/Settings${Date.now()}`);
 await run(framework, ["bun", "scripts/pack.ts"]);
 await create(root, path.join(framework, "artifacts/packages/manifest.json"), "macos", true);
 const shared = ["desktop.config.json", "package.json", "App.tsx", "index.ts", "metro.config.js", "react-native.config.js", "app.config.js", "global.css", "uniwind-types.d.ts"];
 const originals = shared.map(file => readFileSync(path.join(root, file), "utf8"));
-const output = path.join(root, ".frame/universal-checks"); mkdirSync(output, { recursive: true });
+const output = path.join(root, ".spark/universal-checks"); mkdirSync(output, { recursive: true });
 const native = ["ios", "android", "windows"];
 const hashes = new Map<string, string>();
 function hashProject(target: string) {
@@ -32,7 +32,7 @@ function assertPreserved() {
   for (const [target, hash] of hashes) if (hashProject(target) !== hash) throw new Error(`Target switching changed the ${target} project`);
 }
 for (const platform of native) {
-  await run(root, ["bun", "node_modules/@legendapp/frame-cli/src/index.ts", "prebuild", "--platform", platform], { capture: true, env: { CI: "1" } });
+  await run(root, ["bun", "node_modules/@legendapp/spark-cli/src/index.ts", "prebuild", "--platform", platform], { capture: true, env: { CI: "1" } });
   assertPreserved();
   if (!existsSync(path.join(root, platform))) throw new Error(`${platform} project missing`);
   hashes.set(platform, hashProject(platform));
@@ -41,14 +41,14 @@ for (const platform of native) {
 const results = [];
 for (const platform of ["ios", "android", "web", "windows", "macos"]) {
   const sourceMap = path.join(output, `${platform}.map`);
-  await run(root, nodeCommand(root, "expo", "expo", ["export:embed", "--entry-file", "index.ts", "--platform", platform, "--dev", "true", "--max-workers", "2", "--bundle-output", path.join(output, `${platform}.js`), "--sourcemap-output", sourceMap]), { capture: true, env: { CI: "1", FRAME_PLATFORM: platform } });
+  await run(root, nodeCommand(root, "expo", "expo", ["export:embed", "--entry-file", "index.ts", "--platform", platform, "--dev", "true", "--max-workers", "2", "--bundle-output", path.join(output, `${platform}.js`), "--sourcemap-output", sourceMap]), { capture: true, env: { CI: "1", SPARK_PLATFORM: platform } });
   const sources: string[] = readJson(sourceMap).sources;
-  if (!sources.some(source => source.includes(`@legendapp/frame-ui/uniwind${platform === "web" ? ".web.ts" : ".ts"}`))) throw new Error(`${platform} did not load optional UI bindings`);
+  if (!sources.some(source => source.includes(`@legendapp/spark-ui/uniwind${platform === "web" ? ".web.ts" : ".ts"}`))) throw new Error(`${platform} did not load optional UI bindings`);
   const uniwindRuntime = platform === "web" ? "dist/module/core/config/config.js" : "src/core/config/config.native.ts";
   if (!sources.some(source => source.includes(`uniwind/${uniwindRuntime}`))) throw new Error(`${platform} selected the wrong Uniwind runtime`);
   const adapter = platform === "macos" ? "index.tsx" : `index.${platform}.tsx`;
-  if (!sources.some(source => source.includes(`@legendapp/frame-ui/src/${adapter}`))) throw new Error(`${platform} did not select its UI adapter`);
-  if (!["macos", "windows"].includes(platform) && sources.some(source => /Frame(?:Button|TextInput|Select)NativeComponent|NativeDesktop/.test(source))) throw new Error(`${platform} loads an AppKit native binding`);
+  if (!sources.some(source => source.includes(`@legendapp/spark-ui/src/${adapter}`))) throw new Error(`${platform} did not select its UI adapter`);
+  if (!["macos", "windows"].includes(platform) && sources.some(source => /Spark(?:Button|TextInput|Select)NativeComponent|NativeDesktop/.test(source))) throw new Error(`${platform} loads an AppKit native binding`);
   if (["macos", "windows", "web"].includes(platform) && sources.some(source => source.includes("@expo/ui/"))) throw new Error(`${platform} loads Expo's mobile UI backend`);
   assertPreserved(); results.push({ platform, modules: sources.length });
   console.log(`PASS ${platform} shared Settings bundle and preserved projects`);

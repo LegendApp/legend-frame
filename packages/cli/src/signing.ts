@@ -7,7 +7,7 @@ import { run } from "./commands.ts";
 import { digest, nativePackages, readJson, stateFile, writeJson } from "./project.ts";
 import type { Runner, SigningCredentials } from "./credentials.ts";
 
-const { resolveEntitlements } = createRequire(import.meta.url)("@legendapp/frame-desktop-config/entitlements.cjs");
+const { resolveEntitlements } = createRequire(import.meta.url)("@legendapp/spark-desktop-config/entitlements.cjs");
 export type Entitlements = Record<string, unknown>;
 
 export function distributionEntitlements(value: Entitlements) {

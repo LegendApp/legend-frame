@@ -10,15 +10,15 @@
 #include "HybridCompatibilityViewSpec.hpp"
 
 // Forward declaration of `HybridCompatibilityViewSpec_cxx` to properly resolve imports.
-namespace FrameNitroProbe { class HybridCompatibilityViewSpec_cxx; }
+namespace SparkNitroProbe { class HybridCompatibilityViewSpec_cxx; }
 
 
 
 #include <string>
 
-#include "FrameNitroProbe-Swift-Cxx-Umbrella.hpp"
+#include "SparkNitroProbe-Swift-Cxx-Umbrella.hpp"
 
-namespace margelo::nitro::frameprobe {
+namespace margelo::nitro::sparkprobe {
 
   /**
    * The C++ part of HybridCompatibilityViewSpec_cxx.swift.
@@ -33,13 +33,13 @@ namespace margelo::nitro::frameprobe {
   class HybridCompatibilityViewSpecSwift: public virtual HybridCompatibilityViewSpec {
   public:
     // Constructor from a Swift instance
-    explicit HybridCompatibilityViewSpecSwift(const FrameNitroProbe::HybridCompatibilityViewSpec_cxx& swiftPart):
+    explicit HybridCompatibilityViewSpecSwift(const SparkNitroProbe::HybridCompatibilityViewSpec_cxx& swiftPart):
       HybridObject(HybridCompatibilityViewSpec::TAG),
       _swiftPart(swiftPart) { }
 
   public:
     // Get the Swift part
-    inline FrameNitroProbe::HybridCompatibilityViewSpec_cxx& getSwiftPart() noexcept {
+    inline SparkNitroProbe::HybridCompatibilityViewSpec_cxx& getSwiftPart() noexcept {
       return _swiftPart;
     }
 
@@ -82,7 +82,7 @@ namespace margelo::nitro::frameprobe {
     }
 
   private:
-    FrameNitroProbe::HybridCompatibilityViewSpec_cxx _swiftPart;
+    SparkNitroProbe::HybridCompatibilityViewSpec_cxx _swiftPart;
   };
 
-} // namespace margelo::nitro::frameprobe
+} // namespace margelo::nitro::sparkprobe

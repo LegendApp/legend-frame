@@ -1,7 +1,7 @@
 import { macOSReleaseSettings } from "./macos-release.ts";
 import { projectPlatform, architecture, type DesktopPlatform } from "./platform.ts";
 import { resolveHelpers } from "./helpers.ts";
-import { readConfig as readAppConfig, prepareConfig, writeUpdates, statePath, isUniversal, isExpoProject } from "@legendapp/frame-desktop-config/config.cjs";
+import { readConfig as readAppConfig, prepareConfig, writeUpdates, statePath, isUniversal, isExpoProject } from "@legendapp/spark-desktop-config/config.cjs";
 export { readAppConfig, prepareConfig, writeUpdates, statePath, isUniversal };
 import { createHash } from "node:crypto";
 import { createRequire } from "node:module";
@@ -112,7 +112,7 @@ export function installedPackages(root: string): Package[] {
         prior &&
         prior.json.version !== json.version &&
         (json.codegenConfig ||
-          json.frame ||
+          json.spark ||
           existsSync(path.join(dir, "expo-module.config.json")))
       ) {
         throw new Error(
@@ -155,14 +155,14 @@ export function nativePackages(root: string): NativePackage[] {
   if (projectPlatform(root) === "windows") return windowsNativePackages(root, installed);
   // Host/CNG code can change the native ABI without adding a TurboModule.
   // Fold it into the mandatory app module's compatibility signature for Go.
-  const adapters = installed.filter(pkg => ["@legendapp/frame-desktop-host", "@legendapp/frame-desktop-config"].includes(pkg.name))
+  const adapters = installed.filter(pkg => ["@legendapp/spark-desktop-host", "@legendapp/spark-desktop-config"].includes(pkg.name))
     .map(pkg => hashFiles(pkg.root, ["package.json", "AppDelegate.mm", ...readdirSync(pkg.root).filter(name => name.endsWith(".cjs"))])).join(":");
   const excluded = isUniversal(root) ? readAppConfig(root).expo?.autolinking?.exclude ?? [] : [];
   return installed.filter(pkg => !excluded.includes(pkg.name))
     .filter(
       (pkg) =>
         pkg.json.codegenConfig ||
-        pkg.json.frame?.nativeModules ||
+        pkg.json.spark?.nativeModules ||
         readdirSync(pkg.root).some(
           (name) =>
             name.endsWith(".podspec") || name === "expo-module.config.json",
@@ -170,9 +170,9 @@ export function nativePackages(root: string): NativePackage[] {
     )
     .map((pkg) => ({
       ...pkg,
-      sdk: pkg.json.frame?.sdk === true || ["@react-native-async-storage/async-storage", "react-native-webview", "@op-engineering/op-sqlite", "@react-native-runtimes/core", "react-native-nitro-modules"].includes(pkg.name),
-      requires: pkg.json.frame?.requires ?? [],
-      signature: (signature => pkg.name === "@legendapp/frame-desktop-app" ? digest(signature + adapters) : signature)(hashFiles(pkg.root, [
+      sdk: pkg.json.spark?.sdk === true || ["@react-native-async-storage/async-storage", "react-native-webview", "@op-engineering/op-sqlite", "@react-native-runtimes/core", "react-native-nitro-modules"].includes(pkg.name),
+      requires: pkg.json.spark?.requires ?? [],
+      signature: (signature => pkg.name === "@legendapp/spark-desktop-app" ? digest(signature + adapters) : signature)(hashFiles(pkg.root, [
         "package.json",
         "ios",
         "macos",
@@ -254,7 +254,7 @@ export function selection(
 }
 export function hostSourceSignature(root: string) {
   return digest(JSON.stringify(installedPackages(root)
-    .filter(pkg => ["@legendapp/frame-desktop-host", "@legendapp/frame-desktop-config"].includes(pkg.name))
+    .filter(pkg => ["@legendapp/spark-desktop-host", "@legendapp/spark-desktop-config"].includes(pkg.name))
     .map(pkg => [pkg.name, hashFiles(pkg.root, ["package.json", "AppDelegate.mm", "windows", ...readdirSync(pkg.root).filter(file => file.endsWith(".cjs"))])])));
 }
 export function runtimeFor(
@@ -274,8 +274,8 @@ export function runtimeFor(
         "react-native-macos",
         "react-native-windows",
         "expo",
-        "@legendapp/frame-desktop-host",
-        "@legendapp/frame-desktop-config",
+        "@legendapp/spark-desktop-host",
+        "@legendapp/spark-desktop-config",
       ].includes(p.name),
     )
     .map((p) => [p.name, p.json.version]);
@@ -293,7 +293,7 @@ export function runtimeFor(
         modules,
         pins,
         config: readAppConfig(root),
-        helpers: resolveHelpers(root, readAppConfig(root).expo?.extra?.frame?.helpers, platform).map(helper => ({ name: helper.name, contents: hashFiles(root, helper.files), modes: helper.modes, directories: helper.directories })),
+        helpers: resolveHelpers(root, readAppConfig(root).expo?.extra?.spark?.helpers, platform).map(helper => ({ name: helper.name, contents: hashFiles(root, helper.files), modes: helper.modes, directories: helper.directories })),
         adapter: hostSourceSignature(root),
       }),
     ),
@@ -319,18 +319,18 @@ export function incompatible(
 export function goConfigurationIssues(config: any): string[] {
   const expo = config.expo ?? config;
   const issues: string[] = [];
-  if (expo.scheme || expo.extra?.frame?.documentTypes?.length)
+  if (expo.scheme || expo.extra?.spark?.documentTypes?.length)
     issues.push("URL schemes and document associations require a custom runtime");
-  if (expo.extra?.frame?.menuBarOnly) issues.push("Menu-bar-only activation requires a custom runtime");
-  if (expo.extra?.frame?.updates) issues.push("Update feed configuration requires a custom runtime");
-  if (Object.keys(expo.extra?.frame?.helpers ?? {}).length) issues.push("Bundled helpers require a custom runtime");
-  if (expo.extra?.frame?.customRuntime)
+  if (expo.extra?.spark?.menuBarOnly) issues.push("Menu-bar-only activation requires a custom runtime");
+  if (expo.extra?.spark?.updates) issues.push("Update feed configuration requires a custom runtime");
+  if (Object.keys(expo.extra?.spark?.helpers ?? {}).length) issues.push("Bundled helpers require a custom runtime");
+  if (expo.extra?.spark?.customRuntime)
     issues.push("app configuration requires a custom runtime");
   if (
     (expo.plugins ?? []).some(
       (plugin: any) =>
         (Array.isArray(plugin) ? plugin[0] : plugin) !==
-        "@legendapp/frame-desktop-config",
+        "@legendapp/spark-desktop-config",
     )
   )
     issues.push("additional configuration plugins require a custom runtime");
@@ -352,44 +352,44 @@ export function goConfigurationIssues(config: any): string[] {
 }
 
 export function validateBuildModules(mode: string, packages: NativePackage[]) {
-  if (mode === "go" && packages.some(pkg => pkg.name === "@legendapp/frame-native-greeting" || pkg.json.frame?.testOnly))
+  if (mode === "go" && packages.some(pkg => pkg.name === "@legendapp/spark-native-greeting" || pkg.json.spark?.testOnly))
     throw new Error("Build the prebuilt runtime from the clean SDK starter, not a custom-module test fixture.");
-  if (mode === "release" && packages.some(pkg => pkg.json.frame?.testOnly))
+  if (mode === "release" && packages.some(pkg => pkg.json.spark?.testOnly))
     throw new Error("Test-only native modules cannot be included in distribution builds.");
 }
 
 export function projectEnvironment(root: string): Record<string, string> {
   const file = path.join(root, "app.json");
-  // Explicit `frame open /path/App.app` also works outside a project.
+  // Explicit `spark open /path/App.app` also works outside a project.
   if (!existsSync(file) && !existsSync(path.join(root, "desktop.config.json"))) return {};
   const config = readAppConfig(root).expo ?? {};
-  const projectId = config.extra?.frame?.projectId ?? config.macos?.bundleIdentifier;
+  const projectId = config.extra?.spark?.projectId ?? config.macos?.bundleIdentifier;
   if (typeof projectId !== "string" || !projectId.length || projectId.length > 200)
-    throw new Error("Set extra.frame.projectId to a stable project identifier before launching the prebuilt runtime.");
+    throw new Error("Set extra.spark.projectId to a stable project identifier before launching the prebuilt runtime.");
   return {
-    FRAME_WINDOW_CONFIG: JSON.stringify(config.extra?.frame?.window ?? {}),
-    FRAME_PROJECT_ID: projectId,
-    FRAME_PROJECT_NAME: typeof config.name === "string" ? config.name : path.basename(root),
-    FRAME_PROJECT_VERSION: typeof config.version === "string" ? config.version : "0.0.0",
+    SPARK_WINDOW_CONFIG: JSON.stringify(config.extra?.spark?.window ?? {}),
+    SPARK_PROJECT_ID: projectId,
+    SPARK_PROJECT_NAME: typeof config.name === "string" ? config.name : path.basename(root),
+    SPARK_PROJECT_VERSION: typeof config.version === "string" ? config.version : "0.0.0",
   };
 }
 
 function windowsNativePackages(root: string, installed: Package[]): NativePackage[] {
   const direct = readJson(path.join(root, "package.json")).dependencies ?? {};
   const supported = (pkg: Package) => pkg.name !== "expo-desktop-template-bare-minimum" && (existsSync(path.join(pkg.root, "windows")) ||
-    ["react-native", "react-native-windows", "@legendapp/frame-desktop-host", "@legendapp/frame-desktop-app", "@legendapp/frame-desktop-windows", "@legendapp/frame-desktop-shortcuts", "@legendapp/frame-native-menu", "@legendapp/frame-updates"].includes(pkg.name));
+    ["react-native", "react-native-windows", "@legendapp/spark-desktop-host", "@legendapp/spark-desktop-app", "@legendapp/spark-desktop-windows", "@legendapp/spark-desktop-shortcuts", "@legendapp/spark-native-menu", "@legendapp/spark-updates"].includes(pkg.name));
   const explicitlyExcluded = isUniversal(root) ? readAppConfig(root).expo?.autolinking?.exclude ?? [] : [];
   for (const pkg of installed) {
     const platformAdapter = isUniversal(root) && ["src/index.windows.ts", "src/index.windows.tsx"].some(file => existsSync(path.join(pkg.root, file)));
-    if (!platformAdapter && !explicitlyExcluded.includes(pkg.name) && direct[pkg.name] && pkg.name !== "expo" && !supported(pkg) && (pkg.json.codegenConfig || pkg.json.frame?.nativeModules || readdirSync(pkg.root).some(name => name.endsWith(".podspec") || name === "expo-module.config.json"))) {
+    if (!platformAdapter && !explicitlyExcluded.includes(pkg.name) && direct[pkg.name] && pkg.name !== "expo" && !supported(pkg) && (pkg.json.codegenConfig || pkg.json.spark?.nativeModules || readdirSync(pkg.root).some(name => name.endsWith(".podspec") || name === "expo-module.config.json"))) {
       throw new Error(`${pkg.name} has no Windows implementation. Remove it from this Windows development app until it is ported.`);
     }
   }
-  const adapter = installed.filter(pkg => ["@legendapp/frame-desktop-host", "@legendapp/frame-desktop-config"].includes(pkg.name))
+  const adapter = installed.filter(pkg => ["@legendapp/spark-desktop-host", "@legendapp/spark-desktop-config"].includes(pkg.name))
     .map(pkg => hashFiles(pkg.root, ["package.json", "windows", ...readdirSync(pkg.root).filter(name => name.endsWith(".cjs"))], true)).join(":");
   const versions = installed.filter(pkg => ["react", "expo", "react-native", "react-native-windows"].includes(pkg.name)).map(pkg => [pkg.name, pkg.json.version]);
   return installed.filter(supported).map(pkg => ({ ...pkg,
-    sdk: pkg.json.frame?.sdk === true || pkg.name === "@react-native-async-storage/async-storage", requires: pkg.json.frame?.requires ?? [],
-    signature: digest(hashFiles(pkg.root, ["package.json", "windows", "src", "cpp", "common", "react-native.config.js"], true) + (pkg.name === "@legendapp/frame-desktop-host" ? adapter + JSON.stringify(versions) : "")),
+    sdk: pkg.json.spark?.sdk === true || pkg.name === "@react-native-async-storage/async-storage", requires: pkg.json.spark?.requires ?? [],
+    signature: digest(hashFiles(pkg.root, ["package.json", "windows", "src", "cpp", "common", "react-native.config.js"], true) + (pkg.name === "@legendapp/spark-desktop-host" ? adapter + JSON.stringify(versions) : "")),
   }));
 }

@@ -1,6 +1,6 @@
 node_modules/
 .threaded-runtime/
-.frame/
+.spark/
 macos/
 dist/
 app.json

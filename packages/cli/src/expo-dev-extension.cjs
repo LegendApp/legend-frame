@@ -2,7 +2,7 @@ let state = { target: 'go', canBuild: false };
 let sequence = 0;
 const pending = new Map();
 
-function commands(platform = process.env.FRAME_PLATFORM, host = process.platform, current = state) {
+function commands(platform = process.env.SPARK_PLATFORM, host = process.platform, current = state) {
   const name = platform === 'macos' ? 'macOS' : platform === 'windows' ? 'Windows' : undefined;
   if (!name) return [];
   const disabled = platform === 'macos' ? host !== 'darwin' : host !== 'win32';
@@ -19,7 +19,7 @@ async function handleKey(key) {
   const id = ++sequence;
   await new Promise((resolve, reject) => {
     pending.set(id, { resolve, reject });
-    process.send({ type: 'frame:action', id, action: { d: 'open', g: 'switch', b: 'build' }[key] }, error => {
+    process.send({ type: 'spark:action', id, action: { d: 'open', g: 'switch', b: 'build' }[key] }, error => {
       if (error) { pending.delete(id); reject(error); }
     });
   });
@@ -36,8 +36,8 @@ function integrateCommands(ui) {
 
 if (process.send) {
   process.on('message', message => {
-    if (message?.type === 'frame:state') state = message.state;
-    if (message?.type === 'frame:result') {
+    if (message?.type === 'spark:state') state = message.state;
+    if (message?.type === 'spark:result') {
       const request = pending.get(message.id);
       pending.delete(message.id);
       if (message.error) request?.reject(new Error(message.error));
@@ -48,4 +48,4 @@ if (process.send) {
   process.on('disconnect', () => process.exit());
 }
 
-module.exports = { commands, integrateCommands, handleKey, ready: (port, options) => process.send({ type: 'frame:ready', port, options }) };
+module.exports = { commands, integrateCommands, handleKey, ready: (port, options) => process.send({ type: 'spark:ready', port, options }) };

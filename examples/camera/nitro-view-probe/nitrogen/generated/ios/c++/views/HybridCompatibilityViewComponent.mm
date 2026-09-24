@@ -20,7 +20,7 @@
 #endif
 
 #import "HybridCompatibilityViewSpecSwift.hpp"
-#import "FrameNitroProbe-Swift-Cxx-Umbrella.hpp"
+#import "SparkNitroProbe-Swift-Cxx-Umbrella.hpp"
 
 #if __has_include(<cxxreact/ReactNativeVersion.h>)
 #include <cxxreact/ReactNativeVersion.h>
@@ -30,8 +30,8 @@
 #endif
 
 using namespace facebook;
-using namespace margelo::nitro::frameprobe;
-using namespace margelo::nitro::frameprobe::views;
+using namespace margelo::nitro::sparkprobe;
+using namespace margelo::nitro::sparkprobe::views;
 
 /**
  * Represents the React Native View holder for the Nitro "CompatibilityView" HybridView.
@@ -57,7 +57,7 @@ using namespace margelo::nitro::frameprobe::views;
 - (instancetype) init {
   if (self = [super init]) {
     _props = HybridCompatibilityViewShadowNode::defaultSharedProps();
-    std::shared_ptr<HybridCompatibilityViewSpec> hybridView = FrameNitroProbe::FrameNitroProbeAutolinking::createCompatibilityView();
+    std::shared_ptr<HybridCompatibilityViewSpec> hybridView = SparkNitroProbe::SparkNitroProbeAutolinking::createCompatibilityView();
     _hybridView = std::dynamic_pointer_cast<HybridCompatibilityViewSpecSwift>(hybridView);
     [self updateView];
   }
@@ -66,7 +66,7 @@ using namespace margelo::nitro::frameprobe::views;
 
 - (void) updateView {
   // 1. Get Swift part
-  FrameNitroProbe::HybridCompatibilityViewSpec_cxx& swiftPart = _hybridView->getSwiftPart();
+  SparkNitroProbe::HybridCompatibilityViewSpec_cxx& swiftPart = _hybridView->getSwiftPart();
 
   // 2. Get UIView*
   void* viewUnsafe = swiftPart.getView();
@@ -90,7 +90,7 @@ using namespace margelo::nitro::frameprobe::views;
   if (_didDropView) {
     return;
   }
-  FrameNitroProbe::HybridCompatibilityViewSpec_cxx& swiftPart = _hybridView->getSwiftPart();
+  SparkNitroProbe::HybridCompatibilityViewSpec_cxx& swiftPart = _hybridView->getSwiftPart();
   swiftPart.onDropView();
   _didDropView = YES;
 }
@@ -103,7 +103,7 @@ using namespace margelo::nitro::frameprobe::views;
   // 1. Downcast props
   const auto& newViewProps = *std::static_pointer_cast<const HybridCompatibilityViewProps>(props);
   const auto* oldViewProps = static_cast<const HybridCompatibilityViewProps*>(oldProps.get());
-  FrameNitroProbe::HybridCompatibilityViewSpec_cxx& swiftPart = _hybridView->getSwiftPart();
+  SparkNitroProbe::HybridCompatibilityViewSpec_cxx& swiftPart = _hybridView->getSwiftPart();
 
   // 2. Update only props that differ from the previous Props snapshot.
   const bool hasTransactionPropChanges = oldViewProps == nullptr
@@ -138,13 +138,13 @@ using namespace margelo::nitro::frameprobe::views;
 }
 
 + (BOOL)shouldBeRecycled {
-  return FrameNitroProbe::FrameNitroProbeAutolinking::isCompatibilityViewRecyclable();
+  return SparkNitroProbe::SparkNitroProbeAutolinking::isCompatibilityViewRecyclable();
 }
 
 - (void)prepareForRecycle {
   [self notifyOnDropView];
   [super prepareForRecycle];
-  FrameNitroProbe::HybridCompatibilityViewSpec_cxx& swiftPart = _hybridView->getSwiftPart();
+  SparkNitroProbe::HybridCompatibilityViewSpec_cxx& swiftPart = _hybridView->getSwiftPart();
   swiftPart.maybePrepareForRecycle();
 }
 

@@ -13,7 +13,7 @@ import { nativePackages, readJson, VERSION, writeJson, type Runtime } from "../p
 const { resolveEntitlements } = createRequire(import.meta.url)("../packages/config-plugin/entitlements.cjs");
 const identity: SigningCredentials = { hash: "A".repeat(40), name: "Developer ID Application: Test Team (ABCDEFGHIJ)", teamId: "ABCDEFGHIJ", keychainProfile: "test-profile" };
 const id = "12345678-1234-1234-1234-123456789abc";
-function temporary() { return mkdtempSync(path.join(os.tmpdir(), "frame-package-")); }
+function temporary() { return mkdtempSync(path.join(os.tmpdir(), "spark-package-")); }
 function machO(file: string, type = 2) {
   mkdirSync(path.dirname(file), { recursive: true });
   const header = Buffer.alloc(32);
@@ -41,9 +41,9 @@ test("only valid Developer ID identities are selectable and team filters are enf
 });
 
 test("CNG entitlements use selected modules, reject conflicts, and exclude debug privileges from distribution", () => {
-  expect(resolveEntitlements({ expo: { macos: { entitlements: { groups: ["app"] } } } }, [{ frame: { entitlements: { macos: { groups: ["module"], camera: true } } } }])).toEqual({ groups: ["module", "app"], camera: true });
+  expect(resolveEntitlements({ expo: { macos: { entitlements: { groups: ["app"] } } } }, [{ spark: { entitlements: { macos: { groups: ["module"], camera: true } } } }])).toEqual({ groups: ["module", "app"], camera: true });
   expect(resolveEntitlements({}, [])).toEqual({});
-  expect(() => resolveEntitlements({ macos: { entitlements: { camera: false } } }, [{ frame: { entitlements: { macos: { camera: true } } } }])).toThrow("Conflicting");
+  expect(() => resolveEntitlements({ macos: { entitlements: { camera: false } } }, [{ spark: { entitlements: { macos: { camera: true } } } }])).toThrow("Conflicting");
   for (const value of [true, "true", 1]) expect(() => distributionEntitlements({ "com.apple.security.get-task-allow": value })).toThrow("absent or false");
   expect(() => distributionEntitlements({ groups: "$(AppIdentifierPrefix)app" })).toThrow("resolved values");
 });
@@ -54,10 +54,10 @@ test("packaging entitlements follow the release binary even when the last genera
     writeJson(path.join(root, "package.json"), { name: "test", dependencies: { used: "1.0.0", unused: "1.0.0" } });
     writeJson(path.join(root, "app.json"), { expo: {} });
     for (const name of ["used", "unused"]) writeJson(path.join(root, "node_modules", name, "package.json"), {
-      name, version: "1.0.0", frame: { nativeModules: [name], sdk: true, entitlements: { macos: { [name]: true } } },
+      name, version: "1.0.0", spark: { nativeModules: [name], sdk: true, entitlements: { macos: { [name]: true } } },
     });
     const all = nativePackages(root);
-    writeJson(path.join(root, ".frame/native-selection.json"), { included: all });
+    writeJson(path.join(root, ".spark/native-selection.json"), { included: all });
     const used = all.find((pkg) => pkg.name === "used")!;
     expect(appEntitlements(root, { used: used.signature })).toEqual({ used: true });
     expect(() => appEntitlements(root, { used: "stale" })).toThrow("changed after");
@@ -78,7 +78,7 @@ test.skipIf(process.platform !== "darwin" || process.arch !== "arm64")("noninter
     const error = await new Response(child.stderr).text();
     expect(await child.exited).toBe(1);
     expect(error).toContain("No matching Developer ID");
-    expect(readFileSync(path.join(root, ".frame/commands.jsonl"), "utf8")).not.toContain("xcodebuild");
+    expect(readFileSync(path.join(root, ".spark/commands.jsonl"), "utf8")).not.toContain("xcodebuild");
   } finally { rmSync(root, { recursive: true, force: true }); }
 });
 
@@ -124,7 +124,7 @@ function harness() {
   const root = temporary();
   const source = appFixture(root);
   writeJson(path.join(root, "app.json"), { expo: { name: "Probe", slug: "probe", version: "1.0.0", macos: { bundleIdentifier: "test.probe" } } });
-  writeJson(path.join(root, ".frame/native-selection.json"), { included: [] });
+  writeJson(path.join(root, ".spark/native-selection.json"), { included: [] });
   const runtime: Runtime = { schema: 1, framework: VERSION, platform: "macos", arch: "arm64", mode: "release", fingerprint: "test", modules: {} };
   const state = { status: "In Progress", submits: 0, upload: "", badHash: false, invalidSignature: false, uncertainSubmit: false, calls: [] as string[][] };
   const execute: Runner = async (_root, args) => {
@@ -230,9 +230,9 @@ test("command arguments, output chunks, and error messages redact credentials", 
     } catch (caught) { error = String(caught); }
     expect(error).toContain("[REDACTED]");
     expect(error).not.toContain(secret);
-    const commands = readFileSync(path.join(root, ".frame/commands.jsonl"), "utf8");
+    const commands = readFileSync(path.join(root, ".spark/commands.jsonl"), "utf8");
     expect(commands).not.toContain(secret);
-    const output = readdirSync(path.join(root, ".frame/logs")).map((file) => readFileSync(path.join(root, ".frame/logs", file), "utf8")).join("");
+    const output = readdirSync(path.join(root, ".spark/logs")).map((file) => readFileSync(path.join(root, ".spark/logs", file), "utf8")).join("");
     expect(output).toContain("[REDACTED]");
     expect(output).not.toContain(secret);
   } finally { rmSync(root, { recursive: true, force: true }); }
@@ -260,7 +260,7 @@ test("feed-signing retries receive the same verified ZIP without repackaging or 
 test("configured updates must survive production pruning before packaging", async () => {
   const h = harness();
   try {
-    const config = readJson(path.join(h.root, "app.json")); config.expo.extra = { frame: { updates: { feedURL: "https://example.com/appcast.xml" } } }; writeJson(path.join(h.root, "app.json"), config);
+    const config = readJson(path.join(h.root, "app.json")); config.expo.extra = { spark: { updates: { feedURL: "https://example.com/appcast.xml" } } }; writeJson(path.join(h.root, "app.json"), config);
     await expect(packageApp(h.root, {}, h.dependencies)).rejects.toThrow("module was pruned");
     expect(h.state.submits).toBe(0);
   } finally { h.cleanup(); }

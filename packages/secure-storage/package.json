@@ -1,5 +1,5 @@
 {
-  "name": "@legendapp/frame-secure-storage",
+  "name": "@legendapp/spark-secure-storage",
   "version": "0.1.0-prototype.0",
   "license": "MIT",
   "main": "src/index",
@@ -26,7 +26,7 @@
       }
     }
   },
-  "frame": {
+  "spark": {
     "sdk": true,
     "nativeModules": [
       "NativeDesktopSecureStorage"
@@ -37,11 +37,11 @@
       "windows"
     ],
     "requires": [
-      "@legendapp/frame-desktop-app"
+      "@legendapp/spark-desktop-app"
     ]
   },
   "dependencies": {
-    "@legendapp/frame-desktop-app": "0.1.0-prototype.0"
+    "@legendapp/spark-desktop-app": "0.1.0-prototype.0"
   },
   "peerDependenciesMeta": {
     "expo-secure-store": {

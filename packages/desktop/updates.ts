@@ -1,1 +1,1 @@
-export * from "@legendapp/frame-updates";
+export * from "@legendapp/spark-updates";

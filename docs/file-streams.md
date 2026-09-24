@@ -1,13 +1,13 @@
 # Streaming files and OS Trash
 
-Available through `@legendapp/frame/files` (or the underlying
-`@legendapp/frame-file-system`) on macOS and Windows. These APIs require a rebuilt
+Available through `@legendapp/spark/files` (or the underlying
+`@legendapp/spark-file-system`) on macOS and Windows. These APIs require a rebuilt
 native runtime. Mobile/web implementations are not supplied by this desktop module.
 
 ## Bounded binary I/O
 
 ```ts
-import { openFile, readChunks, writeChunks, trash } from '@legendapp/frame/files';
+import { openFile, readChunks, writeChunks, trash } from '@legendapp/spark/files';
 
 for await (const bytes of readChunks(sourcePath, { chunkSize: 64 * 1024, signal })) {
   await consume(bytes); // pulls the next chunk only after this finishes

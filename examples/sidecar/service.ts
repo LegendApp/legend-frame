@@ -1,4 +1,4 @@
-import { spawn } from "@legendapp/frame/processes";
+import { spawn } from "@legendapp/spark/processes";
 import { startHelper } from "./client";
 // Explicitly app-owned: share this service between windows, stop on app shutdown.
 let client: ReturnType<typeof startHelper> | undefined;

@@ -1,1 +1,1 @@
-export * from "@legendapp/frame-clipboard";
+export * from "@legendapp/spark-clipboard";

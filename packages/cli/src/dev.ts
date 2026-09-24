@@ -31,7 +31,7 @@ export async function launch(root: string, app: string, port?: number, options: 
     if (process.platform !== "win32") throw new Error("Launch the Windows runtime on Windows.");
     const nativePort = windowsMetroPort(root, port ?? 8081, options);
     writeJson(stateFile(root, "windows-connection.json"), { port: nativePort, dev: options.dev ?? true });
-    return Bun.spawn([path.join(app, "MyApp.exe")], { cwd: app, env: { ...process.env, ...projectEnvironment(root), FRAME_METRO_PORT: String(nativePort), FRAME_SESSION_FILE: stateFile(root, "windows-connection.json") }, stdout: "inherit", stderr: "inherit" });
+    return Bun.spawn([path.join(app, "MyApp.exe")], { cwd: app, env: { ...process.env, ...projectEnvironment(root), SPARK_METRO_PORT: String(nativePort), SPARK_SESSION_FILE: stateFile(root, "windows-connection.json") }, stdout: "inherit", stderr: "inherit" });
   }
   const info = await run(
     root,
@@ -44,7 +44,7 @@ export async function launch(root: string, app: string, port?: number, options: 
     { capture: true },
   );
   const executable = path.join(app, "Contents/MacOS", info.trim());
-  const runtimeFile = path.join(app, "Contents/Resources/frame-runtime.json");
+  const runtimeFile = path.join(app, "Contents/Resources/spark-runtime.json");
   const developmentJS = options.dev ?? (!existsSync(runtimeFile) || readJson(runtimeFile).mode !== "preview");
   // Direct executable launch retains the exact product path and process ownership.
   // RN's native packager websocket reads RCT_jsLocation independently of the
@@ -58,7 +58,7 @@ export async function launch(root: string, app: string, port?: number, options: 
         ...projectEnvironment(root),
         ...(port
           ? {
-              FRAME_BUNDLE_URL: `${options.https ? "https" : "http"}://127.0.0.1:${port}/index.bundle?platform=macos&dev=${developmentJS}&minify=${options.minify ?? false}`,
+              SPARK_BUNDLE_URL: `${options.https ? "https" : "http"}://127.0.0.1:${port}/index.bundle?platform=macos&dev=${developmentJS}&minify=${options.minify ?? false}`,
             }
           : {}),
       },
@@ -119,20 +119,20 @@ export async function dev(
     const child = Bun.spawn([
       "node", "--require", path.join(import.meta.dir, "expo-dev-preload.cjs"), expo!, ...args,
     ], {
-      cwd: root, env: { ...process.env, FRAME_PLATFORM: platform, FRAME_DEV_SESSION: "1" },
+      cwd: root, env: { ...process.env, SPARK_PLATFORM: platform, SPARK_DEV_SESSION: "1" },
       stdin: "inherit", stdout: "inherit", stderr: "inherit", serialization: "json",
       ipc(message, sender) {
-        if (message?.type === "frame:ready") { bundleOptions = message.options ?? {}; ready(message.port); }
-        if (message?.type === "frame:action") {
+        if (message?.type === "spark:ready") { bundleOptions = message.options ?? {}; ready(message.port); }
+        if (message?.type === "spark:action") {
           void action(message.action).then(
-            () => { if (sender.exitCode === null) sender.send({ type: "frame:result", id: message.id }); },
-            error => { if (sender.exitCode === null) sender.send({ type: "frame:result", id: message.id, error: String(error) }); },
+            () => { if (sender.exitCode === null) sender.send({ type: "spark:result", id: message.id }); },
+            error => { if (sender.exitCode === null) sender.send({ type: "spark:result", id: message.id, error: String(error) }); },
           );
         }
       },
     });
     metro = child;
-    child.send({ type: "frame:state", state: { target, canBuild } });
+    child.send({ type: "spark:state", state: { target, canBuild } });
     void child.exited.then(code => {
       if (metro === child && !closing) {
         process.exitCode = code;
@@ -162,7 +162,7 @@ export async function dev(
       if (closing) return false;
       const reason = String(error);
       writeJson(stateFile(root, "session.json"), { compatible: false, reason, target, port, canBuild });
-      if (metro?.exitCode === null) metro.send({ type: "frame:state", state: { target, canBuild } });
+      if (metro?.exitCode === null) metro.send({ type: "spark:state", state: { target, canBuild } });
       if (status !== reason) { status = reason; console.error(`\n› Desktop: ${reason}`); }
       return false;
     }
@@ -227,7 +227,7 @@ export async function dev(
       appProcess.kill();
       await appProcess.exited;
     }
-    if (metro?.exitCode === null) metro.send({ type: "frame:state", state: { target, canBuild } });
+    if (metro?.exitCode === null) metro.send({ type: "spark:state", state: { target, canBuild } });
     if (next !== status) {
       status = next;
       console.log(`\n› Desktop: ${status}\n${view.compatible ? "" : view.actions + "\n"}`);

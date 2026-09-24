@@ -1,14 +1,14 @@
-import { getAppContext } from "@legendapp/frame/app";
-import * as windows from "@legendapp/frame/windows";
-import * as clipboard from "@legendapp/frame/clipboard";
-import { spawn, runCommand } from "@legendapp/frame/processes";
-import { registerGlobalShortcut } from "@legendapp/frame/global-shortcuts";
-import * as system from "@legendapp/frame/system";
-import { openDatabase } from "@legendapp/frame/sqlite";
+import { getAppContext } from "@legendapp/spark/app";
+import * as windows from "@legendapp/spark/windows";
+import * as clipboard from "@legendapp/spark/clipboard";
+import { spawn, runCommand } from "@legendapp/spark/processes";
+import { registerGlobalShortcut } from "@legendapp/spark/global-shortcuts";
+import * as system from "@legendapp/spark/system";
+import { openDatabase } from "@legendapp/spark/sqlite";
 function assert(value: unknown, message: string): asserts value { if (!value) throw new Error(message); }
 export async function runExpansionChecks(check: (name: string, action: () => Promise<void>) => Promise<void>) {
   const context = await getAppContext();
-  if (context.launchArguments.includes("--frame-window-config-probe")) await check("canonical config reaches main window in this runtime", async () => {
+  if (context.launchArguments.includes("--spark-window-config-probe")) await check("canonical config reaches main window in this runtime", async () => {
     const main = await windows.getWindow();
     assert(main.title === "Configured main" && main.frame.width === 930 && !main.resizable && main.minWidth === 400 && main.maxWidth === 1400, `Wrong startup configuration: ${JSON.stringify(main)}`);
   });

@@ -7,26 +7,26 @@ import { binary, run } from "../packages/cli/src/commands";
 import { readJson, writeJson, prepareConfig } from "../packages/cli/src/project";
 
 // This integration specifically validates standalone behavior and needs Release.
-const root = path.resolve(process.argv[2] ?? ".frame/update-tests/UpdateProbe");
+const root = path.resolve(process.argv[2] ?? ".spark/update-tests/UpdateProbe");
 await prepareKitchenSink(root);
 const configFile = path.join(root, existsSync(path.join(root, "desktop.config.json")) ? "desktop.config.json" : "app.json");
 const appFile = path.join(root, "App.tsx");
 const originalConfig = readFileSync(configFile, "utf8");
 const originalApp = readFileSync(appFile, "utf8");
-const report = path.join(root, ".frame/release-update-report.json");
+const report = path.join(root, ".spark/release-update-report.json");
 let app: ReturnType<typeof Bun.spawn> | undefined;
 try {
   const config = readJson(configFile);
   const { publicKey } = generateKeyPairSync("ed25519");
-  const framework = config.expo ? config.expo.extra.frame : config;
+  const framework = config.expo ? config.expo.extra.spark : config;
   framework.menuBarOnly = true;
   framework.updates = { feedURL: "https://example.com/updates/appcast.xml", publicKey: (publicKey.export({ format: "der", type: "spki" }) as Buffer).subarray(-32).toString("base64") };
   writeJson(configFile, config);
   writeFileSync(appFile, `import React, { useEffect } from "react";
 import { Text } from "react-native";
-import { getUpdateStatus, startUpdates } from "@legendapp/frame/updates";
-import { writeText } from "@legendapp/frame/files";
-import { getWindow } from "@legendapp/frame/windows";
+import { getUpdateStatus, startUpdates } from "@legendapp/spark/updates";
+import { writeText } from "@legendapp/spark/files";
+import { getWindow } from "@legendapp/spark/windows";
 export default function App() {
   useEffect(() => { (async () => {
     let result;
@@ -44,17 +44,17 @@ export default function App() {
   const result = await build(root, "release");
   if (!existsSync(path.join(result.app, "Contents/Frameworks/Sparkle.framework"))) throw new Error("Sparkle was not embedded");
   const info = JSON.parse(await run(root, ["plutil", "-convert", "json", "-o", "-", path.join(result.app, "Contents/Info.plist")], { capture: true }));
-  if (!info.LSUIElement || !info.FrameMenuBarOnly || !info.SURequireSignedFeed || !info.SUVerifyUpdateBeforeExtraction) throw new Error("Release updater/menu-bar CNG settings missing");
+  if (!info.LSUIElement || !info.SparkMenuBarOnly || !info.SURequireSignedFeed || !info.SUVerifyUpdateBeforeExtraction) throw new Error("Release updater/menu-bar CNG settings missing");
   await run(root, ["codesign", "--verify", "--deep", "--strict", result.app], { capture: true });
   rmSync(report, { force: true });
-  const log = Bun.file(path.join(root, ".frame/update-release.log"));
+  const log = Bun.file(path.join(root, ".spark/update-release.log"));
   app = Bun.spawn([path.join(result.app, "Contents/MacOS", info.CFBundleExecutable)], { cwd: root, stdout: log, stderr: log });
   const deadline = Date.now() + 30000;
   while (!existsSync(report) && Date.now() < deadline) {
     if (app.exitCode !== null || app.signalCode !== null) throw new Error("Release app exited before reporting");
     await Bun.sleep(100);
   }
-  if (!existsSync(report)) throw new Error(`Release update test timed out: ${root}/.frame/update-release.log`);
+  if (!existsSync(report)) throw new Error(`Release update test timed out: ${root}/.spark/update-release.log`);
   const outcome = readJson(report);
   if (!outcome.passed) throw new Error(`Release updater checks failed: ${JSON.stringify(outcome)}`);
   console.log(`PASS: standalone Release loads Sparkle, starts idempotently, preserves disabled automatic checks, and hides the menu-bar-only app window. No Metro or feed request. Report: ${report}`);
@@ -64,7 +64,7 @@ export default function App() {
   try {
     await run(root, [binary(root, "expo-desktop"), "prebuild", "--platform", "macos", "--template", "expo-desktop-template-bare-minimum@54.81.1-beta.6", "--no-install"], { env: { CI: "1" }, capture: true });
     const regenerated = JSON.parse(await run(root, ["plutil", "-convert", "json", "-o", "-", path.join(root, "macos", `${info.CFBundleExecutable}-macOS`, "Info.plist")], { capture: true }));
-    if (regenerated.SUFeedURL || regenerated.SUPublicEDKey || regenerated.SURequireSignedFeed || regenerated.LSUIElement || regenerated.FrameMenuBarOnly) throw new Error("Removed update/menu-bar configuration survived CNG");
+    if (regenerated.SUFeedURL || regenerated.SUPublicEDKey || regenerated.SURequireSignedFeed || regenerated.LSUIElement || regenerated.SparkMenuBarOnly) throw new Error("Removed update/menu-bar configuration survived CNG");
     console.log("PASS: prebuild removes stale update feed/key and resets menu-bar-only activation");
   } finally { writeFileSync(path.join(root, "package.json"), currentPackage); }
 

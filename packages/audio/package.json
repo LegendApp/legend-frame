@@ -1,5 +1,5 @@
 {
-  "name": "@legendapp/frame-audio",
+  "name": "@legendapp/spark-audio",
   "version": "0.1.0-prototype.0",
   "license": "MIT",
   "main": "src/index",
@@ -21,21 +21,21 @@
     }
   },
   "codegenConfig": {
-    "name": "RNFrameAudioSpec",
+    "name": "RNSparkAudioSpec",
     "type": "modules",
     "jsSrcsDir": "src",
     "ios": {
       "modulesProvider": {
-        "NativeFrameAudio": "RNFrameAudio"
+        "NativeSparkAudio": "RNSparkAudio"
       }
     }
   },
-  "frame": {
+  "spark": {
     "sdk": true,
     "nativeModules": [
-      "NativeFrameAudio"
+      "NativeSparkAudio"
     ],
-    "pod": "RNFrameAudio",
+    "pod": "RNSparkAudio",
     "platforms": [
       "macos",
       "windows",

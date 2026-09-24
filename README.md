@@ -1,18 +1,18 @@
-# Legend Frame
+# Legend Spark
 
-Legend Frame is an experimental framework for building native desktop applications with React Native and Expo Desktop. It combines desktop APIs with an Expo-style development workflow: start in a supplied **prebuilt runtime**, switch to a custom development build when you need additional native code, and build a standalone application containing the native modules it needs.
+Legend Spark is an experimental framework for building native desktop applications with React Native and Expo Desktop. It combines desktop APIs with an Expo-style development workflow: start in a supplied **prebuilt runtime**, switch to a custom development build when you need additional native code, and build a standalone application containing the native modules it needs.
 
-The public package is `@legendapp/frame`; the CLI and short name are `frame`.
-APIs are imported from paths such as `@legendapp/frame/files` and
-`@legendapp/frame/ui`. Internal implementation packages use `@legendapp/frame-*`.
-See the [rename and migration guide](docs/legend-frame-migration.md) when updating
+The public package is `@legendapp/spark`; the CLI and short name are `spark`.
+APIs are imported from paths such as `@legendapp/spark/files` and
+`@legendapp/spark/ui`. Internal implementation packages use `@legendapp/spark-*`.
+See the [rename and migration guide](docs/legend-spark-migration.md) when updating
 an existing prototype checkout.
 
 Application JavaScript runs in **Hermes**. Node and Bun are development tools; neither is embedded as the application's JavaScript runtime. The UI uses React Native's native renderer.
 
 **Current scope:** macOS 14+ on Apple Silicon. The packages, CLI, and native runtime are prototypes. A [transferable SDK with optional prebuilt runtimes](docs/sdk-distribution.md) works outside the checkout; public npm packages and hosted prebuilt releases are not available. Windows x64/ARM64 prebuilt and custom development builds are integrated, with native verification still pending; see the [Windows development guide](docs/windows-slice.md). Mobile/web development delegates to Expo. Intel macOS, Linux, and Mac App Store distribution are not supported by this framework's current workflow.
 
-The checkout currently targets Expo SDK 54 / React Native 0.81 and pins **Expo Desktop 1.0.0-beta.6**. Expo Desktop owns template creation and native project generation; Expo CLI owns Metro and the development terminal. frame adds desktop actions, runtime compatibility checks, native capabilities, and build orchestration. See the [integration boundary](docs/expo-desktop-integration.md) for the remaining upstream launch requirements.
+The checkout currently targets Expo SDK 54 / React Native 0.81 and pins **Expo Desktop 1.0.0-beta.6**. Expo Desktop owns template creation and native project generation; Expo CLI owns Metro and the development terminal. spark adds desktop actions, runtime compatibility checks, native capabilities, and build orchestration. See the [integration boundary](docs/expo-desktop-integration.md) for the remaining upstream launch requirements.
 
 ## Start here
 
@@ -51,8 +51,8 @@ You need Bun 1.3.14 or newer and Node compatible with the pinned Expo/React Nati
 bun install
 bun run typecheck
 bun test tests
-bun run frame sdk pack
-bun run frame sdk build-prebuilt
+bun run spark sdk pack
+bun run spark sdk build-prebuilt
 ```
 
 Use Node 24.19.0 (`nvm install && nvm use` in this checkout). Older Node 24 releases can fail on Expo Desktop beta's CommonJS imports; see [native prerequisites](docs/development.md#native-prerequisites).
@@ -62,7 +62,7 @@ Use Node 24.19.0 (`nvm install && nvm use` in this checkout). Older Node 24 rele
 If you already have a compatible runtime, register it instead of building it:
 
 ```sh
-bun run frame sdk register /absolute/path/to/FramePrebuilt.app
+bun run spark sdk register /absolute/path/to/SparkPrebuilt.app
 ```
 
 Registration records the path; keep the binary at that location. A compatible prebuilt runtime can be launched without invoking Xcode, CocoaPods, or codegen. Native build tools are needed when creating or rebuilding a binary.
@@ -72,8 +72,8 @@ Registration records the path; keep the binary at that location. A compatible pr
 After preparing the SDK, run from the framework checkout:
 
 ```sh
-bun run frame create /tmp/MyFrameApp
-cd /tmp/MyFrameApp
+bun run spark create /tmp/MySparkApp
+cd /tmp/MySparkApp
 bun run macos
 ```
 
@@ -92,7 +92,7 @@ bun run build
 This produces a local ad-hoc-signed `.app` with embedded JavaScript and prints its path. It runs without the development server. To reopen the last standalone build:
 
 ```sh
-bunx --no-install frame open
+bunx --no-install spark open
 ```
 
 To prepare a Developer ID-signed, notarized distribution ZIP:
@@ -111,24 +111,24 @@ On Windows 11 x64 or ARM64 (including Parallels), install the prerequisites in t
 
 ```powershell
 bun install
-bun run frame sdk pack --platform windows
-bun run frame sdk build-prebuilt --platform windows
-bun run frame create C:\dev\MyFrameApp --platform windows
-cd C:\dev\MyFrameApp
+bun run spark sdk pack --platform windows
+bun run spark sdk build-prebuilt --platform windows
+bun run spark create C:\dev\MySparkApp --platform windows
+cd C:\dev\MySparkApp
 bun run windows
 ```
 
-Creation defaults to Windows on a Windows machine. `bun run windows`, `bun dev`, and `bun start` enter the normal `frame dev` session. Additional Windows native dependencies use the normal custom-build path: the session detects incompatible prebuilt code and offers `b`, or you can run `bunx --no-install frame build --dev` explicitly. Windows builds default to the native CPU architecture, including ARM64 on Apple Silicon Parallels; runtime registration distinguishes Windows/x64, Windows/arm64, and macOS/arm64. See the Windows guide for the ARM64 compiler tools and `FRAME_WINDOWS_ARCH` override.
+Creation defaults to Windows on a Windows machine. `bun run windows`, `bun dev`, and `bun start` enter the normal `spark dev` session. Additional Windows native dependencies use the normal custom-build path: the session detects incompatible prebuilt code and offers `b`, or you can run `bunx --no-install spark build --dev` explicitly. Windows builds default to the native CPU architecture, including ARM64 on Apple Silicon Parallels; runtime registration distinguishes Windows/x64, Windows/arm64, and macOS/arm64. See the Windows guide for the ARM64 compiler tools and `SPARK_WINDOWS_ARCH` override.
 
 For the automated prebuilt → Fast Refresh → added native module → custom-build check, run from the framework checkout with a fresh destination:
 
 ```powershell
-bun run test:windows --project C:\dev\FrameWindowsVerification
+bun run test:windows --project C:\dev\SparkWindowsVerification
 ```
 
-The verifier uses the real CLI and existing native-greeting fixture, and saves `.frame/windows-verification.json` plus `.frame/logs`. On macOS, `bun run test:windows:prepare --project /tmp/FrameWindowsCheck` checks generation and both development bundles without executing a native binary.
+The verifier uses the real CLI and existing native-greeting fixture, and saves `.spark/windows-verification.json` plus `.spark/logs`. On macOS, `bun run test:windows:prepare --project /tmp/SparkWindowsCheck` checks generation and both development bundles without executing a native binary.
 
-Windows host source now includes display enumeration, window frame/centering/fullscreen operations, size constraints and basic presentation options, menu following between React windows, and an atomic single-instance guard. The native UI package implements React Native Appearance overrides for WinUI controls. Run `bun run test:windows:features` on Windows to compile and exercise these additions, including simultaneous launches and owner-termination recovery.
+Windows host source now includes display enumeration, window spark/centering/fullscreen operations, size constraints and basic presentation options, menu following between React windows, and an atomic single-instance guard. The native UI package implements React Native Appearance overrides for WinUI controls. Run `bun run test:windows:features` on Windows to compile and exercise these additions, including simultaneous launches and owner-termination recovery.
 
 **Native Windows verification is still pending.** Local generation/bundle checks do not prove compilation, autolinking, Hermes startup, or Fast Refresh on Windows. Windows production builds, preview builds, signing/MSIX, and clean-machine runtime distribution are outside this development scope. Desktop modules, Nitro, SQLite, WebView2, and secondary Hermes runtimes now have Windows integrations; run `bun run test:platform --platform windows` to exercise their shared contracts. See the [Windows guide](docs/windows-slice.md) for the full setup, test, and diagnostic workflow.
 
@@ -136,28 +136,28 @@ Windows host source now includes display enumeration, window frame/centering/ful
 
 The feature set below describes the macOS SDK; it is not a Windows API support matrix.
 
-Framework-owned capabilities are imported from `@legendapp/frame/<feature>`. Use individual entry points so production analysis can associate JavaScript imports with native modules.
+Framework-owned capabilities are imported from `@legendapp/spark/<feature>`. Use individual entry points so production analysis can associate JavaScript imports with native modules.
 
 | Area | Entry points and capabilities |
 | --- | --- |
-| Application and windows | `app`, `windows`: identity, lifecycle, single-instance forwarding, secondary React roots, window styles, frame restoration, close/quit guards |
+| Application and windows | `app`, `windows`: identity, lifecycle, single-instance forwarding, secondary React roots, window styles, spark restoration, close/quit guards |
 | Files and persistence | `files`, `settings`, `secure-storage`: filesystem operations, bounded binary streaming and positional I/O, recursive watches, Trash/Recycle Bin, JSON settings, project-scoped Keychain values |
 | Desktop commands | `menus`, `context-menu`, `shortcuts`, `global-shortcuts`: menus, command handling, focused and system-wide shortcuts |
 | User interaction | `dialogs`, `message-dialog`, `clipboard`, `drag-drop`: file panels, alerts, clipboard formats, drag sources and drop targets |
 | OS integration | `links`, `notifications`, `tray`, `system`: URLs/documents, local notifications, menu-bar items, Dock/startup/power integration |
 | Processes and distribution | `processes`, `updates`: child process I/O, timeouts and managed target-specific helper bundles, signed whole-app update integration |
-| Native controls and styling | `@legendapp/frame-ui`: native buttons, text inputs and selects; optional Uniwind bindings and system/light/dark themes |
-| Audio and authentication | `@legendapp/frame-audio`, `@legendapp/frame-auth-session`: playback and system media controls, external-browser authentication callback transport |
+| Native controls and styling | `@legendapp/spark-ui`: native buttons, text inputs and selects; optional Uniwind bindings and system/light/dark themes |
+| Audio and authentication | `@legendapp/spark-audio`, `@legendapp/spark-auth-session`: playback and system media controls, external-browser authentication callback transport |
 | External libraries | React Native WebView, OP-SQLite, and Margelo Runtimes; see [integrated external libraries](docs/external-libraries.md) |
 
 For example, application code can use project-scoped storage without a Node filesystem API:
 
 ```ts
-import { getDirectory, writeText } from '@legendapp/frame/files';
-import { settings } from '@legendapp/frame/settings';
+import { getDirectory, writeText } from '@legendapp/spark/files';
+import { settings } from '@legendapp/spark/settings';
 
 const dataDirectory = await getDirectory('data');
-await writeText(`${dataDirectory}/draft.txt`, 'Hello from frame');
+await writeText(`${dataDirectory}/draft.txt`, 'Hello from spark');
 await settings.set('theme', 'dark');
 ```
 
@@ -171,11 +171,11 @@ item to the OS Trash/Recycle Bin and rejects if recycling is unavailable; it doe
 not fall back to permanent deletion. See [streaming files and Trash](docs/file-streams.md)
 for limits, partial-write behavior, and platform acceptance.
 
-For external libraries, prefer their upstream imports and documentation. frame supplies integration, native setup, tested pins, and supported production pruning. For example, background work uses `@react-native-runtimes/core` directly. It runs in independent Hermes heaps inside the application process and ends when the app quits. Read the [Runtimes guide](docs/runtimes.md) for serialization, cleanup, native-module restrictions, and production reachability.
+For external libraries, prefer their upstream imports and documentation. spark supplies integration, native setup, tested pins, and supported production pruning. For example, background work uses `@react-native-runtimes/core` directly. It runs in independent Hermes heaps inside the application process and ends when the app quits. Read the [Runtimes guide](docs/runtimes.md) for serialization, cleanup, native-module restrictions, and production reachability.
 
 ## One app for mobile, web, and desktop
 
-`bun run settings /tmp/MySettings` packs the shared Settings template and creates it through Expo Desktop beta. It uses the existing capability adapters, ordinary React Native layout, and native `Button`, `TextInput`, and `Select` controls from `@legendapp/frame-ui`. Mobile controls use the pinned Expo UI backend; desktop and web select their own implementations. The starter uses [Uniwind](docs/styling.md) for responsive layout and light/dark/system themes, with optional native control bindings at `@legendapp/frame-ui/uniwind`. Ordinary `style` props remain supported.
+`bun run settings /tmp/MySettings` packs the shared Settings template and creates it through Expo Desktop beta. It uses the existing capability adapters, ordinary React Native layout, and native `Button`, `TextInput`, and `Select` controls from `@legendapp/spark-ui`. Mobile controls use the pinned Expo UI backend; desktop and web select their own implementations. The starter uses [Uniwind](docs/styling.md) for responsive layout and light/dark/system themes, with optional native control bindings at `@legendapp/spark-ui/uniwind`. Ordinary `style` props remain supported.
 
 Run `bun run web`, `bun run ios`, `bun run android`, or `bun run macos` inside the generated app. Native targets first need their development build. Windows uses WinUI controls with visible, noninteractive fallbacks if native initialization fails; native Windows acceptance is still pending. Track remaining work in [known Windows issues](docs/windows-issues.md). See [the shared Settings guide](docs/universal-settings.md) for build commands, platform status, and verification.
 
@@ -189,12 +189,12 @@ A typical generated configuration looks like this; retain the `projectId` assign
 
 ```json
 {
-  "$schema": "./node_modules/@legendapp/frame-desktop-config/schema.json",
-  "name": "MyFrameApp",
+  "$schema": "./node_modules/@legendapp/spark-desktop-config/schema.json",
+  "name": "MySparkApp",
   "projectId": "f478dff4-f9a1-4ff2-8096-64df89e1c470",
   "version": "0.0.1",
   "window": { "width": 1000, "height": 700, "restoreFrame": true },
-  "macos": { "bundleIdentifier": "com.example.myframeapp" }
+  "macos": { "bundleIdentifier": "com.example.mysparkapp" }
 }
 ```
 
@@ -215,7 +215,7 @@ bun run windows
 ```
 
 The app uses workspace packages and the repository lockfile. Installation applies
-checked-in desktop library adapters; startup delegates to the normal frame/Expo
+checked-in desktop library adapters; startup delegates to the normal spark/Expo
 CLI. It does not create a second app, pack SDK archives, or compile native code.
 Edit the screens and CSS directly for Fast Refresh. `bun run kitchen-sink` from the
 repository root is a shortcut for this app's `dev` command.
@@ -238,14 +238,14 @@ Run framework commands from this repository; run app commands from a generated a
 
 | Location | Command | Purpose |
 | --- | --- | --- |
-| Framework | `bun run frame sdk pack` | Pack and register local SDK archives |
-| Framework | `bun run frame sdk build-prebuilt` | Build/register the generic runtime |
-| Framework | `bun run frame create <directory>` | Create a consumer from the packaged starter |
+| Framework | `bun run spark sdk pack` | Pack and register local SDK archives |
+| Framework | `bun run spark sdk build-prebuilt` | Build/register the generic runtime |
+| Framework | `bun run spark create <directory>` | Create a consumer from the packaged starter |
 | App | `bun run macos` / `bun run windows` / `bun dev` / `bun start` | Managed development session for the project target |
-| App | `bunx --no-install frame build --dev` | Build an app-specific development runtime |
+| App | `bunx --no-install spark build --dev` | Build an app-specific development runtime |
 | Framework | `bun run test:windows` | Verify the integrated Windows native development path |
 | Framework | `bun run test:windows:prepare` | Check Windows generation and development bundles without native execution |
-| App | `bunx --no-install frame analyze` | Explain macOS production native module selection |
+| App | `bunx --no-install spark analyze` | Explain macOS production native module selection |
 | App | `bun run build` | Build a standalone macOS Release app |
 | App | `bun run package` | Prepare a signed, notarized macOS distribution archive |
 | App | `bun run doctor` | Diagnose native build prerequisites |
@@ -309,14 +309,14 @@ Use the [implementation plan](docs/implementation-plan.md) for original decision
 
 ## Shared application and SDK transfer
 
-`frame create MyEditor --example document-editor` creates a [shared document editor](docs/document-editor.md) using Expo adapters on mobile, browser file operations on web, and native desktop dialogs. The macOS example exercises windows, menus, shortcuts, file-open events, and unsaved-change guards. Windows includes native control/API/file-dialog implementations, with remaining native acceptance and lifecycle gaps listed in [known Windows issues](docs/windows-issues.md).
+`spark create MyEditor --example document-editor` creates a [shared document editor](docs/document-editor.md) using Expo adapters on mobile, browser file operations on web, and native desktop dialogs. The macOS example exercises windows, menus, shortcuts, file-open events, and unsaved-change guards. Windows includes native control/API/file-dialog implementations, with remaining native acceptance and lifecycle gaps listed in [known Windows issues](docs/windows-issues.md).
 
-[SDK export/import](docs/sdk-distribution.md) packages the CLI, module archives, and optional prebuilt runtimes into a transferable directory. The recipient installs it without this checkout; Expo Desktop beta still owns creation and desktop generation, and frame retains native compatibility checks.
+[SDK export/import](docs/sdk-distribution.md) packages the CLI, module archives, and optional prebuilt runtimes into a transferable directory. The recipient installs it without this checkout; Expo Desktop beta still owns creation and desktop generation, and spark retains native compatibility checks.
 
 ## Small application examples
 
 [Notes Lite, Music Lite, and Diff Lite](docs/example-apps.md) are standalone universal
-CLI examples, created with `frame create MyApp --example notes-lite` (or
+CLI examples, created with `spark create MyApp --example notes-lite` (or
 `music-lite` / `diff-lite`). They share application models and screens, with
 platform files for native lifecycle, selected-file access, and playback. Source
 ships with the CLI and depends only on public package imports.
@@ -333,7 +333,7 @@ note models remain application-owned. The maintained prebuilt profile now includ
 and AsyncStorage; existing clients require a rebuild for those native additions.
 
 Windows host source also supplies window roots sharing the host's React runtime,
-close/quit guards, focused shortcuts, basic menus, frame restoration, and launch
+close/quit guards, focused shortcuts, basic menus, spark restoration, and launch
 forwarding. Native compilation and acceptance remain tracked in
 [known Windows issues](docs/windows-issues.md); generated bundles do not prove them.
 See [extension development](docs/extensions.md) for adding a native library or
@@ -366,7 +366,7 @@ a persistent background service. See [sidecar lifecycle limits](docs/sidecars.md
 
 ## Cross-platform acceptance
 
-Run `bun run test:platform --platform macos` (or `windows`, `ios`, `android`, `web`) for a fresh shared test app. `--prepare-only` checks generation/bundling; `--api-only` runs API assertions without claiming UI acceptance. Collect JSON reports from each machine and run `bun run test:report --output .frame/platform-coverage.md` to see passed, failed, missing, inapplicable, and untested cases. See [platform testing](docs/platform-testing.md) for devices, commands, cleanup, and current coverage.
+Run `bun run test:platform --platform macos` (or `windows`, `ios`, `android`, `web`) for a fresh shared test app. `--prepare-only` checks generation/bundling; `--api-only` runs API assertions without claiming UI acceptance. Collect JSON reports from each machine and run `bun run test:report --output .spark/platform-coverage.md` to see passed, failed, missing, inapplicable, and untested cases. See [platform testing](docs/platform-testing.md) for devices, commands, cleanup, and current coverage.
 
 App-supplied backend executables can be packaged as target-specific helper bundles. See the [sidecar guide](docs/sidecars.md) for configuration, lifecycle, distribution limits, and a runnable C example. No Node runtime is included.
 

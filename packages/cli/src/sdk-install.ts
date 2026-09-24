@@ -27,13 +27,13 @@ for (const [name, file] of Object.entries(manifest)) {
   if (typeof file !== "string" || path.basename(file) !== file || !actual[`packages/${file}`]) throw new Error("Invalid SDK manifest");
   overrides[name] = path.join(root, "packages", file);
 }
-if (!overrides["@legendapp/frame-cli"]) throw new Error("SDK has no CLI");
+if (!overrides["@legendapp/spark-cli"]) throw new Error("SDK has no CLI");
 const tooling = path.join(root, ".cli");
 mkdirSync(tooling, { recursive: true });
-writeFileSync(path.join(tooling, "package.json"), JSON.stringify({ name: "frame-sdk-tools", private: true, dependencies: { "@legendapp/frame-cli": overrides["@legendapp/frame-cli"] }, overrides }, null, 2));
+writeFileSync(path.join(tooling, "package.json"), JSON.stringify({ name: "spark-sdk-tools", private: true, dependencies: { "@legendapp/spark-cli": overrides["@legendapp/spark-cli"] }, overrides }, null, 2));
 const install = Bun.spawn(["bun", "install"], { cwd: tooling, stdout: "inherit", stderr: "inherit" });
 if (await install.exited) throw new Error("SDK CLI installation failed");
-const cli = path.join(tooling, "node_modules/@legendapp/frame-cli/src/index.ts");
+const cli = path.join(tooling, "node_modules/@legendapp/spark-cli/src/index.ts");
 const register = Bun.spawn(["bun", cli, "sdk", "import", root], { cwd: root, stdout: "inherit", stderr: "inherit" });
 if (await register.exited) throw new Error("SDK registration failed");
 console.log(`SDK installed. Keep this directory in place.\nCreate an app: bun ${JSON.stringify(cli)} create MyApp --universal`);

@@ -23,13 +23,13 @@ test("build defaults to standalone release and rejects conflicting modes", () =>
 const module: NativePackage = { name: "dialogs", root: "/dialogs", json: {}, sdk: true, requires: [], signature: "current" };
 
 test("runtime discovery uses native compatibility, survives deleted binaries, and ignores other SDKs", () => {
-  const root = mkdtempSync(path.join(os.tmpdir(), "frame-discovery-"));
-  const previous = process.env.FRAME_HOME;
-  process.env.FRAME_HOME = path.join(root, "cache");
+  const root = mkdtempSync(path.join(os.tmpdir(), "spark-discovery-"));
+  const previous = process.env.SPARK_HOME;
+  process.env.SPARK_HOME = path.join(root, "cache");
   function runtime(name: string, signature: string, version = VERSION) {
     const app = path.join(root, `${name}.app`);
     mkdirSync(path.join(app, "Contents/MacOS"), { recursive: true });
-    writeJson(path.join(app, "Contents/Resources/frame-runtime.json"), {
+    writeJson(path.join(app, "Contents/Resources/spark-runtime.json"), {
       schema: 1, framework: version, platform: "macos", arch: "arm64", mode: "go", fingerprint: name, modules: { dialogs: signature },
     });
     return app;
@@ -46,20 +46,20 @@ test("runtime discovery uses native compatibility, survives deleted binaries, an
     rmSync(old, { recursive: true });
     expect(findGo([module])).toBeUndefined();
   } finally {
-    if (previous === undefined) delete process.env.FRAME_HOME;
-    else process.env.FRAME_HOME = previous;
+    if (previous === undefined) delete process.env.SPARK_HOME;
+    else process.env.SPARK_HOME = previous;
     rmSync(root, { recursive: true, force: true });
   }
 });
 
 test("app discovery walks past nested packages to the application root", () => {
-  const root = mkdtempSync(path.join(os.tmpdir(), "frame-project-"));
+  const root = mkdtempSync(path.join(os.tmpdir(), "spark-project-"));
   try {
     writeJson(path.join(root, "app.json"), { expo: { name: "App" } });
     writeJson(path.join(root, "package.json"), { name: "app" });
     writeJson(path.join(root, "src/component/package.json"), { name: "component" });
     expect(findProject(path.join(root, "src/component"))).toBe(root);
-    expect(() => findProject(os.tmpdir())).toThrow("No frame app found");
+    expect(() => findProject(os.tmpdir())).toThrow("No spark app found");
   } finally { rmSync(root, { recursive: true, force: true }); }
 });
 
@@ -94,11 +94,11 @@ test("automatic ports skip any listening server and explicit ports fail clearly"
 });
 
 test("package registration rejects incomplete SDK archives", () => {
-  const root = mkdtempSync(path.join(os.tmpdir(), "frame-packages-"));
+  const root = mkdtempSync(path.join(os.tmpdir(), "spark-packages-"));
   try {
     const manifest = path.join(root, "manifest.json");
-    writeJson(manifest, { "@legendapp/frame-cli": "missing.tgz" });
+    writeJson(manifest, { "@legendapp/spark-cli": "missing.tgz" });
     expect(() => registerPackages(manifest)).toThrow("Missing local archive");
-    expect(() => packageManifest(manifest)).toThrow("frame sdk pack");
+    expect(() => packageManifest(manifest)).toThrow("spark sdk pack");
   } finally { rmSync(root, { recursive: true, force: true }); }
 });

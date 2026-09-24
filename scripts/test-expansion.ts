@@ -5,19 +5,19 @@ import { build } from "../packages/cli/src/build";
 import { availablePort } from "../packages/cli/src/local";
 import { binary, run } from "../packages/cli/src/commands";
 import { readJson, writeJson, projectEnvironment, prepareConfig, readAppConfig } from "../packages/cli/src/project";
-const root = path.resolve(process.argv[2] ?? ".frame/expansion-tests/Expansion");
+const root = path.resolve(process.argv[2] ?? ".spark/expansion-tests/Expansion");
 await prepareKitchenSink(root);
 const canonical = path.join(root, "desktop.config.json"), generated = path.join(root, "app.json");
 const originalCanonical = existsSync(canonical) ? readFileSync(canonical) : undefined;
 const originalGenerated = existsSync(generated) ? readFileSync(generated) : undefined;
 const previous = readAppConfig(root).expo;
 const port = await availablePort();
-const directory = path.join(root, ".frame/expansion-results"); mkdirSync(directory, { recursive: true });
-writeJson(path.join(root, ".frame/session.json"), { compatible: true, target: "test", port });
+const directory = path.join(root, ".spark/expansion-results"); mkdirSync(directory, { recursive: true });
+writeJson(path.join(root, ".spark/session.json"), { compatible: true, target: "test", port });
 let metro: ReturnType<typeof Bun.spawn> | undefined;
 let app: ReturnType<typeof Bun.spawn> | undefined;
 try {
-  writeJson(canonical, { name: previous.name, version: previous.version, projectId: previous.extra?.frame?.projectId ?? previous.macos.bundleIdentifier,
+  writeJson(canonical, { name: previous.name, version: previous.version, projectId: previous.extra?.spark?.projectId ?? previous.macos.bundleIdentifier,
     macos: previous.macos, window: { title: "Configured main", width: 930, height: 620, minWidth: 400, maxWidth: 1400, resizable: false, titleBarStyle: "overlay", restoreFrame: false } });
   prepareConfig(root);
   const log = Bun.file(path.join(directory, "metro.log"));
@@ -31,15 +31,15 @@ try {
   if (!ready) throw new Error("Metro startup timed out");
   for (const mode of ["dev", "go"] as const) {
     const pkgFile = path.join(root, "package.json"), pkg = readJson(pkgFile);
-    if (mode === "dev") pkg.dependencies["@legendapp/frame-sdk-test-driver"] = `file:${path.resolve(import.meta.dir, "../fixtures/sdk-test-driver")}`;
-    else delete pkg.dependencies["@legendapp/frame-sdk-test-driver"];
+    if (mode === "dev") pkg.dependencies["@legendapp/spark-sdk-test-driver"] = `file:${path.resolve(import.meta.dir, "../fixtures/sdk-test-driver")}`;
+    else delete pkg.dependencies["@legendapp/spark-sdk-test-driver"];
     writeJson(pkgFile, pkg);
     await run(root, ["bun", "install"]);
     const result = await build(root, mode);
     const name = (await run(root, ["/usr/libexec/PlistBuddy", "-c", "Print CFBundleExecutable", path.join(result.app, "Contents/Info.plist")], { capture: true })).trim();
     const report = path.join(directory, `${mode}.json`); rmSync(report, { force: true });
     const appLog = Bun.file(path.join(directory, `${mode}.log`));
-    app = Bun.spawn([path.join(result.app, "Contents/MacOS", name), "-RCT_jsLocation", `127.0.0.1:${port}`, "--frame-expansion-report", report, "--frame-window-config-probe"], { cwd: root, env: { ...process.env, ...projectEnvironment(root), FRAME_BUNDLE_URL: `http://127.0.0.1:${port}/index.bundle?platform=macos&dev=true&minify=false` }, stdout: appLog, stderr: appLog });
+    app = Bun.spawn([path.join(result.app, "Contents/MacOS", name), "-RCT_jsLocation", `127.0.0.1:${port}`, "--spark-expansion-report", report, "--spark-window-config-probe"], { cwd: root, env: { ...process.env, ...projectEnvironment(root), SPARK_BUNDLE_URL: `http://127.0.0.1:${port}/index.bundle?platform=macos&dev=true&minify=false` }, stdout: appLog, stderr: appLog });
     const deadline = Date.now() + 90000;
     while (!existsSync(report) && Date.now() < deadline) {
       if (app.exitCode !== null || app.signalCode !== null) throw new Error(`${mode} exited before reporting; see ${directory}`);
@@ -55,11 +55,11 @@ try {
   if (app) { app.kill(); await app.exited; }
   if (metro) { metro.kill(); await metro.exited; }
   const pkgFile = path.join(root, "package.json"), pkg = readJson(pkgFile);
-  if (pkg.dependencies["@legendapp/frame-sdk-test-driver"]) {
-    delete pkg.dependencies["@legendapp/frame-sdk-test-driver"]; writeJson(pkgFile, pkg);
+  if (pkg.dependencies["@legendapp/spark-sdk-test-driver"]) {
+    delete pkg.dependencies["@legendapp/spark-sdk-test-driver"]; writeJson(pkgFile, pkg);
     await run(root, ["bun", "install"]);
   }
-  rmSync(path.join(root, ".frame/session.json"), { force: true });
+  rmSync(path.join(root, ".spark/session.json"), { force: true });
   if (originalCanonical) writeFileSync(canonical, originalCanonical); else rmSync(canonical, { force: true });
   if (originalGenerated) writeFileSync(generated, originalGenerated); else rmSync(generated, { force: true });
 }

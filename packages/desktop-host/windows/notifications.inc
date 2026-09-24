@@ -3,7 +3,7 @@
 #include <atomic>
 #include <mutex>
 #include <deque>
-namespace FrameWin {
+namespace SparkWin {
 static std::mutex notificationMutex;
 static std::deque<std::string> notificationResponses;
 static std::deque<std::string> notificationEvents;
@@ -14,7 +14,7 @@ static std::wstring ToastClassId() {
 }
 static void QueueNotificationResponse(std::string const &encoded) {
   auto args = Json::JsonObject::Parse(to_hstring(encoded));
-  if (args.GetNamedString(L"project") != FrameWindowsEnv(L"FRAME_PROJECT_ID")) return;
+  if (args.GetNamedString(L"project") != SparkWindowsEnv(L"SPARK_PROJECT_ID")) return;
   auto data = args.GetNamedObject(L"data", Json::JsonObject());
   for (auto const &entry : data) if (entry.Value().ValueType() != Json::JsonValueType::String) return;
   GUID identity{}; winrt::check_hresult(CoCreateGuid(&identity));
@@ -42,7 +42,7 @@ static void EmitNotificationEvents() {
 }
 struct ToastCallback : winrt::implements<ToastCallback, INotificationActivationCallback> {
   HRESULT __stdcall Activate(LPCWSTR appId, LPCWSTR arguments, const NOTIFICATION_USER_INPUT_DATA *, ULONG) noexcept override {
-    try { if (appId && arguments && std::wstring(appId) == L"Frame." + ProjectKey()) QueueNotificationResponse(to_string(arguments)); return S_OK; } catch (...) { return winrt::to_hresult(); }
+    try { if (appId && arguments && std::wstring(appId) == L"Spark." + ProjectKey()) QueueNotificationResponse(to_string(arguments)); return S_OK; } catch (...) { return winrt::to_hresult(); }
   }
 };
 struct ToastFactory : winrt::implements<ToastFactory, IClassFactory> {

@@ -1,6 +1,6 @@
 node_modules/
 .DS_Store
-.frame/
+.spark/
 artifacts/
 dist/
 docs/evidence/
@@ -9,3 +9,4 @@ docs/evidence/
 
 # Legacy prototype build artifacts (not migrated automatically).
 .legend/
+.frame/

@@ -24,9 +24,9 @@ if (values.help) {
   --no-open         Print the web URL instead of opening a browser
   --timeout 180     Seconds to wait for runtime results after building
   --project PATH    Fresh disposable consumer directory
-  --report-dir DIR  Portable JSON reports (default .frame/test-results)
+  --report-dir DIR  Portable JSON reports (default .spark/test-results)
 
-Desktop uses Frame builds; mobile uses Expo run:ios/run:android. Interact with
+Desktop uses Spark builds; mobile uses Expo run:ios/run:android. Interact with
 controls and choose Finish run, or use --api-only for noninteractive API checks.
 Clipboard checks replace clipboard content and restore text; use a test session.`);
   process.exit(0);
@@ -37,13 +37,13 @@ const platform = (values.platform ?? (process.platform === "win32" ? "windows" :
 if (!platforms.includes(platform)) throw new Error(`Invalid platform: ${platform}`);
 const timeoutMs = Number(values.timeout) * 1000;
 if (!Number.isFinite(timeoutMs) || timeoutMs < 1000) throw new Error("--timeout must be a positive number of seconds");
-const root = path.resolve(values.project ?? `.frame/platform-tests/Platform${platform}${Date.now()}`);
+const root = path.resolve(values.project ?? `.spark/platform-tests/Platform${platform}${Date.now()}`);
 if (existsSync(root)) throw new Error("Choose a fresh --project directory; this runner creates a disposable consumer");
 const prepareOnly = !!values["prepare-only"];
 const desktop = platform === "macos" || platform === "windows";
 const report = createReport(framework, root, { platform, arch: desktop ? architecture(platform) : "not-reported",
   device: values.device ?? (platform === "web" ? "browser" : desktop ? "interactive desktop" : "not selected"), mode: "dev" }, prepareOnly ? "prepare" : "runtime");
-const reportFile = path.resolve(values["report-dir"] ?? ".frame/test-results", `${report.runId}.json`);
+const reportFile = path.resolve(values["report-dir"] ?? ".spark/test-results", `${report.runId}.json`);
 let stage = "build.project";
 let metro: ReturnType<typeof Bun.spawn> | undefined;
 let app: ReturnType<typeof Bun.spawn> | undefined;
@@ -55,8 +55,8 @@ let androidReversePort: number | undefined;
 let mobileApplicationId: string | undefined;
 let received = false;
 let interrupted = false;
-const previousPlatform = process.env.FRAME_PLATFORM;
-process.env.FRAME_PLATFORM = platform;
+const previousPlatform = process.env.SPARK_PLATFORM;
+process.env.SPARK_PLATFORM = platform;
 function checkpoint() { saveReport(reportFile, report); }
 function stop() { interrupted = true; cancelCommands(root); app?.kill(); metro?.kill(); }
 process.on("SIGINT", stop); process.on("SIGTERM", stop);
@@ -92,7 +92,7 @@ try {
     writeFileSync(path.join(root, "App.tsx"), 'export { default } from "./PlatformChecks";\n');
     if (desktop) {
       const pkg = readJson(path.join(root, "package.json"));
-      for (const name of ["@legendapp/frame", "@legendapp/frame-file-system", "@legendapp/frame-settings", "@legendapp/frame-message-dialog", "@legendapp/frame-context-menu", "@legendapp/frame-tray", "@legendapp/frame-global-shortcuts", "@legendapp/frame-processes", "@legendapp/frame-system", "@legendapp/frame-notifications", "@legendapp/frame-drag-drop", "@legendapp/frame-native-menu", "@legendapp/frame-desktop-windows", "@legendapp/frame-sqlite", "@legendapp/frame-webview", "react-native-nitro-modules", "@react-native-runtimes/core"]) pkg.dependencies[name] = pkg.overrides[name];
+      for (const name of ["@legendapp/spark", "@legendapp/spark-file-system", "@legendapp/spark-settings", "@legendapp/spark-message-dialog", "@legendapp/spark-context-menu", "@legendapp/spark-tray", "@legendapp/spark-global-shortcuts", "@legendapp/spark-processes", "@legendapp/spark-system", "@legendapp/spark-notifications", "@legendapp/spark-drag-drop", "@legendapp/spark-native-menu", "@legendapp/spark-desktop-windows", "@legendapp/spark-sqlite", "@legendapp/spark-webview", "react-native-nitro-modules", "@react-native-runtimes/core"]) pkg.dependencies[name] = pkg.overrides[name];
       writeJson(path.join(root, "package.json"), pkg); await run(root, ["bun", "install"], { capture: true });
     }
     // A unique application ID prevents this probe replacing another test or user app.
@@ -101,7 +101,7 @@ try {
       if (!(Object.values(listing.devices).flat() as { udid: string }[]).some(device => device.udid === values.device)) throw new MissingPrerequisite("--device must identify an available iOS simulator UDID; physical-device transport is not configured");
     }
     const config = readJson(path.join(root, "desktop.config.json"));
-    const applicationId = `so.legend.frame.acceptance.p${report.runId.replaceAll("-", "")}`;
+    const applicationId = `so.legend.spark.acceptance.p${report.runId.replaceAll("-", "")}`;
     config.expo = { ...config.expo, ios: { bundleIdentifier: applicationId }, android: { package: applicationId } };
     writeJson(path.join(root, "desktop.config.json"), config);
     const appCases = new Set(["clipboard.read", "clipboard.roundtrip", "storage.lifecycle", "storage.unavailable", "links.resolution", "files.recursive-watch", "windows.overlay", "files.streaming", "files.trash", "ui.button", "ui.input", "ui.select", "desktop.filesystem", "desktop.settings", "desktop.recent-documents", "desktop.rich-clipboard", "desktop.message-dialog", "desktop.context-menu", "desktop.tray", "desktop.global-shortcuts", "desktop.modal-windows", "desktop.advanced-menus", "desktop.processes", "desktop.system", "desktop.notifications", "desktop.sqlite", "desktop.nitro", "desktop.runtimes", "desktop.webview", "desktop.drag-drop"]);
@@ -124,7 +124,7 @@ try {
       const manifest = readFileSync(path.join(root, "package.json"), "utf8");
       try { await run(root, nodeCommand(root, "expo-desktop", "expo-desktop", ["prebuild", "--platform", "macos", "--template", "expo-desktop-template-bare-minimum@54.81.1-beta.6", "--no-install"]), { env: { CI: "1" }, capture: true }); }
       finally { writeFileSync(path.join(root, "package.json"), manifest); }
-    } else if (platform !== "web") await run(root, ["bun", "node_modules/@legendapp/frame-cli/src/index.ts", "prebuild", "--platform", platform], { capture: true });
+    } else if (platform !== "web") await run(root, ["bun", "node_modules/@legendapp/spark-cli/src/index.ts", "prebuild", "--platform", platform], { capture: true });
     record(report, { id: "build.project", status: "passed" }); stage = "build.bundle"; checkpoint();
     await run(root, nodeCommand(root, "expo", "expo", ["export:embed", "--entry-file", "index.ts", "--platform", platform, "--dev", "true", "--max-workers", "2", "--bundle-output", stateFile(root, "contract-check.js")]), { capture: true });
     record(report, { id: "build.bundle", status: "passed" }); checkpoint();
@@ -141,10 +141,10 @@ try {
         stage = "build.native";
         const product = await build(root, "dev"); expectedFingerprint = product.runtime.fingerprint;
         record(report, { id: "build.native", status: "passed" });
-        if (platform === "windows") app = Bun.spawn([path.join(product.app, "MyApp.exe")], { cwd: product.app, env: { ...process.env, ...projectEnvironment(root), FRAME_METRO_PORT: String(port) }, stdout: "inherit", stderr: "inherit" });
+        if (platform === "windows") app = Bun.spawn([path.join(product.app, "MyApp.exe")], { cwd: product.app, env: { ...process.env, ...projectEnvironment(root), SPARK_METRO_PORT: String(port) }, stdout: "inherit", stderr: "inherit" });
         else {
           const executable = (await run(root, ["/usr/libexec/PlistBuddy", "-c", "Print CFBundleExecutable", path.join(product.app, "Contents/Info.plist")], { capture: true })).trim();
-          app = Bun.spawn([path.join(product.app, "Contents/MacOS", executable), "-RCT_jsLocation", `127.0.0.1:${port}`], { cwd: root, env: { ...process.env, ...projectEnvironment(root), FRAME_BUNDLE_URL: `http://127.0.0.1:${port}/index.bundle?platform=macos&dev=true&minify=false` }, stdout: "inherit", stderr: "inherit" });
+          app = Bun.spawn([path.join(product.app, "Contents/MacOS", executable), "-RCT_jsLocation", `127.0.0.1:${port}`], { cwd: root, env: { ...process.env, ...projectEnvironment(root), SPARK_BUNDLE_URL: `http://127.0.0.1:${port}/index.bundle?platform=macos&dev=true&minify=false` }, stdout: "inherit", stderr: "inherit" });
         }
       } else if (platform === "web") {
         const url = `http://localhost:${port}`;
@@ -186,7 +186,7 @@ try {
   if (report.execution === "running") report.execution = "completed";
   report.finishedAt = new Date().toISOString(); checkpoint();
   process.off("SIGINT", stop); process.off("SIGTERM", stop);
-  if (previousPlatform === undefined) delete process.env.FRAME_PLATFORM; else process.env.FRAME_PLATFORM = previousPlatform;
+  if (previousPlatform === undefined) delete process.env.SPARK_PLATFORM; else process.env.SPARK_PLATFORM = previousPlatform;
   console.log(`${report.target.platform}: ${Object.entries(report.summary.counts).map(([status, count]) => `${count} ${status}`).join(", ")}. Coverage ${report.summary.complete ? "complete" : "incomplete"}.`);
   console.log(`Platform report: ${reportFile}`);
 }

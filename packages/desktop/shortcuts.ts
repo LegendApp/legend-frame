@@ -1,1 +1,1 @@
-export * from "@legendapp/frame-desktop-shortcuts";
+export * from "@legendapp/spark-desktop-shortcuts";

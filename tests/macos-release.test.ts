@@ -6,7 +6,7 @@ import { macOSReleaseSettings } from "../packages/cli/src/macos-release";
 import { runtimeFor, writeJson } from "../packages/cli/src/project";
 
 test("compiler policy changes invalidate macOS releases without invalidating development or Windows", () => {
-  const root = mkdtempSync(path.join(os.tmpdir(), "frame-release-policy-"));
+  const root = mkdtempSync(path.join(os.tmpdir(), "spark-release-policy-"));
   const original = [...macOSReleaseSettings];
   try {
     writeJson(path.join(root, "package.json"), { name: "app", dependencies: {} });

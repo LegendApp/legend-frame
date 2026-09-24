@@ -8,12 +8,12 @@ import { binary, run } from "../packages/cli/src/commands";
 import { projectEnvironment } from "../packages/cli/src/project";
 if (process.platform !== "darwin") throw new Error("This launcher builds the AppKit test driver on macOS. Run the portable Kitchen Sink checks on Windows.");
 const root = path.resolve("examples/kitchen-sink");
-const directory = path.resolve(".frame/audio-tests");
+const directory = path.resolve(".spark/audio-tests");
 mkdirSync(directory, { recursive: true });
 const manifest = path.join(root, "package.json"), original = readFileSync(manifest, "utf8");
 let source: string;
 try {
-  const pkg = JSON.parse(original); pkg.devDependencies = { ...pkg.devDependencies, "@legendapp/frame-sdk-test-driver": "workspace:*" };
+  const pkg = JSON.parse(original); pkg.devDependencies = { ...pkg.devDependencies, "@legendapp/spark-sdk-test-driver": "workspace:*" };
   writeFileSync(manifest, JSON.stringify(pkg, null, 2) + "\n");
   source = (await build(root, "dev")).app;
 } finally { writeFileSync(manifest, original); }
@@ -26,7 +26,7 @@ rmSync(appPath, { recursive: true, force: true }); cpSync(source, appPath, { rec
 const port = await availablePort();
 const report = path.join(directory, "report.json"); rmSync(report, { force: true });
 const metroLog = Bun.file(path.join(directory, "metro.log"));
-const metro = Bun.spawn([binary(root, "expo"), "start", "--localhost", "--port", String(port), "--max-workers", "2"], { cwd: root, env: { ...process.env, CI: "1", FRAME_PLATFORM: "macos" }, stdout: metroLog, stderr: metroLog });
+const metro = Bun.spawn([binary(root, "expo"), "start", "--localhost", "--port", String(port), "--max-workers", "2"], { cwd: root, env: { ...process.env, CI: "1", SPARK_PLATFORM: "macos" }, stdout: metroLog, stderr: metroLog });
 let app: ReturnType<typeof Bun.spawn> | undefined;
 try {
   const deadline = Date.now() + 60000;
@@ -36,7 +36,7 @@ try {
   }
   const executable = (await run(directory, ["/usr/libexec/PlistBuddy", "-c", "Print CFBundleExecutable", path.join(appPath, "Contents/Info.plist")], { capture: true })).trim();
   const log = Bun.file(path.join(directory, "app.log"));
-  app = Bun.spawn([path.join(appPath, "Contents/MacOS", executable), "-RCT_jsLocation", `127.0.0.1:${port}`, "--frame-audio-report", report, "--frame-audio-source", path.join(directory, "tone.wav")], { cwd: root, env: { ...process.env, ...projectEnvironment(root), FRAME_BUNDLE_URL: `http://127.0.0.1:${port}/index.bundle?platform=macos&dev=true&minify=false` }, stdout: log, stderr: log });
+  app = Bun.spawn([path.join(appPath, "Contents/MacOS", executable), "-RCT_jsLocation", `127.0.0.1:${port}`, "--spark-audio-report", report, "--spark-audio-source", path.join(directory, "tone.wav")], { cwd: root, env: { ...process.env, ...projectEnvironment(root), SPARK_BUNDLE_URL: `http://127.0.0.1:${port}/index.bundle?platform=macos&dev=true&minify=false` }, stdout: log, stderr: log });
   const end = Date.now() + 90000;
   while (!existsSync(report)) {
     if (Date.now() > end || app.exitCode !== null) throw new Error(`Audio probe did not report; see ${directory}`);

@@ -10,7 +10,7 @@ custom dev builds contain installed native dependencies; distribution keeps the
 production import graph. Window routes must be reachable from the app entry.
 
 Project identity is a stable UUID in app configuration. Go receives it from the
-CLI; custom apps embed it through CNG. App data, settings, frame restoration and
+CLI; custom apps embed it through CNG. App data, settings, spark restoration and
 Keychain services use a hash of this identity. This prevents accidental collisions,
 not hostile code access: Go and direct-distribution apps are not OS sandboxes.
 

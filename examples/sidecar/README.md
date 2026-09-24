@@ -39,7 +39,7 @@ Use a development build of your app; the shared prebuilt runtime cannot include
 an app-specific helper. Then call the existing process API:
 
 ```ts
-import { spawn } from '@legendapp/frame/processes';
+import { spawn } from '@legendapp/spark/processes';
 
 const child = await spawn({ executable: 'helper:echo', timeoutMs: 5000 });
 await child.write('hello from React Native\n');
@@ -71,14 +71,14 @@ bun run macos # or windows; choose Build for the custom helper runtime
 
 The preparer requires a fresh destination, compiles the helper for the host target,
 and typechecks the generated app. On Windows run it from a Visual Studio developer
-shell matching `FRAME_WINDOWS_ARCH` (or the host architecture).
+shell matching `SPARK_WINDOWS_ARCH` (or the host architecture).
 
 Alternatively, create an ordinary desktop app and copy the three TypeScript files into its root:
 
 ```sh
-frame create HelperDemo
+spark create HelperDemo
 cd HelperDemo
-bun add @legendapp/frame-ui@0.1.0-prototype.0 base64-js@1.5.1
+bun add @legendapp/spark-ui@0.1.0-prototype.0 base64-js@1.5.1
 # Copy App.tsx, client.ts, service.ts from this example into this directory.
 # Copy worker.c into helpers/worker/worker.c.
 mkdir -p helpers/worker/binaries/macos-arm64

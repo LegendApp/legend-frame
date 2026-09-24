@@ -1,6 +1,6 @@
-import * as clipboard from "@legendapp/frame/clipboard";
-import * as secureStore from "@legendapp/frame/secure-storage";
-import * as links from "@legendapp/frame/links";
+import * as clipboard from "@legendapp/spark/clipboard";
+import * as secureStore from "@legendapp/spark/secure-storage";
+import * as links from "@legendapp/spark/links";
 import { clipboardRead, clipboardRoundTrip, secureStorageLifecycle, linkingResolution } from "./contract-cases";
 import type { TestDriver } from "./test-driver";
 
@@ -66,27 +66,27 @@ export async function runAPIChecks(check: Check, driver?: TestDriver, expectedIn
     if (expectedInitial !== undefined) assert(initial === expectedInitial, `Initial URL mismatch: ${initial}`);
     assert(await links.getInitialURL() === initial, "Initial URL changed between reads");
     assert(await links.canOpenURL("https://example.com"), "HTTPS handler missing");
-    assert(!await links.canOpenURL("frame-api-unknown://missing"), "Unknown scheme resolved");
+    assert(!await links.canOpenURL("spark-api-unknown://missing"), "Unknown scheme resolved");
   }, ["links.resolution"]);
   if (driver) await check("Expo Linking: live URL events, file separation, removal and stable initial URL", async () => {
     const initial = await links.getInitialURL();
     const received: string[] = [], legacyFiles: string[] = [];
     const legacy = await links.onOpen(event => { if (event.type === "openFile") legacyFiles.push(event.url); });
     const sub = links.addEventListener("url", event => received.push(event.url));
-    const warm = `frame-api-test://${token}/warm`;
+    const warm = `spark-api-test://${token}/warm`;
     try {
       if (expectedInitial !== undefined) {
-        const opened = `frame-api-test://${token}/opened`;
+        const opened = `spark-api-test://${token}/opened`;
         assert(await links.openURL(opened) === true, "openURL must resolve true");
         await until(() => received.includes(opened));
         received.length = 0;
       }
-      await native("openURLs", { urls: [warm, "file:///tmp/frame-api-fixture.txt"] });
-      await until(() => received.includes(warm) && legacyFiles.includes("file:///tmp/frame-api-fixture.txt"));
+      await native("openURLs", { urls: [warm, "file:///tmp/spark-api-fixture.txt"] });
+      await until(() => received.includes(warm) && legacyFiles.includes("file:///tmp/spark-api-fixture.txt"));
       assert(received.length === 1, "URL listener received file/duplicate event");
       assert(await links.getInitialURL() === initial, "Warm URL replaced launch URL");
       sub.remove(); sub.remove();
-      await native("openURLs", { urls: [`frame-api-test://${token}/removed`] });
+      await native("openURLs", { urls: [`spark-api-test://${token}/removed`] });
       await delay(100);
       assert(received.length === 1, "Removed listener still active");
       const late: string[] = [];

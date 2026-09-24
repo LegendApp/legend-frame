@@ -1,1 +1,1 @@
-export * from "@legendapp/frame-secure-storage";
+export * from "@legendapp/spark-secure-storage";

@@ -1,6 +1,6 @@
 {
-  "cxxNamespace": ["frameprobe"], "ios": {"iosModuleName": "FrameNitroProbe"},
-  "android": {"androidNamespace": ["frameprobe"], "androidCxxLibName": "FrameNitroProbe"},
+  "cxxNamespace": ["sparkprobe"], "ios": {"iosModuleName": "SparkNitroProbe"},
+  "android": {"androidNamespace": ["sparkprobe"], "androidCxxLibName": "SparkNitroProbe"},
   "autolinking": {"CompatibilityView": {"ios": {"language": "swift", "implementationClassName": "HybridCompatibilityView"}}},
   "ignorePaths": ["**/node_modules"]
 }

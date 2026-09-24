@@ -1,8 +1,8 @@
 import { Button } from "./Controls";
 import React, { useEffect, useState } from "react";
 import { StyleSheet, Text, View } from "react-native";
-import { writeText } from "@legendapp/frame/files";
-import { quit } from "@legendapp/frame/app";
+import { writeText } from "@legendapp/spark/files";
+import { quit } from "@legendapp/spark/app";
 import { runAPIChecks } from "./api-checks";
 import { testDriver } from "./test-driver";
 import type { Check } from "./checks";

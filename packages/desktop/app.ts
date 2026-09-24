@@ -1,1 +1,1 @@
-export * from "@legendapp/frame-desktop-app";
+export * from "@legendapp/spark-desktop-app";

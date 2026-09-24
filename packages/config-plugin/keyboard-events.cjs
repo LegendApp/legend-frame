@@ -28,7 +28,7 @@ function patchKeyboardSource(file, source) {
 function installKeyboardEventsPatch(root) {
   const manifest = require.resolve("react-native-macos/package.json", { paths: [root] });
   const version = JSON.parse(fs.readFileSync(manifest, "utf8")).version;
-  if (version !== "0.81.7") throw new Error(`frame's keyboard patch requires react-native-macos@0.81.7; found ${version}.`);
+  if (version !== "0.81.7") throw new Error(`spark's keyboard patch requires react-native-macos@0.81.7; found ${version}.`);
   // Validate all targets before changing either file.
   const changes = Object.keys(replacements).map(relative => {
     const file = path.join(path.dirname(manifest), relative);
@@ -36,7 +36,7 @@ function installKeyboardEventsPatch(root) {
     return {file, before, after: patchKeyboardSource(relative, before)};
   });
   for (const {file, before, after} of changes) if (before !== after) {
-    const temporary = `${file}.frame-${process.pid}.tmp`;
+    const temporary = `${file}.spark-${process.pid}.tmp`;
     fs.writeFileSync(temporary, after);
     fs.renameSync(temporary, file); // Preserve package-manager cache hardlinks.
   }

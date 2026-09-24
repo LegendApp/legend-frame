@@ -1,6 +1,6 @@
 # Add desktop to an existing Expo app
 
-`frame add desktop` integrates the frame host and development commands into an installed Expo app. Expo remains the source of application configuration. The app keeps its entry point, screens, mobile/web scripts, and existing native mobile projects.
+`spark add desktop` integrates the spark host and development commands into an installed Expo app. Expo remains the source of application configuration. The app keeps its entry point, screens, mobile/web scripts, and existing native mobile projects.
 
 ## Current baseline
 
@@ -10,8 +10,8 @@ Packages are still distributed as local SDK archives. From the framework checkou
 
 ```sh
 bun install
-bun run frame sdk pack
-bun run frame add desktop --project /absolute/path/to/ExistingExpoApp
+bun run spark sdk pack
+bun run spark add desktop --project /absolute/path/to/ExistingExpoApp
 ```
 
 The command uses the app's declared package manager, or its existing lockfile, for installation. Without either it uses Bun. Conflicting lockfiles require an explicit `packageManager` field. Bun is the verified installer in the integration fixture; npm, pnpm, and Yarn follow their respective install/override conventions but have not received equivalent end-to-end verification.
@@ -25,39 +25,39 @@ bun run android
 bun run web
 
 # Build once, then develop on macOS
-bunx --no-install frame build --dev --platform macos
+bunx --no-install spark build --dev --platform macos
 bun run macos
 
 # On a configured Windows machine
-bunx --no-install frame build --dev --platform windows
+bunx --no-install spark build --dev --platform windows
 bun run windows
 ```
 
-If a `macos` or `windows` script already exists, it is preserved and the added script is named `frame:macos` or `frame:windows`. Direct frame commands can also select the target with `--platform`. A compatible registered prebuilt runtime can be used through the existing development session; the initial native build is only necessary when no compatible binary is available.
+If a `macos` or `windows` script already exists, it is preserved and the added script is named `spark:macos` or `spark:windows`. Direct spark commands can also select the target with `--platform`. A compatible registered prebuilt runtime can be used through the existing development session; the initial native build is only necessary when no compatible binary is available.
 
-For one shared session, run `bunx --no-install frame dev --no-open`, then use `i`, `a`, `w`, and `d`. The existing Expo scripts stay unchanged; they remain available for standalone Expo workflows. Standard Expo start options pass through frame.
+For one shared session, run `bunx --no-install spark dev --no-open`, then use `i`, `a`, `w`, and `d`. The existing Expo scripts stay unchanged; they remain available for standalone Expo workflows. Standard Expo start options pass through spark.
 
 ## Configuration composition
 
 The integration adds `desktop.config.json` with `"extends": "expo"`, stable project identity, desktop options, supported targets, and desktop autolinking exclusions. Names, versions, mobile identifiers, plugins, and environment-dependent application values continue to come from Expo config.
 
-The command composes the existing `app.config.js` or `app.config.ts` export with `withFrameExpo` from `@legendapp/frame-desktop-config/expo.cjs`. For a static `app.json`, it adds a small `app.config.js` that extends Expo's supplied config. It keeps the original configuration code in the same file and directory, preserving relative imports and environment logic.
+The command composes the existing `app.config.js` or `app.config.ts` export with `withSparkExpo` from `@legendapp/spark-desktop-config/expo.cjs`. For a static `app.json`, it adds a small `app.config.js` that extends Expo's supplied config. It keeps the original configuration code in the same file and directory, preserving relative imports and environment logic.
 
-Ordinary Expo commands, including commands without `FRAME_PLATFORM`, retain their original configuration. For native builds, `FRAME_PLATFORM=macos` or `windows` applies desktop options and the frame config plugin. A `frame dev` session instead exposes all declared platforms, preserves the original shared Expo config and plugins, and omits desktop build overlays. frame commands supply that environment automatically. For direct Expo Desktop commands, set it explicitly:
+Ordinary Expo commands, including commands without `SPARK_PLATFORM`, retain their original configuration. For native builds, `SPARK_PLATFORM=macos` or `windows` applies desktop options and the spark config plugin. A `spark dev` session instead exposes all declared platforms, preserves the original shared Expo config and plugins, and omits desktop build overlays. spark commands supply that environment automatically. For direct Expo Desktop commands, set it explicitly:
 
 ```sh
-FRAME_PLATFORM=macos bunx expo config
+SPARK_PLATFORM=macos bunx expo config
 ```
 
-PowerShell uses `$env:FRAME_PLATFORM="windows"`. Keep desktop-specific exclusions and options in `desktop.config.json`; keep mobile/web configuration in the existing Expo files. Previously generated iOS and Android projects stay in place. Native generation/build operations against one checkout must run sequentially.
+PowerShell uses `$env:SPARK_PLATFORM="windows"`. Keep desktop-specific exclusions and options in `desktop.config.json`; keep mobile/web configuration in the existing Expo files. Previously generated iOS and Android projects stay in place. Native generation/build operations against one checkout must run sequentially.
 
 ## Metro and native configuration
 
-The existing Metro config gets its defaults through `@legendapp/frame-cli/src/expo-metro.cjs`. That helper delegates to Expo for standalone mobile/web commands and Expo Desktop for desktop or shared frame dev sessions. Application customizations continue to run after those defaults. Custom resolver fallbacks retain upstream desktop module resolution, and frame adds its development compatibility gate.
+The existing Metro config gets its defaults through `@legendapp/spark-cli/src/expo-metro.cjs`. That helper delegates to Expo for standalone mobile/web commands and Expo Desktop for desktop or shared spark dev sessions. Application customizations continue to run after those defaults. Custom resolver fallbacks retain upstream desktop module resolution, and spark adds its development compatibility gate.
 
 Desktop hosts request `index.bundle` or `index.windows.bundle`. The composed Metro config routes those requests through Expo's virtual entry resolver, which reads the original `package.json` main. There is no generated replacement application entry. Apps must register the normal Expo `main` component through their existing entry.
 
-The existing React Native config export is composed with `withFrameNative`. Mobile commands retain the original object; desktop commands add platform discovery and native selection while preserving application assets and configuration.
+The existing React Native config export is composed with `withSparkNative`. Mobile commands retain the original object; desktop commands add platform discovery and native selection while preserving application assets and configuration.
 
 ## Boundaries and failure handling
 
@@ -83,8 +83,8 @@ Workspace unit tests separately check export composition and mobile no-op behavi
 
 - Workspace TypeScript and 134 unit tests passed (580 assertions).
 - The independent dynamic-config fixture passed its original mobile bundle, all five post-integration bundles, custom resolver and desktop request routing, config/plugin preservation, conflict rejection, and repeated integration checks.
-- Windows generation preserved the previously generated iOS project and shared files. Equivalent project paths produced identical frame configuration, excluding Expo's diagnostic `_internal` metadata from compatibility inputs.
+- Windows generation preserved the previously generated iOS project and shared files. Equivalent project paths produced identical spark configuration, excluding Expo's diagnostic `_internal` metadata from compatibility inputs.
 - A static `app.json` fixture with no explicit `main` retained its app/config source and bundled on macOS through Expo's default AppEntry.
-- The adopted app compiled on macOS and mounted through the normal frame development session. A temporary mount callback confirmed its custom entry/Metro alias and Hermes execution; the diagnostic source edit was restored afterward.
+- The adopted app compiled on macOS and mounted through the normal spark development session. A temporary mount callback confirmed its custom entry/Metro alias and Hermes execution; the diagnostic source edit was restored afterward.
 
-Execution used the synchronized `/tmp/frame-api-clean` checkout because Bun stalls in Documents on this host. Windows native execution, arbitrary third-party native libraries/Router, and the other package managers remain outside this acceptance record.
+Execution used the synchronized `/tmp/spark-api-clean` checkout because Bun stalls in Documents on this host. Windows native execution, arbitrary third-party native libraries/Router, and the other package managers remain outside this acceptance record.

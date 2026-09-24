@@ -30,7 +30,7 @@ export async function create(root: string, archiveManifest: string, platform: Ap
   await checkExpoDesktopNode(path.resolve(import.meta.dir, ".."));
   const variant = universal || example ? "universal" : platform === "macos" ? "blank-typescript" : "windows";
   const source = path.resolve(import.meta.dir, "../templates", variant);
-  const temporary = mkdtempSync(path.join(os.tmpdir(), "frame-create-"));
+  const temporary = mkdtempSync(path.join(os.tmpdir(), "spark-create-"));
   const templateFile = path.join(temporary, "template.tgz");
   // Resolve archives on the recipient machine, immediately before Expo extracts
   // and installs the template. No producer-machine paths enter the SDK bundle.
@@ -48,14 +48,14 @@ export async function create(root: string, archiveManifest: string, platform: Ap
     writeJson(path.join(temporary, "package.json"), pkg);
     await run(temporary, ["bun", "pm", "pack", "--filename", templateFile], { capture: true });
     // The upstream CLI owns validation, extraction, app IDs, install, and Git setup.
-    // The templates' postinstall initializes frame configuration once.
+    // The templates' postinstall initializes spark configuration once.
     const name = path.basename(root);
     // beta.5 misreads npm 12's record-shaped pack metadata for a local tarball.
     // Use the compatible npm executable for upstream extraction; Bun still installs.
     const npmBin = path.join(import.meta.dir, "npm-bin");
     const child = Bun.spawn(nodeCommand(path.resolve(import.meta.dir, ".."), "expo-desktop", "expo-desktop", [
       "create-app", root, "--template", templateFile, "--yes", "--no-agents-md",
-      "--display-name", name, "--rdns", `so.legend.frame.prototype.${name.toLowerCase()}`,
+      "--display-name", name, "--rdns", `so.legend.spark.prototype.${name.toLowerCase()}`,
     ]), { cwd: process.cwd(), env: { ...process.env, PATH: `${npmBin}${path.delimiter}${process.env.PATH ?? ""}`, npm_config_user_agent: `bun/${Bun.version}`, CI: "1" }, stdout: "inherit", stderr: "inherit" });
     if (await child.exited) throw new Error("Expo Desktop could not create the app. See its output above.");
   } finally { rmSync(temporary, { recursive: true, force: true }); }
@@ -65,7 +65,7 @@ export async function create(root: string, archiveManifest: string, platform: Ap
 
 export function upgradeManagedEntry(root: string) {
   const oldMetro = `const { makeMetroConfig } = require("expo-desktop-metro-config");
-const { gate } = require("@legendapp/frame-cli/src/metro-gate.cjs");
+const { gate } = require("@legendapp/spark-cli/src/metro-gate.cjs");
 const config = makeMetroConfig(__dirname);
 config.server = { ...config.server, enhanceMiddleware: (middleware) => gate(__dirname, middleware) };
 module.exports = config;

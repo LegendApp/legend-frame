@@ -2,8 +2,8 @@
 
 Scope: stages 1–4 of the desktop API plan, macOS 14+ / arm64. Validation ran
 on this Apple Silicon Mac using Xcode 26.6.0, Bun 1.3.14, React Native macOS
-and the pinned Expo Desktop beta. Source is in `frame`; builds ran
-from `/tmp/frame-sdk-validation` because Bun stalls in the Documents checkout.
+and the pinned Expo Desktop beta. Source is in `spark`; builds ran
+from `/tmp/spark-sdk-validation` because Bun stalls in the Documents checkout.
 No packages or binaries were published.
 
 ## Automated evidence
@@ -16,10 +16,10 @@ No packages or binaries were published.
 | Custom expansion | Pass: 11 cases — the Go cases plus a test-only driver for mounted drag hit testing/drop event delivery and native confirmation sheet completion |
 | Full native regression | Pass: Go project A/B/A isolation, real reduced binary selection, 24 custom API cases, real Save acceptance, accepted quit |
 | Native pruning | Pass: unused SDK modules plus WebView/SQLite excluded from runtime metadata and executable classes; Sparkle framework absent; retained APIs execute |
-| Saved Go artifact | Pass: copied to `artifacts/runtimes/FramePrebuilt.app`, `codesign --verify --deep --strict` succeeds, registered with the local SDK |
+| Saved Go artifact | Pass: copied to `artifacts/runtimes/SparkPrebuilt.app`, `codesign --verify --deep --strict` succeeds, registered with the local SDK |
 | Standalone Release | Pass: starts without Metro, Sparkle initializes idempotently, automatic checks stay disabled, menu-bar-only window remains hidden; stale update config removal passes |
 
-The full regression used `FRAME_TEST_UI_DRIVER=external`; computer use clicked
+The full regression used `SPARK_TEST_UI_DRIVER=external`; computer use clicked
 the real Save button because this Mac's XCTest service could not connect. All
 other assertions ran automatically. The Release and full regression runs precede
 the final modal-close and drag-targeting fixes; the focused expansion suite was
@@ -53,9 +53,9 @@ passed in the native suite, which restores the original pasteboard representatio
 bun install
 bun run typecheck
 bun test tests
-bun run test:expansion /tmp/FrameSDKKitchenSink
-bun run test:native /tmp/FrameSDKKitchenSink
-bun run test:updates /tmp/FrameUpdateReleaseProbe
+bun run test:expansion /tmp/SparkSDKKitchenSink
+bun run test:native /tmp/SparkSDKKitchenSink
+bun run test:updates /tmp/SparkUpdateReleaseProbe
 
 bun run kitchen-sink /tmp/MyDesktopKitchenSink
 cd /tmp/MyDesktopKitchenSink
@@ -63,14 +63,14 @@ bun dev
 ```
 
 The native suite normally uses the XCTest UI driver. Set
-`FRAME_TEST_UI_DRIVER=external` only when another UI driver or a person will
+`SPARK_TEST_UI_DRIVER=external` only when another UI driver or a person will
 accept its Save panel. A native toolchain is required for these development and
 Release validation builds. The already-built Go runtime does not require Xcode
 for consumers to start a compatible JavaScript app.
 
 Local logs and JSON reports are preserved under
 `docs/evidence/expansion-2026-09-11/` (ignored by Git). Local SDK archives are in
-`artifacts/packages/`; the refreshed Go app is in `artifacts/runtimes/FramePrebuilt.app`.
+`artifacts/packages/`; the refreshed Go app is in `artifacts/runtimes/SparkPrebuilt.app`.
 The full suite and release logs record exactly which binaries and phases ran.
 
 ## Kitchen sink event feedback — 2026-09-14

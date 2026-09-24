@@ -9,7 +9,7 @@ export async function configureExample(root: string, example: Example) {
   const suffixes = ["desktop-app", "desktop-windows", "desktop-shortcuts", "native-menu", "file-dialog", "message-dialog"];
   if (example === "music-lite") suffixes.push("audio");
   if (example === "diff-lite") suffixes.push("processes");
-  const desktop = suffixes.map(name => name === "desktop" ? "@legendapp/frame" : `@legendapp/frame-${name}`);
+  const desktop = suffixes.map(name => name === "desktop" ? "@legendapp/spark" : `@legendapp/spark-${name}`);
   for (const name of desktop) {
     if (!pkg.overrides[name]) throw new Error(`SDK example requires ${name}`);
     pkg.dependencies[name] = pkg.overrides[name];
@@ -24,7 +24,7 @@ export async function configureExample(root: string, example: Example) {
     const options = config.expoByPlatform[platform] ??= {};
     const excluded = options.autolinking?.exclude ?? [];
     const extra = ["macos", "windows"].includes(platform) ? ["expo-document-picker", "expo-sharing", "expo-file-system", "expo-audio"] : desktop;
-    if (platform === "windows") extra.push(...desktop.filter(name => !["@legendapp/frame-file-dialog", "@legendapp/frame-audio", "@legendapp/frame-desktop-app", "@legendapp/frame-desktop-windows", "@legendapp/frame-desktop-shortcuts", "@legendapp/frame-native-menu"].includes(name)));
+    if (platform === "windows") extra.push(...desktop.filter(name => !["@legendapp/spark-file-dialog", "@legendapp/spark-audio", "@legendapp/spark-desktop-app", "@legendapp/spark-desktop-windows", "@legendapp/spark-desktop-shortcuts", "@legendapp/spark-native-menu"].includes(name)));
     options.autolinking = { ...options.autolinking, exclude: [...new Set([...excluded, ...extra])] };
     if (example === "music-lite" && ["ios", "android"].includes(platform)) options.plugins = [...(options.plugins ?? []), ["expo-audio", { microphonePermission: false, enableBackgroundPlayback: true, recordAudioAndroid: false }]];
   }

@@ -1,7 +1,7 @@
 import React, { useEffect, useState } from "react";
 import { Button, StyleSheet, Text, View } from "react-native";
-import { openFileDialog } from "@legendapp/frame/dialogs";
-import { configureMenus, clearMenus, addNativeMenuActionListener } from "@legendapp/frame/menus";
+import { openFileDialog } from "@legendapp/spark/dialogs";
+import { configureMenus, clearMenus, addNativeMenuActionListener } from "@legendapp/spark/menus";
 
 const menus = [{ id: "hello", title: "Hello", items: [{ id: "greet", title: "Say Hello" }] }];
 export default function App({ runtime }: { runtime?: { mode: string } }) {
@@ -20,7 +20,7 @@ export default function App({ runtime }: { runtime?: { mode: string } }) {
     } catch (error) { setMessage(String(error)); }
   }
   return <View style={styles.root}>
-    <Text style={styles.title}>Hello, Legend Frame</Text>
+    <Text style={styles.title}>Hello, Legend Spark</Text>
     <Text style={styles.text}>Runtime: {runtime?.mode ?? "unknown"}</Text>
     <Button title="Choose a file" onPress={chooseFile} />
     <Text style={styles.text} accessible accessibilityLabel={message}>{message}</Text>

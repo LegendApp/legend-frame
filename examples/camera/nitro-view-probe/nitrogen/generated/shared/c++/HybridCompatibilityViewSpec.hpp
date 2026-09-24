@@ -17,7 +17,7 @@
 
 #include <string>
 
-namespace margelo::nitro::frameprobe {
+namespace margelo::nitro::sparkprobe {
 
   using namespace margelo::nitro;
 
@@ -60,4 +60,4 @@ namespace margelo::nitro::frameprobe {
       static constexpr auto TAG = "CompatibilityView";
   };
 
-} // namespace margelo::nitro::frameprobe
+} // namespace margelo::nitro::sparkprobe
