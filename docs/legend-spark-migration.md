@@ -59,6 +59,9 @@ bun run rebuild:macos  # or rebuild:windows, on Windows
 bun run macos         # or windows
 ```
 
+The Spark artwork lives at `assets/branding/legend-spark.png` and is included in
+the starter templates at `assets/icon.png`.
+
 Follow the [manual acceptance checklist](desktop-manual-acceptance.md) after rebuilding.
 The [previous Frame validation report](frame-rename-validation.md) is historical
 and does not establish native acceptance for Spark.

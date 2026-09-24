@@ -5,6 +5,7 @@
     "version": "0.0.1",
     "platforms": [
       "macos"
-    ]
+    ],
+    "icon": "./assets/icon.png"
   }
 }

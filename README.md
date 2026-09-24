@@ -1,3 +1,7 @@
+<p align="center">
+  <img src="assets/branding/legend-spark.png" width="160" alt="Legend Spark logo" />
+</p>
+
 # Legend Spark
 
 Legend Spark is an experimental framework for building native desktop applications with React Native and Expo Desktop. It combines desktop APIs with an Expo-style development workflow: start in a supplied **prebuilt runtime**, switch to a custom development build when you need additional native code, and build a standalone application containing the native modules it needs.

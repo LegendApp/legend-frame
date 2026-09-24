@@ -9,6 +9,7 @@
       "web",
       "macos",
       "windows"
-    ]
+    ],
+    "icon": "./assets/icon.png"
   }
 }

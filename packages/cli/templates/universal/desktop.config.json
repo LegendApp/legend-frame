@@ -20,7 +20,8 @@
   "expo": {
     "web": {
       "bundler": "metro"
-    }
+    },
+    "icon": "./assets/icon.png"
   },
   "expoByPlatform": {
     "macos": {
