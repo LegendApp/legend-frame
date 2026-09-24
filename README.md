@@ -45,17 +45,15 @@ The development terminal explains incompatibilities and offers a build/switch ac
 
 ## Install the experimental prerelease
 
-Download the matching SDK archive from [GitHub releases](https://github.com/LegendApp/legend-spark/releases), extract it to a permanent location, and run its installer. The macOS ARM64 SDK includes a development runtime; it is not a notarized production application.
+Install the public package with Node 24.19.0 or newer. The CLI downloads the matching macOS Apple Silicon Runner automatically on first launch; no SDK archive, Bun installation, or manual runtime registration is required.
 
 ```sh
-cd /path/to/LegendSparkSDK-0.1.0-prototype.0
-bun install.ts
-bunx @legendapp/spark@next create /absolute/path/to/MyApp
-cd /absolute/path/to/MyApp
-bun run macos
+npx @legendapp/spark@next create MyApp
+cd MyApp
+npm run macos
 ```
 
-Use Bun 1.3.14+ and Node 24.19.0. Keep the extracted SDK directory in place: generated applications reference its archives, and the runtime registry references its binary. npm alone does not register the patched SDK archives, and the CLI does not download a runtime automatically. No Windows binary is included in this prerelease.
+The Runner download is tied to the published source revision and is cached locally after installation. This is an experimental prerelease for macOS Apple Silicon; Windows native acceptance remains pending.
 
 ## Quick start from source
 
