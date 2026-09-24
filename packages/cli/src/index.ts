@@ -104,7 +104,7 @@ Windows: dev and build --dev; production builds are not yet supported.
 SDK transfer: sdk export <directory> [--runtime <Spark Runner directory>], sdk import <directory>
 SDK maintainers: sdk pack, sdk package-runner, sdk build-runner [--platform windows], sdk register <runtime directory>
 Targets: dev/build/prebuild --platform macos|windows|ios|android|web
-Overrides: --project <directory>, --port <number>, dev --runner-binary <runtime path>, create --packages <manifest>, create --package-manager npm|pnpm|yarn|bun`);
+Overrides: --project <directory>, --port <number>, dev --runner-binary <runtime path>, create --packages <manifest>, create / sdk build-runner --package-manager npm|pnpm|yarn|bun`);
   } else switch (command) {
     case "add": {
       if (positionals[1] !== "desktop") throw new Error("Usage: spark add desktop [--project <Expo app>]");
@@ -157,9 +157,10 @@ Overrides: --project <directory>, --port <number>, dev --runner-binary <runtime 
           else {
             root = path.join(sparkHome(), "sdk-builds", VERSION, ...(platform === "windows" ? ["windows"] : []), "SparkRunner");
             const manifest = packageManifest(values.packages as string | undefined);
-            if (!existsSync(path.join(root, "package.json"))) await create(root, manifest, platform);
-            else await refreshLocalPackages(root, manifest);
-            await prepareGoProfile(root, manifest, platform as "macos" | "windows");
+            const manager = values["package-manager"] as PackageManager | undefined;
+            if (!existsSync(path.join(root, "package.json"))) await create(root, manifest, platform, false, undefined, manager);
+            else await refreshLocalPackages(root, manifest, manager);
+            await prepareGoProfile(root, manifest, platform as "macos" | "windows", manager);
             const configFile = path.join(root, "desktop.config.json");
             const config = readJson(configFile);
             config.version = VERSION.split("-")[0];

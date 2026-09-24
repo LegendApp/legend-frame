@@ -1,10 +1,11 @@
-import { packageManager, managerCommand, localArchive } from "./package-manager.ts";
+import { packageManager, managerCommand, localArchive, type PackageManager } from "./package-manager.ts";
 import path from "node:path";
 import { readJson, writeJson } from "./project.ts";
 import { run } from "./commands.ts";
 import type { DesktopPlatform } from "./platform.ts";
 /** Modules shipped in the maintained client, in addition to its platform starter. */
-export async function prepareGoProfile(root: string, manifest: string, platform: DesktopPlatform) {
+export async function prepareGoProfile(root: string, manifest: string, platform: DesktopPlatform, selectedManager?: PackageManager) {
+  const manager = packageManager(root, selectedManager);
   const pkg = readJson(path.join(root, "package.json"));
   const archives = readJson(manifest);
   if (!archives["@legendapp/spark"]) throw new Error("Spark Runner profile requires @legendapp/spark");
@@ -14,5 +15,5 @@ export async function prepareGoProfile(root: string, manifest: string, platform:
   // consumers' conservative graph. It builds on macOS and must be present in Go.
   if (platform === "macos") pkg.dependencies["expo-json-utils"] = "0.15.0";
   writeJson(path.join(root, "package.json"), pkg);
-  await run(root, managerCommand(packageManager(root), ["install"]));
+  await run(root, managerCommand(manager, ["install"]));
 }

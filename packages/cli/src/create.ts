@@ -15,11 +15,11 @@ import { run } from "./commands.ts";
 // Resolve relative to the installed CLI so packed consumers use the same starter.
 const template = path.resolve(import.meta.dirname, "../templates/blank-typescript");
 
-export async function refreshLocalPackages(root: string, manifest: string) {
+export async function refreshLocalPackages(root: string, manifest: string, selectedManager?: PackageManager) {
   const pkg = readJson(path.join(root, "package.json"));
   // The template owns the tested compatibility matrix, not module inclusion.
   const pins = readJson(path.join(template, "package.json")).overrides;
-  const manager = packageManager(root);
+  const manager = packageManager(root, selectedManager);
   const overrides = { ...pins };
   for (const [name, file] of Object.entries(readJson(manifest))) {
     const archive = localArchive(path.resolve(path.dirname(manifest), file as string));
