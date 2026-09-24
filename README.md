@@ -4,6 +4,8 @@
 
 # Legend Spark
 
+**Experimental — not ready for production use.** APIs, native implementations, and tooling may change.
+
 Legend Spark is an experimental framework for building native desktop applications with React Native and Expo Desktop. It combines desktop APIs with an Expo-style development workflow: start in a supplied **prebuilt runtime**, switch to a custom development build when you need additional native code, and build a standalone application containing the native modules it needs.
 
 The public package is `@legendapp/spark`; the CLI and short name are `spark`.
@@ -14,7 +16,7 @@ an existing prototype checkout.
 
 Application JavaScript runs in **Hermes**. Node and Bun are development tools; neither is embedded as the application's JavaScript runtime. The UI uses React Native's native renderer.
 
-**Current scope:** macOS 14+ on Apple Silicon. The packages, CLI, and native runtime are prototypes. A [transferable SDK with optional prebuilt runtimes](docs/sdk-distribution.md) works outside the checkout; public npm packages and hosted prebuilt releases are not available. Windows x64/ARM64 prebuilt and custom development builds are integrated, with native verification still pending; see the [Windows development guide](docs/windows-slice.md). Mobile/web development delegates to Expo. Intel macOS, Linux, and Mac App Store distribution are not supported by this framework's current workflow.
+**Current scope:** macOS 14+ on Apple Silicon. The packages, CLI, and native runtime are prototypes. A [transferable SDK with optional prebuilt runtimes](docs/sdk-distribution.md) works outside the checkout; experimental npm packages use the `next` tag; matching SDK archives and macOS development runtimes are distributed through [GitHub prereleases](https://github.com/LegendApp/legend-spark/releases). Windows x64/ARM64 prebuilt and custom development builds are integrated, with native verification still pending; see the [Windows development guide](docs/windows-slice.md). Mobile/web development delegates to Expo. Intel macOS, Linux, and Mac App Store distribution are not supported by this framework's current workflow.
 
 The checkout currently targets Expo SDK 54 / React Native 0.81 and pins **Expo Desktop 1.0.0-beta.6**. Expo Desktop owns template creation and native project generation; Expo CLI owns Metro and the development terminal. spark adds desktop actions, runtime compatibility checks, native capabilities, and build orchestration. See the [integration boundary](docs/expo-desktop-integration.md) for the remaining upstream launch requirements.
 
@@ -41,7 +43,21 @@ The CLI checks the project's native requirements against the selected runtime. O
 
 The development terminal explains incompatibilities and offers a build/switch action. It does not silently compile on every file change. Switching binaries or restarting Metro can reset application state.
 
-## Quick start
+## Install the experimental prerelease
+
+Download the matching SDK archive from [GitHub releases](https://github.com/LegendApp/legend-spark/releases), extract it to a permanent location, and run its installer. The macOS ARM64 SDK includes a development runtime; it is not a notarized production application.
+
+```sh
+cd /path/to/LegendSparkSDK-0.1.0-prototype.0
+bun install.ts
+bunx @legendapp/spark@next create /absolute/path/to/MyApp
+cd /absolute/path/to/MyApp
+bun run macos
+```
+
+Use Bun 1.3.14+ and Node 24.19.0. Keep the extracted SDK directory in place: generated applications reference its archives, and the runtime registry references its binary. npm alone does not register the patched SDK archives, and the CLI does not download a runtime automatically. No Windows binary is included in this prerelease.
+
+## Quick start from source
 
 The steps below are for macOS; use the [Windows guide](docs/windows-slice.md) for its native prerequisites and development-only workflow.
 
@@ -297,7 +313,7 @@ The macOS prebuilt → custom runtime → reduced standalone workflow has record
 | [Windows development](docs/windows-slice.md) | Integrated CLI, generation and bundle checks; native acceptance pending |
 | [Packaging status](docs/packaging.md#validation-status) | Simulated notarization pipeline versus real distribution acceptance |
 
-Public SDK/prebuilt distribution, real Developer ID/notarization acceptance, production update installation/relaunch, and broader platform support remain separate release gates. Some OS interaction cases also remain outstanding in their feature reports. No current test result establishes full Windows support.
+Automatic SDK/runtime downloads, real Developer ID/notarization acceptance, production update installation/relaunch, and broader platform support remain separate release gates. Some OS interaction cases also remain outstanding in their feature reports. No current test result establishes full Windows support.
 
 ## Repository and documentation
 
